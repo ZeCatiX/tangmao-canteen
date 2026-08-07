@@ -1,0 +1,50 @@
+# 环境变量和密钥
+.env
+.env.local
+.env.*.local
+
+# 依赖目录
+node_modules/
+
+# 日志
+logs/
+
+# 备份
+backups/
+model_backups/
+
+# 上传文件
+uploads/
+
+# 模型文件
+*.pkl
+
+# 配置文件
+ngrok.exe
+*.bat
+*.sh
+deploy.bat
+deploy.sh
+install.bat
+start.bat
+setup_backup.bat
+
+# 构建产物
+script.js.bak
+dist/
+
+# 编辑器配置
+.ai/
+.retired/
+
+# 测试文件
+tests/
+
+# 文档和演示文稿
+*.pptx
+*.docx
+*.md
+
+# 系统文件
+.DS_Store
+Thumbs.db

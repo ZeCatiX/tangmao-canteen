@@ -1,0 +1,44 @@
+# 环境配置
+.env
+.env.local
+
+# 日志
+logs/
+*.log
+server.log
+server_error.log
+server_output.log
+
+# 数据备份
+backups/
+*.bak
+
+# 数据库文件
+*.sqlite
+*.sqlite3
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+
+# 机器学习模型和 OCR 数据文件
+*.pkl
+*.traineddata
+model_backups/
+
+# 运行时
+*.pid
+*.seed
+
+# 二进制文件
+ngrok.exe
+
+# 临时修复脚本
+.fix_*.js

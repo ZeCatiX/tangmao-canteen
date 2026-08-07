@@ -1,0 +1,30 @@
+{
+  "env": {
+    "node": true,
+    "es2022": true,
+    "browser": true
+  },
+  "globals": {
+    "bootstrap": "writable",
+    "Chart": "writable"
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-console": "off",
+    "no-empty": "warn",
+    "no-extra-semi": "warn",
+    "no-redeclare": "error",
+    "no-var": "warn",
+    "prefer-const": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "curly": "warn",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error"
+  },
+  "ignorePatterns": ["node_modules/", "dist/", "*.min.js", "唐猫菜品/"]
+}

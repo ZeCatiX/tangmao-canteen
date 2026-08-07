@@ -1,0 +1,189 @@
+# -*- coding: utf-8 -*-
+"""
+唐猫庭院 - 从真实反馈数据增量训练模型
+从PostgreSQL读取feedback表，结合真实反馈微调模型
+"""
+import pickle, json, sys, os, random
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+sys.stdout.reconfigure(encoding='utf-8')
+
+ORD_MAPPINGS = {
+    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4, '麻辣': 5},
+    '咸淡': {'无': 0, '清淡': 1, '适中': 2, '偏咸': 3},
+    '甜酸': {'无': 0, '无味': 1, '微甜': 2, '酸甜': 3, '偏酸': 4, '偏甜': 5},
+}
+FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '价格', '招牌', '评分',
+                 '用户辣度', '用户咸淡', '用户甜酸']
+
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'recommendation_model.pkl')
+
+
+def load_feedback_from_db():
+    """从PostgreSQL加载真实反馈数据"""
+    import psycopg2
+    conn = psycopg2.connect(
+        host='localhost', port=5432, database='tangmao',
+        user='postgres', password=os.environ['PG_PASSWORD']
+    )
+    cur = conn.cursor()
+    # 获取有user_preferences的反馈，同时关联菜品数据
+    cur.execute('''
+        SELECT f.dish_id, f.rating, f.user_preferences, f.created_at,
+               d.spiciness, d.saltiness, d.sweetness, d.price, d.rating as dish_rating, d.tags
+        FROM feedback f
+        JOIN dishes d ON f.dish_id = d.id
+        WHERE f.user_preferences IS NOT NULL
+          AND f.user_preferences != '{}'::jsonb
+        ORDER BY f.created_at DESC
+    ''')
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def parse_tags(tags):
+    if tags is None: return []
+    if isinstance(tags, list): return tags
+    if isinstance(tags, str):
+        try:
+            import ast
+            return ast.literal_eval(tags) if isinstance(ast.literal_eval(tags), list) else []
+        except:
+            return [t.strip() for t in tags.split(',') if t.strip()]
+    return []
+
+
+def encode_feedback(fb_row):
+    """将一条反馈数据编码为9维特征 + 目标值"""
+    dish_id, rating, user_prefs, created_at, spiciness, saltiness, sweetness, price, dish_rating, tags = fb_row
+    tags_list = parse_tags(tags)
+    is_sig = 1.0 if '招牌' in tags_list else 0.0
+    price_val = float(price) if price and float(price) > 0 else 20.0
+    dish_rating_val = float(dish_rating) if dish_rating and float(dish_rating) > 0 else 4.0
+
+    # 解析user_preferences JSON
+    if isinstance(user_prefs, str):
+        import json as j
+        prefs = j.loads(user_prefs)
+    else:
+        prefs = user_prefs
+
+    X = np.zeros(9)
+    X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
+    X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
+    X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
+    X[3] = price_val / 100
+    X[4] = is_sig
+    X[5] = dish_rating_val / 5
+
+    # 用户偏好（从user_preferences中提取）
+    user_spice = prefs.get('spiciness') or prefs.get('辣度', '无')
+    user_salty = prefs.get('saltiness') or prefs.get('咸淡', '无')
+    user_sweet = prefs.get('sweetness') or prefs.get('甜酸', '无')
+    X[6] = ORD_MAPPINGS['辣度'].get(user_spice, 1)
+    X[7] = ORD_MAPPINGS['咸淡'].get(user_salty, 1)
+    X[8] = ORD_MAPPINGS['甜酸'].get(user_sweet, 1)
+
+    # 目标值：评分映射到0.1~1.0
+    y = max(0.1, min(1.0, float(rating) / 5))
+    return X, y
+
+
+def main():
+    print('加载现有模型...', file=sys.stderr)
+    try:
+        with open(MODEL_PATH, 'rb') as f:
+            model_data = pickle.load(f)
+        model = model_data['model']
+        print(f'  现有模型: {model.n_estimators}棵树, {model.n_features_in_}维', file=sys.stderr)
+    except FileNotFoundError:
+        print('  未找到现有模型，创建新模型', file=sys.stderr)
+        model = RandomForestRegressor(n_estimators=200, max_depth=12, random_state=42)
+        model_data = {'model': model, 'ohe': None, 'le_dict': {}, 'scaler': None}
+
+    # 加载真实反馈
+    print('加载真实反馈数据...', file=sys.stderr)
+    feedbacks = load_feedback_from_db()
+    print(f'  找到 {len(feedbacks)} 条有偏好的反馈', file=sys.stderr)
+
+    if len(feedbacks) == 0:
+        print('没有可用的反馈数据，退出', file=sys.stderr)
+        return
+
+    # 编码反馈数据
+    X_fb, y_fb = [], []
+    for fb in feedbacks:
+        try:
+            X, y = encode_feedback(fb)
+            X_fb.append(X)
+            y_fb.append(y)
+        except Exception as e:
+            print(f'  编码失败: {e}', file=sys.stderr)
+
+    X_fb = np.array(X_fb)
+    y_fb = np.array(y_fb)
+    print(f'  编码 {len(X_fb)} 条有效反馈', file=sys.stderr)
+
+    # 用真实反馈数据微调模型
+    # 方法：用现有模型预测作为基础，结合真实反馈做增量训练
+    if hasattr(model, 'predict'):
+        y_pred_base = model.predict(X_fb)
+        errors = np.abs(y_fb - y_pred_base)
+        print(f'  当前模型在反馈数据上的平均误差: {np.mean(errors):.4f}', file=sys.stderr)
+
+    # 合并训练：生成合成数据 + 真实反馈数据
+    from train_restaurant_model import generate_training_data, load_dishes_from_db, USER_PROFILES
+
+    dishes = load_dishes_from_db()
+    X_syn, y_syn = generate_training_data(dishes, USER_PROFILES, samples_per_dish=4)
+
+    # 将真实反馈数据附加到合成数据中（权重可以调整）
+    repeat_factor = max(1, len(X_syn) // (len(X_fb) * 10))  # 真实反馈权重为合成数据的10%
+    X_fb_weighted = np.repeat(X_fb, repeat_factor, axis=0)
+    y_fb_weighted = np.repeat(y_fb, repeat_factor, axis=0)
+
+    X_combined = np.vstack([X_syn, X_fb_weighted])
+    y_combined = np.concatenate([y_syn, y_fb_weighted])
+
+    print(f'\n合并训练数据: {len(X_combined)} 条', file=sys.stderr)
+    print(f'  合成数据: {len(X_syn)} 条', file=sys.stderr)
+    print(f'  真实反馈(加权): {len(X_fb_weighted)} 条 (原始{len(X_fb)}条×{repeat_factor}倍)', file=sys.stderr)
+
+    # 重新训练
+    model.fit(X_combined, y_combined)
+
+    # 评估
+    y_pred = model.predict(X_fb)
+    r2 = 1 - np.sum((y_fb - y_pred)**2) / np.sum((y_fb - y_fb.mean())**2)
+    mse = np.mean((y_fb - y_pred)**2)
+    print(f'\n微调后在反馈数据上的表现:', file=sys.stderr)
+    print(f'  R²: {r2:.4f}, MSE: {mse:.6f}', file=sys.stderr)
+
+    # 更新模型数据
+    model_data['model'] = model
+    model_data['metrics'] = {
+        'r2': float(r2), 'mse': float(mse),
+        'rmse': float(np.sqrt(mse)),
+        'mae': float(np.mean(np.abs(y_fb - y_pred))),
+        'real_feedback_count': len(feedbacks),
+        'training_samples': len(X_combined),
+        'feature_count': 9,
+        'feature_names': FEATURE_NAMES,
+    }
+
+    with open(MODEL_PATH, 'wb') as f:
+        pickle.dump(model_data, f)
+    print(f'\n模型已更新: {MODEL_PATH}', file=sys.stderr)
+    print(f'  真实反馈数: {len(feedbacks)}', file=sys.stderr)
+
+    # 输出特征重要性
+    imp = model.feature_importances_
+    importance = [{'feature': FEATURE_NAMES[i], 'importance': round(float(imp[i]), 4)}
+                  for i in range(len(FEATURE_NAMES))]
+    importance.sort(key=lambda x: -x['importance'])
+    print(json.dumps({'success': True, 'importance': importance}, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tangmao-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tangmao
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "${PG_PASSWORD:?PG_PASSWORD is required}"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: tangmao-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DATABASE: tangmao
+      PG_USER: postgres
+      PG_PASSWORD: "${PG_PASSWORD:?PG_PASSWORD is required}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      JWT_EXPIRES_IN: 7d
+      ADMIN_USER: admin
+      ADMIN_PASS: "${ADMIN_PASS:?ADMIN_PASS is required}"
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 1000
+    volumes:
+      - ./logs:/app/logs
+      - ./model_backups:/app/model_backups
+      - ./backups:/app/backups
+
+volumes:
+  pgdata:

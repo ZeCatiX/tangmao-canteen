@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "node",
+      "args": ["node_modules/@modelcontextprotocol/server-filesystem/dist/index.js", "C:\\Users\\Lenovo\\Desktop\\食堂网页"],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "command": "node",
+      "args": ["node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"],
+      "env": {}
+    },
+    "memory": {
+      "command": "node",
+      "args": ["node_modules/@modelcontextprotocol/server-memory/dist/index.js"],
+      "env": {}
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp"],
+      "env": {}
+    }
+  }
+}

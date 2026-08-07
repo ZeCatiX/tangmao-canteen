@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>唐猫庭院 - 厨房看板</title>
+  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { background: #1a0f0a; font-family: 'Noto Sans SC', sans-serif; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; color: #c9a96e; margin-bottom: 20px; }
+    .header h2 { font-family: 'Noto Serif SC', serif; letter-spacing: 4px; margin: 0; }
+    .header span { color: #8b7a6a; font-size: 0.9rem; }
+    .order-card { background: #2c1810; border: 1px solid rgba(201,169,110,0.15); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .order-card .table-num { font-size: 1.3rem; font-weight: 700; color: #c9a96e; }
+    .order-card .time { font-size: 0.78rem; color: #8b7a6a; }
+    .order-card .items { margin: 8px 0; }
+    .order-card .item { display: flex; justify-content: space-between; color: #e8d5b0; font-size: 0.9rem; padding: 4px 0; }
+    .order-card .status { font-size: 0.78rem; color: #f1c40f; }
+    .btn-complete { background: #27ae60; color: #fff; border: none; border-radius: 8px; padding: 6px 20px; font-size: 0.85rem; cursor: pointer; }
+    .btn-complete:hover { background: #219a52; }
+    .empty { text-align: center; color: #8b7a6a; padding: 60px 0; font-size: 1rem; }
+    .refresh-bar { text-align: center; color: #8b7a6a; font-size: 0.78rem; margin-top: 20px; }
+    /* 登录覆盖层 */
+    .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26,15,10,0.95); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .login-box { background: #2c1810; border: 1px solid rgba(201,169,110,0.3); border-radius: 12px; padding: 30px; width: 320px; }
+    .login-box h3 { color: #c9a96e; text-align: center; margin-bottom: 20px; font-family: 'Noto Serif SC', serif; }
+    .login-box input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(201,169,110,0.3); border-radius: 6px; background: #1a0f0a; color: #e8d5b0; font-size: 0.9rem; }
+    .login-box input:focus { outline: none; border-color: #c9a96e; }
+    .login-box button { width: 100%; padding: 10px; background: #c9a96e; color: #1a0f0a; border: none; border-radius: 6px; font-size: 0.95rem; cursor: pointer; font-weight: 600; }
+    .login-box button:hover { background: #d4b87a; }
+    .login-box .error { color: #e74c3c; font-size: 0.8rem; text-align: center; margin-top: 8px; display: none; }
+    .login-box .hint { color: #8b7a6a; font-size: 0.75rem; text-align: center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <!-- 登录覆盖层 -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+      <h3>🏮 厨房看板登录</h3>
+      <input type="text" id="login-user" placeholder="管理员账号" autocomplete="username">
+      <input type="password" id="login-pass" placeholder="管理员密码" autocomplete="current-password">
+      <button id="login-btn">登录</button>
+      <div class="error" id="login-error">账号或密码错误</div>
+      <div class="hint">请使用管理后台账号登录</div>
+    </div>
+  </div>
+
+  <div class="header">
+    <h2>🏮 唐猫庭院 · 厨房看板</h2>
+    <span id="current-time"></span>
+  </div>
+  <div id="order-list"><div class="empty">⏳ 请先登录...</div></div>
+  <div class="refresh-bar">每 10 秒自动刷新</div>
+
+  <script>
+    function esc(str) {
+      if (typeof str !== 'string') return str;
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function getToken() {
+      return localStorage.getItem('kitchenToken') || '';
+    }
+
+    function getAuthHeaders() {
+      const token = getToken();
+      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    }
+
+    // 登录逻辑
+    function doLogin() {
+      const user = document.getElementById('login-user').value.trim();
+      const pass = document.getElementById('login-pass').value.trim();
+      const errEl = document.getElementById('login-error');
+      if (!user || !pass) { errEl.textContent = '请输入账号和密码'; errEl.style.display = 'block'; return; }
+      fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass })
+      }).then(r => r.json()).then(d => {
+        if (d.success && d.token) {
+          localStorage.setItem('kitchenToken', d.token);
+          document.getElementById('login-overlay').style.display = 'none';
+          loadOrders();
+        } else {
+          errEl.textContent = '账号或密码错误';
+          errEl.style.display = 'block';
+        }
+      }).catch(() => {
+        errEl.textContent = '登录失败，请检查网络';
+        errEl.style.display = 'block';
+      });
+    }
+
+    document.getElementById('login-btn').addEventListener('click', doLogin);
+    document.getElementById('login-pass').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    function loadOrders() {
+      const token = getToken();
+      if (!token) return;
+      fetch('/api/orders?status=pending,confirmed', { headers: getAuthHeaders() })
+        .then(r => { if (r.status === 401) { localStorage.removeItem('kitchenToken'); location.reload(); return null; } return r.json(); })
+        .then(d => {
+          if (!d) return;
+          if (!d.success) return;
+          const container = document.getElementById('order-list');
+          if (!d.orders || d.orders.length === 0) {
+            container.innerHTML = '<div class="empty">📋 暂无待处理订单</div>';
+            return;
+          }
+          container.innerHTML = d.orders.map(o => {
+            const items = (o.items || []).map(i =>
+              '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + (parseInt(i.quantity) || 1) + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>'
+            ).join('');
+            const time = o.created_at ? new Date(o.created_at).toLocaleTimeString() : '';
+            return '<div class="order-card" data-id="' + o.id + '">'
+              + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+              + '<span class="table-num">' + esc(o.table_number ? '桌号 ' + o.table_number : '外卖') + '</span>'
+              + '<span class="time">' + time + '</span>'
+              + '</div>'
+              + '<div class="items">' + items + '</div>'
+              + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+              + '<span class="status">' + (o.status === 'confirmed' ? '✅ 已确认' : '📌 待处理') + '</span>'
+              + '<button class="btn-complete" onclick="completeOrder(' + o.id + ')">完成</button>'
+              + '</div>'
+              + '</div>';
+          }).join('');
+        }).catch(() => {});
+    }
+
+    function completeOrder(id) {
+      if (!confirm('确定此订单已完成？此操作不可撤销。')) return;
+      const token = getToken();
+      if (!token) return;
+      fetch('/api/orders/' + id + '/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ status: 'completed' })
+      }).then(r => r.json()).then(d => {
+        if (d.success) loadOrders();
+      }).catch(() => {});
+    }
+
+    function updateTime() {
+      document.getElementById('current-time').textContent = new Date().toLocaleString();
+    }
+
+    // 初始化：检查是否已有 token
+    if (getToken()) {
+      document.getElementById('login-overlay').style.display = 'none';
+    }
+
+    updateTime();
+    setInterval(loadOrders, 10000);
+    setInterval(updateTime, 1000);
+  </script>
+</body>
+</html>
