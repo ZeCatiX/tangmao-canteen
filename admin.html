@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>唐猫庭院 - 管理后台</title>
   <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
-  <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     :root { --primary: #b83a2a; --primary-dark: #8b1a1a; --gold: #c9a96e; --gold-light: #e8d5b0; --cream: #faf6f0; --brown: #1a0f0a; --text-light: #8b7a6a; }
@@ -31,7 +30,7 @@
     .mobile-topbar .nav-links { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
     .mobile-topbar .nav-links a { color: rgba(255,255,255,0.7); font-size: 0.8rem; padding: 0.3rem 0.7rem; letter-spacing: 1px; text-decoration: none; border-radius: 4px; }
     .mobile-topbar .nav-links a:hover { background: rgba(255,255,255,0.1); color: var(--gold); }
-    @media (max-width: 768px) { .sidebar { display: none; } .mobile-topbar { display: block; } .main-content { margin-left: 0; padding: 1rem; } }
+    @media (max-width: 768px) { .mobile-topbar { display: block; } .main-content { margin-left: 0; padding: 1rem; } }
     .stat-card { background: #fff; border-radius: 12px; border: 1px solid rgba(201,169,110,0.1); padding: 1.2rem 0.8rem; text-align: center; transition: all 0.3s; }
     .stat-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.05); transform: translateY(-3px); }
     .stat-card .icon { font-size: 1.5rem; margin-bottom: 4px; }
@@ -1255,6 +1254,8 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   setTimeout(loadNotifications, 500);
   
 </script>
+<script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
+<script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 

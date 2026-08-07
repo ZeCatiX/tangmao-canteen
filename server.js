@@ -286,6 +286,9 @@ function adminAuth(req, res, next) {
   }
   try {
     const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, error: '无管理权限' });
+    }
     req.admin = decoded;
     next();
   } catch (err) {

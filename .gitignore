@@ -1,5 +1,5 @@
 # 环境配置
-.env
+.env*
 .env.local
 
 # 日志
@@ -28,6 +28,9 @@ node_modules/
 # 构建产物
 dist/
 
+# 上传文件
+uploads/
+
 # 机器学习模型和 OCR 数据文件
 *.pkl
 *.traineddata
@@ -42,3 +45,11 @@ ngrok.exe
 
 # 临时修复脚本
 .fix_*.js
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# AI 工具配置
+.retired/
+.ai/
