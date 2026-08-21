@@ -851,6 +851,29 @@ html.dark-mode img[style*="background:#fff"] { background: #1a1a1a !important; }
 html.dark-mode [style*="background-color:#c0392b"] { background: linear-gradient(135deg, #8b1a1a, #5a1010) !important; }
 html.dark-mode [style*="background:linear-gradient(135deg,#c0392b"] { background: linear-gradient(135deg, #8b1a1a, #5a1010) !important; }
 html.dark-mode [style*="background:linear-gradient(135deg,#b83a2a"] { background: linear-gradient(135deg, #7a2a1a, #4a1010) !important; }
+/* 深色模式：覆盖内联 color（修复暗字暗底不可见，约25处） */
+html.dark-mode [style*="color:#2c1810"],
+html.dark-mode [style*="color: #2c1810"] { color: var(--text) !important; }
+html.dark-mode [style*="color:#1a0f0a"],
+html.dark-mode [style*="color: #1a0f0a"] { color: var(--text) !important; }
+html.dark-mode [style*="color:#4a3028"],
+html.dark-mode [style*="color: #4a3028"] { color: var(--gold-light) !important; }
+html.dark-mode [style*="color:#8b7a6a"],
+html.dark-mode [style*="color: #8b7a6a"] { color: var(--text-light) !important; }
+html.dark-mode [style*="color:#b83a2a"],
+html.dark-mode [style*="color: #b83a2a"] { color: var(--gold) !important; }
+html.dark-mode [style*="color:#c0392b"],
+html.dark-mode [style*="color: #c0392b"] { color: var(--gold) !important; }
+/* 深色模式：浅色背景块覆盖（属性选择器此前仅匹配#fff，漏#fdf6f0等） */
+html.dark-mode [style*="background:#fdf6f0"],
+html.dark-mode [style*="background: #fdf6f0"] { background: #1a1a1a !important; }
+html.dark-mode [style*="background:linear-gradient(135deg,#fdf6f0"] { background: linear-gradient(135deg, #1a1a1a, #221510) !important; }
+html.dark-mode [style*="background:#e8d5b0"],
+html.dark-mode [style*="background: #e8d5b0"] { background: linear-gradient(135deg, #3d2e1a, #2a1f10) !important; }
+/* 深色模式：边框覆盖 */
+html.dark-mode [style*="border-bottom:2px solid #e8d5b0"] { border-bottom-color: var(--gold-dark) !important; }
+html.dark-mode [style*="border:1px solid #ddd"],
+html.dark-mode [style*="border: 1px solid #ddd"] { border-color: #2a2a2a !important; }
 html.dark-mode body { background-color: #0f0f0f !important; }
 .logo-bg { background: #fff; }
 
