@@ -3,13 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#b83a2a">
+  <meta name="description" content="唐猫庭院管理后台 - 菜品管理、数据统计、用户管理、订单管理">
+  <link rel="manifest" href="/manifest.json">
   <title>唐猫庭院 - 管理后台</title>
   <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-sans-sc/400.css">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-sans-sc/500.css">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-sans-sc/700.css">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-serif-sc/400.css">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-serif-sc/600.css">
+  <link rel="stylesheet" href="node_modules/@fontsource/noto-serif-sc/700.css">
   <style>
     * { box-sizing: border-box; }
-    :root { --primary: #b83a2a; --primary-dark: #8b1a1a; --gold: #c9a96e; --gold-light: #e8d5b0; --cream: #faf6f0; --brown: #1a0f0a; --text-light: #8b7a6a; }
+    .admin-login-box { background: #fff; }
+    :root { --primary: #b83a2a; --primary-dark: #8b1a1a; --primary-light: #cf5240; --gold: #c9a96e; --gold-light: #e8d5b0; --gold-dark: #a8884e; --green: #2d8a6e; --cream: #faf6f0; --cream-dark: #f0e8d8; --brown: #1a0f0a; --brown-light: #4a3028; --text: #2c1810; --text-light: #756558; --radius: 12px; --radius-lg: 18px; --ease: cubic-bezier(0.4, 0, 0.2, 1); }
     html, body { height: 100%; margin: 0; overflow-x: hidden; font-family: 'Noto Sans SC', -apple-system, sans-serif; background: var(--cream); color: var(--brown); }
     .app-wrap { min-height: 100vh; }
     .sidebar { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: linear-gradient(180deg, #1a0f0a 0%, #2c1810 100%); display: flex; flex-direction: column; z-index: 100; }
@@ -75,13 +84,47 @@
     .pref-row .fill { height: 100%; border-radius: 4px; transition: width 0.6s; background: linear-gradient(90deg, #c9a96e, #b83a2a); }
     .pref-row .count { width: 30px; font-size: 0.82rem; color: #2c1810; font-weight: 600; text-align: right; }
     .pref-row .pct { width: 40px; font-size: 0.78rem; color: #8b7a6a; text-align: right; }
+    /* 暗黑模式覆盖（管理后台专用组件） */
+    html.dark-mode { --cream: #1a1a1a; --cream-dark: #1a1a1a; --text: #e0d5c1; --text-light: #a89880; --brown: #e0d5c1; --brown-light: #c4b698; --gold: #c9a96e; --gold-light: #d4b87a; --primary: #d0453a; --primary-dark: #b8352a; }
+    html.dark-mode body { background: #0f0f0f; color: var(--brown); }
+    html.dark-mode .stat-card { background: #1a1a1a; border-color: #2a2a2a; }
+    html.dark-mode .main-content { background: #0f0f0f; }
+    html.dark-mode .card { background: #1a1a1a !important; border-color: #2a2a2a; }
+    html.dark-mode .card-body { background: #1a1a1a !important; }
+    html.dark-mode .table thead th { background: #1a1a1a; color: #e0d5c1; border-color: #2a2a2a; }
+    html.dark-mode .table { color: #e0d5c1; }
+    html.dark-mode .table td { color: #e0d5c1; }
+    html.dark-mode .admin-login-box { background: #1a1a1a; }
+    html.dark-mode .pref-row .fill { background: linear-gradient(90deg, #c9a96e, #c0392b); }
+    html.dark-mode .pref-row .count { color: #e0d5c1; }
+    html.dark-mode .pref-row .pct { color: #a89880; }
+    html.dark-mode .dropdown-menu { background-color: #1a1a1a; border-color: #2a2a2a; }
+    html.dark-mode .dropdown-item { color: #e0d5c1; }
+    html.dark-mode .dropdown-item:hover { background-color: #2a2a2a; }
+    html.dark-mode .topbar-link, html.dark-mode .mobile-topbar { background: #0a0a0a; }
+    /* 深色模式：覆盖内联硬编码颜色（admin 内联统一，与 styles.css 方向1一致） */
+    html.dark-mode [style*="color:#2c1810"], html.dark-mode [style*="color: #2c1810"] { color: var(--text) !important; }
+    html.dark-mode [style*="color:#4a3028"], html.dark-mode [style*="color: #4a3028"] { color: var(--gold-light) !important; }
+    html.dark-mode [style*="color:#8b7a6a"], html.dark-mode [style*="color: #8b7a6a"] { color: var(--text-light) !important; }
+    html.dark-mode [style*="color:#b83a2a"], html.dark-mode [style*="color: #b83a2a"] { color: var(--gold) !important; }
+    html.dark-mode [style*="color:#c0392b"], html.dark-mode [style*="color: #c0392b"] { color: var(--gold) !important; }
+    html.dark-mode [style*="background:#fff"], html.dark-mode [style*="background: #fff"] { background: #1a1a1a !important; }
+    html.dark-mode [style*="background-color:#fff"], html.dark-mode [style*="background-color: #fff"] { background-color: #1a1a1a !important; }
+    html.dark-mode [style*="background:#fdfaf5"], html.dark-mode [style*="background: #fdfaf5"] { background: #1a1a1a !important; }
+    html.dark-mode [style*="background-color:#fdfaf5"], html.dark-mode [style*="background-color: #fdfaf5"] { background-color: #1a1a1a !important; }
+    html.dark-mode [style*="border:1.5px solid #e4dbcf"], html.dark-mode [style*="border: 1.5px solid #e4dbcf"] { border-color: #2a2a2a !important; }
+    html.dark-mode [style*="border:1px solid #ddd"], html.dark-mode [style*="border: 1px solid #ddd"] { border-color: #2a2a2a !important; }
+    @media (max-width: 767px) { #dark-mode-toggle-mobile { display: inline-flex !important; } }
   </style>
 </head>
 <body>
 <div class="mobile-topbar">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <h5>唐猫庭院</h5>
-    <small style="color:rgba(255,255,255,0.5);font-size:0.7rem;letter-spacing:1px;">管理后台</small>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <small style="color:rgba(255,255,255,0.5);font-size:0.7rem;letter-spacing:1px;">管理后台</small>
+      <button class="btn btn-sm" id="dark-mode-toggle-mobile" style="border-radius:50%;width:28px;height:28px;padding:0;background:transparent;border:1px solid rgba(201,169,110,0.3);color:#c9a96e;font-size:0.75rem;cursor:pointer;display:none;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
+    </div>
   </div>
   <div class="nav-links">
     <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i> 控制面板</a>
@@ -93,13 +136,13 @@
     <a href="#" data-page="model"><i class="bi bi-cpu"></i> 模型管理</a>
     <a href="#" data-page="apidocs"><i class="bi bi-book"></i> API</a>
     <a href="/"><i class="bi bi-arrow-left"></i> 返回首页</a>
+    <a href="#" id="admin-logout-link-mobile" style="color:#c0392b;"><i class="bi bi-box-arrow-right"></i> 退出登录</a>
   </div>
-      
-      </div>
+</div>
 
 
 <div id="admin-login-page" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
-  <div style="background:#fff;border-radius:16px;padding:2.5rem;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.08);text-align:center;">
+  <div class="admin-login-box" style="border-radius:16px;padding:2.5rem;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.08);text-align:center;">
     <h3 style="font-family:'Noto Serif SC',serif;color:#2c1810;margin-bottom:4px;">唐猫庭院</h3>
     <p style="color:#8b7a6a;font-size:0.85rem;margin-bottom:24px;">管理后台登录</p>
     <div style="text-align:left;margin-bottom:16px;">
@@ -133,10 +176,13 @@
     </nav>
     <div class="sidebar-footer">
       <a href="/"><i class="bi bi-arrow-left"></i>返回首页</a>
+      <a href="#" id="admin-logout-link" style="color:#c0392b;"><i class="bi bi-box-arrow-right"></i>退出登录</a>
+      <button class="btn btn-sm ms-2" id="dark-mode-toggle" style="border-radius:50%;width:30px;height:30px;padding:0;background:transparent;border:1px solid rgba(201,169,110,0.3);color:var(--gold);font-size:0.8rem;cursor:pointer;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
     </div>
   </div>
 
   <div class="main-content">
+<div id="admin-toast-container" style="position:fixed;top:20px;right:20px;z-index:9999;"></div>
 <div id="notification-bar" style="display:none;margin-bottom:12px;"></div>
 
     <div class="page active" id="page-dashboard">
@@ -273,9 +319,9 @@
 <!-- 数据分析页 -->
 <div class="page" id="page-analytics">
   <div class="page-title"><span>数据分析</span></div><div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;">
-  <button class="btn btn-sm" onclick="exportCSV('popular-dishes')" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">导出热门菜品</button>
-  <button class="btn btn-sm" onclick="exportCSV('feedback')" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">导出反馈数据</button>
-  <button class="btn btn-sm" onclick="exportCSV('orders')" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">导出订单数据</button>
+  <button class="btn btn-sm btn-export" onclick="exportCSV('popular-dishes')">导出热门菜品</button>
+  <button class="btn btn-sm btn-export" onclick="exportCSV('feedback')">导出反馈数据</button>
+  <button class="btn btn-sm btn-export" onclick="exportCSV('orders')">导出订单数据</button>
 </div>
   <div class="row g-3 mb-3">
     <div class="col-12">
@@ -532,9 +578,9 @@
       <div class="modal-header"><h5 class="modal-title" id="dishModalTitle">添加菜品</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <input type="hidden" id="edit-dish-id">
-        <div class="mb-2"><label class="form-label" for="dish-name">菜品名称</label><input class="form-control" id="dish-name" placeholder="请输入菜品名称"></div><div class="mb-2"><label class="form-label" for="dish-description">菜品描述</label><textarea class="form-control" id="dish-description" rows="2" placeholder="请输入菜品描述，如特色、口味等..." style="font-size:0.88rem;border-radius:8px;border:1.5px solid #e4dbcf;"></textarea></div>
+        <div class="mb-2"><label class="form-label" for="dish-name">菜品名称</label><input class="form-control" id="dish-name" placeholder="请输入菜品名称" maxlength="100"></div><div class="mb-2"><label class="form-label" for="dish-description">菜品描述</label><textarea class="form-control" id="dish-description" rows="2" placeholder="请输入菜品描述，如特色、口味等..." maxlength="500" style="font-size:0.88rem;border-radius:8px;border:1.5px solid #e4dbcf;"></textarea></div>
         <div class="row g-2 mb-2">
-          <div class="col-6"><label class="form-label" for="dish-category">分类</label><select class="form-select" id="dish-category"><option>热菜</option><option>凉菜凉拌</option><option>汤粥糖水</option><option>主食小吃</option><option>甜品饮品</option><option>海鲜水产</option><option>清爽素食</option></select></div>
+          <div class="col-6"><label class="form-label" for="dish-category">分类</label><select class="form-select" id="dish-category"><option>招牌</option><option>热销菜品</option><option>传承陕菜</option><option>江湖海鲜</option><option>热菜</option><option>特色凉菜</option><option>田园时蔬</option><option>陕西小吃</option><option>凉菜凉拌</option><option>汤粥糖水</option><option>主食小吃</option><option>甜品饮品</option><option>海鲜水产</option><option>清爽素食</option></select></div>
           <div class="col-6"><label class="form-label" for="dish-spiciness">辣度</label><select class="form-select" id="dish-spiciness"><option>不辣</option><option selected>微辣</option><option>中辣</option><option>特辣</option></select></div>
         </div>
         <div class="row g-2 mb-2">
@@ -563,7 +609,7 @@
           </div>
         </div>
         <div class="mb-2"><label class="form-label" for="dish-tags">标签（逗号分隔）</label><input class="form-control" id="dish-tags" placeholder="招牌, 微辣"></div>
-        <div class="mb-2"><div class="mb-2"><label class="form-label">菜品图片</label><div style="display:flex;align-items:center;gap:8px;"><input type="file" id="dish-image-file" accept="image/*" style="font-size:0.82rem;"><button type="button" class="btn btn-sm" id="dish-image-upload" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">上传</button></div><img id="dish-image-preview" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;display:none;object-fit:cover;"></div>
+        <div class="mb-2"><div class="mb-2"><label class="form-label">菜品图片</label><div style="display:flex;align-items:center;gap:8px;"><input type="file" id="dish-image-file" accept="image/*" style="font-size:0.82rem;"><button type="button" class="btn btn-sm" id="dish-image-upload" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">上传</button></div><img id="dish-image-preview" alt="菜品预览" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;display:none;object-fit:cover;"></div>
         <label class="form-label"><input type="checkbox" id="dish-active" checked style="margin-right:6px;cursor:pointer;">上架</label></div>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:space-between;">
@@ -604,11 +650,11 @@ function loadStats() {
     if (!d.success) return;
     const s = d.stats;
     document.getElementById('stat-cards').innerHTML = [
-      { icon: '??', val: s.todayRecommendations, label: '今日推荐', color: '#b83a2a' },
-      { icon: '??', val: s.todayGuest, label: '游客推荐', color: '#8b7a6a' },
-      { icon: '??', val: s.todayUser, label: '用户推荐', color: '#2d8a6e' },
-      { icon: '?', val: s.totalFeedback, label: '总反馈', color: '#c9a96e' },
-      { icon: '??', val: s.totalDishes, label: '总菜品', color: '#b83a2a' },
+      { icon: '📈', val: s.todayRecommendations, label: '今日推荐', color: '#b83a2a' },
+      { icon: '👥', val: s.todayGuest, label: '游客推荐', color: '#8b7a6a' },
+      { icon: '👤', val: s.todayUser, label: '用户推荐', color: '#2d8a6e' },
+      { icon: '💬', val: s.totalFeedback, label: '总反馈', color: '#c9a96e' },
+      { icon: '🍽️', val: s.totalDishes, label: '总菜品', color: '#b83a2a' },
     ].map(c => `<div class="col-6 col-md"><div class="stat-card"><div class="icon">${c.icon}</div><div class="value" style="color:${c.color}">${c.val}</div><div class="label">${c.label}</div></div></div>`).join('');
   }).catch(() => { console.warn('数据加载失败'); });
 }
@@ -884,7 +930,7 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
   const btn = this;
   const status = document.getElementById('retrain-status');
   btn.disabled = true;
-  status.textContent = '训练完成';
+  status.textContent = '训练中...';
   fetch('/api/admin/retrain', { method: 'POST' })
     .then(r => r.json()).then(d => {
       if (d.success) {
@@ -892,9 +938,9 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
         loadModelManagement();
         loadModelInfo();
       } else {
-        status.textContent = '训练完成' + (d.message || '');
+        status.textContent = '训练失败，请重试';
       }
-    }).catch(() => { status.textContent = '训练完成'; })
+    }).catch(() => { status.textContent = '训练失败，网络错误'; })
     .finally(() => { btn.disabled = false; });
 });
 
@@ -937,7 +983,7 @@ function loadDishes() {
   fetch('/api/dishes').then(r => r.json()).then(d => {
     if (!d.success) return;
     document.querySelector('#dish-table-body').innerHTML = d.dishes.map(x =>
-      `<tr><td>${esc(x.id)}</td><td>${x.image_url?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}">`:""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${esc(x.price)}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span></td>
+      `<tr><td>${esc(x.id)}</td><td>${x.image_url?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span></td>
         <td><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
     ).join('');
   }).catch(() => { console.warn('数据加载失败'); });
@@ -980,20 +1026,32 @@ document.getElementById('dish-active').checked = dish.is_active !== false;
 // 修复 toggleDish 导致已下架菜品无法编辑的问题
 
 document.getElementById('add-dish-btn').addEventListener('click', () => {
+  const preview = document.getElementById('dish-image-preview');
+  const fileInput = document.getElementById('dish-image-file');
   document.getElementById('edit-dish-id').value = '';
   document.getElementById('dish-name').value = '';
   document.getElementById('dish-category').value = '热菜';
   document.getElementById('dish-spiciness').value = '微辣';
+  document.getElementById('dish-saltiness').value = '适中';
+  document.getElementById('dish-sweetness').value = '无味';
+  document.getElementById('dish-description').value = '';
   document.getElementById('dish-price').value = 0;
   document.getElementById('dish-rating').value = 4.0;
   document.getElementById('dish-tags').value = '';
+  document.getElementById('dish-active').checked = true;
+  document.getElementById('dish-halal').checked = false;
+  document.getElementById('dish-vegetarian').checked = false;
+  document.getElementById('dish-allergy-seafood').checked = false;
+  document.getElementById('dish-allergy-peanut').checked = false;
+  document.getElementById('dish-allergy-egg').checked = false;
+  document.getElementById('dish-allergy-gluten').checked = false;
+  document.getElementById('dish-allergy-soy').checked = false;
   document.getElementById('dishModalTitle').textContent = '添加菜品';
   document.getElementById('delete-dish-btn').style.display = 'none';
   document.getElementById('save-dish-btn').onclick = () => saveDish(null);
   // 重置图片上传状态
-  document.getElementById('dish-image-preview').style.display = 'none';
-  document.getElementById('dish-image-preview').src = '';
-  document.getElementById('dish-image-file').value = '';
+  if (preview) { preview.style.display = 'none'; preview.src = ''; }
+  if (fileInput) { fileInput.value = ''; }
   new bootstrap.Modal(document.getElementById('dishModal')).show();
 });
 
@@ -1049,7 +1107,7 @@ function saveDish(id) {
     sweetness: document.getElementById('dish-sweetness').value,
     price: priceNum,
     rating: ratingNum,
-    tags: document.getElementById('dish-tags').value,
+    tags: document.getElementById('dish-tags').value.split(',').map(t => t.trim()).filter(Boolean).join(','),
     is_active: document.getElementById('dish-active').checked,
     allergies: {seafood:document.getElementById('dish-allergy-seafood').checked,peanut:document.getElementById('dish-allergy-peanut').checked,egg:document.getElementById('dish-allergy-egg').checked,gluten:document.getElementById('dish-allergy-gluten').checked,soy:document.getElementById('dish-allergy-soy').checked},
     isHalal: document.getElementById('dish-halal').checked,
@@ -1063,7 +1121,8 @@ function saveDish(id) {
     .then(r => r.json()).then(d => {
       if (d.success) {
         var m=bootstrap.Modal.getInstance(document.getElementById('dishModal'));if(m)m.hide();
-        loadDishes(); loadStats();
+        // 保存菜品后等待服务器缓存刷新再重新加载列表
+        setTimeout(function() { loadDishes(); loadStats(); }, 800);
       } else { alert(d.error); }
     }).catch(() => { alert('网络错误，请重试'); });
 }
@@ -1078,13 +1137,17 @@ function deleteDish(id) {
     .then(r => r.json()).then(d => {
       if (d.success) {
         var m=bootstrap.Modal.getInstance(document.getElementById('dishModal'));if(m)m.hide();
-        loadDishes(); loadStats();
+        // 删除菜品后等待服务器缓存刷新再重新加载列表
+        setTimeout(function() { loadDishes(); loadStats(); }, 800);
       } else { alert(d.error); }
     }).catch(() => { alert('网络错误，请重试'); });
 }
 
 
 // 弹窗关闭前移走焦点，避免 aria-hidden 警告
+document.getElementById('dishModal').addEventListener('show.bs.modal', function() {
+  _lastTrigger = document.activeElement;
+});
 document.getElementById('dishModal').addEventListener('hide.bs.modal', function() {
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
   document.body.focus();
@@ -1123,11 +1186,44 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
       });
     };
     // 加载初始数据
-    loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor();
+    loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor(); loadNotifications();
   } else {
     showAdmin(false);
   }
-  
+
+  // 暗黑模式切换
+  var dmt = document.getElementById('dark-mode-toggle');
+  var dmtm = document.getElementById('dark-mode-toggle-mobile');
+  function toggleDark() {
+    document.documentElement.classList.toggle('dark-mode');
+    var isDark = document.documentElement.classList.contains('dark-mode');
+    if (dmt) dmt.textContent = isDark ? '☀️' : '🌙';
+    if (dmtm) dmtm.textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('darkMode', isDark);
+  }
+  (function initDark() {
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+    var savedDark = localStorage.getItem('darkMode');
+    var shouldBeDark = savedDark !== null ? savedDark === 'true' : prefersDark;
+    if (shouldBeDark) { document.documentElement.classList.add('dark-mode'); if (dmt) dmt.textContent = '☀️'; if (dmtm) dmtm.textContent = '☀️'; }
+    if (dmt) dmt.addEventListener('click', toggleDark);
+    if (dmtm) dmtm.addEventListener('click', toggleDark);
+  })();
+
+  // 显示Toast通知
+  function showToast(msg, type) {
+    var bar = document.getElementById('notification-bar');
+    if (!bar) return;
+    bar.style.display = 'block';
+    bar.textContent = msg;
+    bar.style.background = type === 'warning' ? '#f39c12' : type === 'error' ? '#e74c3c' : '#27ae60';
+    bar.style.color = '#fff';
+    bar.style.padding = '8px 12px';
+    bar.style.borderRadius = '6px';
+    bar.style.marginBottom = '12px';
+    setTimeout(function() { bar.style.display = 'none'; }, 3000);
+  }
+
   // 登录按钮
   const loginBtn = document.getElementById('admin-login-btn');
   if (loginBtn) {
@@ -1163,7 +1259,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
               return resp;
             });
           };
-          loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo();
+          loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor(); loadNotifications();
         } else {
           errEl.textContent = d.error || '登录失败';
           errEl.style.display = 'block';
@@ -1226,7 +1322,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
       .then(r => r.json()).then(d => {
         if (d.success) { loadUsers(); alert('用户已删除'); }
         else alert(d.error);
-      }).catch(() => alert('导出失败'));
+      }).catch(() => alert('删除失败，网络错误'));
   }
 
   // 管理员点击导航时加载对应页面数据
@@ -1256,6 +1352,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
 </script>
 <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
 <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
 </html>
 
