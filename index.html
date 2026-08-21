@@ -18,6 +18,16 @@
           var saved = localStorage.getItem('darkMode');
           var dark = saved !== null ? saved === 'true' : prefers;
           if (dark) document.documentElement.classList.add('dark-mode');
+          document.addEventListener('DOMContentLoaded', function(){
+            var btn = document.getElementById('dark-mode-toggle');
+            if(!btn) return;
+            btn.textContent = dark ? '☀️' : '🌙';
+            btn.addEventListener('click', function(){
+              var isDark = document.documentElement.classList.toggle('dark-mode');
+              localStorage.setItem('darkMode', isDark);
+              btn.textContent = isDark ? '☀️' : '🌙';
+            });
+          });
         } catch(e){}
       })();
     </script>
