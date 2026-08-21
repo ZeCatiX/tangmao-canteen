@@ -806,7 +806,7 @@ html.dark-mode {
   --text: #e0d5c1; --text-light: #a89880;
   --brown: #e0d5c1; --brown-light: #c4b698;
   --gold: #c9a96e; --gold-light: #d4b87a;
-  --primary: #c0392b; --primary-dark: #a33226;
+  --primary: #d0453a; --primary-dark: #b8352a;
 }
 html.dark-mode body {
   background-color: #0f0f0f;
