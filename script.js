@@ -357,10 +357,10 @@ function submitPreference(){
   const amap={'allergy-seafood':'海鲜','allergy-peanut':'花生','allergy-egg':'鸡蛋','allergy-soy':'大豆','allergy-gluten':'麸质'};
   Object.keys(amap).forEach(k=>{if($(k).checked)userProfile.allergies.push(amap[k]);});
  }
- if(currentUser!=='guest'){
+ if(currentUser&&currentUser!=='guest'){
   updateUserData(currentUser,{preferences:userProfile});
   localStorage.setItem('savedPrefs','true');
-  fetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
+  fetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).then(r=>{if(r.status===401){localStorage.removeItem('userToken');localStorage.removeItem('currentUser');currentUser=null;}}).catch(()=>{});
 }
  // 记录偏好选择
  fetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
