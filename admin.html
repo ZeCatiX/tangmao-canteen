@@ -1210,6 +1210,19 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     if (dmtm) dmtm.addEventListener('click', toggleDark);
   })();
 
+  // 退出登录
+  function adminLogout(){
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    showAdmin(false);
+    location.reload();
+  }
+  ['admin-logout-link','admin-logout-link-mobile'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.addEventListener('click',function(e){e.preventDefault();adminLogout();});
+  });
+  window.scrollToTop=()=>window.scrollTo({top:0,behavior:'smooth'});
+
   // 显示Toast通知
   function showToast(msg, type) {
     var bar = document.getElementById('notification-bar');

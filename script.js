@@ -746,6 +746,7 @@ function displayRecommendations(){
  fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
  if(!loading||!result)return;
+ const vcb=$('view-cached-btn');if(vcb)vcb.classList.remove('d-none');
  const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
  result.innerHTML='<div style="background-color:#fdf2e9;border:2px solid #f5cba7;border-radius:8px;padding:15px;margin-bottom:20px;text-align:center"><p style="margin:0;color:#c0392b"><strong>当前使用：</strong>'+currentRecommendationMode+' '+desc+'</p></div><div class="mb-4"><h4 class="text-danger">为您推荐</h4><div class="list-group" id="dish-list"></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
  const old=result._delegateHandler;if(old)result.removeEventListener('click',old);
@@ -774,6 +775,7 @@ function displayRecommendations(){
 // 页面初始化模块
 document.addEventListener('DOMContentLoaded',function(){
  if(_initialized)return;_initialized=true;
+ window.scrollToTop=()=>window.scrollTo({top:0,behavior:'smooth'});
  // 从localStorage恢复登录状态
  const savedUser=localStorage.getItem('currentUser');
  if(savedUser&&getUserData(savedUser))currentUser=savedUser;
@@ -818,6 +820,10 @@ document.addEventListener('DOMContentLoaded',function(){
  click('back-to-home-from-register',()=>showSection('home-section'));
  click('back-from-about',()=>showSection('home-section'));
  click('back-from-dataset',()=>showSection('home-section'));
+ click('nav-privacy',e=>{e.preventDefault();showSection('privacy-section');});
+ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
+ click('back-from-privacy',e=>{e.preventDefault();showSection('home-section');});
+ click('view-cached-btn',e=>{e.preventDefault();if(currentRecommendations&&currentRecommendations.length){showSection('preference-section');displayRecommendations();}else{showMessage('提示','暂无缓存推荐，请先完成点餐');}});
  submit('login-form',login);submit('register-form',register);
  const an=$('allergy-none'),ac=document.querySelectorAll('input[name="allergy"]');
  if(an){an.addEventListener('change',function(){ac.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)ac.forEach(cb=>cb.disabled=false);});ac.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){an.checked=false;an.disabled=false;}}));}
