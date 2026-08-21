@@ -53,3 +53,4 @@ __pycache__/
 # AI 工具配置
 .retired/
 .ai/
+.playwright-mcp/
