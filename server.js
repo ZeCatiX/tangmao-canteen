@@ -6,11 +6,11 @@ const helmet = require('helmet');
 const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
-const { spawn } = require('child_process');
 const userStorage = require('./user_storage');
 const { generateToken, authMiddleware, softAuth } = require('./auth');
 const multer = require('multer');
 const logger = require('./logger');
+const db = require('./db');
 
 // 带 BOM 剥离的 JSON 文件读取
 function readJSON(filePath) {
@@ -44,11 +44,33 @@ app.use(cors({
 
 // 安全 HTTP 头（helmet）
 app.use(helmet({
-  contentSecurityPolicy: false, // 允许内联样式和脚本
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  },
   crossOriginEmbedderPolicy: false
 }));
 
 // 请求限流
+
+// API 版本管理：/api/v1/* → /api/*（向后兼容）
+// 必须在限流中间件之前注册，否则 /api/v2/user/login 等请求会绕过登录限流
+app.use((req, res, next) => {
+  if (req.originalUrl.match(/^\/api\/v\d+\//)) {
+    req.url = req.originalUrl.replace(/^\/api\/v\d+/, '/api');
+  }
+  next();
+});
+
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
   max: parseInt(process.env.RATE_LIMIT_MAX || '1000'),
@@ -61,31 +83,37 @@ app.use('/api/', limiter);
 // 健康检查接口限流放宽（轻量请求，前端会频繁检查）
 const healthLimiter = rateLimit({
   windowMs: 60000,
-  max: 60,
+  max: parseInt(process.env.HEALTH_RATE_LIMIT_MAX || '600'),
   message: { success: false, error: '请求过于频繁，请稍后再试' },
 });
 app.use('/api/worker-health', healthLimiter);
 
-// 登录接口限流（防暴力破解）
+// 登录接口限流（防暴力破解，生产默认 30 次/分钟，测试可设环境变量 LOGIN_RATE_LIMIT_MAX）
+const LOGIN_RATE_LIMIT_RAW = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '30');
+const LOGIN_RATE_LIMIT_MAX = (Number.isFinite(LOGIN_RATE_LIMIT_RAW) && LOGIN_RATE_LIMIT_RAW >= 1) ? LOGIN_RATE_LIMIT_RAW : 30;
 const loginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
-  max: 30, // 最多30次/分钟
+  max: LOGIN_RATE_LIMIT_MAX,
   message: { success: false, error: '登录过于频繁，请稍后再试' },
 });
 app.use('/api/user/login', loginLimiter);
 
-// 注册接口限流
+// 注册接口限流（测试环境可通过环境变量放宽）
+const REGISTER_RATE_LIMIT_RAW = parseInt(process.env.REGISTER_RATE_LIMIT_MAX || '2000');
+const REGISTER_RATE_LIMIT_MAX = (Number.isFinite(REGISTER_RATE_LIMIT_RAW) && REGISTER_RATE_LIMIT_RAW >= 1) ? REGISTER_RATE_LIMIT_RAW : 2000;
 const registerLimiter = rateLimit({
   windowMs: 3600000, // 1小时
-  max: 200,
+  max: REGISTER_RATE_LIMIT_MAX,
   message: { success: false, error: '注册过于频繁，请1小时后再试' },
 });
 app.use('/api/user/register', registerLimiter);
 
-// 管理员登录限流（严格限制，防暴力破解）
+// 管理员登录限流（严格限制，防暴力破解，测试环境可通过环境变量放宽）
+const ADMIN_LOGIN_RATE_LIMIT_RAW = parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '30');
+const ADMIN_LOGIN_RATE_LIMIT_MAX = (Number.isFinite(ADMIN_LOGIN_RATE_LIMIT_RAW) && ADMIN_LOGIN_RATE_LIMIT_RAW >= 1) ? ADMIN_LOGIN_RATE_LIMIT_RAW : 30;
 const adminLoginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
-  max: 100,
+  max: ADMIN_LOGIN_RATE_LIMIT_MAX,
   message: { success: false, error: '登录过于频繁，请稍后再试' },
 });
 app.use('/api/admin/login', adminLoginLimiter);
@@ -151,9 +179,9 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
     const newName = `dish_${dishId}_${Date.now()}${ext}`;
     const newPath = path.join(__dirname, 'uploads', newName);
     // 清理旧图片文件
-    const pool = require('./db');
+    const pool = db;
     const oldDish = await pool.query('SELECT image_url FROM dishes WHERE id = $1', [dishId]);
-    if (oldDish.rows.length > 0 && oldDish.rows[0].image_url) {
+    if (oldDish.rows.length > 0 && oldDish.rows[0].image_url && oldDish.rows[0].image_url.startsWith('/uploads/')) {
       const oldImagePath = path.join(__dirname, oldDish.rows[0].image_url.replace(/^\//, ''));
       try { if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath); } catch(e) { /* 忽略旧文件清理错误 */ }
     }
@@ -165,18 +193,19 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
 });
 
 // 静态文件服务（只允许前端需要的文件类型，阻止敏感文件泄露）
-const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
-const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'decision_tree_model.json', 'recommendation_model.pkl', 'feature_importance.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', 'node_modules/', '.git/'];
+const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
+const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   const ext = path.extname(req.path).toLowerCase();
   const basename = path.basename(req.path).toLowerCase();
   // 规范化路径，防止路径遍历绕过
   const normalizedPath = path.normalize(req.path).replace(/\\/g, '/');
-  // 阻止敏感文件（精确匹配文件，或匹配目录前缀，或startsWith用于fix_前缀）
+  // 阻止敏感文件（精确匹配文件，或匹配目录前缀，或startsWith用于fix_前缀，或glob模式）
   if (BLOCKED_STATIC_PATHS.some(p => {
     if (p.endsWith('/')) return normalizedPath.startsWith('/' + p) || normalizedPath === '/' + p.slice(0, -1);
     if (p.endsWith('_')) return basename.startsWith(p);
+    if (p.startsWith('*.')) return basename.endsWith(p.slice(1));
     return basename === p;
   })) {
     return res.status(403).json({ success: false, error: '禁止访问' });
@@ -188,9 +217,17 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, { maxAge: '7d', setHeaders: (res, p) => {
+  // HTML 短缓存（10分钟）
+  if (p.endsWith('.html')) res.setHeader('Cache-Control', 'public, max-age=600');
+  // CSS/JS 短缓存+revalidate（1小时，ETag/304 仍省带宽，更新 1h 内生效）
+  if (p.endsWith('.css') || p.endsWith('.js')) res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+} }));
+// node_modules 中的前端库文件（在拦截中间件之后注册，敏感文件已被阻止）
+app.use('/node_modules', express.static(path.join(__dirname, 'node_modules'), { maxAge: '7d' }));
+
 // 上传的图片文件目录
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '7d' }));
 
 // ═══════════════════════════════════════════════
 // 菜品数据加载（从 PostgreSQL）
@@ -251,6 +288,25 @@ async function loadDishData() {
 // 服务器启动后异步加载菜品数据
 loadDishData();
 
+// 确保 token_blacklist 表存在（JWT 吊销需要），幂等执行
+async function ensureTokenBlacklistTable() {
+  try {
+    const pool = db;
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS token_blacklist (
+        jti VARCHAR(64) PRIMARY KEY,
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP NOT NULL
+      )`
+    );
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at)');
+    logger.info('token_blacklist 表已就绪');
+  } catch(e) {
+    logger.warn('token_blacklist 表创建失败（可能 DB 未就绪）: ' + (e?.message || String(e)));
+  }
+}
+ensureTokenBlacklistTable();
+
 // ═══════════════════════════════════════════════
 // 静态页面
 // ═══════════════════════════════════════════════
@@ -268,9 +324,30 @@ const ADMIN_PASS = process.env.ADMIN_PASS;
 
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    const token = generateToken({ id: 0, username: ADMIN_USER, role: 'admin' });
-    return res.json({ success: true, message: '管理员登录成功', token });
+  if (username === ADMIN_USER) {
+    // 优先使用 bcrypt 比对（恒定时间），bcrypt对非哈希返回false而非抛异常
+    const bcrypt = require('bcrypt');
+    const crypto = require('crypto');
+    let matched = false;
+    try {
+      matched = bcrypt.compareSync(password, ADMIN_PASS);
+    } catch(e) {
+      // ADMIN_PASS 不是 bcrypt 哈希格式
+    }
+    // bcrypt 返回 false 时，尝试 timingSafeEqual（处理明文密码场景）
+    if (!matched) {
+      try {
+        const a = Buffer.from(password, 'utf8');
+        const b = Buffer.from(ADMIN_PASS, 'utf8');
+        if (a.length === b.length) {
+          matched = crypto.timingSafeEqual(a, b);
+        }
+      } catch(e2) { matched = false; }
+    }
+    if (matched) {
+      const token = generateToken({ id: 0, username: ADMIN_USER, role: 'admin' });
+      return res.json({ success: true, message: '管理员登录成功', token });
+    }
   }
   res.status(401).json({ success: false, error: '管理员账号或密码错误' });
 });
@@ -304,7 +381,7 @@ app.use('/api/admin', adminAuth);
 // ═══════════════════════════════════════════════
 app.get('/api/admin/stats', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     // 今日推荐次数（最近24小时）
 const [today, guest, user, totalRec, totalFb, avgRating, totalUsers, totalDishes] = await Promise.all([
       pool.query("SELECT COUNT(*) FROM recommendation_log WHERE created_at > NOW() - INTERVAL '24 hours'"),
@@ -335,7 +412,7 @@ const [today, guest, user, totalRec, totalFb, avgRating, totalUsers, totalDishes
 // 菜品热度排行
 app.get('/api/admin/popular-dishes', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       "SELECT d.id, d.name, d.category, d.price, d.rating, COUNT(f.id) as feedback_count, ROUND(AVG(f.rating),2) as avg_rating FROM dishes d LEFT JOIN feedback f ON d.id = f.dish_id WHERE d.is_active = TRUE GROUP BY d.id ORDER BY feedback_count DESC, avg_rating DESC NULLS LAST LIMIT 62"
     );
@@ -346,7 +423,7 @@ app.get('/api/admin/popular-dishes', async (req, res) => {
 // 反馈汇总
 app.get('/api/admin/feedback-summary', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       "SELECT f.id, f.dish_id, d.name as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC LIMIT 50"
     );
@@ -359,17 +436,17 @@ app.get('/api/admin/feedback-summary', async (req, res) => {
 app.post('/api/admin/dish', async (req, res) => {
   try {
     const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description } = req.body;
-    if (!name || name.length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
-    if (name.length > 100) return res.status(400).json({ success: false, error: '菜名不能超过100个字符' });
+    if (!name || name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
+    if (name.trim().length > 100) return res.status(400).json({ success: false, error: '菜名不能超过100个字符' });
     if (description && description.length > 500) return res.status(400).json({ success: false, error: '描述不能超过500个字符' });
     const priceNum = parseFloat(price);
     if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ success: false, error: '价格不能为负数' });
     const ratingNum = parseFloat(rating);
     if (isNaN(ratingNum) || ratingNum < 0 || ratingNum > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' });
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,$12) RETURNING id`,
-      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, tags ? `{${tags}}` : '{}', allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, description||null]
+      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, description||null]
     );
     res.json({ success: true, message: '添加成功', id: result.rows[0].id });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
@@ -381,10 +458,10 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     const dishId = parseInt(req.params.id);
     if (isNaN(dishId) || dishId <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
     const { name, category, spiciness, saltiness, sweetness, price, rating, tags, is_active, allergies, isHalal, isVegetarian, description } = req.body;
-    if (name !== undefined && name.length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
+    if (name !== undefined && name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
     if (price !== undefined) { const p = parseFloat(price); if (isNaN(p) || p < 0) return res.status(400).json({ success: false, error: '价格不能为负数' }); }
     if (rating !== undefined) { const r = parseFloat(rating); if (isNaN(r) || r < 0 || r > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' }); }
-    const pool = require('./db');
+    const pool = db;
     const sets = []; const vals = []; let idx = 1;
     if (name !== undefined) { sets.push(`name = $${idx++}`); vals.push(name); }
     if (category !== undefined) { sets.push(`category = $${idx++}`); vals.push(category); }
@@ -394,7 +471,7 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     if (price !== undefined) { sets.push(`price = $${idx++}`); vals.push(parseFloat(price)); }
     if (rating !== undefined) { sets.push(`rating = $${idx++}`); vals.push(parseFloat(rating)); }
     if (is_active !== undefined) { sets.push(`is_active = $${idx++}`); vals.push(is_active); }
-    if (tags !== undefined) { sets.push(`tags = $${idx++}::text[]`); vals.push(`{${tags}}`); }
+    if (tags !== undefined) { const cleanTags = tags.split(',').map(t => t.trim()).filter(Boolean).join(','); sets.push(`tags = $${idx++}::text[]`); vals.push(`{${cleanTags}}`); }
     if (allergies !== undefined) { sets.push(`allergies = $${idx++}::jsonb`); vals.push(JSON.stringify(allergies)); }
     if (isHalal !== undefined) { sets.push(`is_halal = $${idx++}`); vals.push(isHalal); }
     if (isVegetarian !== undefined) { sets.push(`is_vegetarian = $${idx++}`); vals.push(isVegetarian); }
@@ -411,7 +488,7 @@ app.delete('/api/admin/dish/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id) || id <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
-    const pool = require('./db');
+    const pool = db;
     await pool.query('UPDATE dishes SET is_active = NOT is_active WHERE id = $1', [id]);
     res.json({ success: true, message: '状态已切换' });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
@@ -422,7 +499,7 @@ app.delete('/api/admin/dish/:id/permanent', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id) || id <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
-    const pool = require('./db');
+    const pool = db;
     await pool.query('DELETE FROM dishes WHERE id = $1', [id]);
     res.json({ success: true, message: '已永久删除' });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
@@ -434,16 +511,20 @@ app.post('/api/user/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, error: '用户名和密码不能为空' });
-    if (username.length < 2) return res.status(400).json({ success: false, error: '用户名至少2个字符' });
-    if (username.length > 50) return res.status(400).json({ success: false, error: '用户名不能超过50个字符' });
-    if (password.length < 6) return res.status(400).json({ success: false, error: '密码至少6个字符' });
+    if (username.trim().length < 2) return res.status(400).json({ success: false, error: '用户名至少2个字符' });
+    if (username.trim().length > 50) return res.status(400).json({ success: false, error: '用户名不能超过50个字符' });
+    if (password.length < 8) return res.status(400).json({ success: false, error: '密码至少8个字符' });
     if (password.length > 128) return res.status(400).json({ success: false, error: '密码不能超过128个字符' });
+    if (!/[A-Z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含大写字母' });
+    if (!/[a-z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含小写字母' });
+    if (!/[0-9]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含数字' });
     const existing = await userStorage.findUserByUsername(username);
     if (existing) return res.status(400).json({ success: false, error: '用户名已存在' });
     const newUser = await userStorage.createUser(username, password);
     if (newUser) {
       logger.info(`新用户注册：${username}`);
-      res.json({ success: true, message: '注册成功', user: { username: newUser.username } });
+      const token = generateToken({ username: newUser.username, id: newUser.id });
+      res.json({ success: true, message: '注册成功', token, user: { username: newUser.username } });
     } else {
       res.status(500).json({ success: false, error: '注册失败' });
     }
@@ -499,21 +580,42 @@ app.post('/api/user-blacklist', authMiddleware, async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 退出登录（吊销当前 token）
+app.post('/api/user/logout', authMiddleware, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const revoked = await require('./auth').revokeToken(token);
+      if (!revoked) {
+        logger.warn('退出登录：token 吊销失败');
+      }
+    }
+    res.json({ success: true, message: '已退出登录' });
+  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // 注销账号（需要JWT认证，且只能注销自己的账号）
 app.post('/api/user/delete', authMiddleware, async (req, res) => {
   try {
     const username = req.user.username;
     if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
+    // 吊销当前token，防止删除后token仍可用
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try { await require('./auth').revokeToken(token); } catch (e) { logger.warn('注销账号：token 吊销失败:', e.message); }
+    }
     await userStorage.removeUser(username);
     res.json({ success: true, message: '账号已注销' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
 // 偏好记录
-app.post('/api/preference-log', async (req, res) => {
+app.post('/api/preference-log', softAuth, async (req, res) => {
   try {
     const { spiciness, saltiness, sweetness, price, calorie, religion, allergies, userId, recommendationMode } = req.body;
-    const pool = require('./db');
+    const pool = db;
     await pool.query(
       "INSERT INTO preference_log (spiciness, saltiness, sweetness, price, calorie, religion, allergies, user_id, recommendation_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
       [spiciness||null, saltiness||null, sweetness||null, price||null, calorie||null, religion||null, allergies||[], userId||'guest', recommendationMode||'auto']
@@ -523,10 +625,10 @@ app.post('/api/preference-log', async (req, res) => {
 });
 
 // 推荐次数记录
-app.post('/api/recommendation-log', async (req, res) => {
+app.post('/api/recommendation-log', softAuth, async (req, res) => {
   try {
     const { userType, userId } = req.body;
-    const pool = require('./db');
+    const pool = db;
     await pool.query('INSERT INTO recommendation_log (user_type, user_id) VALUES ($1,$2)', [userType||'guest', userId||'guest']);
     res.json({ success: true });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -535,7 +637,7 @@ app.post('/api/recommendation-log', async (req, res) => {
 // 偏好统计 API
 app.get('/api/admin/preference-stats', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const fields = ['spiciness','saltiness','sweetness','price','calorie','religion'];
     const result = {};
     for (const field of fields) {
@@ -555,7 +657,7 @@ app.get('/api/admin/preference-stats', async (req, res) => {
 // 每日推荐趋势
 app.get('/api/admin/daily-recommendations', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const q = await pool.query(`
       SELECT DATE(created_at) as day, COUNT(*) as total,
              COUNT(*) FILTER (WHERE user_type='guest') as guest_count,
@@ -571,7 +673,7 @@ app.get('/api/admin/daily-recommendations', async (req, res) => {
 // 用户活跃度
 app.get('/api/admin/user-activity', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const totalUsers = await pool.query('SELECT COUNT(*) FROM users');
     const dailyActive = await pool.query(`
       SELECT DATE(created_at) as day, COUNT(DISTINCT user_id) as active_users
@@ -594,7 +696,7 @@ app.get('/api/admin/user-activity', async (req, res) => {
 // 推荐日志详情
 app.get('/api/admin/recommendation-details', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const q = await pool.query(`
       SELECT rl.id, rl.user_type, rl.user_id, rl.created_at,
              f.id as feedback_id, f.rating, f.dish_id as feedback_dish_id
@@ -653,7 +755,7 @@ app.post('/api/admin/retrain', async (req, res) => {
   try {
     // 检查是否正在训练
     if (global._isRetraining || _isRetrainingCheck) {
-      return res.json({ success: false, message: '模型正在训练中，请稍后' });
+      return res.status(409).json({ success: false, message: '模型正在训练中，请稍后' });
     }
     global._isRetraining = true;
     _isRetrainingCheck = true;
@@ -666,14 +768,18 @@ app.post('/api/admin/retrain', async (req, res) => {
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       stdio: ['ignore', 'ignore', 'pipe']
     });
+    // 安全超时：30 秒后清除标志，仅当进程挂起时释放锁（防进程挂起导致标志永久锁定）
+    const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; _isRetrainingCheck = false; } }, 30000);
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
+    proc.on('error', (e) => { clearTimeout(retrainTimeout); logger.error('手动重训练进程错误: ' + e.message); global._isRetraining = false; _isRetrainingCheck = false; });
     proc.on('close', async (code) => {
+      clearTimeout(retrainTimeout);
       global._isRetraining = false;
       _isRetrainingCheck = false;
       if (code === 0) {
         try {
-          const pool = require('./db');
+          const pool = db;
           await pool.query("UPDATE feedback SET processed = TRUE WHERE processed = FALSE OR processed IS NULL");
         } catch(e) { logger.warn('标记反馈已处理失败: ' + (e?.message || String(e))); }
         modelInfo.version = (parseFloat(modelInfo.version) + 0.1).toFixed(1);
@@ -692,14 +798,14 @@ app.post('/api/admin/retrain', async (req, res) => {
   } catch (e) {
     global._isRetraining = false;
     _isRetrainingCheck = false;
-    res.status(500).json({ success: false, error: e.message });
+    res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
 
 // 推荐效果不佳的菜品分析
 app.get('/api/admin/worst-dishes', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const q = await pool.query(`
       SELECT d.id, d.name, d.category, d.price, d.rating as dish_rating,
              COUNT(f.id) as feedback_count,
@@ -775,7 +881,7 @@ app.get('/api/admin/model-compare', (req, res) => {
 // 推荐点击率统计
 app.get('/api/admin/recommendation-stats', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     // 总推荐次数
     const totalRec = await pool.query('SELECT COUNT(*) FROM recommendation_log');
     const total = parseInt(totalRec.rows[0].count);
@@ -816,8 +922,18 @@ app.post('/api/order', softAuth, async (req, res) => {
     if (!items || !items.length) return res.status(400).json({ success: false, error: '订单不能为空' });
     if (items.some(i => { const p = parseFloat(i.price); return isNaN(p) || p < 0; })) return res.status(400).json({ success: false, error: '商品价格无效' });
     if (totalPrice !== undefined && totalPrice !== null && totalPrice !== '') { const tp = parseFloat(totalPrice); if (!isNaN(tp) && tp < 0) return res.status(400).json({ success: false, error: '订单总价不能为负数' }); }
-    const effectiveUserId = req.user?.username || userId || 'guest';
-    const pool = require('./db');
+    const effectiveUserId = req.user?.username || 'guest';
+    const pool = db;
+    // 幂等性检查：同一用户 10 秒内相同内容的订单视为重复
+    const itemsStr = JSON.stringify(items);
+    const tenSecAgo = new Date(Date.now() - 10000).toISOString();
+    const existing = await pool.query(
+      "SELECT id FROM orders WHERE user_id = $1 AND items::text = $2 AND created_at > $3 LIMIT 1",
+      [effectiveUserId, itemsStr, tenSecAgo]
+    );
+    if (existing.rows.length > 0) {
+      return res.json({ success: true, message: '订单已存在（防重复提交）', orderId: existing.rows[0].id });
+    }
     // 检查 orders 表是否有 table_number 列
     const colCheck = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'");
     let result;
@@ -841,7 +957,7 @@ app.get('/api/orders', authMiddleware, async (req, res) => {
     const { status } = req.query;
     const userId = req.user?.username;
     if (!userId) return res.status(401).json({ success: false, error: '请先登录' });
-    const pool = require('./db');
+    const pool = db;
     let query = 'SELECT * FROM orders';
     let params = [];
     const conditions = [];
@@ -860,6 +976,9 @@ app.get('/api/orders', authMiddleware, async (req, res) => {
     }
     if (conditions.length > 0) query += ' WHERE ' + conditions.join(' AND ');
     query += ' ORDER BY created_at DESC';
+    // 厨房看板等按状态筛选的场景：限制返回最新 100 条，避免海量订单一次性渲染导致页面卡顿
+    // （普通用户查看自己订单不受影响）
+    if (status) query += ' LIMIT 100';
     const result = await pool.query(query, params);
     res.json({ success: true, orders: result.rows });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -874,7 +993,7 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
     // 厨房操作允许管理员或订单所有者
     const validStatuses = ['pending', 'confirmed', 'preparing', 'completed', 'cancelled'];
     if (!validStatuses.includes(status)) return res.status(400).json({ success: false, error: '无效的状态' });
-    const pool = require('./db');
+    const pool = db;
     let result;
     // 管理员可以更新任意订单，普通用户只能更新自己的订单
     if (req.user.role === 'admin') {
@@ -898,8 +1017,8 @@ app.post('/api/feedback', softAuth, async (req, res) => {
     if (dishIdNum === null || isNaN(dishIdNum) || dishIdNum < 0) return res.status(400).json({ success: false, error: '无效的菜品 ID' });
     // dishId 为 0 表示整体满意度，允许
     // 优先使用 token 验证的用户 ID
-    const effectiveUserId = req.user?.username || userId || 'guest';
-    const pool = require('./db');
+    const effectiveUserId = req.user?.username || 'guest';
+    const pool = db;
     await pool.query(
       "INSERT INTO feedback (dish_id, user_id, rating, user_preferences) VALUES ($1,$2,$3,$4)",
       [dishIdNum, effectiveUserId, scoreNum, userPreferences ? JSON.stringify(userPreferences) : '{}']
@@ -910,7 +1029,7 @@ app.post('/api/feedback', softAuth, async (req, res) => {
 
 app.get('/api/feedback', authMiddleware, async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const userId = req.user?.username;
     if (!userId) return res.status(401).json({ success: false, error: '请先登录' });
     const result = await pool.query('SELECT * FROM feedback WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
@@ -926,27 +1045,9 @@ app.get('/api/model-metrics', (req, res) => {
       const metrics = readJSON(metricsPath);
       return res.json({ success: true, metrics });
     }
-    // 缓存文件不存在时尝试从模型实时计算
-    const { spawnSync } = require('child_process');
-    const result = spawnSync('python', [path.join(__dirname, 'get_metrics.py')], {
-      cwd: __dirname, encoding: 'utf8', timeout: 10000
-    });
-    if (result.status === 0 && result.stdout) {
-      const metrics = JSON.parse(result.stdout.trim());
-      // 缓存到磁盘供后续使用
-      fs.writeFileSync(metricsPath, result.stdout.trim(), 'utf8');
-      return res.json({ success: true, metrics });
-    }
-    // 都失败时返回默认值
-    res.json({ success: true, metrics: {
-      r2: 0.9713, mse: 0.00067, rmse: 0.0259, mae: 0.0176,
-      training_samples: 63, feature_count: 9,
-      note: '基于模型实时计算'
-    }});
-  } catch (e) { res.json({ success: true, metrics: {
-    r2: 0.9713, mse: 0.00067, rmse: 0.0259, mae: 0.0176,
-    note: '基于模型实时计算'
-  }}); }
+    // 缓存文件不存在时返回空指标，不阻塞事件循环、不返回误导性假数据
+    res.json({ success: false, metrics: null, error: '模型指标暂未生成，请触发重训练后重试' });
+  } catch (e) { res.json({ success: false, metrics: null, error: '模型指标读取失败' }); }
 });
 
 // 特征重要性（启动时预加载，长时间缓存）
@@ -1242,7 +1343,7 @@ async function checkAndRetrain() {
   _isRetrainingCheck = true;
   global._isRetraining = true;
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       "SELECT COUNT(*) FROM feedback WHERE processed = FALSE OR processed IS NULL"
     );
@@ -1256,10 +1357,14 @@ async function checkAndRetrain() {
         cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
         stdio: ['ignore', 'ignore', 'pipe']
       });
+      const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; _isRetrainingCheck = false; } }, 30000);
+      proc.stderr?.on('data', (d) => { logger.warn('自动重训练stderr: ' + d.toString().slice(0, 500)); });
+      proc.on('error', (e) => { clearTimeout(retrainTimeout); logger.error('自动重训练进程错误: ' + e.message); _isRetrainingCheck = false; global._isRetraining = false; });
       proc.on('close', async (code) => {
+        clearTimeout(retrainTimeout);
         try {
           if (code === 0) {
-            const pool = require('./db');
+            const pool = db;
             await pool.query("UPDATE feedback SET processed = TRUE WHERE processed = FALSE OR processed IS NULL");
             modelInfo.feedbackCount = newCount;
             modelInfo.version = (parseFloat(modelInfo.version) + 0.1).toFixed(1);
@@ -1385,7 +1490,7 @@ app.get('/api/admin/monitor', (req, res) => {
       errorLogSize = stats.size;
       errorLogUpdated = stats.mtime.toISOString();
     }
-    const combinedLogPath = path.join(__dirname, 'logs', 'combined.log');
+    const combinedLogPath = path.join(__dirname, 'logs', 'combined-'+today+'.log');
     let combinedLogSize = 0;
     if (fs.existsSync(combinedLogPath)) {
       combinedLogSize = fs.statSync(combinedLogPath).size;
@@ -1438,7 +1543,7 @@ function toCSV(headers, rows) {
 
 app.get('/api/admin/export/popular-dishes', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       "SELECT d.id, d.name, d.category, d.price, d.rating, COUNT(f.id) as feedback_count, ROUND(AVG(f.rating),2) as avg_rating FROM dishes d LEFT JOIN feedback f ON d.id = f.dish_id WHERE d.is_active = TRUE GROUP BY d.id ORDER BY feedback_count DESC"
     );
@@ -1446,13 +1551,13 @@ app.get('/api/admin/export/popular-dishes', async (req, res) => {
       result.rows.map(r => [r.id, r.name, r.category, r.price, r.rating, r.feedback_count, r.avg_rating]));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=popular_dishes.csv');
-    res.send('﻿' + csv);
+    res.send(csv);
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
 app.get('/api/admin/export/feedback', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query(
       "SELECT f.id, f.dish_id, d.name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC"
     );
@@ -1460,19 +1565,19 @@ app.get('/api/admin/export/feedback', async (req, res) => {
       result.rows.map(r => [r.id, r.dish_id, r.name, r.rating, r.created_at]));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=feedback.csv');
-    res.send('﻿' + csv);
+    res.send(csv);
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
 app.get('/api/admin/export/orders', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query("SELECT * FROM orders ORDER BY created_at DESC");
     const csv = toCSV(['ID', '用户', '总价', '菜品数', '状态', '桌号', '时间'],
       result.rows.map(r => [r.id, r.user_id, r.total_price, r.dish_count, r.status, r.table_number, r.created_at]));
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
-    res.send('﻿' + csv);
+    res.send(csv);
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
@@ -1481,8 +1586,8 @@ app.post('/api/admin/dish/batch-status', async (req, res) => {
   try {
     const { ids, isActive } = req.body;
     if (!ids || !Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, error: '请选择菜品' });
-    if (!ids.every(id => Number.isInteger(id))) return res.status(400).json({ success: false, error: '菜品ID必须为整数' });
-    const pool = require('./db');
+    if (!ids.every(id => Number.isInteger(id) || /^\d+$/.test(String(id)))) return res.status(400).json({ success: false, error: '菜品ID必须为整数' });
+    const pool = db;
     await pool.query('UPDATE dishes SET is_active = $1 WHERE id = ANY($2::int[])', [isActive, ids]);
     res.json({ success: true, message: '已更新 ' + ids.length + ' 道菜品' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -1492,8 +1597,8 @@ app.post('/api/admin/dish/batch-delete', async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, error: '请选择菜品' });
-    if (!ids.every(id => Number.isInteger(id))) return res.status(400).json({ success: false, error: '菜品ID必须为整数' });
-    const pool = require('./db');
+    if (!ids.every(id => Number.isInteger(id) || /^\d+$/.test(String(id)))) return res.status(400).json({ success: false, error: '菜品ID必须为整数' });
+    const pool = db;
     await pool.query("UPDATE dishes SET is_active = FALSE WHERE id = ANY($1::int[])", [ids]);
     res.json({ success: true, message: '已下架 ' + ids.length + ' 道菜品' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -1502,7 +1607,7 @@ app.post('/api/admin/dish/batch-delete', async (req, res) => {
 // 3.3 用户管理
 app.get('/api/admin/users', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query("SELECT id, username, created_at, last_login FROM users ORDER BY last_login DESC NULLS LAST");
     res.json({ success: true, users: result.rows });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -1512,7 +1617,7 @@ app.get('/api/admin/users/:id', async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     if (isNaN(userId) || userId <= 0) return res.status(400).json({ success: false, error: '无效的用户ID' });
-    const pool = require('./db');
+    const pool = db;
     const result = await pool.query("SELECT id, username, preferences, favorites, blacklist, created_at, last_login FROM users WHERE id = $1", [userId]);
     if (!result.rows.length) return res.status(404).json({ success: false, error: '用户不存在' });
     res.json({ success: true, user: result.rows[0] });
@@ -1523,7 +1628,7 @@ app.post('/api/admin/users/:id/toggle', async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     if (isNaN(userId) || userId <= 0) return res.status(400).json({ success: false, error: '无效的用户ID' });
-    const pool = require('./db');
+    const pool = db;
     const user = await pool.query("SELECT id, username FROM users WHERE id = $1", [userId]);
     if (!user.rows.length) return res.status(404).json({ success: false, error: '用户不存在' });
     const username = user.rows[0].username;
@@ -1538,7 +1643,7 @@ app.post('/api/admin/users/:id/toggle', async (req, res) => {
 // 3.4 通知（低评分菜品告警）
 app.get('/api/admin/notifications', async (req, res) => {
   try {
-    const pool = require('./db');
+    const pool = db;
     const worst = await pool.query(
       "SELECT d.id, d.name, COUNT(f.id) as count, ROUND(AVG(f.rating),2) as avg FROM dishes d JOIN feedback f ON d.id = f.dish_id WHERE d.is_active = TRUE GROUP BY d.id HAVING AVG(f.rating) < 3.5 ORDER BY avg ASC LIMIT 5"
     );
@@ -1550,14 +1655,48 @@ app.get('/api/admin/notifications', async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
-// 404 兜底（对 /api/ 路径返回 JSON）
+// 404 兜底（对 /api/ 路径返回 JSON，其他路径返回友好页面）
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) {
     res.status(404).json({ success: false, error: '请求的接口不存在' });
   } else {
-    res.status(404).send('页面未找到');
+    res.status(404).send(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>404 - 页面未找到 · 唐猫庭院</title><link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css"><link rel="stylesheet" href="styles.css"></head><body><div class="container text-center" style="padding:100px 20px"><h1 style="font-size:6rem;color:#c0392b;font-weight:700;">404</h1><h2 class="mb-4" style="color:#8b7a6a;">🏮 页面未找到</h2><p class="text-muted mb-4">您访问的页面不存在，可能已被移除或地址有误。</p><a href="/" class="btn btn-primary px-4 py-2" style="background:#c0392b;border-color:#c0392b;border-radius:50px;"><i class="bi bi-house-door"></i> 返回首页</a></div></body></html>`);
   }
 });
+
+// 500 友好错误页面（仅在非 API 请求时返回 HTML）
+app.use((err, req, res, next) => {
+  if (req.path.startsWith('/api/')) return next(err);
+  res.status(500).send(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>500 - 服务器错误 · 唐猫庭院</title><link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css"><link rel="stylesheet" href="styles.css"></head><body><div class="container text-center" style="padding:100px 20px"><h1 style="font-size:6rem;color:#c0392b;font-weight:700;">500</h1><h2 class="mb-4" style="color:#8b7a6a;">😿 服务器出了点小问题</h2><p class="text-muted mb-4">请稍后再试，或联系管理员。</p><a href="/" class="btn btn-primary px-4 py-2" style="background:#c0392b;border-color:#c0392b;border-radius:50px;"><i class="bi bi-house-door"></i> 返回首页</a></div></body></html>`);
+});
+
+// 数据归档/清理任务（每 24 小时执行）
+async function cleanupOldData() {
+  try {
+    const pool = db;
+    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000 * 30).toISOString(); // 30 天前
+    // 永久删除下架超过 30 天的菜品
+    const cleared = await pool.query(
+      "DELETE FROM dishes WHERE is_active = FALSE AND updated_at < $1",
+      [dayAgo]
+    );
+    // 清理 90 天前的旧推荐日志
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+    const oldLogs = await pool.query(
+      "DELETE FROM recommendation_log WHERE created_at < $1",
+      [ninetyDaysAgo]
+    );
+    // 清理已过期的 token_blacklist 记录
+    const expiredTokens = await pool.query(
+      "DELETE FROM token_blacklist WHERE expires_at < NOW()"
+    );
+    if (cleared.rowCount > 0 || oldLogs.rowCount > 0 || expiredTokens.rowCount > 0) {
+      logger.info(`数据清理完成：删除 ${cleared.rowCount} 条下架超30天菜品，${oldLogs.rowCount} 条90天前推荐日志，${expiredTokens.rowCount} 条过期token`);
+    }
+  } catch (e) {
+    logger.warn('数据清理任务异常: ' + (e?.message || String(e)));
+  }
+}
 
 // 启动服务器
 // 启动服务器（支持 HTTP 和可选的 HTTPS）
@@ -1574,12 +1713,13 @@ httpServer.listen(PORT, () => {
   setInterval(checkAndRetrain, 1800000);
   setInterval(trackMetrics, 3600000);
   setInterval(checkErrorLog, 600000);
+  setInterval(cleanupOldData, 86400000); // 每 24 小时清理旧数据
 });
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
 const SSL_CERT = process.env.SSL_CERT || '';
-const SSL_PORT = parseInt(process.env.SSL_PORT || '3443');
+const SSL_PORT = Math.max(1, Math.min(65535, parseInt(process.env.SSL_PORT || '3443'))) || 3443;
 
 if (SSL_KEY && SSL_CERT && fs.existsSync(SSL_KEY) && fs.existsSync(SSL_CERT)) {
   try {
@@ -1609,6 +1749,60 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (err) => {
   logger.error('未捕获的异常:', err.message, { stack: err.stack });
-  // 记录错误后不立即退出，让进程有机会优雅关闭
-  setTimeout(() => process.exit(1), 3000);
+  // 记录错误后不退出进程。服务器可能处于不稳定状态，但继续运行比崩溃更好
+  // 后续请求仍可能失败，但不会导致全部服务中断
 });
+
+// ═══════════════════════════════════════════════
+// 优雅关闭：SIGTERM / SIGINT 时释放资源
+// ═══════════════════════════════════════════════
+let isShuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
+
+  // 1. 停止接受新连接
+  if (typeof httpServer !== 'undefined' && httpServer) {
+    httpServer.close(() => logger.info('HTTP 服务器已关闭'));
+    // 强制超时：10 秒后不管是否完成，强制退出
+    setTimeout(() => {
+      logger.warn('优雅关闭超时，强制退出');
+      process.exit(1);
+    }, 10000).unref();
+  }
+
+  // 2. 关闭 Python Worker 进程
+  try {
+    if (typeof pythonWorker !== 'undefined' && pythonWorker && pythonWorker.exitCode === null) {
+      // 清理所有待处理请求
+      if (typeof pendingRequests !== 'undefined' && pendingRequests) {
+        for (const [, req] of pendingRequests) {
+          if (req.res) req.res.status(503).json({ success: false, error: '服务器正在关闭，请稍后重试' });
+        }
+        pendingRequests.clear();
+      }
+      pythonWorker.kill();
+      logger.info('Python Worker 已关闭');
+    }
+  } catch (e) {
+    logger.warn('关闭 Python Worker 失败: ' + (e?.message || String(e)));
+  }
+
+  // 3. 关闭数据库连接池
+  try {
+    const pool = db;
+    if (pool && typeof pool.end === 'function') {
+      await pool.end();
+      logger.info('数据库连接池已关闭');
+    }
+  } catch (e) {
+    logger.warn('关闭数据库连接池失败: ' + (e?.message || String(e)));
+  }
+
+  logger.info('优雅关闭完成，进程退出');
+  setTimeout(() => process.exit(0), 500);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
