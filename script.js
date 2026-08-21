@@ -401,7 +401,7 @@ function endRecommendation(){
  // 记录已点过的菜品
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  currentRecommendations.forEach(d=>{if(!ordered.includes(d.id))ordered.push(d.id);});
- localStorage.setItem('orderedDishes',JSON.stringify(ordered));
+ try{localStorage.setItem('orderedDishes',JSON.stringify(ordered));}catch(e){}
  // 创建订单（发送到服务器）
  const items=currentRecommendations.map(d=>{const p=parseFloat(d.price);return{id:d.id,name:d.name,price:isNaN(p)?0:p,type:d.type||'偏好推荐',matchRate:d.matchRate||0};});
  const total=items.reduce((s,i)=>s+i.price,0);
@@ -625,7 +625,7 @@ function showCart(){
 function checkoutCart(){
  const cart=getCart();
  if(!cart.length){showMessage('提示','购物车是空的');return;}
- const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:esc(x.name),price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
  fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})})
@@ -634,7 +634,7 @@ function checkoutCart(){
   // 下单成功后再清理本地数据
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
-  localStorage.setItem('orderedDishes',JSON.stringify(ordered));
+  try{localStorage.setItem('orderedDishes',JSON.stringify(ordered));}catch(e){}
   clearCart();
   showMessage('下单成功','您的订单已提交，感谢用餐！',function(){showSection('home-section');});
  }).catch(()=>showMessage('下单失败','网络错误，请稍后重试'));
@@ -662,7 +662,7 @@ async function fetchRecommendations(isRefresh){
   }
  }
 
- const prefs={'辣度':userProfile.spiciness,'咸淡':userProfile.saltiness,'甜酸':userProfile.sweetness,'价格区间':userProfile.price||'无','饮食_宗教':userProfile.religion==='无'?'无特殊要求':userProfile.religion,'allergies':userProfile.allergies||[],'calorie':userProfile.calorie||'无'};
+ const up=userProfile||{};const prefs={'辣度':up.spiciness,'咸淡':up.saltiness,'甜酸':up.sweetness,'价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion,'allergies':up.allergies||[],'calorie':up.calorie||'无'};
  let blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u)blk=u.blacklist||[];}
 
  let dishes=dishData.filter(d=>{
