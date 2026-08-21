@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded',function(){
  showSection('home-section');
  // 从API加载菜品数据
  Promise.race([fetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length)dishData=d.dishes;}).catch(()=>console.warn('菜品数据加载超时/失败'));
- setTimeout(()=>checkApiAvailability().then(a=>console.log(a?'API可用':'API不可用,使用本地推荐')),100);
+ setTimeout(()=>checkApiAvailability().then(a=>{if(!a)console.log('ML模型启动中,暂用本地推荐(稍后自动恢复)')}),2000);
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
  const submit=(id,fn)=>{const el=$(id);if(el)el.addEventListener('submit',e=>{e.preventDefault();fn();});};
