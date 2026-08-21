@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="唐猫庭院 - 千年陕菜传承者，智能推荐菜品，唐风雅韵，猫趣悠然。">
-    <meta name="theme-color" content="#b83a2a">
+    <meta name="theme-color" content="var(--primary)">
     <link rel="manifest" href="/manifest.json">
     <title>唐猫庭院 - 菜品推荐</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23d35400' d='M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14.5c-3.59 0-6.5-2.91-6.5-6.5S4.41 1.5 8 1.5 14.5 4.41 14.5 8 11.59 14.5 8 14.5zm-2.5-7h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0-2h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0 4h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5z'/%3E%3C/svg%3E" type="image/svg+xml">
@@ -23,7 +23,7 @@
     </script>
 </head>
 <body>
-    <a href="#main-content" class="visually-hidden-focusable" style="position:absolute;top:0;left:0;z-index:9999;background:#c0392b;color:#fff;padding:8px 16px;text-decoration:none;">跳转到主要内容</a>
+    <a href="#main-content" class="visually-hidden-focusable" style="position:absolute;top:0;left:0;z-index:9999;background:var(--primary-accent);color:#fff;padding:8px 16px;text-decoration:none;">跳转到主要内容</a>
     <div class="container-fluid min-vh-100 d-flex flex-column">
         <nav class="navbar navbar-expand-lg navbar-dark">
             <div class="container">
@@ -57,7 +57,7 @@
             <!-- 首页 -->
             <section id="home-section" class="section active">
                 <div class="text-center mb-5">
-                    <h1 class="display-4 fw-bold" style="font-family:'Noto Serif SC',serif;color:#2c1810;margin-bottom:0.3rem;">唐猫庭院</h1>
+                    <h1 class="display-4 fw-bold" style="font-family:'Noto Serif SC',serif;color:var(--text);margin-bottom:0.3rem;">唐猫庭院</h1>
                     <p class="text-muted" style="letter-spacing:4px;font-size:0.9rem;">— 唐风雅韵 · 猫趣悠然 —</p>
                 </div>
 
@@ -66,22 +66,22 @@
                     <div class="col-md-4 d-none d-md-block">
                         <div class="p-3 text-center h-100" style="border-radius:12px;border:1px solid rgba(201,169,110,0.2);">
                             <div style="font-size:1.8rem;margin-bottom:4px;">🏮</div>
-                            <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;margin-bottom:2px;">唐风雅韵</h6>
-                            <small style="color:#8b7a6a;">梦回大唐 · 品味长安</small>
+                            <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);margin-bottom:2px;">唐风雅韵</h6>
+                            <small style="color:var(--text-light);">梦回大唐 · 品味长安</small>
                         </div>
                     </div>
                     <div class="col-md-4 d-none d-md-block">
                         <div class="p-3 text-center h-100" style="border-radius:12px;border:1px solid rgba(201,169,110,0.2);">
                             <div style="font-size:1.8rem;margin-bottom:4px;">🐱</div>
-                            <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;margin-bottom:2px;">猫趣盎然</h6>
-                            <small style="color:#8b7a6a;">灵猫相伴 · 妙趣横生</small>
+                            <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);margin-bottom:2px;">猫趣盎然</h6>
+                            <small style="color:var(--text-light);">灵猫相伴 · 妙趣横生</small>
                         </div>
                     </div>
                     <div class="col-md-4 d-none d-md-block">
                         <div class="p-3 text-center h-100" style="border-radius:12px;border:1px solid rgba(201,169,110,0.2);">
                             <div style="font-size:1.8rem;margin-bottom:4px;">🍜</div>
-                            <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;margin-bottom:2px;">珍馐美馔</h6>
-                            <small style="color:#8b7a6a;">宫廷御膳 · 匠心呈现</small>
+                            <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);margin-bottom:2px;">珍馐美馔</h6>
+                            <small style="color:var(--text-light);">宫廷御膳 · 匠心呈现</small>
                         </div>
                     </div>
                 </div>
@@ -92,13 +92,13 @@
                 </div>
 
                 <div class="text-center">
-                    <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,#c0392b,#8b1a1a);box-shadow:0 8px 24px rgba(192,57,43,0.25);">
+                    <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);">
                         <i class="bi bi-hand-index-thumb me-2"></i>开始点餐
                     </button>
-                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:#8b7a6a;line-height:1.5;">
+                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;">
                         <i class="bi bi-arrow-repeat me-2"></i>继续上次推荐
                     </button>
-                    <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:#c0392b;line-height:1.5;margin-top:8px;">
+                    <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:var(--primary-accent);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-clock-history me-2"></i>查看上次推荐
                     </button>
                     <div class="mt-3">
@@ -117,7 +117,7 @@
                 <div class="row justify-content-center">
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-lg rounded-4">
-                            <div class="card-header text-white text-center py-4" style="background-color:#c0392b;">
+                            <div class="card-header text-white text-center py-4" style="background-color:var(--primary-accent);">
                                 <h2 class="mb-0">登录</h2>
                             </div>
                             <div class="card-body p-5">
@@ -130,7 +130,7 @@
                                         <label for="login-password" class="form-label">密码</label>
                                         <input type="password" class="form-control" id="login-password" required autocomplete="current-password">
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100 py-2" style="background-color:#c0392b;border-color:#c0392b;">登录</button>
+                                    <button type="submit" class="btn btn-primary w-100 py-2" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">登录</button>
                                 </form>
                                 <div class="mt-4 text-center">
                                     <button class="btn btn-link" id="back-to-home">返回</button>
@@ -146,7 +146,7 @@
                 <div class="row justify-content-center">
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-lg rounded-4">
-                            <div class="card-header text-white text-center py-4" style="background-color:#c0392b;">
+                            <div class="card-header text-white text-center py-4" style="background-color:var(--primary-accent);">
                                 <h2 class="mb-0">注册</h2>
                             </div>
                             <div class="card-body p-5">
@@ -166,10 +166,10 @@
                                     <div class="mb-3 form-check">
                                         <input type="checkbox" class="form-check-input" id="agree-privacy" required>
                                         <label class="form-check-label" for="agree-privacy" style="font-size:0.85rem;">
-                                            我已阅读并同意 <a href="#" id="privacy-link" style="color:#c0392b;">《隐私政策》</a>
+                                            我已阅读并同意 <a href="#" id="privacy-link" style="color:var(--primary-accent);">《隐私政策》</a>
                                         </label>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100 py-2" style="background-color:#c0392b;border-color:#c0392b;">注册</button>
+                                    <button type="submit" class="btn btn-primary w-100 py-2" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">注册</button>
                                 </form>
                                 <div class="mt-4 text-center">
                                     <button class="btn btn-link" id="back-to-home-from-register">返回</button>
@@ -183,7 +183,7 @@
             <!-- 口味偏好 -->
             <section id="preference-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white" style="background-color:#c0392b;">
+                    <div class="card-header text-white" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">我的口味</h2>
                     </div>
                     <div class="card-body p-5">
@@ -310,7 +310,7 @@
 
                             <div class="mb-4">
                                 <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary py-3" style="background-color:#c0392b;border-color:#c0392b;">
+                                    <button type="submit" class="btn btn-primary py-3" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">
                                         <i class="bi bi-search me-2"></i>推荐菜品
                                     </button>
                                     <button type="button" id="view-profile-btn" class="btn btn-outline-secondary py-2">我的收藏</button>
@@ -325,7 +325,7 @@
             <!-- 个人信息 -->
             <section id="profile-section" class="section">
                 <div class="card shadow-lg rounded-4 border-0" style="border:1px solid rgba(201,169,110,0.2)!important;">
-                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#8b1a1a,#b83a2a)!important;border:none;">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary))!important;border:none;">
                         <h2 class="mb-0" style="font-family:'Noto Serif SC',serif;letter-spacing:2px;"><i class="bi bi-person-circle me-2"></i>我的</h2>
                         <button class="btn btn-sm" id="back-from-profile" style="background:rgba(255,255,255,0.2);color:#fff;border:none;border-radius:20px;padding:4px 16px;">
                             <i class="bi bi-arrow-left me-1"></i>返回
@@ -335,20 +335,20 @@
                         <!-- 用户信息卡片 -->
                         <div class="mb-4 p-3 rounded-3" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.15);">
                             <div class="d-flex align-items-center">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:56px;height:56px;background:linear-gradient(135deg,#b83a2a,#d45a4a);font-size:1.5rem;color:#fff;">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:56px;height:56px;background:linear-gradient(135deg,var(--primary),var(--primary-light));font-size:1.5rem;color:#fff;">
                                     <i class="bi bi-person"></i>
                                 </div>
                                 <div>
-                                    <h5 class="mb-1" style="font-family:'Noto Serif SC',serif;color:#2c1810;"><span id="profile-username"></span></h5>
-                                    <small style="color:#8b7a6a;"><i class="bi bi-clock me-1"></i>最后登录：<span id="profile-last-login"></span></small>
+                                    <h5 class="mb-1" style="font-family:'Noto Serif SC',serif;color:var(--text);"><span id="profile-username"></span></h5>
+                                    <small style="color:var(--text-light);"><i class="bi bi-clock me-1"></i>最后登录：<span id="profile-last-login"></span></small>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 推荐历史 -->
                         <div class="mb-4">
-                            <h5 style="font-family:'Noto Serif SC',serif;color:#b83a2a;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:12px;">
-                                <i class="bi bi-clock-history me-2" style="color:#c9a96e;"></i>最近推荐记录
+                            <h5 style="font-family:'Noto Serif SC',serif;color:var(--primary);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:12px;">
+                                <i class="bi bi-clock-history me-2" style="color:var(--gold);"></i>最近推荐记录
                             </h5>
                             <div id="rec-history-list" class="mb-2" style="max-height:300px;overflow-y:auto;">
                                 <p class="text-muted" style="font-size:0.85rem;">加载中...</p>
@@ -357,7 +357,7 @@
 
                         <!-- 收藏菜品 -->
                         <div class="mb-4">
-                            <h5 style="font-family:'Noto Serif SC',serif;color:#b83a2a;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:12px;">
+                            <h5 style="font-family:'Noto Serif SC',serif;color:var(--primary);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:12px;">
                                 <i class="bi bi-heart-fill me-2" style="color:#e74c3c;"></i>收藏菜品
                             </h5>
                             <div id="favorites-list" class="mb-2"></div>
@@ -366,8 +366,8 @@
 
                         <!-- 拉黑的菜品 -->
                         <div class="mb-4">
-                            <h5 style="font-family:'Noto Serif SC',serif;color:#b83a2a;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:12px;">
-                                <i class="bi bi-x-circle-fill me-2" style="color:#8b7a6a;"></i>拉黑的菜品
+                            <h5 style="font-family:'Noto Serif SC',serif;color:var(--primary);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:12px;">
+                                <i class="bi bi-x-circle-fill me-2" style="color:var(--text-light);"></i>拉黑的菜品
                             </h5>
                             <div id="blacklist-list" class="mb-2"></div>
                             <button type="button" id="cancel-blacklist-btn" class="btn btn-sm btn-outline-secondary" style="border-radius:20px;font-size:0.8rem;">取消</button>
@@ -375,7 +375,7 @@
 
                         <!-- 注销账号 -->
                         <div class="mt-4 pt-3 text-center" style="border-top:1px solid rgba(201,169,110,0.15);">
-                            <button type="button" id="delete-account-btn" class="btn btn-sm" style="border-radius:20px;font-size:0.8rem;color:#8b7a6a;border:1px solid #ddd;background:transparent;padding:4px 20px;">
+                            <button type="button" id="delete-account-btn" class="btn btn-sm" style="border-radius:20px;font-size:0.8rem;color:var(--text-light);border:1px solid #ddd;background:transparent;padding:4px 20px;">
                                 <i class="bi bi-trash me-1"></i>注销账号
                             </button>
                         </div>
@@ -386,7 +386,7 @@
             <!-- 推荐结果 -->
             <section id="recommendation-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#c0392b;">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">推荐菜品</h2>
                         <button class="btn btn-light btn-sm" id="back-to-preference">
                             <i class="bi bi-arrow-left me-2"></i>换口味
@@ -432,14 +432,14 @@
             <!-- 反馈（星级评分，点击菜品卡片上的⭐触发） -->
             <section id="feedback-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:#c0392b;">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">评价菜品</h2>
                         <button class="btn btn-light" id="back-to-recommendations">
                             <i class="bi bi-arrow-left me-2"></i>返回
                         </button>
                     </div>
                     <div class="card-body p-5 text-center">
-                        <div id="star-feedback-dish" style="font-family:'Noto Serif SC',serif;font-size:1.2rem;color:#2c1810;margin-bottom:20px;"></div>
+                        <div id="star-feedback-dish" style="font-family:'Noto Serif SC',serif;font-size:1.2rem;color:var(--text);margin-bottom:20px;"></div>
                         <div id="star-rating" class="mb-4" style="font-size:2.5rem;cursor:pointer;user-select:none;letter-spacing:8px;">
                             <span class="star" data-value="1">☆</span>
                             <span class="star" data-value="2">☆</span>
@@ -447,8 +447,8 @@
                             <span class="star" data-value="4">☆</span>
                             <span class="star" data-value="5">☆</span>
                         </div>
-                        <div style="color:#8b7a6a;font-size:0.85rem;margin-bottom:20px;" id="star-hint">点击星星评分</div>
-                        <button class="btn btn-primary py-2 px-5" id="star-submit-btn" disabled style="background-color:#c0392b;border-color:#c0392b;border-radius:50px;letter-spacing:2px;">提交评价</button>
+                        <div style="color:var(--text-light);font-size:0.85rem;margin-bottom:20px;" id="star-hint">点击星星评分</div>
+                        <button class="btn btn-primary py-2 px-5" id="star-submit-btn" disabled style="background-color:var(--primary-accent);border-color:var(--primary-accent);border-radius:50px;letter-spacing:2px;">提交评价</button>
                     </div>
                 </div>
             </section>
@@ -456,12 +456,12 @@
             <!-- 购物车面板 -->
         <section id="cart-section" class="section">
             <div class="card shadow-lg rounded-4">
-                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#b83a2a,#8b1a1a);">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));">
                     <h2 class="mb-0" style="font-size:1.1rem;letter-spacing:1px;"><i class="bi bi-cart3 me-2"></i>我的购物车</h2>
                     <button class="btn btn-sm btn-outline-light" id="cart-close-btn" style="border-radius:20px;padding:2px 12px;font-size:0.8rem;">✕ 关闭</button>
                 </div>
                 <div class="card-body p-4">
-                    <div id="cart-empty" class="text-center py-5" style="color:#8b7a6a;">
+                    <div id="cart-empty" class="text-center py-5" style="color:var(--text-light);">
                         <i class="bi bi-cart" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.3;"></i>
                         <p>购物车是空的</p>
                         <p style="font-size:0.85rem;">去推荐菜品页面添加你喜欢的菜吧</p>
@@ -475,12 +475,12 @@
                         </div>
                         <div class="d-flex justify-content-between align-items-center p-3" style="background:#fdf6f0;border-radius:8px;">
                             <div>
-                                <span style="color:#8b7a6a;font-size:0.9rem;">共 <strong id="cart-total-items">0</strong> 件商品</span>
-                                <span style="margin-left:20px;color:#8b7a6a;font-size:0.9rem;">合计：<strong id="cart-total-price" style="color:#c0392b;font-size:1.2rem;">0</strong> 元</span>
+                                <span style="color:var(--text-light);font-size:0.9rem;">共 <strong id="cart-total-items">0</strong> 件商品</span>
+                                <span style="margin-left:20px;color:var(--text-light);font-size:0.9rem;">合计：<strong id="cart-total-price" style="color:var(--primary-accent);font-size:1.2rem;">0</strong> 元</span>
                             </div>
                             <div>
                                 <button class="btn btn-sm btn-outline-secondary me-2" id="cart-clear-btn" style="border-radius:8px;"><i class="bi bi-trash"></i> 清空</button>
-                                <button class="btn btn-sm" id="cart-checkout-btn" style="background:linear-gradient(135deg,#b83a2a,#8b1a1a);color:#fff;border:none;border-radius:8px;padding:8px 20px;"><i class="bi bi-check-circle me-1"></i> 去结算</button>
+                                <button class="btn btn-sm" id="cart-checkout-btn" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:8px;padding:8px 20px;"><i class="bi bi-check-circle me-1"></i> 去结算</button>
                             </div>
                         </div>
                     </div>
@@ -491,7 +491,7 @@
             <!-- 点餐完成 -->
             <section id="end-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,#1a0f0a,#4a3028)!important;border:none;">
+                    <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,var(--brown),var(--brown-light))!important;border:none;">
                         <h2 class="mb-0" style="font-family:'Noto Serif SC',serif;letter-spacing:2px;">🍽️ 点餐完成</h2>
                         <small style="opacity:0.6;font-weight:300;">唐猫庭院</small>
                     </div>
@@ -521,8 +521,8 @@
                                     <polyline points="140 68 92 128 60 98" fill="none" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </div>
-                            <h3 style="font-family:'Noto Serif SC',serif;color:#1a0f0a;font-weight:700;letter-spacing:6px;margin-bottom:8px;">点餐完成</h3>
-                            <p style="color:#8b7a6a;font-size:0.95rem;letter-spacing:2px;">菜品已记录，厨房正在为您准备</p>
+                            <h3 style="font-family:'Noto Serif SC',serif;color:var(--brown);font-weight:700;letter-spacing:6px;margin-bottom:8px;">点餐完成</h3>
+                            <p style="color:var(--text-light);font-size:0.95rem;letter-spacing:2px;">菜品已记录，厨房正在为您准备</p>
                         </div>
 
                         <!-- 数据卡片区 -->
@@ -530,46 +530,46 @@
                             <div class="row g-3 mb-4">
                                 <div class="col-6 col-md-3">
                                     <div class="text-center py-3 px-2" style="background:#fdf6f0;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                        <div style="font-size:1.5rem;color:#c9a96e;margin-bottom:4px;">🍜</div>
-                                        <div style="font-size:1.3rem;font-weight:700;color:#2c1810;" id="end-dish-count">6</div>
-                                        <small style="color:#8b7a6a;">推荐菜品</small>
+                                        <div style="font-size:1.5rem;color:var(--gold);margin-bottom:4px;">🍜</div>
+                                        <div style="font-size:1.3rem;font-weight:700;color:var(--text);" id="end-dish-count">6</div>
+                                        <small style="color:var(--text-light);">推荐菜品</small>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="text-center py-3 px-2" style="background:#fdf6f0;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
                                         <div style="font-size:1.5rem;color:#27ae60;margin-bottom:4px;">🎯</div>
-                                        <div style="font-size:1.3rem;font-weight:700;color:#2c1810;" id="end-avg-match">86%</div>
-                                        <small style="color:#8b7a6a;">平均匹配度</small>
+                                        <div style="font-size:1.3rem;font-weight:700;color:var(--text);" id="end-avg-match">86%</div>
+                                        <small style="color:var(--text-light);">平均匹配度</small>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="text-center py-3 px-2" style="background:#fdf6f0;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                        <div style="font-size:1.5rem;color:#c0392b;margin-bottom:4px;">⭐</div>
-                                        <div style="font-size:1.3rem;font-weight:700;color:#2c1810;" id="end-top-match">100%</div>
-                                        <small style="color:#8b7a6a;">最高匹配度</small>
+                                        <div style="font-size:1.5rem;color:var(--primary-accent);margin-bottom:4px;">⭐</div>
+                                        <div style="font-size:1.3rem;font-weight:700;color:var(--text);" id="end-top-match">100%</div>
+                                        <small style="color:var(--text-light);">最高匹配度</small>
                                     </div>
                                 </div>
                                 <div class="col-6 col-md-3">
                                     <div class="text-center py-3 px-2" style="background:#fdf6f0;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                        <div style="font-size:1.5rem;color:#2d8a6e;margin-bottom:4px;">📊</div>
-                                        <div style="font-size:1.3rem;font-weight:700;color:#2c1810;" id="end-model-r2">0.94</div>
-                                        <small style="color:#8b7a6a;">模型精度 <span style="font-size:0.7rem;">R²</span></small>
+                                        <div style="font-size:1.5rem;color:var(--green);margin-bottom:4px;">📊</div>
+                                        <div style="font-size:1.3rem;font-weight:700;color:var(--text);" id="end-model-r2">0.94</div>
+                                        <small style="color:var(--text-light);">模型精度 <span style="font-size:0.7rem;">R²</span></small>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- 推荐分析 -->
                             <div class="mb-4 p-4" style="background:#fff;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                <h5 style="font-family:'Noto Serif SC',serif;color:#2c1810;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:16px;">
-                                    <i class="bi bi-graph-up me-2" style="color:#c0392b;"></i>模型评估
+                                <h5 style="font-family:'Noto Serif SC',serif;color:var(--text);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:16px;">
+                                    <i class="bi bi-graph-up me-2" style="color:var(--primary-accent);"></i>模型评估
                                 </h5>
                                 <div id="model-metrics" style="display:flex;flex-wrap:wrap;gap:20px;justify-content:center;"></div>
                             </div>
 
                             <!-- 本次推荐满意度 -->
                             <div class="mb-4 p-4" style="background:#fff;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                <h5 style="font-family:'Noto Serif SC',serif;color:#2c1810;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:16px;">
-                                    <i class="bi bi-emoji-smile me-2" style="color:#c0392b;"></i>对这次推荐满意吗？
+                                <h5 style="font-family:'Noto Serif SC',serif;color:var(--text);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:16px;">
+                                    <i class="bi bi-emoji-smile me-2" style="color:var(--primary-accent);"></i>对这次推荐满意吗？
                                 </h5>
                                 <div style="text-align:center;padding:10px 0;">
                                     <div style="font-size:2.2rem;letter-spacing:8px;cursor:pointer;" id="end-satisfaction">
@@ -579,15 +579,15 @@
                                         <span class="sat-star" data-val="4" style="cursor:pointer;color:#ddd;">😄</span>
                                         <span class="sat-star" data-val="5" style="cursor:pointer;color:#ddd;">🤩</span>
                                     </div>
-                                    <div style="color:#8b7a6a;font-size:0.85rem;margin-top:4px;" id="end-sat-hint">点击选择满意度</div>
-                                    <button class="btn btn-sm mt-2" id="end-sat-submit" disabled style="background:#c9a96e;color:#fff;border:none;border-radius:6px;padding:4px 16px;font-size:0.8rem;">提交评价</button>
+                                    <div style="color:var(--text-light);font-size:0.85rem;margin-top:4px;" id="end-sat-hint">点击选择满意度</div>
+                                    <button class="btn btn-sm mt-2" id="end-sat-submit" disabled style="background:var(--gold);color:#fff;border:none;border-radius:6px;padding:4px 16px;font-size:0.8rem;">提交评价</button>
                                 </div>
                             </div>
 
                             <!-- 口味分析 -->
                             <div class="mb-4 p-4" style="background:#fff;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
-                                <h5 style="font-family:'Noto Serif SC',serif;color:#2c1810;font-size:1rem;padding-bottom:8px;border-bottom:2px solid #e8d5b0;margin-bottom:16px;">
-                                    <i class="bi bi-bar-chart me-2" style="color:#c0392b;"></i>影响推荐的关键因素
+                                <h5 style="font-family:'Noto Serif SC',serif;color:var(--text);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:16px;">
+                                    <i class="bi bi-bar-chart me-2" style="color:var(--primary-accent);"></i>影响推荐的关键因素
                                 </h5>
                                 <div style="position:relative;width:100%;height:280px;">
                                     <canvas id="feature-importance-chart" style="width:100%;height:100%;display:block;"></canvas>
@@ -597,12 +597,12 @@
                             <!-- 操作按钮 -->
                             <div class="row g-3">
                                 <div class="col-6">
-                                    <button class="btn w-100 py-3" id="new-recommendation" style="background:linear-gradient(135deg,#b83a2a,#8b1a1a);color:#fff;border:none;border-radius:12px;font-size:0.95rem;letter-spacing:1px;box-shadow:0 4px 16px rgba(184,58,42,0.2);">
+                                    <button class="btn w-100 py-3" id="new-recommendation" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;font-size:0.95rem;letter-spacing:1px;box-shadow:0 4px 16px rgba(184,58,42,0.2);">
                                         <i class="bi bi-arrow-repeat me-2"></i>重新点餐
                                     </button>
                                 </div>
                                 <div class="col-6">
-                                    <button class="btn w-100 py-3" id="end-logout" style="background:transparent;color:#8b7a6a;border:1.5px solid #ddd;border-radius:12px;font-size:0.95rem;letter-spacing:1px;">
+                                    <button class="btn w-100 py-3" id="end-logout" style="background:transparent;color:var(--text-light);border:1.5px solid #ddd;border-radius:12px;font-size:0.95rem;letter-spacing:1px;">
                                         <i class="bi bi-box-arrow-right me-2"></i>退出
                                     </button>
                                 </div>
@@ -615,7 +615,7 @@
             <!-- 关于本店 -->
             <section id="about-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white" style="background-color:#c0392b;">
+                    <div class="card-header text-white" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">关于本店</h2>
                     </div>
                     <div class="card-body p-5">
@@ -638,28 +638,28 @@
                                 <div class="col-md-4 d-flex">
                                     <div class="p-3 text-center rounded-3 w-100 d-flex flex-column align-items-center justify-content-center" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.15);min-height:140px;">
                                         <div style="font-size:2rem;margin-bottom:6px;">🎨</div>
-                                        <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;">前端</h6>
-                                        <p style="font-size:0.8rem;color:#8b7a6a;margin:0;letter-spacing:1px;">Bootstrap 5 · Chart.js</p>
+                                        <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);">前端</h6>
+                                        <p style="font-size:0.8rem;color:var(--text-light);margin:0;letter-spacing:1px;">Bootstrap 5 · Chart.js</p>
                                     </div>
                                 </div>
                                 <div class="col-md-4 d-flex">
                                     <div class="p-3 text-center rounded-3 w-100 d-flex flex-column align-items-center justify-content-center" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.15);min-height:140px;">
                                         <div style="font-size:2rem;margin-bottom:6px;">⚙️</div>
-                                        <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;">后端</h6>
-                                        <p style="font-size:0.8rem;color:#8b7a6a;margin:0;letter-spacing:1px;">Node.js · Express · Python</p>
+                                        <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);">后端</h6>
+                                        <p style="font-size:0.8rem;color:var(--text-light);margin:0;letter-spacing:1px;">Node.js · Express · Python</p>
                                     </div>
                                 </div>
                                 <div class="col-md-4 d-flex">
                                     <div class="p-3 text-center rounded-3 w-100 d-flex flex-column align-items-center justify-content-center" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.15);min-height:140px;">
                                         <div style="font-size:2rem;margin-bottom:6px;">🧠</div>
-                                        <h6 style="font-family:'Noto Serif SC',serif;color:#4a3028;">机器学习</h6>
-                                        <p style="font-size:0.8rem;color:#8b7a6a;margin:0;letter-spacing:1px;">scikit-learn · Random Forest</p>
+                                        <h6 style="font-family:'Noto Serif SC',serif;color:var(--brown-light);">机器学习</h6>
+                                        <p style="font-size:0.8rem;color:var(--text-light);margin:0;letter-spacing:1px;">scikit-learn · Random Forest</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="text-center mt-5">
-                            <button class="btn btn-primary" id="back-from-about" style="background-color:#c0392b;border-color:#c0392b;">返回</button>
+                            <button class="btn btn-primary" id="back-from-about" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">返回</button>
                         </div>
                     </div>
                 </div>
@@ -668,7 +668,7 @@
             <!-- 全部菜单 -->
             <section id="dataset-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white" style="background-color:#c0392b;">
+                    <div class="card-header text-white" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">全部菜单</h2>
                     </div>
                     <div class="card-body p-5">
@@ -709,7 +709,7 @@
                                     <option value="price_asc">价格从低到高</option>
                                     <option value="price_desc">价格从高到低</option>
                                 </select>
-                                <button class="btn w-100 mt-2" id="menu-reset-filter" style="background:#e8d5b0;color:#4a3028;border:none;border-radius:8px;font-size:0.85rem;">
+                                <button class="btn w-100 mt-2" id="menu-reset-filter" style="background:var(--gold-light);color:var(--brown-light);border:none;border-radius:8px;font-size:0.85rem;">
                                     <i class="bi bi-x-circle"></i> 重置
                                 </button>
                             </div>
@@ -727,7 +727,7 @@
                             </div>
                         </div>
                         <div class="text-center mt-5">
-                            <button class="btn btn-primary" id="back-from-dataset" style="background-color:#c0392b;border-color:#c0392b;">返回</button>
+                            <button class="btn btn-primary" id="back-from-dataset" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">返回</button>
                         </div>
                     </div>
                 </div>
@@ -736,7 +736,7 @@
             <!-- 隐私政策 -->
             <section id="privacy-section" class="section">
                 <div class="card shadow-lg rounded-4">
-                    <div class="card-header text-white" style="background-color:#c0392b;">
+                    <div class="card-header text-white" style="background-color:var(--primary-accent);">
                         <h2 class="mb-0">隐私政策</h2>
                     </div>
                     <div class="card-body p-5">
@@ -776,7 +776,7 @@
                             <p class="text-muted" style="font-size:0.8rem;">本政策最后更新日期：2026年8月8日</p>
                         </div>
                         <div class="text-center mt-5">
-                            <button class="btn btn-primary" id="back-from-privacy" style="background-color:#c0392b;border-color:#c0392b;">返回</button>
+                            <button class="btn btn-primary" id="back-from-privacy" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">返回</button>
                         </div>
                     </div>
                 </div>
@@ -809,7 +809,7 @@
                 </div>
                 <div class="modal-body" id="modal-body">消息内容</div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="modal-confirm-btn" style="background-color:#c0392b;border-color:#c0392b;">确定</button>
+                    <button type="button" class="btn btn-primary" id="modal-confirm-btn" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">确定</button>
                 </div>
             </div>
         </div>

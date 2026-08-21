@@ -17,6 +17,7 @@ html { touch-action: manipulation; }
   --primary: #b83a2a;
   --primary-dark: #8b1a1a;
   --primary-light: #cf5240;
+  --primary-accent: #c0392b;
   --gold: #c9a96e;
   --gold-light: #e8d5b0;
   --gold-dark: #a8884e;
@@ -248,7 +249,7 @@ body {
   padding: 1rem 3rem !important;
   letter-spacing: 6px !important;
   border-radius: 50px !important;
-  background: linear-gradient(135deg, #c0392b, #8b1a1a) !important;
+  background: linear-gradient(135deg, var(--primary-accent), var(--primary-dark)) !important;
   border: none !important;
   box-shadow:
     0 4px 20px rgba(184,58,42,0.22),
@@ -806,7 +807,7 @@ html.dark-mode {
   --text: #e0d5c1; --text-light: #a89880;
   --brown: #e0d5c1; --brown-light: #c4b698;
   --gold: #c9a96e; --gold-light: #d4b87a;
-  --primary: #d0453a; --primary-dark: #b8352a;
+  --primary: #d0453a; --primary-dark: #b8352a; --primary-accent: #d0453a;
 }
 html.dark-mode body {
   background-color: #0f0f0f;
@@ -920,10 +921,10 @@ html.dark-mode .logo-bg { background: #1a1a1a; }
    管理后台导出按钮
    ═══════════════════════════════════════════════════ */
 .btn-export {
-  background: #b83a2a; color: #fff; border: none;
+  background: var(--primary); color: #fff; border: none;
   border-radius: 6px; padding: 4px 12px; font-size: 0.78rem;
 }
-.btn-export:hover { background: #a33226; color: #fff; }
+.btn-export:hover { background: var(--primary-dark); color: #fff; }
 
 /* ═══════════════════════════════════════════════════
    打印样式 —— 菜单/订单打印
