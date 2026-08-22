@@ -57,3 +57,7 @@ ssl/
 .retired/
 .ai/
 .playwright-mcp/
+
+# 运行时指标数据（服务器自动写入，不应提交）
+metrics_history.json
+model_metrics.json
