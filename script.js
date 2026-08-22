@@ -16,8 +16,6 @@ function esc(str) {
   if (typeof str !== 'string') return str;
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escapeAttr(str){return esc(String(str)).replace(/&quot;/g,'&#34;').replace(/&#39;/g,'&#x27;');}
-// 价格格式化：数字 → "88元"，null/undefined → "未知"
 function formatPrice(p){if(p===null||p===undefined||p==='')return'未知';return parseFloat(p).toFixed(0)+'元';}
 // 获取用户认证头
 function authHeaders(){const t=localStorage.getItem('userToken');return t?{'Authorization':'Bearer '+t}:{};}
@@ -49,7 +47,7 @@ function updateCartBadge(){
 
 
 // ─── js/core.js ───
-﻿// 核心功能模块
+// 核心功能模块
 async function loadDecisionTreeModel(){
  if(decisionTreeLoaded||decisionTreeLoading)return decisionTreeLoaded;
  decisionTreeLoading=true;
@@ -114,7 +112,6 @@ function loadUsers(){try{const d=localStorage.getItem('users');return d?JSON.par
 function saveUsers(u){try{localStorage.setItem('users',JSON.stringify(u));}catch(e){}}
 function getUserData(n){return loadUsers().find(u=>u.username===n);}
 function updateUserData(n,d){const u=loadUsers();const i=u.findIndex(x=>x.username===n);if(i===-1)return false;u[i]={...u[i],...d};saveUsers(u);return true;}
-function addUser(u){const us=loadUsers();us.push(u);saveUsers(us);}
 function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 
 
@@ -602,7 +599,7 @@ function deleteAccount(){
 function showCart(){
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
- if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';}else{
+ if(!cart.length){if(tb)tb.innerHTML='';if(empty)empty.style.display='block';if(content)content.style.display='none';}else{
   if(empty)empty.style.display='none';if(content)content.style.display='block';
   if(tb)tb.innerHTML=cart.map(x=>{
    const dish=dishData.find(d=>d.id===x.id);
@@ -646,7 +643,7 @@ async function fetchRecommendations(isRefresh){
  const start=Date.now();
  const $=id=>document.getElementById(id);
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
- if(!rl||!rr){console.warn('推荐元素未找到');showMessage('提示','页面加载中，请稍后重试');console.groupEnd();return;}
+ if(!rl||!rr){console.warn('推荐元素未找到');showMessage('提示','页面加载中，请稍后重试');return;}
  rl.classList.remove('d-none');rr.classList.add('d-none');
 
  // 等待菜品数据加载完成（最多等5秒）

@@ -49,8 +49,8 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      fontSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
       frameSrc: ["'none'"],
@@ -1537,7 +1537,12 @@ app.get('/api/admin/monitor', (req, res) => {
 
 // 3.1 数据导出 CSV
 function toCSV(headers, rows) {
-  const escape = v => '"' + String(v || '').replace(/"/g, '""') + '"';
+  const escape = v => {
+    const s = String(v || '');
+    // 防止 CSV 注入：以 = + - @ 开头的值添加 \t 前缀
+    const safe = /^[=+\-@]/.test(s) ? '\t' + s : s;
+    return '"' + safe.replace(/"/g, '""') + '"';
+  };
   return headers.join(',') + '\n' + rows.map(r => r.map(escape).join(',')).join('\n');
 }
 
@@ -1634,7 +1639,7 @@ app.post('/api/admin/users/:id/toggle', async (req, res) => {
     const username = user.rows[0].username;
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
     // 清理用户相关的反馈和推荐日志（按用户名清理）
-    await pool.query("DELETE FROM feedback WHERE user_id = $1 OR user_id = $2", [String(username), String(username)]);
+    await pool.query("DELETE FROM feedback WHERE user_id = $1", [String(username)]);
     await pool.query("DELETE FROM recommendation_log WHERE user_id = $1", [String(username)]);
     res.json({ success: true, message: '用户已删除，相关数据已清理' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }

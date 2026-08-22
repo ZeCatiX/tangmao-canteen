@@ -15,11 +15,30 @@ function esc(str) {
   if (typeof str !== 'string') return str;
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function escapeAttr(str){return esc(String(str)).replace(/&quot;/g,'&#34;').replace(/&#39;/g,'&#x27;');}
 // 价格格式化：数字 → "88元"，null/undefined → "未知"
 function formatPrice(p){if(p===null||p===undefined||p==='')return'未知';return parseFloat(p).toFixed(0)+'元';}
 // 获取用户认证头
 function authHeaders(){const t=localStorage.getItem('userToken');return t?{'Authorization':'Bearer '+t}:{};}
+
+// 安全 fetch 包装器：自动处理 401 登录过期和网络错误
+function safeFetch(url, opts) {
+  const fetcher = opts?.method 
+    ? fetch(url, opts) 
+    : (typeof url === 'string' ? fetch(url, opts) : url);
+  return fetcher.then(r => {
+    if (r.status === 401 && localStorage.getItem('userToken')) {
+      // token 过期，自动清除并提示登录
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('currentUser');
+      showMessage('登录已过期', '请重新登录');
+      setTimeout(() => { const $ = id => document.getElementById(id); ['home-section','login-section'].forEach(s=>{const e=$(s);if(e)e.classList.add('active');}); if($('login-section'))$('login-section').classList.add('active'); ['profile-section','register-section'].forEach(s=>{const e=$(s);if(e)e.classList.remove('active');}); }, 500);
+    }
+    return r;
+  }).catch(e => {
+    console.warn('网络请求失败:', url, e.message);
+    return new Response(JSON.stringify({ success: false, error: '网络请求失败，请检查连接' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+  });
+}
 
 // ═══════════════ 购物车功能 ═══════════════
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
@@ -28,7 +47,7 @@ function addToCart(dish,qty){
  const cart=getCart();const i=cart.findIndex(x=>x.id===dish.id);
  const q=typeof qty==='number'&&qty>0?qty:1;
  if(i>=0){cart[i].qty=(cart[i].qty||1)+q}else{cart.push({id:dish.id,name:dish.name,price:dish.price,qty:q,image:dish.image_url||''})}
- saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车');
+ saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
 }
 function removeFromCart(id){
  const cart=getCart().filter(x=>x.id!==id);saveCart(cart);updateCartBadge();

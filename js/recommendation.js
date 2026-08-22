@@ -1,10 +1,10 @@
 // 推荐逻辑模块
 async function fetchRecommendations(isRefresh){
- console.group(isRefresh?'🔍刷新':'🔍推荐');
+ // console.group(isRefresh?'🔍刷新':'🔍推荐');
  const start=Date.now();
  const $=id=>document.getElementById(id);
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
- if(!rl||!rr){console.warn('推荐元素未找到');showMessage('提示','页面加载中，请稍后重试');console.groupEnd();return;}
+ if(!rl||!rr){console.warn('推荐元素未找到');showMessage('提示','页面加载中，请稍后重试');return;}
  rl.classList.remove('d-none');rr.classList.add('d-none');
 
  // 等待菜品数据加载完成（最多等5秒）
@@ -15,12 +15,12 @@ async function fetchRecommendations(isRefresh){
   }
   if(!dishData.length){
    showMessage('提示','菜品数据加载中，请稍后重试');
-   $('recommendation-loading').classList.add('d-none');
-   console.groupEnd();return;
+   rl.classList.add('d-none');
+   return;
   }
  }
 
- const prefs={'辣度':userProfile.spiciness,'咸淡':userProfile.saltiness,'甜酸':userProfile.sweetness,'价格区间':userProfile.price||'无','饮食_宗教':userProfile.religion==='无'?'无特殊要求':userProfile.religion,'allergies':userProfile.allergies||[],'calorie':userProfile.calorie||'无'};
+ const up=userProfile||{};const prefs={'辣度':up.spiciness||'','咸淡':up.saltiness||'','甜酸':up.sweetness||'','价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion||'无','allergies':up.allergies||[],'calorie':up.calorie||'无'};
  let blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u)blk=u.blacklist||[];}
 
  let dishes=dishData.filter(d=>{
@@ -44,7 +44,7 @@ async function fetchRecommendations(isRefresh){
   if(a.includes('麸质')&&d.allergies?.gluten)return false;
   return true;
  });
- if(dishes.length<5){showMessage('提示','没有更多菜品啦！');if($('recommendation-loading'))$('recommendation-loading').classList.add('d-none');console.groupEnd();return;}
+ if(dishes.length<5){showMessage('提示','没有更多菜品啦！');if($('recommendation-loading'))$('recommendation-loading').classList.add('d-none');return;}
 
  const processML=preds=>{
   const mlScores=dishes.map(d=>{const p=preds.find(p2=>p2.id==d.id);return p?p.score:0;});
@@ -60,7 +60,7 @@ async function fetchRecommendations(isRefresh){
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
   currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';console.log('🍽️'+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.groupEnd();displayRecommendations();
+  currentRecommendationMode='随机森林';displayRecommendations();
  };
  const callAPI=dlist=>{
   const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
@@ -70,11 +70,11 @@ async function fetchRecommendations(isRefresh){
  };
  const mode=userProfile?.recommendationMode||'auto';
  if(mode==='local'){fallback(prefs,blk,dishes);return;}
- checkApiAvailability().then(a=>{if(a)callAPI(dishes);else if(mode==='api'){showMessage('提示','API不可用，请切换为自动或本地模式');displayRecommendations();}else fallback(prefs,blk,dishes);});
+ checkApiAvailability().then(a=>{if(a)callAPI(dishes);else if(mode==='api'){showMessage('提示','API不可用，已自动切换为本地推荐模式');fallback(prefs,blk,dishes);}else fallback(prefs,blk,dishes);});
 }
 
 async function fallback(prefs,blk,dishes){
- console.log('🔄本地推荐');const start=Date.now();await loadDecisionTreeModel();
+// console.log('🔄本地推荐');const start=Date.now();await loadDecisionTreeModel();
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,nutrition:0,rating:0};
@@ -94,7 +94,7 @@ async function fallback(prefs,blk,dishes){
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
  if(eligible.length){const bd=eligible[Math.floor(Math.random()*eligible.length)];bd.reason='🔮 盲盒推荐：试试这个吧，说不定有惊喜！';bd.type='盲盒尝鲜';bd.matchIndex=0;bd.matchRate=0.5;top.push(bd);}
  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
- currentRecommendationMode='决策树模型';console.log('🍽️'+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.groupEnd();displayRecommendations();
+ currentRecommendationMode='决策树模型';displayRecommendations();
 }
 
 
@@ -102,6 +102,8 @@ async function fallback(prefs,blk,dishes){
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
  fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
+ // 缓存推荐结果到 localStorage
+ try { localStorage.setItem('cachedRecommendations', JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode', currentRecommendationMode); } catch(e) {}
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
  if(!loading||!result)return;
  const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
@@ -120,7 +122,7 @@ function displayRecommendations(){
   const blindBoxClass=d.type==='盲盒尝鲜'?'blind-box-card':'';
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
   const matchRatePct=isFinite(d.matchRate)?(d.matchRate*100).toFixed(1):'0';
- dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'<img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy">'+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
+ dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'<img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">'+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
  loading.classList.add('d-none');result.classList.remove('d-none');
 }

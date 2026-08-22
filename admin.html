@@ -145,15 +145,17 @@
   <div class="admin-login-box" style="border-radius:16px;padding:2.5rem;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.08);text-align:center;">
     <h3 style="font-family:'Noto Serif SC',serif;color:#2c1810;margin-bottom:4px;">唐猫庭院</h3>
     <p style="color:#8b7a6a;font-size:0.85rem;margin-bottom:24px;">管理后台登录</p>
-    <div style="text-align:left;margin-bottom:16px;">
-      <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">用户名</label>
-      <input id="admin-login-user" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员账号">
-    </div>
-    <div style="text-align:left;margin-bottom:24px;">
-      <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">密码</label>
-      <input id="admin-login-pass" type="password" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员密码">
-    </div>
-    <button id="admin-login-btn" style="width:100%;background:linear-gradient(135deg,#b83a2a,#8b1a1a);color:#fff;border:none;border-radius:8px;padding:10px;font-size:0.95rem;letter-spacing:2px;cursor:pointer;">登 录</button>
+    <form id="admin-login-form" onsubmit="return false;">
+      <div style="text-align:left;margin-bottom:16px;">
+        <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">用户名</label>
+        <input id="admin-login-user" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员账号" autocomplete="username">
+      </div>
+      <div style="text-align:left;margin-bottom:24px;">
+        <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">密码</label>
+        <input id="admin-login-pass" type="password" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员密码" autocomplete="current-password">
+      </div>
+      <button id="admin-login-btn" type="submit" style="width:100%;background:linear-gradient(135deg,#b83a2a,#8b1a1a);color:#fff;border:none;border-radius:8px;padding:10px;font-size:0.95rem;letter-spacing:2px;cursor:pointer;">登 录</button>
+    </form>
     <p id="admin-login-error" style="color:#e74c3c;font-size:0.8rem;margin-top:12px;display:none;"></p>
   </div>
 </div>
@@ -1293,7 +1295,9 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   function loadNotifications() {
     const token = localStorage.getItem('adminToken');
     if (!token) return;
-    fetch('/api/admin/notifications')
+    fetch('/api/admin/notifications', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
       .then(r => r.json()).then(d => {
         if (!d.success || !d.notifications.length) return;
         const bar = document.getElementById('notification-bar');

@@ -5,9 +5,30 @@ document.addEventListener('DOMContentLoaded',function(){
  const savedUser=localStorage.getItem('currentUser');
  if(savedUser&&getUserData(savedUser))currentUser=savedUser;
  showSection('home-section');
+ // 恢复购物车徽标（刷新后保持显示）
+ if(typeof updateCartBadge==='function')updateCartBadge();
+ // 暗黑模式：检测系统偏好 + 用户手动切换
+ const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
+ const savedDark=localStorage.getItem('darkMode');
+ // 优先级：localStorage保存的偏好 > 系统偏好
+ const shouldBeDark=savedDark!==null?savedDark==='true':prefersDark;
+ if(shouldBeDark){document.documentElement.classList.add('dark-mode');const tb=document.getElementById('dark-mode-toggle');if(tb)tb.textContent='☀️';}
+ // 暗黑模式切换按钮
+ const darkToggle=document.getElementById('dark-mode-toggle');
+ if(darkToggle)darkToggle.addEventListener('click',function(){
+  document.documentElement.classList.toggle('dark-mode');
+  const isDark=document.documentElement.classList.contains('dark-mode');
+  this.textContent=isDark?'☀️':'🌙';
+  localStorage.setItem('darkMode',isDark);
+ });
  // 从API加载菜品数据
- Promise.race([fetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length)dishData=d.dishes;}).catch(()=>console.warn('菜品数据加载超时/失败'));
- setTimeout(()=>checkApiAvailability().then(a=>console.log(a?'API可用':'API不可用,使用本地推荐')),100);
+ Promise.race([fetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
+  if(d.success&&d.dishes.length){
+    dishData=d.dishes;
+    renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
+  }
+}).catch(()=>console.warn('菜品数据加载超时/失败'));
+ setTimeout(()=>checkApiAvailability().then(a=>console.info(a?'API可用':'API不可用,使用本地推荐')),100);
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
  const submit=(id,fn)=>{const el=$(id);if(el)el.addEventListener('submit',e=>{e.preventDefault();fn();});};
@@ -16,6 +37,7 @@ document.addEventListener('DOMContentLoaded',function(){
  click('nav-home',e=>{e.preventDefault();showSection('home-section');});
  click('nav-about',e=>{e.preventDefault();showSection('about-section');});
  click('nav-dataset',e=>{e.preventDefault();showDataset();});
+ click('nav-privacy',e=>{e.preventDefault();showSection('privacy-section');});
  // 搜索和筛选事件绑定
  ['menu-search','menu-filter-cat','menu-filter-spice','menu-filter-price','menu-sort'].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
@@ -45,9 +67,14 @@ document.addEventListener('DOMContentLoaded',function(){
  click('back-to-home-from-register',()=>showSection('home-section'));
  click('back-from-about',()=>showSection('home-section'));
  click('back-from-dataset',()=>showSection('home-section'));
+click('back-from-privacy',()=>showSection('home-section'));
+click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  submit('login-form',login);submit('register-form',register);
  const an=$('allergy-none'),ac=document.querySelectorAll('input[name="allergy"]');
- if(an){an.addEventListener('change',function(){ac.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)ac.forEach(cb=>cb.disabled=false);});ac.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){an.checked=false;an.disabled=false;}}));}
+ if(an){an.addEventListener('change',function(){ac.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)ac.forEach(cb=>cb.disabled=false);});ac.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){an.checked=false;an.disabled=false;}}));
+ // 初始化时同步禁用状态（allergy-none 默认 checked 时应禁用其他选项）
+ if(an.checked){ac.forEach(cb=>{cb.disabled=true;});}
+ }
  submit('preference-form',submitPreference);
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
@@ -83,10 +110,10 @@ document.addEventListener('DOMContentLoaded',function(){
   showCart();
  });
  const me=$('message-modal'),cb=$('modal-close-btn'),cf=$('modal-confirm-btn');
- const closeModal=()=>{const m=bootstrap.Modal.getInstance(me);if(!m)return;if(document.activeElement)document.activeElement&&document.activeElement.blur();me.inert=true;m.hide();setTimeout(()=>me.setAttribute('aria-hidden','true'),100);};
+ const closeModal=()=>{if(!me)return;const m=bootstrap.Modal.getInstance(me);if(!m)return;if(document.activeElement)document.activeElement&&document.activeElement.blur();me.inert=true;m.hide();setTimeout(()=>me.setAttribute('aria-hidden','true'),100);};
  if(cb)cb.addEventListener('click',e=>{e.preventDefault();closeModal();});
  if(cf)cf.addEventListener('click',e=>{e.preventDefault();closeModal();});
- me.addEventListener('hidden.bs.modal',()=>{me.inert=true;me.setAttribute('aria-hidden','true');if(me.contains(document.activeElement))document.activeElement&&document.activeElement.blur();});
+ if(me)me.addEventListener('hidden.bs.modal',()=>{me.inert=true;me.setAttribute('aria-hidden','true');if(me.contains(document.activeElement))document.activeElement&&document.activeElement.blur();});
  // 星级评分（使用全局变量）
  const sc=document.getElementById('star-rating');
  if(sc){sc.addEventListener('click',function(e){const st=e.target.closest('.star');if(!st)return;starRatingValue=parseInt(st.dataset.value);document.querySelectorAll('.star').forEach((s,i)=>{s.textContent=i<starRatingValue?'★':'☆';s.style.color=i<starRatingValue?'#f1c40f':'#ddd';});document.getElementById('star-hint').textContent='您给了 '+starRatingValue+' 星';document.getElementById('star-submit-btn').disabled=false;});}
@@ -117,11 +144,40 @@ document.addEventListener('DOMContentLoaded',function(){
  const savedPrefs=localStorage.getItem('savedPrefs');
  const cb2=document.getElementById('continue-btn');
  if(currentUser&&currentUser!=='guest'&&(savedPrefs||getUserData(currentUser)?.preferences?.spiciness)){if(cb2)cb2.classList.remove('d-none');}
+// 检查是否有缓存的推荐结果
+try {
+  const cached = localStorage.getItem('cachedRecommendations');
+  const vcb = document.getElementById('view-cached-btn');
+  if (cached && vcb) {
+    const parsed = JSON.parse(cached);
+    if (Array.isArray(parsed) && parsed.length > 0) vcb.classList.remove('d-none');
+  }
+} catch(e) {}
+click('view-cached-btn', () => {
+  try {
+    const cached = localStorage.getItem('cachedRecommendations');
+    const mode = localStorage.getItem('cachedRecMode') || '本地推荐';
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        currentRecommendations = parsed;
+        currentRecommendationMode = mode;
+        showSection('recommendation-section');
+        displayRecommendations();
+        return;
+      }
+    }
+    showMessage('提示', '没有找到上次的推荐记录');
+  } catch(e) { showMessage('提示', '读取推荐记录失败'); }
+});
  // 初始化已点过列表
  if(!localStorage.getItem('orderedDishes'))localStorage.setItem('orderedDishes','[]');
  // 触控滑动支持（左滑拉黑，右滑收藏）
  let touchStartX=0,touchStartY=0,touchEl=null;
- document.addEventListener('touchstart',function(e){
+ document.addEventListener('storage',function(e){
+ if(e.key==='cart'){updateCartBadge();const cs=document.getElementById('cart-section');if(cs&&cs.classList.contains('active'))showCart();}
+});
+document.addEventListener('touchstart',function(e){
   const item=e.target.closest('.list-group-item');
   if(!item||!item.closest('#dish-list'))return;
   touchStartX=e.touches[0].clientX;
@@ -159,5 +215,18 @@ document.addEventListener('DOMContentLoaded',function(){
   if(touchEl){touchEl.style.transform='';touchEl.style.opacity='';}
   touchStartX=0;touchStartY=0;touchEl=null;
  },{passive:true});
+// 浏览器前进/后退按钮导航
+window.addEventListener('popstate', function(e) {
+  const section = e.state && e.state.section ? e.state.section : 'home-section';
+  const el = document.getElementById(section);
+  if (el) showSection(section);
+});
+// 回到顶部按钮：滚动超过200px时显示
+const backToTopBtn = document.getElementById('back-to-top');
+if (backToTopBtn) {
+  window.addEventListener('scroll', function() {
+    backToTopBtn.classList.toggle('visible', window.scrollY > 200);
+  }, { passive: true });
+}
 });
 

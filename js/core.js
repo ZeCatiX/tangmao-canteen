@@ -1,4 +1,4 @@
-﻿// 核心功能模块
+// 核心功能模块
 async function loadDecisionTreeModel(){
  if(decisionTreeLoaded||decisionTreeLoading)return decisionTreeLoaded;
  decisionTreeLoading=true;
@@ -63,7 +63,6 @@ function loadUsers(){try{const d=localStorage.getItem('users');return d?JSON.par
 function saveUsers(u){try{localStorage.setItem('users',JSON.stringify(u));}catch(e){}}
 function getUserData(n){return loadUsers().find(u=>u.username===n);}
 function updateUserData(n,d){const u=loadUsers();const i=u.findIndex(x=>x.username===n);if(i===-1)return false;u[i]={...u[i],...d};saveUsers(u);return true;}
-function addUser(u){const us=loadUsers();us.push(u);saveUsers(us);}
 function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 
 
@@ -165,14 +164,22 @@ function resetPreferenceForm(){
  if($('recommendation-mode'))$('recommendation-mode').value='auto';
 }
 
+const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院'};
+const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
+
 function showSection(sectionId){
  const el=document.getElementById(sectionId);
  if(!el){console.warn('showSection: 未找到元素',sectionId);return;}
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
  el.classList.add('active');
+ // 切换section时平滑滚动到顶部，提升浏览体验
+ window.scrollTo({ top: 0, behavior: 'smooth' });
+ // 记录导航历史（用于浏览器前进/后退）
+ try { history.pushState({ section: sectionId }, '', window.location.pathname); } catch(e) {}
  updateUserNavbar();
- const navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
- const nid=navMap[sectionId];
+ // 更新页面标题
+ if(s_titleMap[sectionId])document.title=s_titleMap[sectionId];
+ const nid=s_navMap[sectionId];
  document.querySelectorAll('.navbar-nav .nav-link').forEach(l=>{l.classList.remove('active');l.removeAttribute('aria-current');});
  if(nid){const l=document.getElementById(nid);if(l){l.classList.add('active');l.setAttribute('aria-current','page');}}
  if(sectionId==='preference-section'){
@@ -191,7 +198,7 @@ function showSection(sectionId){
 
 function updateModeDisplay(){const el=document.getElementById('current-recommendation-mode'),sel=document.getElementById('recommendation-mode');if(!el||!sel)return;el.textContent=({auto:'自动选择（优先API）',api:'后端API推荐（更智能）',local:'本地推荐（更快速）'})[sel.value]||'自动选择（优先API）';}
 
-function showMessage(title,msg,callback){
+function showMessage(title,msg,callback,autoClose){
  const mt=document.getElementById('modal-title'),mb=document.getElementById('modal-body');
  if(!mt||!mb){console.warn('showMessage: 模态框元素未找到');return;}
  mt.textContent=title;
@@ -199,6 +206,12 @@ function showMessage(title,msg,callback){
  const el=document.getElementById('message-modal');
  let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el,{focus:false});
  el.inert=false;el.removeAttribute('aria-hidden');m.show();
+  // 模态框打开后聚焦到确定按钮（焦点管理）
+  el.addEventListener('shown.bs.modal', function focusMsgHandler() {
+    el.removeEventListener('shown.bs.modal', focusMsgHandler);
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if (confirmBtn) setTimeout(function() { confirmBtn.focus(); }, 50);
+  });
  // 保存回调，在模态框隐藏时调用
  if (typeof callback === 'function') {
    const handler = function() {
@@ -207,7 +220,13 @@ function showMessage(title,msg,callback){
    };
    el.addEventListener('hidden.bs.modal', handler);
  }
- setTimeout(()=>{if(el.contains(document.activeElement))document.activeElement&&document.activeElement.blur();},50);
+ // 自动关闭：信息提示在指定毫秒后自动隐藏，避免遮罩层长时间阻挡页面操作
+ if (typeof autoClose === 'number' && autoClose > 0) {
+   setTimeout(function() {
+     const modal = bootstrap.Modal.getInstance(el);
+     if (modal) modal.hide();
+   }, autoClose);
+ }
 }
 
 function showDataset(){
@@ -216,15 +235,17 @@ function showDataset(){
 }
 function renderMenuTable(){
  const tb=document.getElementById('dataset-table-body');if(!tb)return;
+ // 如果 dishData 为空，最多重试 3 次（避免无限堆积）
+ if(!dishData||!dishData.length){
+  if(!renderMenuTable._retryCount)renderMenuTable._retryCount=0;
+  if(renderMenuTable._retryCount<3){renderMenuTable._retryCount++;setTimeout(renderMenuTable,1000);}
+  return;
+ }
+ renderMenuTable._retryCount=0;
  const q=document.getElementById('menu-search')?.value?.trim().toLowerCase()||'';
  const cat=document.getElementById('menu-filter-cat')?.value||'';
  const spice=document.getElementById('menu-filter-spice')?.value||'';
  const priceRange=document.getElementById('menu-filter-price')?.value||'';
- // 如果 dishData 为空，等 1 秒后重试
- if(!dishData||!dishData.length){
-  setTimeout(renderMenuTable,1000);
-  return;
- }
  const catOrder=['招牌','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬','陕西小吃'];
  const sorted=[...dishData].sort((a,b)=>catOrder.indexOf(a.category)-catOrder.indexOf(b.category)||a.id-b.id);
  const filtered=sorted.filter(d=>{
@@ -247,16 +268,17 @@ function renderMenuTable(){
   const r=document.createElement('tr');
   const tags=d.tags&&d.tags.length?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
-  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+tags+'</td>';
+  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+esc(tags)+'</td><td style="text-align:center;white-space:nowrap;"><button class="btn btn-sm btn-link add-to-cart-btn" data-id="'+d.id+'" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#2e86c1;" title="加入购物车">🛒</button><button class="btn btn-sm btn-link" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#e74c3c;" onclick="addToFavorites('+d.id+')" title="收藏">♥</button></td>';
   tb.appendChild(r);
  });
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
 }
 
 function login(){
- const uEl=document.getElementById('login-username'),pEl=document.getElementById('login-password');
+ const uEl=document.getElementById('login-username'),pEl=document.getElementById('login-password'),bEl=document.getElementById('login-btn');
  if(!uEl||!pEl){showMessage('页面错误','登录表单元素未找到');return;}
- const u=uEl.value,p=pEl.value;
+ if(bEl)bEl.disabled=true;
+ const u=uEl.value.trim(),p=pEl.value;
  if(!u||!p){showMessage('登录失败','请输入用户名和密码');return;}
  fetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('登录失败',d.error||'用户名或密码错误');return;}
@@ -267,42 +289,73 @@ function login(){
  saveUsers(users);showMessage('登录成功','欢迎回来，'+u+'！',function(){
      const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');
      if(pi)pi.classList.remove('d-none');if(nu)nu.classList.add('d-none');
+     // 隐藏home区登录/注册按钮
+     const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
+     if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
      showSection('preference-section');if(d.user?.preferences)loadUserPreferences(d.user.preferences);
    });})
- .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');});
+ .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('login-btn');if(b)b.disabled=false;});
 }
 
 function register(){
- const uEl=document.getElementById('register-username'),pEl=document.getElementById('register-password'),cEl=document.getElementById('register-confirm');
+ const uEl=document.getElementById('register-username'),pEl=document.getElementById('register-password'),cEl=document.getElementById('register-confirm'),bEl=document.getElementById('register-btn');
+ const aEl=document.getElementById('agree-privacy');
  if(!uEl||!pEl||!cEl){showMessage('页面错误','注册表单元素未找到');return;}
- const u=uEl.value,p=pEl.value,c=cEl.value;
- if(!u||!p){showMessage('注册失败','请填写完整信息');return;}
- if(p!==c){showMessage('注册失败','两次密码不一致');return;}
+ if(bEl)bEl.disabled=true;const u=uEl.value.trim(),p=pEl.value,c=cEl.value;
+ if(!u||!p){showMessage('注册失败','请填写完整信息');if(bEl)bEl.disabled=false;return;}
+ if(p!==c){showMessage('注册失败','两次密码不一致');if(bEl)bEl.disabled=false;return;}
+ if(!aEl||!aEl.checked){showMessage('注册失败','请阅读并同意隐私政策');if(bEl)bEl.disabled=false;return;}
  fetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('注册失败',d.error||'注册失败');return;}
+ if(d.token)localStorage.setItem('userToken',d.token);
  currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();if(!users.find(x=>x.username===u))users.push({username:u,created_at:new Date().toISOString(),lastLogin:new Date().toISOString(),favorites:[],blacklist:[],preferences:{}});saveUsers(users);
- showMessage('注册成功','欢迎，'+u+'！',function(){showSection('preference-section');});})
- .catch(()=>{showMessage('注册失败','无法连接到服务器，请检查网络');});
+ showMessage('注册成功','欢迎，'+u+'！',function(){
+     const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');
+     if(pi)pi.classList.remove('d-none');if(nu)nu.classList.add('d-none');
+     const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
+     if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+     showSection('preference-section');
+   });})
+ .catch(()=>{showMessage('注册失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('register-btn');if(b)b.disabled=false;});
 }
 
 function loadUserPreferences(prefs){
  if(!prefs)return;
  const $=id=>document.getElementById(id);
- if(prefs.spiciness)$('spiciness').value=prefs.spiciness;
- if(prefs.saltiness)$('saltiness').value=prefs.saltiness;
- if(prefs.sweetness)$('sweetness').value=prefs.sweetness;
- if(prefs.price)$('price').value=prefs.price;
- if(prefs.calorie)$('calorie').value=prefs.calorie;
- if(prefs.recommendationMode&&['auto','api','local'].includes(prefs.recommendationMode))$('recommendation-mode').value=prefs.recommendationMode;
- if(prefs.religion)$('religion').value=prefs.religion;
- if(prefs.allergies&&prefs.allergies.length>0){$('allergy-none').checked=false;$('allergy-seafood').checked=prefs.allergies.includes('海鲜');$('allergy-peanut').checked=prefs.allergies.includes('花生');$('allergy-egg').checked=prefs.allergies.includes('鸡蛋');$('allergy-soy').checked=prefs.allergies.includes('大豆');$('allergy-gluten').checked=prefs.allergies.includes('麸质');}
- else{$('allergy-none').checked=true;['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'].forEach(id=>{const cb=$(id);if(cb){cb.checked=false;cb.disabled=true;}});}
+ // 安全设置元素值（带 null 保护）
+ const setVal = (id, val) => { const el = $(id); if (el) el.value = val; };
+ const setChecked = (id, checked) => { const el = $(id); if (el) el.checked = checked; };
+ const setDisabled = (id, disabled) => { const el = $(id); if (el) el.disabled = disabled; };
+ if(prefs.spiciness) setVal('spiciness', prefs.spiciness);
+ if(prefs.saltiness) setVal('saltiness', prefs.saltiness);
+ if(prefs.sweetness) setVal('sweetness', prefs.sweetness);
+ if(prefs.price) setVal('price', prefs.price);
+ if(prefs.calorie) setVal('calorie', prefs.calorie);
+ if(prefs.recommendationMode&&['auto','api','local'].includes(prefs.recommendationMode)) setVal('recommendation-mode', prefs.recommendationMode);
+ if(prefs.religion) setVal('religion', prefs.religion);
+ if(prefs.allergies&&prefs.allergies.length>0){
+  setChecked('allergy-none', false);
+  setChecked('allergy-seafood', prefs.allergies.includes('海鲜'));
+  setChecked('allergy-peanut', prefs.allergies.includes('花生'));
+  setChecked('allergy-egg', prefs.allergies.includes('鸡蛋'));
+  setChecked('allergy-soy', prefs.allergies.includes('大豆'));
+  setChecked('allergy-gluten', prefs.allergies.includes('麸质'));
+ } else {
+  setChecked('allergy-none', true);
+  ['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'].forEach(id => {
+   setChecked(id, false);
+   setDisabled(id, true);
+  });
+ }
 }
 
 function submitPreference(){
  const $=id=>document.getElementById(id);
- userProfile={spiciness:$('spiciness').value,saltiness:$('saltiness').value,sweetness:$('sweetness').value,price:$('price').value,calorie:$('calorie').value,religion:$('religion').value,allergies:[],recommendationMode:$('recommendation-mode').value};
- if(!$('allergy-none').checked){
+ // null 保护：检查所有偏好元素是否存在
+ const sp=$('spiciness'),sa=$('saltiness'),sw=$('sweetness'),pr=$('price'),ca=$('calorie'),re=$('religion'),rm=$('recommendation-mode');
+ if(!sp||!sa||!sw||!pr||!ca||!re||!rm){showMessage('页面错误','偏好设置表单未完全加载');return;}
+ userProfile={spiciness:sp.value,saltiness:sa.value,sweetness:sw.value,price:pr.value,calorie:ca.value,religion:re.value,allergies:[],recommendationMode:rm.value};
+ if($('allergy-none')&&!$('allergy-none').checked){
   const amap={'allergy-seafood':'海鲜','allergy-peanut':'花生','allergy-egg':'鸡蛋','allergy-soy':'大豆','allergy-gluten':'麸质'};
   Object.keys(amap).forEach(k=>{if($(k).checked)userProfile.allergies.push(amap[k]);});
  }
@@ -314,7 +367,9 @@ function submitPreference(){
  // 记录偏好选择
  fetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
  showSection('recommendation-section');
- $('recommendation-loading').classList.remove('d-none');$('recommendation-result').classList.add('d-none');
+ const rl=$('recommendation-loading'),rr=$('recommendation-result');
+ if(rl)rl.classList.remove('d-none');
+ if(rr)rr.classList.add('d-none');
  fetchRecommendations();
 }
 
@@ -322,7 +377,8 @@ async function fetchRecommendations(isRefresh){
  console.group(isRefresh?'🔍刷新':'🔍推荐');
  const start=Date.now();
  const $=id=>document.getElementById(id);
- $('recommendation-loading').classList.remove('d-none');$('recommendation-result').classList.add('d-none');
+ const rl=$('recommendation-loading'),rr=$('recommendation-result');
+ if(!rl||!rr){showMessage('提示','页面加载中，请稍后重试');console.groupEnd();return;}
 
  // 等待菜品数据加载完成（最多等5秒）
  if(!dishData.length){
@@ -332,7 +388,7 @@ async function fetchRecommendations(isRefresh){
   }
   if(!dishData.length){
    showMessage('提示','菜品数据加载中，请稍后重试');
-   $('recommendation-loading').classList.add('d-none');
+   rl.classList.add('d-none');
    console.groupEnd();return;
   }
  }
@@ -377,7 +433,7 @@ async function fetchRecommendations(isRefresh){
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
   currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';console.log('🍽️'+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.groupEnd();displayRecommendations();
+  currentRecommendationMode='随机森林';displayRecommendations();
  };
  const callAPI=dlist=>{
   const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
@@ -406,7 +462,7 @@ function displayRecommendations(){
  result.addEventListener('click',handler);result._delegateHandler=handler;
  let fav=[],blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u){fav=u.favorites||[];blk=u.blacklist||[];}}
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
- const dl=$('dish-list');dl.innerHTML='';
+ const dl=$('dish-list');if(!dl)return;dl.innerHTML='';
  currentRecommendations.forEach((d,i)=>{
   const isFav=fav.includes(d.id),isBlk=blk.includes(d.id),isOrdered=ordered.includes(d.id);
   const tags=d.tags?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
@@ -415,7 +471,7 @@ function displayRecommendations(){
   const blindBoxClass=d.type==='盲盒尝鲜'?'blind-box-card':'';
   dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'</h5><p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.matchIndex?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+(d.matchRate*100).toFixed(1)+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
- loading.classList.add('d-none');result.classList.remove('d-none');
+ if(loading)loading.classList.add('d-none');if(result)result.classList.remove('d-none');
 }
 
 
@@ -442,12 +498,12 @@ function endRecommendation(){
  // 记录已点过的菜品
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  currentRecommendations.forEach(d=>{if(!ordered.includes(d.id))ordered.push(d.id);});
- localStorage.setItem('orderedDishes',JSON.stringify(ordered));
+ try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
  // 创建订单（发送到服务器）
  const items=currentRecommendations.map(d=>{const p=parseFloat(d.price);return{id:d.id,name:d.name,price:isNaN(p)?0:p,type:d.type||'偏好推荐',matchRate:d.matchRate||0};});
  const total=items.reduce((s,i)=>s+i.price,0);
  const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})}).catch(()=>{console.warn('下单失败');});
+ fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})}).catch(()=>{showMessage('下单失败','网络错误，请稍后重试');});
  const $s=id=>{const el=document.getElementById(id);return el;};
  // 缓冲过渡
  const rl=$s('recommendation-loading'),rr=$s('recommendation-result');
@@ -538,19 +594,24 @@ function displayFeatureImportance(){
  });
 }
 function resetRecommendation(){currentRecommendations=[];recommendedIds=[];userProfile=null;}
-function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
+function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
+ // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
+ const token=localStorage.getItem('userToken');
+ if(token){fetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('错误','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
- document.getElementById('profile-username').textContent=user.username||currentUser;
- document.getElementById('profile-last-login').textContent=user.lastLogin||'从未登录';
+  const pu=document.getElementById('profile-username');if(pu)pu.textContent=user.username||currentUser;
+ const pl=document.getElementById('profile-last-login');if(pl)pl.textContent=user.lastLogin||'从未登录';
  const $=id=>document.getElementById(id);
- const fl=$('favorites-list');fl.innerHTML=user.favorites?.length?user.favorites.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有收藏的菜品</p>';
- const bl=$('blacklist-list');bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
+ const fl=$('favorites-list');if(fl)fl.innerHTML=user.favorites?.length?user.favorites.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有收藏的菜品</p>';
+ const bl=$('blacklist-list');if(bl)bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
  document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
  document.querySelectorAll('.cancel-blacklist').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.blacklist){u.blacklist=u.blacklist.filter(x=>x!=id);updateUserData(currentUser,{blacklist:u.blacklist});showMessage('成功','已取消',showProfile);}}));
  // 加载推荐历史
- const rh=$('rec-history-list');rh.innerHTML='<p class="text-muted" style="font-size:0.85rem;">加载中...</p>';
+ const rh=$('rec-history-list');if(rh)rh.innerHTML='<p class="text-muted" style="font-size:0.85rem;">加载中...</p>';
  fetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
   if(d.success&&d.orders&&d.orders.length){
             const items=d.orders.slice(0,10).map((o,oi)=>{
@@ -636,14 +697,19 @@ function deleteAccount(){
  cb.onclick=function(){const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();};
  el.addEventListener('hidden.bs.modal',cleanup);
  el.inert=false;el.removeAttribute('aria-hidden');let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el,{focus:false});m.show();
- setTimeout(()=>{if(document.activeElement)document.activeElement&&document.activeElement.blur();},50);
+  // 聚焦确认按钮
+  el.addEventListener('shown.bs.modal', function focusDelHandler() {
+    el.removeEventListener('shown.bs.modal', focusDelHandler);
+    const confirmBtn = document.getElementById('modal-confirm-btn');
+    if (confirmBtn) setTimeout(function() { confirmBtn.focus(); }, 50);
+  });
 }
 
 // ═══════════════ 购物车功能 ═══════════════
 function showCart(){
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
- if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';}else{
+ if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';if(tb)tb.innerHTML='';}else{
   if(empty)empty.style.display='none';if(content)content.style.display='block';
   if(tb)tb.innerHTML=cart.map(x=>{
    const dish=dishData.find(d=>d.id===x.id);
@@ -651,7 +717,7 @@ function showCart(){
    const name=dish?esc(dish.name):esc(x.name);
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
-   return '<tr><td>'+(dish&&dish.image_url?'<img src="'+esc(dish.image_url||'')+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:8px;vertical-align:middle;">':'')+name+'</td>'
+   return '<tr><td>'+(dish&&dish.image_url?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'')+name+'</td>'
     +'<td><div class="input-group input-group-sm" style="width:100px;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">−</button>'
     +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:36px;height:28px;font-size:0.8rem;">'
     +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">+</button></div></td>'
@@ -664,9 +730,10 @@ function showCart(){
  showSection('cart-section');
 }
 function checkoutCart(){
- const cart=getCart();
+ const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
- const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:esc(x.name),price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ if(bEl)bEl.disabled=true;
+ const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
  fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})})
@@ -675,8 +742,8 @@ function checkoutCart(){
   // 下单成功后再清理本地数据
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
-  localStorage.setItem('orderedDishes',JSON.stringify(ordered));
+  try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
   clearCart();
   showMessage('下单成功','您的订单已提交，感谢用餐！',function(){showSection('home-section');});
- }).catch(()=>showMessage('下单失败','网络错误，请稍后重试'));
+ }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
