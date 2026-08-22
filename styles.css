@@ -134,10 +134,16 @@ body {
 /* ═══════════════════════════════════════════════════
    首页 —— 唐风匾额
    ═══════════════════════════════════════════════════ */
+#main-content { display: flex !important; flex-direction: column !important; padding: 2rem 12px 0 !important; }
 #home-section {
   max-width: 1140px;
   margin: 0 auto;
-  padding-top: 2rem;
+  padding: 2rem 0 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 /* 标题匾额效果 */
