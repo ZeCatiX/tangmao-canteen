@@ -50,6 +50,9 @@ ngrok.exe
 __pycache__/
 *.pyc
 
+# SSL 证书和私钥（不提交，保护密钥）
+ssl/
+
 # AI 工具配置
 .retired/
 .ai/
