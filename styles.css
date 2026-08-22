@@ -855,6 +855,15 @@ html.dark-mode .table-striped tbody tr:nth-of-type(odd) { background-color: rgba
 html.dark-mode .table-hover tbody tr:hover { background-color: rgba(42,42,42,0.5); }
 html.dark-mode td { background-color: transparent !important; }
 html.dark-mode .bg-light { background-color: #1a1a1a !important; }
+/* 深色模式：推荐页元素覆盖（修复亮色残留） */
+html.dark-mode .card-header { background: linear-gradient(135deg, #5a1010, #8b1a1a) !important; color: #f0d5b0 !important; }
+html.dark-mode .dish-reason { background: linear-gradient(135deg, #1a1a1a, #252525) !important; color: var(--text-light) !important; border-left-color: var(--gold) !important; }
+html.dark-mode .badge.bg-info { background: linear-gradient(135deg, #1a4a6a, #2a6a8a) !important; color: #cfe8f5 !important; }
+html.dark-mode .blind-box-card { background: linear-gradient(135deg, #2a1a0a, #3a2a1a) !important; border-color: #6a5a3a !important; box-shadow: 0 0 20px rgba(201,169,110,0.08), inset 0 0 40px rgba(201,169,110,0.03) !important; }
+html.dark-mode .blind-box-card:hover { border-color: #8a7a5a !important; box-shadow: 0 0 30px rgba(201,169,110,0.15), inset 0 0 40px rgba(201,169,110,0.05) !important; }
+html.dark-mode .badge-blind { background: linear-gradient(135deg, #8a6a10, #a67a20) !important; box-shadow: 0 2px 12px rgba(241,196,15,0.15) !important; }
+html.dark-mode #refresh-recommendations { background: linear-gradient(135deg, #5a1010, #8b1a1a) !important; color: #f0d5b0 !important; border: 1px solid #6a3a2a !important; }
+html.dark-mode #end-section .card-header { background: linear-gradient(165deg, #0a0500, #2a1810) !important; color: #f0d5b0 !important; }
 html.dark-mode [style*="background:#fff"] { background: #1a1a1a !important; }
 html.dark-mode [style*="background: #fff"] { background: #1a1a1a !important; }
 html.dark-mode img[style*="background:#fff"] { background: #1a1a1a !important; }
