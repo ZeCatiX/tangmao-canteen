@@ -56,7 +56,10 @@
 
   <div class="header">
     <h2>🏮 唐猫庭院 · 厨房看板</h2>
-    <span id="current-time"></span>
+    <span style="display:flex;align-items:center;gap:12px;">
+      <button id="dark-mode-toggle" style="background:transparent;border:1px solid rgba(201,169,110,0.4);border-radius:50%;width:32px;height:32px;color:#c9a96e;cursor:pointer;font-size:0.85rem;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
+      <span id="current-time"></span>
+    </span>
   </div>
   <div id="order-list"><div class="empty">⏳ 请先登录...</div></div>
   <div class="refresh-bar">每 10 秒自动刷新</div>
@@ -156,12 +159,29 @@
       document.getElementById('current-time').textContent = new Date().toLocaleString();
     }
 
+    // 深色模式切换
+    function initDarkMode() {
+      const btn = document.getElementById('dark-mode-toggle');
+      if (!btn) return;
+      const saved = localStorage.getItem('darkMode');
+      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
+      const dark = saved !== null ? saved === 'true' : prefers;
+      if (dark) document.documentElement.classList.add('dark-mode');
+      btn.textContent = dark ? '☀️' : '🌙';
+      btn.addEventListener('click', function() {
+        const isDark = document.documentElement.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', isDark);
+        this.textContent = isDark ? '☀️' : '🌙';
+      });
+    }
+
     // 初始化：检查是否已有 token
     if (getToken()) {
       document.getElementById('login-overlay').style.display = 'none';
     }
 
     updateTime();
+    initDarkMode();
     setInterval(loadOrders, 10000);
     setInterval(updateTime, 1000);
   </script>

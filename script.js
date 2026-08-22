@@ -295,7 +295,7 @@ function renderMenuTable(){
   const r=document.createElement('tr');
   const tags=d.tags&&d.tags.length?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
-  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+tags+'</td>';
+  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+tags+'</td><td><button class="btn btn-sm btn-outline-success add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;font-size:0.75rem;"><i class="bi bi-cart-plus"></i> 加购</button></td>';
   tb.appendChild(r);
  });
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
@@ -328,7 +328,7 @@ function register(){
  if(p!==c){showMessage('注册失败','两次密码不一致');return;}
  fetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('注册失败',d.error||'注册失败');return;}
- currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();if(!users.find(x=>x.username===u))users.push({username:u,created_at:new Date().toISOString(),lastLogin:new Date().toISOString(),favorites:[],blacklist:[],preferences:{}});saveUsers(users);
+ currentUser=u;localStorage.setItem('currentUser',u);if(d.token)localStorage.setItem('userToken',d.token);const users=loadUsers();if(!users.find(x=>x.username===u))users.push({username:u,created_at:new Date().toISOString(),lastLogin:new Date().toISOString(),favorites:[],blacklist:[],preferences:{}});saveUsers(users);
  showMessage('注册成功','欢迎，'+u+'！',function(){showSection('preference-section');});})
  .catch(()=>{showMessage('注册失败','无法连接到服务器，请检查网络');});
 }
@@ -837,6 +837,10 @@ document.addEventListener('DOMContentLoaded',function(){
  click('cart-close-btn',()=>showSection('recommendation-section'));
  click('cart-clear-btn',()=>{if(confirm('确定清空购物车？')){clearCart();showCart();}});
  click('cart-checkout-btn',()=>{checkoutCart();});
+ // 多标签页购物车同步（storage 事件）
+ document.addEventListener('storage',function(e){
+  if(e.key==='cart'){updateCartBadge();const cs=document.getElementById('cart-section');if(cs&&cs.classList.contains('active'))showCart();}
+ });
  // 购物车数量修改事件委托
  document.addEventListener('click',function(e){
   const target=e.target.closest('.cart-qty-plus,.cart-qty-minus,.cart-remove-btn,.add-to-cart-btn');
