@@ -136,7 +136,7 @@ body {
    ═══════════════════════════════════════════════════ */
 #main-content { display: flex !important; flex-direction: column !important; padding: 0 12px !important; }
 #home-section > * { margin-bottom: 0 !important; }
-#home-section {
+#home-section.active {
   max-width: 1140px;
   margin: 0 auto;
   padding: 0;
