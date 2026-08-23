@@ -853,6 +853,10 @@ html.dark-mode #dark-mode-toggle { border-color: rgba(201,169,110,0.5) !importan
 /* 暗黑模式补充：覆盖内联白色背景 */
 html.dark-mode .table-striped tbody tr:nth-of-type(odd) { background-color: rgba(26,26,26,0.5); }
 html.dark-mode .table-hover tbody tr:hover { background-color: rgba(42,42,42,0.5); }
+html.dark-mode .table { color: var(--text) !important; }
+html.dark-mode .table thead th { background: #1a1a1a !important; color: var(--gold-light) !important; border-bottom: 2px solid #2a2a2a !important; }
+html.dark-mode .table tbody td { color: var(--text) !important; }
+html.dark-mode .table td, html.dark-mode .table th { border-color: #2a2a2a !important; }
 html.dark-mode td { background-color: transparent !important; }
 html.dark-mode .bg-light { background-color: #1a1a1a !important; }
 /* 深色模式：推荐页元素覆盖（修复亮色残留） */
