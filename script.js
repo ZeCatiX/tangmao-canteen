@@ -699,7 +699,7 @@ async function fetchRecommendations(isRefresh){
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
   currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';console.log('🍽️'+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.groupEnd();displayRecommendations();
+  currentRecommendationMode='随机森林';console.log('🍽️随机森林推荐 '+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.log('📊排名:',top.slice(0,5).map((d,i)=>(i+1)+'.'+d.name+'('+Math.round((d.matchIndex||0)*100)+'%)').join('  '));if(blind)console.log('🎁盲盒:'+blind.name);console.groupEnd();displayRecommendations();
  };
  const callAPI=dlist=>{
   const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
@@ -713,7 +713,7 @@ async function fetchRecommendations(isRefresh){
 }
 
 async function fallback(prefs,blk,dishes){
- console.log('🔄本地推荐');const start=Date.now();await loadDecisionTreeModel();
+ console.log('🔄本地推荐(决策树模型)');const start=Date.now();await loadDecisionTreeModel();
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,nutrition:0,rating:0};
@@ -733,7 +733,7 @@ async function fallback(prefs,blk,dishes){
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
  if(eligible.length){const bd=eligible[Math.floor(Math.random()*eligible.length)];bd.reason='🔮 盲盒推荐：试试这个吧，说不定有惊喜！';bd.type='盲盒尝鲜';bd.matchIndex=0;bd.matchRate=0.5;top.push(bd);}
  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
- currentRecommendationMode='决策树模型';console.log('🍽️'+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.groupEnd();displayRecommendations();
+ currentRecommendationMode='决策树模型';console.log('🍽️决策树推荐 '+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.log('📊排名:',top.slice(0,5).map((d,i)=>(i+1)+'.'+d.name+'('+Math.round((d.matchIndex||0)*100)+'%)').join('  '));if(top.find(d=>d.type==='盲盒尝鲜'))console.log('🎁盲盒:'+top.find(d=>d.type==='盲盒尝鲜').name);console.groupEnd();displayRecommendations();
 }
 
 
