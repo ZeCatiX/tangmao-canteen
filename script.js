@@ -273,7 +273,7 @@ function renderMenuTable(){
   setTimeout(renderMenuTable,1000);
   return;
  }
- const catOrder=['招牌','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬','陕西小吃'];
+ const catOrder=['招牌','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬','陕西小吃','飲品与酒水'];
  const sorted=[...dishData].sort((a,b)=>catOrder.indexOf(a.category)-catOrder.indexOf(b.category)||a.id-b.id);
  const filtered=sorted.filter(d=>{
   if(q&&!d.name.toLowerCase().includes(q))return false;
@@ -295,7 +295,10 @@ function renderMenuTable(){
   const r=document.createElement('tr');
   const tags=d.tags&&d.tags.length?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
-  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+tags+'</td><td><button class="btn btn-sm btn-outline-success add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;font-size:0.75rem;"><i class="bi bi-cart-plus"></i> 加购</button></td>';
+  const imgUrl=d.image_url||'';
+  const isRealImg=imgUrl.startsWith('/uploads/')||imgUrl.startsWith('data:');
+  const imgCell=isRealImg?'<img src="'+esc(imgUrl)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy">':(imgUrl?'<span style="font-size:30px;display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;">'+esc(imgUrl)+'</span>':'<img src="'+defaultImg+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy">');
+  r.innerHTML='<td>'+imgCell+'</td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+tags+'</td><td><button class="btn btn-sm btn-outline-success add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;font-size:0.75rem;"><i class="bi bi-cart-plus"></i> 加购</button></td>';
   tb.appendChild(r);
  });
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
