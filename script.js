@@ -219,6 +219,7 @@ function resetPreferenceForm(){
 }
 
 function showSection(sectionId){
+ const cur=document.querySelector('.section.active');if(cur&&cur.id!==sectionId)window._prevSection=cur.id;
  const el=document.getElementById(sectionId);
  if(!el){console.warn('showSection: 未找到元素',sectionId);return;}
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -843,7 +844,7 @@ document.addEventListener('DOMContentLoaded',function(){
  click('end-logout',()=>{resetRecommendation();showSection('home-section');});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
- click('cart-close-btn',()=>showSection('recommendation-section'));
+ click('cart-close-btn',()=>showSection(window._prevSection||'home-section'));
  click('cart-clear-btn',()=>{clearCart();showCart();});
  click('cart-checkout-btn',()=>{checkoutCart();});
  // 多标签页购物车同步（storage 事件）
