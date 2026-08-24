@@ -146,7 +146,7 @@ function generateDishReason(prefs,dish){
 function selectBlindBoxDish(prefs,top,blk){
  const topIds=new Set(top.map(d=>d.id));
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
- const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))
+ const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
@@ -669,6 +669,7 @@ async function fetchRecommendations(isRefresh){
 
  let dishes=dishData.filter(d=>{
   if(d.is_active===false)return false;
+  if(d.category==='飲品与酒水')return false;
   if(prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
    const p=parseFloat(d.price);if(!isNaN(p)){
     if(prefs['价格区间']==='经济'&&p>=20)return false;
@@ -732,7 +733,7 @@ async function fallback(prefs,blk,dishes){
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
- const eligible=dishData.filter(d=>d.is_active!==false&&!top.some(t=>t.id===d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))
+ const eligible=dishData.filter(d=>d.is_active!==false&&!top.some(t=>t.id===d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
