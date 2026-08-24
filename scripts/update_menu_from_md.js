@@ -13,6 +13,8 @@ const DRY = !process.argv.includes('--execute');
 
 // 分类映射: .md 章节 → 数据库 category
 const CAT_MAP = {
+  '主食': '主食',
+  '招牌与游西安必打卡': '招牌',
   '招牌与必打卡': '招牌',
   '陕西小吃': '陕西小吃',
   '特色凉菜': '特色凉菜',
@@ -59,17 +61,17 @@ function parseMd() {
     if (cols.length >= 2 && cat && CAT_MAP[cat]) {
       const name = cols[0];
       if (name.includes('菜品') || name.includes('---') || name.includes('规格') || name.includes('门店')) continue;
-      let price = null, note = '';
+      let price = null, unit = '', note = '';
       for (let i=1;i<cols.length;i++) {
-        const pm = cols[i].match(/(\d+(?:\.\d+)?)\s*元/);
-        if (pm && price===null) { price = parseFloat(pm[1]); }
-        else if (cols[i] && !cols[i].match(/^[\d.]+(ml|g|听|瓶|壶|盖碗)$/i) && !note) { note = cols[i]; }
+        const pm = cols[i].match(/(\d+(?:\.\d+)?)\s*元\s*(\/[^\s|]*)?/);
+        if (pm && price===null) { price = parseFloat(pm[1]); unit = pm[2]||''; }
+        else if (cols[i] && !cols[i].match(/^[\d.]+(ml|g|听|瓶|壶|盖碗)$/i) && !note && cols[i]!=='—') { note = cols[i]; }
       }
       if (!price) continue;
       const category = CAT_MAP[cat];
       const isDrink = category === '飲品与酒水';
       const emoji = isDrink ? (subCat && DRINK_EMOJI[subCat] || '🥤') : null;
-      dishes.push({ name, price, category, note, isDrink, emoji, subCat });
+      dishes.push({ name, price, unit, category, note, isDrink, emoji, subCat });
     }
   }
   return dishes;
@@ -142,14 +144,19 @@ async function main() {
     }
 
     await client.query('BEGIN');
+    await client.query('ALTER TABLE dishes ADD COLUMN IF NOT EXISTS price_unit VARCHAR(20)');
     await client.query('DELETE FROM dishes');
     for (const d of report) {
       // 饮品 emoji 直接存 image_url（script.js 渲染时判断）
       const imageUrl = d.imageUrl ? (d.imageUrl.startsWith('emoji:') ? d.imageUrl.split(':')[1] : d.imageUrl) : null;
+      // 招牌菜 tags 加'招牌'; 饮品 tags 加子分类
+      const tags = [];
+      if (d.category === '招牌') tags.push('招牌');
+      if (d.isDrink && d.subCat) tags.push(d.subCat);
       await client.query(
-        `INSERT INTO dishes (name, category, price, image_url, spiciness, saltiness, sweetness, religion, is_halal, is_vegetarian, is_active, description)
-         VALUES ($1,$2,$3,$4,'不辣','适中','无味','无特殊要求',false,false,true,$5)`,
-        [d.name, d.category, d.price, imageUrl, d.note || null]
+        `INSERT INTO dishes (name, category, price, price_unit, image_url, spiciness, saltiness, sweetness, religion, is_halal, is_vegetarian, is_active, description, tags)
+         VALUES ($1,$2,$3,$4,$5,'不辣','适中','无味','无特殊要求',false,false,true,$6,$7)`,
+        [d.name, d.category, d.price, d.unit || null, imageUrl, d.note || null, tags.length?`{${tags.join(',')}}`:'{}']
       );
     }
     await client.query('COMMIT');

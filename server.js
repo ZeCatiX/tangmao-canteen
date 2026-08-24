@@ -271,6 +271,7 @@ async function loadDishData() {
       allergies: d.allergies || {},
       is_active: d.is_active,
       description: d.description || '',
+      price_unit: d.price_unit || '',
       image_url: d.image_url || '',
       order_count: parseInt(d.order_count) || 0,
       type: '偏好推荐',
