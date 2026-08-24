@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded',function(){
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>showSection('recommendation-section'));
- click('cart-clear-btn',()=>{if(confirm('确定清空购物车？')){clearCart();showCart();}});
+ click('cart-clear-btn',()=>{clearCart();showCart();});
  click('cart-checkout-btn',()=>{checkoutCart();});
  // 多标签页购物车同步（storage 事件）
  document.addEventListener('storage',function(e){
