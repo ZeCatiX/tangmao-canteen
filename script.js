@@ -31,6 +31,7 @@ function addToCart(dish,qty){
  if(i>=0){cart[i].qty=(cart[i].qty||1)+q}else{cart.push({id:dish.id,name:dish.name,price:dish.price,qty:q,image:dish.image_url||''})}
  saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车');
 }
+function addRiceToCart(){const rice=dishData.find(d=>d.name==='五常大米饭');if(rice)addToCart(rice,1);else showMessage('提示','米饭数据未加载');}
 function removeFromCart(id){
  const cart=getCart().filter(x=>x.id!==id);saveCart(cart);updateCartBadge();
 }
@@ -146,7 +147,7 @@ function generateDishReason(prefs,dish){
 function selectBlindBoxDish(prefs,top,blk){
  const topIds=new Set(top.map(d=>d.id));
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
- const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'
+ const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'&&d.category!=='主食'
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
@@ -669,7 +670,7 @@ async function fetchRecommendations(isRefresh){
 
  let dishes=dishData.filter(d=>{
   if(d.is_active===false)return false;
-  if(d.category==='飲品与酒水')return false;
+  if(d.category==='飲品与酒水'||d.category==='主食')return false;
   if(prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
    const p=parseFloat(d.price);if(!isNaN(p)){
     if(prefs['价格区间']==='经济'&&p>=20)return false;
@@ -733,7 +734,7 @@ async function fallback(prefs,blk,dishes){
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
- const eligible=dishData.filter(d=>d.is_active!==false&&!top.some(t=>t.id===d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'
+ const eligible=dishData.filter(d=>d.is_active!==false&&!top.some(t=>t.id===d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))&&d.category!=='飲品与酒水'&&d.category!=='主食'
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
@@ -751,7 +752,7 @@ function displayRecommendations(){
  if(!loading||!result)return;
  const vcb=$('view-cached-btn');if(vcb)vcb.classList.remove('d-none');
  const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
- result.innerHTML='<div style="background-color:#fdf2e9;border:2px solid #f5cba7;border-radius:8px;padding:15px;margin-bottom:20px;text-align:center"><p style="margin:0;color:#c0392b"><strong>当前使用：</strong>'+currentRecommendationMode+' '+desc+'</p></div><div class="mb-4"><h4 class="text-danger">为您推荐</h4><div class="list-group" id="dish-list"></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
+ result.innerHTML='<div style="background-color:#fdf2e9;border:2px solid #f5cba7;border-radius:8px;padding:15px;margin-bottom:20px;text-align:center"><p style="margin:0;color:#c0392b"><strong>当前使用：</strong>'+currentRecommendationMode+' '+desc+'</p></div><div class="mb-4"><h4 class="text-danger">为您推荐</h4><div class="list-group" id="dish-list"></div><div class="mt-3 p-3 rounded-3" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.2);"><div class="d-flex align-items-center justify-content-between"><div><span style="font-size:1.5rem;">🍚</span> <strong>五常大米饭</strong> <small style="color:var(--text-light);">3元/碗</small></div><button class="btn btn-sm btn-outline-success" id="add-rice-btn" onclick="addRiceToCart()"><i class="bi bi-plus-circle me-1"></i>加一碗米饭</button></div></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
  const old=result._delegateHandler;if(old)result.removeEventListener('click',old);
  const handler=e=>{const t=e.target.closest('button');if(!t)return;({'refresh-recommendations':()=>fetchRecommendations(true),'end-recommendation':()=>endRecommendation(),'end-logout-btn':()=>{resetRecommendation();showSection('home-section');}})[t.id]?.();};
  result.addEventListener('click',handler);result._delegateHandler=handler;
