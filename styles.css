@@ -940,10 +940,17 @@ html.dark-mode #back-to-top {
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 html.dark-mode .logo-bg { background: #1a1a1a; }
-/* 暗黑模式仅由 JS 控制（html.dark-mode class），媒体查询不覆盖任何颜色变量 */
-@media (prefers-color-scheme: dark) {
-  :root { color-scheme: dark; }
-}
+/* 深色模式遗漏 inline 颜色覆盖 */
+html.dark-mode [style*="background-color:#fdf2e9"] { background: #2a1a1a !important; }
+html.dark-mode [style*="border:2px solid #f5cba7"] { border-color: #5a3a2a !important; }
+html.dark-mode [style*="color:#f39c12"] { color: var(--gold) !important; }
+html.dark-mode [style*="color:#f1c40f"] { border-color: var(--gold-dark) !important; }
+html.dark-mode [style*="color:#27ae60"]:not(.btn) { color: #4a9a6a !important; }
+html.dark-mode [style*="border-color:#27ae60"] { border-color: #4a9a6a !important; }
+html.dark-mode [style*="color:#e74c3c"] { color: var(--primary-light) !important; }
+html.dark-mode [style*="background:#8b7a6a"] { background: #4a3a2a !important; }
+html.dark-mode [style*="color:#c9a96e"] { color: var(--gold-light) !important; }
+html.dark-mode #end-satisfaction .sat-star { color: var(--text-light) !important; }
 
 /* ═══════════════════════════════════════════════════
    管理后台导出按钮

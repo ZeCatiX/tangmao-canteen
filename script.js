@@ -31,7 +31,7 @@ function addToCart(dish,qty){
  if(i>=0){cart[i].qty=(cart[i].qty||1)+q}else{cart.push({id:dish.id,name:dish.name,price:dish.price,qty:q,image:dish.image_url||''})}
  saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车');
 }
-function addRiceToCart(){const rice=dishData.find(d=>d.name==='五常大米饭');if(rice)addToCart(rice,1);else showMessage('提示','米饭数据未加载');}
+function addRiceToCart(){const rice=dishData.find(d=>d.name==='五常大米饭');if(rice){addToCart(rice,1);const btn=document.getElementById('add-rice-btn');if(btn)btn.innerHTML='<i class="bi bi-check-circle me-1"></i>已加 1';}else showMessage('提示','米饭数据未加载');}
 function removeFromCart(id){
  const cart=getCart().filter(x=>x.id!==id);saveCart(cart);updateCartBadge();
 }
@@ -830,7 +830,7 @@ document.addEventListener('DOMContentLoaded',function(){
  click('nav-privacy',e=>{e.preventDefault();showSection('privacy-section');});
  click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('back-from-privacy',e=>{e.preventDefault();showSection('home-section');});
- click('view-cached-btn',e=>{e.preventDefault();if(currentRecommendations&&currentRecommendations.length){showSection('preference-section');displayRecommendations();}else{showMessage('提示','暂无缓存推荐，请先完成点餐');}});
+ click('view-cached-btn',e=>{e.preventDefault();if(currentRecommendations&&currentRecommendations.length){showSection('recommendation-section');displayRecommendations();}else{showMessage('提示','暂无缓存推荐，请先完成点餐');}});
  submit('login-form',login);submit('register-form',register);
  const an=$('allergy-none'),ac=document.querySelectorAll('input[name="allergy"]');
  if(an){an.addEventListener('change',function(){ac.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)ac.forEach(cb=>cb.disabled=false);});ac.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){an.checked=false;an.disabled=false;}}));}
