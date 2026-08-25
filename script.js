@@ -180,7 +180,8 @@ function selectBlindBoxDish(prefs,top,blk){
  const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
-  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
+  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten)
+  &&d.category!=='飲品与酒水'&&d.category!=='主食');
  if(!eligible.length)return null;
  // 偏好加权：与用户偏好匹配度越高，被选中的概率越大
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
@@ -768,6 +769,7 @@ async function fetchRecommendations(isRefresh){
 
  let dishes=dishData.filter(d=>{
   if(d.is_active===false)return false;
+  if(d.category==='飲品与酒水'||d.category==='主食')return false;
   if(prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
    const p=parseFloat(d.price);if(!isNaN(p)){
     if(prefs['价格区间']==='经济'&&p>=20)return false;
@@ -834,7 +836,8 @@ async function fallback(prefs,blk,dishes){
  const eligible=dishData.filter(d=>d.is_active!==false&&!top.some(t=>t.id===d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
-  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
+  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten)
+  &&d.category!=='飲品与酒水'&&d.category!=='主食');
  if(eligible.length){const bd=eligible[Math.floor(Math.random()*eligible.length)];bd.reason='🔮 盲盒推荐：试试这个吧，说不定有惊喜！';bd.type='盲盒尝鲜';bd.matchIndex=0;bd.matchRate=0.5;top.push(bd);}
  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
  currentRecommendationMode='决策树模型';displayRecommendations();
