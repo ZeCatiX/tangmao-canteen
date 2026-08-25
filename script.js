@@ -24,25 +24,6 @@ const DEFAULT_DISH_IMG='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/200
 function dishImg(url,size,alt){size=size||50;const u=url||'';const st='width:'+size+'px;height:'+size+'px;border-radius:6px;object-fit:cover;';const st2='width:'+size+'px;height:'+size+'px;display:inline-flex;align-items:center;justify-content:center;font-size:'+Math.round(size*0.6)+'px;';if(u.startsWith('/uploads/')||u.startsWith('data:'))return '<img src="'+esc(u)+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';if(u)return '<span style="'+st2+'">'+esc(u)+'</span>';return '<img src="'+DEFAULT_DISH_IMG+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';}
 
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
-function safeFetch(url, opts) {
-  const fetcher = opts?.method 
-    ? fetch(url, opts) 
-    : (typeof url === 'string' ? fetch(url, opts) : url);
-  return fetcher.then(r => {
-    if (r.status === 401 && localStorage.getItem('userToken')) {
-      // token 过期，自动清除并提示登录
-      localStorage.removeItem('userToken');
-      localStorage.removeItem('currentUser');
-      showMessage('登录已过期', '请重新登录');
-      setTimeout(() => { const $ = id => document.getElementById(id); ['home-section','login-section'].forEach(s=>{const e=$(s);if(e)e.classList.add('active');}); if($('login-section'))$('login-section').classList.add('active'); ['profile-section','register-section'].forEach(s=>{const e=$(s);if(e)e.classList.remove('active');}); }, 500);
-    }
-    return r;
-  }).catch(e => {
-    console.warn('网络请求失败:', url, e.message);
-    return new Response(JSON.stringify({ success: false, error: '网络请求失败，请检查连接' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-  });
-}
-
 // ═══════════════ 购物车功能 ═══════════════
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
 function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
