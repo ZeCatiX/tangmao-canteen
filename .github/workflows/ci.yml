@@ -1,0 +1,96 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: tangmao_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install scikit-learn pandas numpy psycopg2-binary
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Init database
+        run: PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -f sample_data.sql
+
+      - name: Run API tests
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DATABASE: tangmao_test
+          PG_USER: postgres
+          PG_PASSWORD: testpass
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          LOGIN_RATE_LIMIT_MAX: 200
+        run: npm test
+
+      - name: Run E2E tests
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DATABASE: tangmao_test
+          PG_USER: postgres
+          PG_PASSWORD: testpass
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          LOGIN_RATE_LIMIT_MAX: 200
+        run: npm run test:all
+
+      - name: Security audit
+        run: npm audit --omit=dev
+
+  deploy:
+    needs: lint-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /path/to/部署目录
+            git pull
+            npm ci --omit=dev
+            npm run build
+            pm2 restart tangmao
