@@ -20,6 +20,8 @@ function esc(str) {
 function formatPrice(d){const p=(d&&typeof d==='object')?d.price:d;if(p===null||p===undefined||p==='')return'未知';return parseFloat(p).toFixed(0)+'元'+((d&&d.price_unit)||'');}
 // 获取用户认证头
 function authHeaders(){const t=localStorage.getItem('userToken');return t?{'Authorization':'Bearer '+t}:{};}
+const DEFAULT_DISH_IMG='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
+function dishImg(url,size,alt){size=size||50;const u=url||'';const st='width:'+size+'px;height:'+size+'px;border-radius:6px;object-fit:cover;';const st2='width:'+size+'px;height:'+size+'px;display:inline-flex;align-items:center;justify-content:center;font-size:'+Math.round(size*0.6)+'px;';if(u.startsWith('/uploads/')||u.startsWith('data:'))return '<img src="'+esc(u)+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';if(u)return '<span style="'+st2+'">'+esc(u)+'</span>';return '<img src="'+DEFAULT_DISH_IMG+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';}
 
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
 function safeFetch(url, opts) {
@@ -250,6 +252,9 @@ const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-s
 function showSection(sectionId){
  const el=document.getElementById(sectionId);
  if(!el){console.warn('showSection: 未找到元素',sectionId);return;}
+ // 记录上一页（关闭购物车时返回）
+ const cur=document.querySelector('.section.active');
+ if(cur&&cur.id!==sectionId)window._prevSection=cur.id;
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
  el.classList.add('active');
  // 切换section时平滑滚动到顶部，提升浏览体验
