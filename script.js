@@ -744,7 +744,7 @@ function checkoutCart(){
 // ─── js/recommendation.js ───
 // 推荐逻辑模块
 async function fetchRecommendations(isRefresh){
- // console.group(isRefresh?'🔍刷新':'🔍推荐');
+ console.group(isRefresh?'🔍刷新':'🔍推荐');
  const start=Date.now();
  const $=id=>document.getElementById(id);
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
@@ -819,7 +819,7 @@ async function fetchRecommendations(isRefresh){
 }
 
 async function fallback(prefs,blk,dishes){
-// console.log('🔄本地推荐');const start=Date.now();await loadDecisionTreeModel();
+ console.log('🔄本地推荐(决策树模型)');const start=Date.now();await loadDecisionTreeModel();
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,nutrition:0,rating:0};
@@ -840,7 +840,7 @@ async function fallback(prefs,blk,dishes){
   &&d.category!=='飲品与酒水'&&d.category!=='主食');
  if(eligible.length){const bd=eligible[Math.floor(Math.random()*eligible.length)];bd.reason='🔮 盲盒推荐：试试这个吧，说不定有惊喜！';bd.type='盲盒尝鲜';bd.matchIndex=0;bd.matchRate=0.5;top.push(bd);}
  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
- currentRecommendationMode='决策树模型';displayRecommendations();
+ currentRecommendationMode='决策树模型';console.log('🍽️决策树推荐 '+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.log('📊排名:',top.slice(0,5).map((d,i)=>(i+1)+'.'+d.name+'('+Math.round((d.matchIndex||0)*100)+'%)').join('  '));if(top.find(d=>d.type==='盲盒尝鲜'))console.log('🎁盲盒:'+top.find(d=>d.type==='盲盒尝鲜').name);console.groupEnd();displayRecommendations();
 }
 
 
@@ -900,7 +900,7 @@ document.addEventListener('DOMContentLoaded',function(){
     renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
   }
 }).catch(()=>console.warn('菜品数据加载超时/失败'));
- setTimeout(()=>checkApiAvailability().then(a=>console.info(a?'API可用':'API不可用,使用本地推荐')),100);
+ setTimeout(()=>checkApiAvailability().then(a=>{if(a)console.log('API可用,ML模型已就绪');else console.log('ML模型启动中,暂用本地推荐(稍后自动恢复)')}),100);
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
  const submit=(id,fn)=>{const el=$(id);if(el)el.addEventListener('submit',e=>{e.preventDefault();fn();});};
