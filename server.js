@@ -218,10 +218,10 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(__dirname, { maxAge: '7d', setHeaders: (res, p) => {
-  // HTML 短缓存（10分钟）
-  if (p.endsWith('.html')) res.setHeader('Cache-Control', 'public, max-age=600');
-  // CSS/JS 短缓存+revalidate（1小时，ETag/304 仍省带宽，更新 1h 内生效）
-  if (p.endsWith('.css') || p.endsWith('.js')) res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+  // HTML 不缓存（防止 Edge 等浏览器缓存旧版，导致版本号更新不生效）
+  if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  // CSS/JS 不缓存（版本号 v= 防缓存，但 setHeader 双重保险）
+  if (p.endsWith('.css') || p.endsWith('.js')) res.setHeader('Cache-Control', 'no-cache, must-revalidate, max-age=0');
 } }));
 // node_modules 中的前端库文件（在拦截中间件之后注册，敏感文件已被阻止）
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules'), { maxAge: '7d' }));
