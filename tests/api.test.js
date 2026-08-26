@@ -50,7 +50,7 @@ describe('菜品 API', () => {
 // ─────────────────────────────────────────────
 describe('用户 API', () => {
   const testUser = 'test_' + Date.now();
-  const testPass = 'test123';
+  const testPass = 'Test123!';
 
   it('POST /api/user/register 注册新用户', async () => {
     const { status, body } = await api('/api/user/register', {
