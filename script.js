@@ -38,7 +38,11 @@ function addRiceToCart(){
   if(rice){
     addToCart(rice, 1);
     const btn = document.getElementById('add-rice-btn');
-    if(btn) btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>已加 1';
+    if(btn){
+      const ci = getCart().find(c => c.id === rice.id);
+      const qty = ci ? (ci.qty || 1) : 1;
+      btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>已加 ' + qty;
+    }
   } else {
     showMessage('提示','米饭数据未加载');
   }
