@@ -426,16 +426,16 @@ body {
 .dish-info h5 {
   font-family: 'Noto Serif SC', serif;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   color: var(--brown);
   letter-spacing: 1.5px;
   margin-bottom: 4px;
 }
-.dish-info .mb-1 { font-size: 0.78rem; color: var(--text-light); letter-spacing: 0.5px; }
+.dish-info .mb-1 { font-size: 0.95rem; color: var(--text-light); letter-spacing: 0.5px; }
 .dish-details { flex: 1; }
-.loading-text { text-align: center; padding: 20px; color: var(--text-light); font-size: 0.9rem; }
+.loading-text { text-align: center; padding: 20px; color: var(--text-light); font-size: 1rem; }
 .dish-reason {
-  font-size: 0.78rem;
+  font-size: 0.92rem;
   color: var(--text-light);
   background: linear-gradient(135deg, #fdfaf5, #fff);
   padding: 10px 14px;
@@ -620,7 +620,7 @@ footer p {
 /* ═══════════════════════════════════════════════════
    全部菜单表格
    ═══════════════════════════════════════════════════ */
-.table { font-size: 0.83rem; border-collapse: separate; border-spacing: 0; }
+.table { font-size: 1rem; border-collapse: separate; border-spacing: 0; }
 .table thead th {
   background: #fdfaf5;
   color: var(--brown-light);
@@ -773,7 +773,7 @@ footer p {
   .btn, .dish-actions .btn { padding: 0.5rem 1rem; min-height: 44px; border-radius: 10px !important; }
   .form-control, .form-select { font-size: 16px !important; padding: 0.6rem 0.8rem; } /* 防止 iOS 缩放 */
   .list-group-item { padding: 1rem; margin-bottom: 10px; }
-  .dish-reason { font-size: 0.75rem; padding: 8px 10px; }
+  .dish-reason { font-size: 0.85rem; padding: 8px 10px; }
   .badge.bg-danger, .badge.bg-warning { font-size: 0.8rem; padding: 5px 12px; }
   #home-section .row.g-4 .p-3 { padding: 1rem 0.8rem !important; }
   #home-section .row.g-4 .p-3 div:first-child { font-size: 1.5rem !important; }
@@ -791,8 +791,8 @@ footer p {
   #end-section .text-center.py-3 div:first-child { font-size: 1.2rem !important; }
   .dish-actions { display: flex; gap: 6px; }
   .dish-actions .btn { flex: 1; font-size: 0.7rem !important; padding: 6px 8px !important; min-height: 32px; }
-  .dish-info h5 { font-size: 0.95rem; }
-  .dish-info .mb-1 { font-size: 0.75rem; }
+  .dish-info h5 { font-size: 1.15rem; }
+  .dish-info .mb-1 { font-size: 0.9rem; }
   #star-rating { font-size: 2rem !important; }
   table { font-size: 0.75rem; }
   table thead th { font-size: 0.7rem; padding: 0.5rem 0.3rem !important; }
@@ -810,7 +810,7 @@ footer p {
   .dish-actions .btn { font-size: 0.75rem !important; padding: 0.4rem 0.6rem !important; min-height: 32px; }
   #end-section .text-center.py-3 div:first-child { font-size: 1rem !important; }
   #end-section .sat-star { font-size: 1.6rem !important; letter-spacing: 4px !important; }
-  .table { font-size: 0.7rem !important; }
+  .table { font-size: 0.85rem !important; }
   #menu-search { font-size: 0.8rem !important; }
 }
 
