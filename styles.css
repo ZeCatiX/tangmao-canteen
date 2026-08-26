@@ -637,6 +637,7 @@ footer p {
   padding: 0.6rem 0.6rem;
   border-color: rgba(201,169,110,0.06);
   transition: background 0.2s;
+  vertical-align: middle;
 }
 .table-hover tbody tr:hover { background: rgba(253,246,240,0.5); }
 
