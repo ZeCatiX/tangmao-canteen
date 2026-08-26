@@ -953,6 +953,10 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
     const ci=cart.find(c=>c.id===id);
     btn.innerHTML=ci?'<i class="bi bi-check-circle me-1"></i>已加 '+(ci.qty||1):'<i class="bi bi-cart-plus"></i> 加入';
    });
+   // 米饭按钮也刷新
+   const rice=dishData.find(d=>d.name==='五常大米饭');
+   const riceBtn=document.getElementById('add-rice-btn');
+   if(riceBtn&&rice){const rc=cart.find(c=>c.id===rice.id);riceBtn.innerHTML=rc?'<i class="bi bi-check-circle me-1"></i>已加 '+(rc.qty||1):'<i class="bi bi-plus-circle me-1"></i>加一碗米饭';}
   }
  });
  click('cart-clear-btn',()=>{clearCart();showCart();});
