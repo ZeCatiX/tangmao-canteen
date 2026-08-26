@@ -49,6 +49,16 @@ function addToCart(dish,qty){
  if(i>=0){cart[i].qty=(cart[i].qty||1)+q}else{cart.push({id:dish.id,name:dish.name,price:dish.price,qty:q,image:dish.image_url||''})}
  saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
 }
+function addRiceToCart(){
+  const rice = dishData.find(d => d.name === '五常大米饭');
+  if(rice){
+    addToCart(rice, 1);
+    const btn = document.getElementById('add-rice-btn');
+    if(btn) btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>已加 1';
+  } else {
+    showMessage('提示','米饭数据未加载');
+  }
+}
 function removeFromCart(id){
  const cart=getCart().filter(x=>x.id!==id);saveCart(cart);updateCartBadge();
 }
