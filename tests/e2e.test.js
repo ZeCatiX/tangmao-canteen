@@ -136,7 +136,7 @@ describe('管理后台功能测试', () => {
 // ─────────────────────────────────────────────
 describe('完整用户会话流程', () => {
   const testUser = 'e2e_' + Date.now();
-  const testPass = 'e2e_test_123';
+  const testPass = 'E2e_test_123!';
 
   it('注册 -> 登录 -> 偏好 -> 推荐 -> 订单 -> 反馈 完整流程', async () => {
     // 注册
