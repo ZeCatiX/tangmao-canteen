@@ -796,7 +796,7 @@ footer p {
   #star-rating { font-size: 2rem !important; }
   table { font-size: 0.75rem; }
   table thead th { font-size: 0.7rem; padding: 0.5rem 0.3rem !important; }
-  table tbody td { font-size: 0.7rem; padding: 0.4rem 0.3rem !important; }
+  table tbody td { font-size: 0.85rem; padding: 0.4rem 0.3rem !important; }
 }
 
 /* 375px 超小屏适配 */
