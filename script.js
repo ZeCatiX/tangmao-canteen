@@ -942,7 +942,19 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('end-logout',()=>{resetRecommendation();showSection('home-section');});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
- click('cart-close-btn',()=>showSection(window._prevSection||'home-section'));
+ click('cart-close-btn',()=>{
+  const prev=window._prevSection||'home-section';
+  showSection(prev);
+  // 返回推荐页时刷新加购按钮状态(购物车删菜后按钮回归"加入")
+  if(prev==='recommendation-section'){
+   const cart=getCart();
+   document.querySelectorAll('#dish-list .add-to-cart-btn').forEach(btn=>{
+    const id=parseInt(btn.dataset.id);
+    const ci=cart.find(c=>c.id===id);
+    btn.innerHTML=ci?'<i class="bi bi-check-circle me-1"></i>已加 '+(ci.qty||1):'<i class="bi bi-cart-plus"></i> 加入';
+   });
+  }
+ });
  click('cart-clear-btn',()=>{clearCart();showCart();});
  click('cart-checkout-btn',()=>{checkoutCart();});
  // 购物车数量修改事件委托
