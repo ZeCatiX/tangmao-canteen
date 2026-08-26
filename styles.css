@@ -623,7 +623,6 @@ footer p {
 .table { font-size: 1rem; border-collapse: separate; border-spacing: 0; }
 /* 全部菜单分类列竖排 */
 #dataset-table-body td:nth-child(2) { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 2px; font-weight: 500; max-width: 40px; text-align: center; }
-#dataset-section thead th:nth-child(2) { writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 2px; max-width: 40px; }
 .table thead th {
   background: #fdfaf5;
   color: var(--brown-light);
