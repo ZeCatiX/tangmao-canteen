@@ -137,14 +137,14 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,nutrition:0,rating:0};
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
- ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=1;}else md.taste+=1;});
- // 招牌菜加分
+ ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]&&prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=2;else md.taste+=0.5;}else md.taste+=1;});
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
- // 营养部分简化
- md.nutrition+=2;
+ // 热量偏好打分：用户有偏好时匹配+1，无偏好时基础+1
+ md.nutrition+=1;
+ if(prefs['calorie']&&prefs['calorie']!=='无'&&dish.calorie===prefs['calorie'])md.nutrition+=1;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
  const total=md.taste+md.cuisine+md.nutrition+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/12};
 }
 
 function generateDishReason(prefs,dish){
@@ -168,7 +168,12 @@ function selectBlindBoxDish(prefs,top,blk){
   &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten)
   &&d.category!=='飲品与酒水'&&d.category!=='主食');
  if(!eligible.length)return null;
- // 偏好加权：与用户偏好匹配度越高，被选中的概率越大
+ // 纯随机模式
+ if(prefs['blindBoxMode']==='random'){
+  const d=eligible[Math.floor(Math.random()*eligible.length)];
+  return{...d,reason:'🔮 盲盒推荐：纯随机惊喜，试试这个吧！',type:'盲盒尝鲜',matchIndex:0,matchRate:0.5};
+ }
+ // 智能选模式：按偏好加权
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
  const weighted=eligible.map(d=>{
   let score=1;
@@ -424,9 +429,9 @@ function loadUserPreferences(prefs){
 function submitPreference(){
  const $=id=>document.getElementById(id);
  // null 保护：检查所有偏好元素是否存在
- const sp=$('spiciness'),sa=$('saltiness'),sw=$('sweetness'),pr=$('price'),ca=$('calorie'),re=$('religion'),rm=$('recommendation-mode');
- if(!sp||!sa||!sw||!pr||!ca||!re||!rm){showMessage('页面错误','偏好设置表单未完全加载');return;}
- userProfile={spiciness:sp.value,saltiness:sa.value,sweetness:sw.value,price:pr.value,calorie:ca.value,religion:re.value,allergies:[],recommendationMode:rm.value};
+ const sp=$('spiciness'),sa=$('saltiness'),sw=$('sweetness'),pr=$('price'),ca=$('calorie'),re=$('religion'),rm=$('recommendation-mode'),bm=$('blind-box-mode');
+ if(!sp||!sa||!sw||!pr||!ca||!re||!rm||!bm){showMessage('页面错误','偏好设置表单未完全加载');return;}
+ userProfile={spiciness:sp.value,saltiness:sa.value,sweetness:sw.value,price:pr.value,calorie:ca.value,religion:re.value,allergies:[],recommendationMode:rm.value,blindBoxMode:bm.value};
  if($('allergy-none')&&!$('allergy-none').checked){
   const amap={'allergy-seafood':'海鲜','allergy-peanut':'花生','allergy-egg':'鸡蛋','allergy-soy':'大豆','allergy-gluten':'麸质'};
   Object.keys(amap).forEach(k=>{if($(k).checked)userProfile.allergies.push(amap[k]);});
@@ -749,7 +754,7 @@ async function fetchRecommendations(isRefresh){
   }
  }
 
- const up=userProfile||{};const prefs={'辣度':up.spiciness||'','咸淡':up.saltiness||'','甜酸':up.sweetness||'','价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion||'无','allergies':up.allergies||[],'calorie':up.calorie||'无'};
+ const up=userProfile||{};const prefs={'辣度':up.spiciness||'','咸淡':up.saltiness||'','甜酸':up.sweetness||'','价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion||'无','allergies':up.allergies||[],'calorie':up.calorie||'无','blindBoxMode':up.blindBoxMode||'smart'};
  let blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u)blk=u.blacklist||[];}
 
  let dishes=dishData.filter(d=>{
