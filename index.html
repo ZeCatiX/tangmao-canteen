@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23d35400' d='M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14.5c-3.59 0-6.5-2.91-6.5-6.5S4.41 1.5 8 1.5 14.5 4.41 14.5 8 11.59 14.5 8 14.5zm-2.5-7h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0-2h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0 4h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5z'/%3E%3C/svg%3E" type="image/svg+xml">
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="styles.css?v=20260932">
+    <link rel="stylesheet" href="styles.css?v=20260933">
     <script>
       (function(){
         try {
@@ -21,7 +21,8 @@
           document.addEventListener('DOMContentLoaded', function(){
             var btn = document.getElementById('dark-mode-toggle');
             if(!btn) return;
-            btn.textContent = dark ? '☀️' : '🌙';
+            var icon = btn.querySelector('i');
+            if(icon) icon.className = dark ? 'bi bi-sun' : 'bi bi-moon-stars';
           });
         } catch(e){}
       })();
@@ -29,7 +30,7 @@
         var isDark = document.documentElement.classList.toggle('dark-mode');
         localStorage.setItem('darkMode', isDark);
         var btn = document.getElementById('dark-mode-toggle');
-        if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+        if(btn){var icon=btn.querySelector('i');if(icon)icon.className=isDark?'bi bi-sun':'bi bi-moon-stars';}
       }
     </script>
 </head>
@@ -57,7 +58,7 @@
                             </a>
                         </li>
                         <li class="nav-item ms-2 d-flex align-items-center">
-                            <button class="btn btn-sm" id="dark-mode-toggle" onclick="toggleDarkMode()" style="border-radius:50%;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;text-align:center;background:transparent;border:1px solid rgba(201,169,110,0.3);color:var(--gold);font-size:0.85rem;cursor:pointer;transition:all 0.3s;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
+                            <button class="btn btn-sm" id="dark-mode-toggle" onclick="toggleDarkMode()" style="border-radius:50%;width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;text-align:center;background:transparent;border:1px solid rgba(201,169,110,0.3);color:var(--gold);font-size:0.95rem;cursor:pointer;transition:all 0.3s;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式"><i class="bi bi-moon-stars"></i></button>
                         </li>
                     </ul>
                 </div>
