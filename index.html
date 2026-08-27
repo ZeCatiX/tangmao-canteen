@@ -316,6 +316,16 @@
                                         <div class="form-text">显示当前使用的推荐算法</div>
                                     </div>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" for="blind-box-mode">盲盒推荐模式</label>
+                                        <select class="form-select" id="blind-box-mode">
+                                            <option value="smart" selected>智能选（按偏好加权）</option>
+                                            <option value="random">纯随机（惊喜盲盒）</option>
+                                        </select>
+                                        <div class="form-text">智能选更贴合口味，纯随机更有惊喜</div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="mb-4">
@@ -862,7 +872,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20260930b"></script>
+    <script src="script.js?v=20260928b"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
