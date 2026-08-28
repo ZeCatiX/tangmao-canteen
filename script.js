@@ -24,6 +24,22 @@ const DEFAULT_DISH_IMG='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/200
 function dishImg(url,size,alt){size=size||50;const u=url||'';const st='width:'+size+'px;height:'+size+'px;border-radius:6px;object-fit:cover;';const st2='width:'+size+'px;height:'+size+'px;display:inline-flex;align-items:center;justify-content:center;font-size:'+Math.round(size*0.6)+'px;';if(u.startsWith('/uploads/')||u.startsWith('data:'))return '<img src="'+esc(u)+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';if(u)return '<span style="'+st2+'">'+esc(u)+'</span>';return '<img src="'+DEFAULT_DISH_IMG+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';}
 
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
+function safeFetch(url, opts) {
+  const fetcher = opts?.method
+    ? fetch(url, opts)
+    : (typeof url === 'string' ? fetch(url, opts) : url);
+  return fetcher.then(r => {
+    if (r.status === 401 && localStorage.getItem('userToken')) {
+      localStorage.removeItem('userToken');
+      localStorage.removeItem('currentUser');
+      showMessage('登录已过期', '请重新登录');
+    }
+    return r;
+  }).catch(e => {
+    console.warn('网络请求失败:', url, e.message);
+    return new Response(JSON.stringify({ success: false, error: '网络请求失败' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+  });
+}
 // ═══════════════ 购物车功能 ═══════════════
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
 function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
@@ -137,14 +153,12 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,nutrition:0,rating:0};
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
- ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]&&prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=2;else md.taste+=0.5;}else md.taste+=1;});
+ ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=1;}else md.taste+=1;});
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
- // 热量偏好打分：用户有偏好时匹配+1，无偏好时基础+1
- md.nutrition+=1;
- if(prefs['calorie']&&prefs['calorie']!=='无'&&dish.calorie===prefs['calorie'])md.nutrition+=1;
+ md.nutrition+=2;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
  const total=md.taste+md.cuisine+md.nutrition+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/12};
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
 }
 
 function generateDishReason(prefs,dish){
