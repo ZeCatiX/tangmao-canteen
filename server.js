@@ -217,11 +217,13 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(__dirname, { maxAge: '7d', setHeaders: (res, p) => {
+app.use(express.static(__dirname, { setHeaders: (res, p) => {
   // HTML 不缓存（防止 Edge 等浏览器缓存旧版，导致版本号更新不生效）
   if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   // CSS/JS 不缓存（版本号 v= 防缓存，但 setHeader 双重保险）
   if (p.endsWith('.css') || p.endsWith('.js')) res.setHeader('Cache-Control', 'no-cache, must-revalidate, max-age=0');
+  // 图片缓存7天
+  if (p.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) res.setHeader('Cache-Control', 'public, max-age=604800');
 } }));
 // node_modules 中的前端库文件（在拦截中间件之后注册，敏感文件已被阻止）
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules'), { maxAge: '7d' }));
