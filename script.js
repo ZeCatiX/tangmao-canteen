@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded',function(){
  const savedDark=localStorage.getItem('darkMode');
  // 优先级：localStorage保存的偏好 > 系统偏好
  const shouldBeDark=savedDark!==null?savedDark==='true':prefersDark;
- if(shouldBeDark){document.documentElement.classList.add('dark-mode');const tb=document.getElementById('dark-mode-toggle');if(tb)tb.textContent='☀️';}
+ if(shouldBeDark){document.documentElement.classList.add('dark-mode');const tb=document.getElementById('dark-mode-toggle');if(tb){const ic=tb.querySelector('i');if(ic)ic.className='bi bi-sun';}}
 	 // 从API加载菜品数据
  Promise.race([fetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
   if(d.success&&d.dishes.length){
