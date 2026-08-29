@@ -931,6 +931,15 @@ document.addEventListener('DOMContentLoaded',function(){
  // 购物车桌号自动填
  const cartTable=$('cart-table-number');
  if(cartTable){const saved=localStorage.getItem('tableNumber');if(saved)cartTable.value=saved;cartTable.addEventListener('input',()=>syncTableNumber(cartTable));}
+ // 分类Tab切换
+ document.querySelectorAll('.cat-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+   document.querySelectorAll('.cat-tab').forEach(t=>{t.classList.remove('active');t.style.background='transparent';t.style.color='var(--text)';t.style.border='1px solid var(--gold-light)';});
+   tab.classList.add('active');tab.style.background='var(--primary)';tab.style.color='#fff';tab.style.border='none';
+   const cat=tab.dataset.cat;
+   const catSel=$('menu-filter-cat');if(catSel){catSel.value=cat;catSel.dispatchEvent(new Event('change'));}
+  });
+ });
 
 // ═══════════════ 页面切换与弹窗 ═══════════════
  click('nav-home',e=>{e.preventDefault();showSection('home-section');});
