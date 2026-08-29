@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded',function(){
  click('nav-profile',e=>{e.preventDefault();showProfile();});
  click('login-btn',()=>showSection('login-section'));
  click('register-btn',()=>showSection('register-section'));
- click('guest-btn',()=>{if(!currentUser)currentUser='guest';showSection('preference-section');});
+ click('guest-btn',()=>{if(!currentUser)currentUser='guest';showDataset();});
  click('ai-recommend-btn',()=>{if(!currentUser)currentUser='guest';showSection('preference-section');});
  click('continue-btn',()=>{if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u&&u.preferences)loadUserPreferences(u.preferences);}showSection('preference-section');});
  click('back-to-home',()=>showSection('home-section'));
