@@ -1009,11 +1009,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const id=parseInt(target.dataset.id);
   if(target.classList.contains('add-to-cart-btn')){
    const dish=dishData.find(d=>d.id===id);
-   if(dish){addToCart(dish,1);const cart=getCart();const ci=cart.find(c=>c.id===id);if(ci)target.innerHTML='<i class=\"bi bi-check-circle me-1\"></i>已加 '+(ci.qty||1);}else{showMessage('提示','菜品数据未加载');}
+   if(dish){addToCart(dish,1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();}else{showMessage('提示','菜品数据未加载');}
    return;
   }
-  if(target.classList.contains('cart-qty-plus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)+1);showCart();}
-  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)-1);showCart();}
+  if(target.classList.contains('cart-qty-plus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)+1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else showCart();}
+  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)-1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else showCart();}
   else if(target.classList.contains('cart-remove-btn')){removeFromCart(id);showCart();}
  });
  // 购物车数量输入变更
