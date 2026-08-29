@@ -731,18 +731,21 @@ function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
  if(bEl)bEl.disabled=true;
+ const tableInput=document.getElementById('cart-table-number');
+ const tableNumber=tableInput?tableInput.value.trim():'';
+ if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
  const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})})
+ fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
   if(!d.success){showMessage('下单失败',d.error||'服务器错误');return;}
-  // 下单成功后再清理本地数据
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
   clearCart();
-  showMessage('下单成功','您的订单已提交，感谢用餐！',function(){showSection('home-section');});
+  if(tableInput)tableInput.value='';
+  showMessage('下单成功 ✓','订单号: '+d.orderId+' | 桌号: '+tableNumber+' | 合计: '+total+'元\n\n厨房已接单，正在为您准备',function(){showSection('home-section');});
  }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
 // ─── js/recommendation.js ───

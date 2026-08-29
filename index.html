@@ -500,13 +500,14 @@
                                 <tbody id="cart-table-body"></tbody>
                             </table>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center p-3" style="background:#fdf6f0;border-radius:8px;">
-                            <div>
-                                <span style="color:var(--text-light);font-size:0.9rem;">共 <strong id="cart-total-items">0</strong> 件商品</span>
-                                <span style="margin-left:20px;color:var(--text-light);font-size:0.9rem;">合计：<strong id="cart-total-price" style="color:var(--primary-accent);font-size:1.2rem;">0</strong> 元</span>
+                        <div class="d-flex justify-content-between align-items-center p-3" style="background:#fdf6f0;border-radius:8px;flex-wrap:wrap;gap:8px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <span style="color:var(--text-light);font-size:0.9rem;">共 <strong id="cart-total-items">0</strong> 件</span>
+                                <span style="color:var(--text-light);font-size:0.9rem;">合计：<strong id="cart-total-price" style="color:var(--primary-accent);font-size:1.2rem;">0</strong> 元</span>
                             </div>
-                            <div>
-                                <button class="btn btn-sm btn-outline-secondary me-2" id="cart-clear-btn" style="border-radius:8px;"><i class="bi bi-trash"></i> 清空</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="text" id="cart-table-number" placeholder="桌号" style="width:70px;font-size:0.85rem;padding:4px 8px;border-radius:6px;border:1.5px solid var(--gold-light);" aria-label="桌号">
+                                <button class="btn btn-sm btn-outline-secondary" id="cart-clear-btn" style="border-radius:8px;"><i class="bi bi-trash"></i> 清空</button>
                                 <button class="btn btn-sm" id="cart-checkout-btn" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:8px;padding:8px 20px;"><i class="bi bi-check-circle me-1"></i> 去结算</button>
                             </div>
                         </div>
