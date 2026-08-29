@@ -748,6 +748,14 @@ function checkoutCart(){
   showMessage('下单成功 ✓','订单号: '+d.orderId+' | 桌号: '+tableNumber+' | 合计: '+total+'元\n\n厨房已接单，正在为您准备',function(){showSection('home-section');});
  }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
+
+// 桌号同步: 偏好页输入 → localStorage → 购物车自动填
+function syncTableNumber(from){
+  const val=from?.value?.trim()||'';
+  if(val)localStorage.setItem('tableNumber',val);
+  const cart=document.getElementById('cart-table-number');
+  if(cart&&val)cart.value=val;
+}
 // ─── js/recommendation.js ───
 // 推荐逻辑模块
 async function fetchRecommendations(isRefresh){
@@ -912,6 +920,12 @@ document.addEventListener('DOMContentLoaded',function(){
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
  const submit=(id,fn)=>{const el=$(id);if(el)el.addEventListener('submit',e=>{e.preventDefault();fn();});};
+ // 桌号同步: 偏好页输入实时存localStorage
+ const prefTable=$('pref-table-number');
+ if(prefTable){const saved=localStorage.getItem('tableNumber');if(saved)prefTable.value=saved;prefTable.addEventListener('input',()=>syncTableNumber(prefTable));}
+ // 购物车桌号自动填
+ const cartTable=$('cart-table-number');
+ if(cartTable){const saved=localStorage.getItem('tableNumber');if(saved)cartTable.value=saved;cartTable.addEventListener('input',()=>syncTableNumber(cartTable));}
 
 // ═══════════════ 页面切换与弹窗 ═══════════════
  click('nav-home',e=>{e.preventDefault();showSection('home-section');});
