@@ -76,6 +76,14 @@ function clearCart(){saveCart([]);updateCartBadge();}
 function updateCartBadge(){
  const el=document.getElementById('cart-badge');
  if(el){const c=getCartCount();el.textContent=c;el.style.display=c>0?'inline':'none';}
+ updateFloatBar();
+}
+function updateFloatBar(){
+ const bar=document.getElementById('float-cart-bar');
+ if(!bar)return;
+ const c=getCartCount();
+ if(c>0){bar.style.display='flex';document.getElementById('float-cart-count').textContent=c;document.getElementById('float-cart-total').textContent=getCartTotal();}
+ else bar.style.display='none';
 }
 
 
