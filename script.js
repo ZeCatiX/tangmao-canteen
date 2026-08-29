@@ -332,8 +332,8 @@ function showDataset(){
  renderMenuTable();
 }
 function renderMenuTable(){
- const tb=document.getElementById('dataset-table-body');if(!tb)return;
- // 如果 dishData 为空，最多重试 3 次（避免无限堆积）
+ const container=document.getElementById('dataset-table-body');if(!container)return;
+ // 如果 dishData 为空，最多重试 3 次
  if(!dishData||!dishData.length){
   if(!renderMenuTable._retryCount)renderMenuTable._retryCount=0;
   if(renderMenuTable._retryCount<3){renderMenuTable._retryCount++;setTimeout(renderMenuTable,1000);}
@@ -353,23 +353,20 @@ function renderMenuTable(){
   if(priceRange){const p=parseFloat(d.price);if(isNaN(p))return false;const [lo,hi]=priceRange.split('-').map(Number);if(p<lo||p>=hi)return false;}
   return true;
  });
- // 排序
  const sortVal=document.getElementById('menu-sort')?.value||'';
  if(sortVal==='popular')filtered.sort((a,b)=>(b.order_count||0)-(a.order_count||0));
  else if(sortVal==='rating')filtered.sort((a,b)=>parseFloat(b.rating)-parseFloat(a.rating));
  else if(sortVal==='price_asc')filtered.sort((a,b)=>parseFloat(a.price)-parseFloat(b.price));
  else if(sortVal==='price_desc')filtered.sort((a,b)=>parseFloat(b.price)-parseFloat(a.price));
- tb.innerHTML='';
- filtered.forEach(d=>{
-
-// ═══════════════ 推荐逻辑 ═══════════════
-  const r=document.createElement('tr');
-  const tags=d.tags&&d.tags.length?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
+ const cart=getCart();
+ container.innerHTML='<div class="dish-grid">'+filtered.map(d=>{
+  const ci=cart.find(c=>c.id===d.id);
+  const qty=ci?(ci.qty||1):0;
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
-  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:120px;height:120px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:3rem;vertical-align:middle;margin-right:8px;">'+esc(d.image_url)+'</span>':'');
-  r.innerHTML='<td>'+imgUrl+'</td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+esc(tags)+'</td><td style="text-align:center;white-space:nowrap;"><button class="btn btn-sm btn-link add-to-cart-btn" data-id="'+d.id+'" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#2e86c1;" title="加入购物车">🛒</button><button class="btn btn-sm btn-link" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#e74c3c;" onclick="addToFavorites('+d.id+')" title="收藏">♥</button></td>';
-  tb.appendChild(r);
- });
+  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
+  const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">招牌</span> ':'';
+  return '<div class="dish-card">'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;">'+star+esc(d.name)+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(d.category)+' · '+esc(d.spiciness)+'</p><div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">'+esc(formatPrice(d.price))+'</strong>'+(qty>0?'<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>')+'</div></div></div>';
+ }).join('')+'</div>';
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
 }
 
