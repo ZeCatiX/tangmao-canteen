@@ -970,6 +970,7 @@ document.addEventListener('DOMContentLoaded',function(){
  click('login-btn',()=>showSection('login-section'));
  click('register-btn',()=>showSection('register-section'));
  click('guest-btn',()=>{if(!currentUser)currentUser='guest';showSection('preference-section');});
+ click('ai-recommend-btn',()=>{if(!currentUser)currentUser='guest';showSection('preference-section');});
  click('continue-btn',()=>{if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u&&u.preferences)loadUserPreferences(u.preferences);}showSection('preference-section');});
  click('back-to-home',()=>showSection('home-section'));
  click('back-to-home-from-register',()=>showSection('home-section'));
