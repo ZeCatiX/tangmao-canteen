@@ -360,12 +360,22 @@ function renderMenuTable(){
  else if(sortVal==='price_desc')filtered.sort((a,b)=>parseFloat(b.price)-parseFloat(a.price));
  const cart=getCart();
  // 按分类分组渲染，每组加分隔标题
- let html='';let lastCat='';
+ let html='';let lastCat='',lastSub='';
+ const SUB_EMOJI={'特调饮品':'🍸','花酒天地':'🥂','茶饮':'🍵','一醉千年':'🏺','葡萄酒':'🍷','液体面包':'🍺','缤纷饮品':'🍹'};
+ const SUBS=['特调饮品','花酒天地','茶饮','一醉千年','葡萄酒','液体面包','缤纷饮品'];
  filtered.forEach(d=>{
   if(d.category!==lastCat){
-   lastCat=d.category;
+   lastCat=d.category;lastSub='';
    const catEmoji={'主食':'🍚','招牌':'🏆','热销菜品':'🔥','传承陕菜':'🍲','江湖海鲜':'🦐','特色凉菜':'🥗','田园时蔬':'🥬','陕西小吃':'🥟','飲品与酒水':'🍹'}[d.category]||'🍽';
    html+='<div class="dish-cat-sep">'+catEmoji+' '+esc(d.category)+'</div>';
+  }
+  // 飲品与酒水二级分隔
+  if(d.category==='飲品与酒水'){
+   const sub=d.tags&&d.tags.find(t=>SUBS.includes(t));
+   if(sub&&sub!==lastSub){
+    lastSub=sub;
+    html+='<div class="dish-sub-sep">'+(SUB_EMOJI[sub]||'·')+' '+esc(sub)+'</div>';
+   }
   }
   const ci=cart.find(c=>c.id===d.id);
   const qty=ci?(ci.qty||1):0;
