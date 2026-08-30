@@ -728,6 +728,7 @@ function deleteAccount(){
 
 // ═══════════════ 购物车功能 ═══════════════
 function showCart(){
+ window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
  if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';if(tb)tb.innerHTML='';}else{
@@ -1014,8 +1015,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
   const prev=window._prevSection||'home-section';
+  const scrollY=window._prevScrollY||0;
   showSection(prev);
-  // 返回推荐页时刷新加购按钮状态(购物车删菜后按钮回归"加入")
+  // 全部菜单页: 恢复滚动位置 + 重新渲染卡片(清空后按钮回归"加入")
+  if(prev==='dataset-section'){renderMenuTable();setTimeout(()=>window.scrollTo(0,scrollY),50);}
+  // 推荐页: 刷新加购按钮
   if(prev==='recommendation-section'){
    const cart=getCart();
    document.querySelectorAll('#recommendation-result .add-to-cart-btn').forEach(btn=>{
@@ -1023,7 +1027,6 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
     const ci=cart.find(c=>c.id===id);
     btn.innerHTML=ci?'<i class="bi bi-check-circle me-1"></i>已加 '+(ci.qty||1):'<i class="bi bi-cart-plus"></i> 加入';
    });
-   // 米饭按钮回归初始文字
    const riceBtn=document.getElementById('add-rice-btn');
    if(riceBtn){const rc=cart.find(c=>c.id===parseInt(riceBtn.dataset.id));if(!rc)riceBtn.innerHTML='<i class="bi bi-plus-circle me-1"></i>加一碗米饭';}
   }
