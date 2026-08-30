@@ -344,7 +344,7 @@ function renderMenuTable(){
  const cat=document.getElementById('menu-filter-cat')?.value||'';
  const spice=document.getElementById('menu-filter-spice')?.value||'';
  const priceRange=document.getElementById('menu-filter-price')?.value||'';
- const catOrder=['招牌','主食','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬','陕西小吃','飲品与酒水'];
+ const catOrder=['主食','招牌','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬','陕西小吃','飲品与酒水'];
  const sorted=[...dishData].sort((a,b)=>catOrder.indexOf(a.category)-catOrder.indexOf(b.category)||a.id-b.id);
  const filtered=sorted.filter(d=>{
   if(q&&!d.name.toLowerCase().includes(q))return false;
