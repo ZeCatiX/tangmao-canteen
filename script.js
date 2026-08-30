@@ -262,7 +262,7 @@ function resetPreferenceForm(){
 const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院'};
 const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
 
-function showSection(sectionId){
+function showSection(sectionId,skipScroll){
  const el=document.getElementById(sectionId);
  if(!el){console.warn('showSection: 未找到元素',sectionId);return;}
  // 记录上一页（关闭购物车时返回）
@@ -270,8 +270,8 @@ function showSection(sectionId){
  if(cur&&cur.id!==sectionId)window._prevSection=cur.id;
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
  el.classList.add('active');
- // 切换section时平滑滚动到顶部，提升浏览体验
- window.scrollTo({ top: 0, behavior: 'smooth' });
+ // 切换section时平滑滚动到顶部，提升浏览体验（购物车返回时跳过，恢复原位置）
+ if(!skipScroll)window.scrollTo({ top: 0, behavior: 'smooth' });
  // 记录导航历史（用于浏览器前进/后退）
  try { history.pushState({ section: sectionId }, '', window.location.pathname); } catch(e) {}
  updateUserNavbar();
@@ -1016,9 +1016,9 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('cart-close-btn',()=>{
   const prev=window._prevSection||'home-section';
   const scrollY=window._prevScrollY||0;
-  showSection(prev);
+  showSection(prev,true);
   // 全部菜单页: 恢复滚动位置 + 重新渲染卡片(清空后按钮回归"加入")
-  if(prev==='dataset-section'){renderMenuTable();requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,scrollY)));}
+  if(prev==='dataset-section'){renderMenuTable();window.scrollTo(0,scrollY);}
   // 推荐页: 刷新加购按钮
   if(prev==='recommendation-section'){
    const cart=getCart();
