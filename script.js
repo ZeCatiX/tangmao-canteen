@@ -1018,7 +1018,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const scrollY=window._prevScrollY||0;
   showSection(prev,true);
   // 全部菜单页: 恢复滚动位置 + 重新渲染卡片(清空后按钮回归"加入")
-  if(prev==='dataset-section'){renderMenuTable();const sy=scrollY;setTimeout(()=>{console.log('恢复滚动:',sy);window.scrollTo(0,sy);},150);}
+  if(prev==='dataset-section'){renderMenuTable();requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,scrollY)));}
   // 推荐页: 刷新加购按钮
   if(prev==='recommendation-section'){
    const cart=getCart();
