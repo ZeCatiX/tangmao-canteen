@@ -328,6 +328,7 @@ function showMessage(title,msg,callback,autoClose){
 }
 
 function showDataset(){
+ sessionStorage.setItem('datasetScrollY',window.scrollY);
  showSection('dataset-section');
  renderMenuTable();
 }
@@ -959,6 +960,8 @@ document.addEventListener('DOMContentLoaded',function(){
    const catSel=$('menu-filter-cat');if(catSel){catSel.value=cat;catSel.dispatchEvent(new Event('change'));}
   });
  });
+ // 全部菜单页滚动时保存位置
+ window.addEventListener('scroll',()=>{if(document.getElementById('dataset-section')?.classList.contains('active'))sessionStorage.setItem('datasetScrollY',window.scrollY);});
 
 // ═══════════════ 页面切换与弹窗 ═══════════════
  click('nav-home',e=>{e.preventDefault();showSection('home-section');});
@@ -1015,10 +1018,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
   const prev=window._prevSection||'home-section';
-  const scrollY=window._prevScrollY||0;
+  // 在 showSection 之前保存滚动位置（showSection 会重置）
+  const scrollY=window.scrollY;
   showSection(prev,true);
   // 全部菜单页: 恢复滚动位置 + 重新渲染卡片(清空后按钮回归"加入")
-  if(prev==='dataset-section'){renderMenuTable();requestAnimationFrame(()=>requestAnimationFrame(()=>window.scrollTo(0,scrollY)));}
+  if(prev==='dataset-section'){renderMenuTable();const sy=parseInt(sessionStorage.getItem('datasetScrollY')||'0');window.scrollTo(0,sy);}
   // 推荐页: 刷新加购按钮
   if(prev==='recommendation-section'){
    const cart=getCart();
