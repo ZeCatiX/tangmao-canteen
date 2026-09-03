@@ -147,6 +147,8 @@ body {
   flex-direction: column;
   justify-content: space-between;
   gap: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* 标题匾额效果 */
