@@ -138,7 +138,7 @@ body {
    ═══════════════════════════════════════════════════ */
 #main-content { display: flex !important; flex-direction: column !important; padding: 0 12px !important; flex: 1 !important; min-height: 0 !important; overflow: auto !important; }
 /* 让main的父容器也flex，使main flex:1生效 */
-.container-fluid.min-vh-100 { display: flex; flex-direction: column; }
+.container-fluid.min-vh-100 { display: flex; flex-direction: column; min-height: 0 !important; flex: 1 !important; }
 #home-section > * { margin-bottom: 0 !important; }
 #home-section.active {
   max-width: 1140px;
