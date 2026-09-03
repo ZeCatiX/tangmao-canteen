@@ -52,6 +52,8 @@ body {
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 ::selection { background: rgba(184,58,42,0.12); color: var(--primary-dark); }
