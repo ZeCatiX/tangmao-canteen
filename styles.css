@@ -136,22 +136,18 @@ body {
 /* ═══════════════════════════════════════════════════
    首页 —— 唐风匾额
    ═══════════════════════════════════════════════════ */
-#main-content { display: flex !important; flex-direction: column !important; padding: 0 12px !important; flex: 1 !important; min-height: 0 !important; overflow: auto !important; }
-/* 让main的父容器也flex，使main flex:1生效 */
-.container-fluid.min-vh-100 { display: flex; flex-direction: column; min-height: 0 !important; flex: 1 !important; }
+#main-content { display: flex !important; flex-direction: column !important; padding: 0 12px !important; }
+/* 首页撑满视口，其他页面可滚动 */
 #home-section > * { margin-bottom: 0 !important; }
 #home-section.active {
   max-width: 1140px;
   margin: 0 auto;
   padding: 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 0;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
+  min-height: calc(100vh - 67px - 126px);
 }
 
 /* 标题匾额效果 */
