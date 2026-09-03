@@ -104,14 +104,16 @@
                 </div>
 
                 <div class="text-center">
-                    <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);">
-                        <i class="bi bi-hand-index-thumb me-2"></i>开始点餐
-                    </button>
-                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;">
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);">
+                            <i class="bi bi-hand-index-thumb me-2"></i>开始点餐
+                        </button>
+                        <button class="btn btn-lg px-5 py-3" id="ai-recommend-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid var(--gold);color:var(--gold);">
+                            <i class="bi bi-magic me-2"></i>不知道吃什么？AI 帮你选
+                        </button>
+                    </div>
+                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-arrow-repeat me-2"></i>继续上次推荐
-                    </button>
-                    <button class="btn btn-lg px-5 py-3" id="ai-recommend-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid var(--gold);color:var(--gold);margin-top:10px;">
-                        <i class="bi bi-magic me-2"></i>不知道吃什么？AI 帮你选
                     </button>
                     <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:var(--primary-accent);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-clock-history me-2"></i>查看上次推荐
