@@ -838,7 +838,8 @@ async function fetchRecommendations(isRefresh){
    const {matchDetails,totalMatch}=computeDishMatch(prefs,d);d.matchDetails=matchDetails;
    const pred=preds.find(p=>p.id==d.id);const ml=pred?pred.score:0;
    const rule=Math.min(totalMatch/8.5,1);
-   const mlNorm=mlR>0.01?(ml-mlMin)/mlR:(ml/5);
+   // 评分全为默认3.5时归一化会放大ML噪声, 用绝对分ml/5让规则主导
+   const mlNorm=Math.max(0,Math.min(1,ml/5));
    d.matchIndex=Math.round((rule*0.6+mlNorm*0.4)*100)/100;d.mlScore=ml;d.matchRate=rule*0.6+mlNorm*0.4;
   });
   dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
@@ -864,7 +865,7 @@ async function fallback(prefs,blk,dishes){
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,nutrition:0,rating:0};
   const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
-  ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(d[keyMap[k]]===prefs[k])md.taste+=1;}else md.taste+=1;});
+  ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(d[keyMap[k]]===prefs[k])md.taste+=2;else md.taste-=1;}else md.taste+=1;});
   if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.5;
   md.nutrition+=2;md.rating=Math.round((ps/5)*2.5*10)/10;
   const total=md.taste+md.cuisine+md.nutrition+md.rating;
