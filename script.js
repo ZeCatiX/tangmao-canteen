@@ -158,10 +158,15 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 
 
 // ═══════════════ 菜品匹配计算 ═══════════════
+const SPICE_ORDER={'不辣':0,'微辣':1,'中辣':2,'重辣':3};
+const SALT_ORDER={'清淡':0,'适中':1,'偏咸':2};
+// 分级匹配: 菜品辣度高于用户可接受→-2重罚; 精确匹配+2; 差1级+1; 差2级以上0
+function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;if(di>ui)return -2;const diff=ui-di;return diff===0?2:diff===1?1:0;}
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,nutrition:0,rating:0};
- const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
- ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=2;else md.taste-=1;}else md.taste+=1;});
+ if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=1;
+ if(prefs['咸淡']!=='无')md.taste+=gradeScore(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=1;
+ if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
  md.nutrition+=2;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
@@ -864,8 +869,9 @@ async function fallback(prefs,blk,dishes){
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,nutrition:0,rating:0};
-  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
-  ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(d[keyMap[k]]===prefs[k])md.taste+=2;else md.taste-=1;}else md.taste+=1;});
+  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=1;
+  if(prefs['咸淡']!=='无')md.taste+=gradeScore(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
+  if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
   if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.5;
   md.nutrition+=2;md.rating=Math.round((ps/5)*2.5*10)/10;
   const total=md.taste+md.cuisine+md.nutrition+md.rating;
