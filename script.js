@@ -174,7 +174,7 @@ function computeDishMatch(prefs,dish){
  if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
  const total=md.taste+md.cuisine+md.calorie+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/12};
 }
 
 function generateDishReason(prefs,dish){
@@ -845,7 +845,7 @@ async function fetchRecommendations(isRefresh){
   dishes.forEach(d=>{
    const {matchDetails,totalMatch}=computeDishMatch(prefs,d);d.matchDetails=matchDetails;
    const pred=preds.find(p=>p.id==d.id);const ml=pred?pred.score:0;
-   const rule=Math.min(totalMatch/8.5,1);
+   const rule=Math.min(totalMatch/12,1);
    // 评分全为默认3.5时归一化会放大ML噪声, 用绝对分ml/5让规则主导
    const mlNorm=Math.max(0,Math.min(1,ml/5));
    d.matchIndex=Math.round((rule*0.6+mlNorm*0.4)*100)/100;d.mlScore=ml;d.matchRate=rule*0.6+mlNorm*0.4;
@@ -879,7 +879,7 @@ async function fallback(prefs,blk,dishes){
   if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],d.calorie);else md.calorie=1;
   md.rating=Math.round((ps/5)*2.5*10)/10;
   const total=md.taste+md.cuisine+md.calorie+md.rating;
-  d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/8.5;
+  d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/12;
   d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
