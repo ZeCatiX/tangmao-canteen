@@ -160,17 +160,20 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 // ═══════════════ 菜品匹配计算 ═══════════════
 const SPICE_ORDER={'不辣':0,'微辣':1,'中辣':2,'重辣':3};
 const SALT_ORDER={'清淡':0,'适中':1,'偏咸':2};
-// 分级匹配: 菜品辣度高于用户可接受→-2重罚; 精确匹配+2; 差1级+1; 差2级以上0
+const CAL_ORDER={'低':0,'中':1,'高':2};
+// 辣度: 超出承受-2重罚; 精确+2; 差1级+1; 差2级+0
 function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;if(di>ui)return -2;const diff=ui-di;return diff===0?2:diff===1?1:0;}
+// 咸淡/热量: 无超出概念, 精确+2; 差1级+1; 差2级+0
+function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?1:0;}
 function computeDishMatch(prefs,dish){
- const md={taste:0,cuisine:0,nutrition:0,rating:0};
+ const md={taste:0,cuisine:0,calorie:0,rating:0};
  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=1;
- if(prefs['咸淡']!=='无')md.taste+=gradeScore(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=1;
+ if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=1;
  if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
- md.nutrition+=2;
+ if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
- const total=md.taste+md.cuisine+md.nutrition+md.rating;
+ const total=md.taste+md.cuisine+md.calorie+md.rating;
  return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
 }
 
@@ -868,15 +871,16 @@ async function fallback(prefs,blk,dishes){
  console.log('🔄本地推荐(决策树模型)');const start=Date.now();await loadDecisionTreeModel();
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
-  const md={taste:0,cuisine:0,nutrition:0,rating:0};
+  const md={taste:0,cuisine:0,calorie:0,rating:0};
   if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=1;
-  if(prefs['咸淡']!=='无')md.taste+=gradeScore(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
+  if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
   if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
   if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.5;
-  md.nutrition+=2;md.rating=Math.round((ps/5)*2.5*10)/10;
-  const total=md.taste+md.cuisine+md.nutrition+md.rating;
+  if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],d.calorie);else md.calorie=1;
+  md.rating=Math.round((ps/5)*2.5*10)/10;
+  const total=md.taste+md.cuisine+md.calorie+md.rating;
   d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/8.5;
-  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 营养'+md.nutrition+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
+  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
@@ -917,7 +921,7 @@ function displayRecommendations(){
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
   const matchRatePct=isFinite(d.matchRate)?(d.matchRate*100).toFixed(1):'0';
  const img=(d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:160px;height:160px;border-radius:12px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:3.5rem;vertical-align:middle;margin-left:12px;">'+esc(d.image_url)+'</span>':''));
-	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.type!=='盲盒尝鲜'&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
+	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.type!=='盲盒尝鲜'&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
  loading.classList.add('d-none');result.classList.remove('d-none');
 }
