@@ -161,7 +161,7 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,nutrition:0,rating:0};
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
- ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=1;}else md.taste+=1;});
+ ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=2;else md.taste-=1;}else md.taste+=1;});
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
  md.nutrition+=2;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
@@ -839,7 +839,7 @@ async function fetchRecommendations(isRefresh){
    const pred=preds.find(p=>p.id==d.id);const ml=pred?pred.score:0;
    const rule=Math.min(totalMatch/8.5,1);
    const mlNorm=mlR>0.01?(ml-mlMin)/mlR:(ml/5);
-   d.matchIndex=Math.round((rule*0.4+mlNorm*0.6)*100)/100;d.mlScore=ml;d.matchRate=rule*0.4+mlNorm*0.6;
+   d.matchIndex=Math.round((rule*0.6+mlNorm*0.4)*100)/100;d.mlScore=ml;d.matchRate=rule*0.6+mlNorm*0.4;
   });
   dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
