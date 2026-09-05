@@ -166,11 +166,11 @@ def compute_score(X, is_sig, price_val, rating_val, category):
 
     # 映射到 0.1~1.0
     score = score * 0.7 + 0.3
-    score += np.random.normal(0, 0.015)
+    score += np.random.normal(0, 0.008)
     return max(0.1, min(1.0, score))
 
 
-def generate_training_data(dishes, user_profiles, samples_per_dish=8):
+def generate_training_data(dishes, user_profiles, samples_per_dish=24):
     """生成训练数据集"""
     X_list, y_list = [], []
     for dish in dishes:
@@ -181,9 +181,9 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=8):
             y_list.append(score)
             # 额外带噪声样本
             for _ in range(samples_per_dish - 1):
-                X_noise = X + np.random.normal(0, 0.015, 11)
+                X_noise = X + np.random.normal(0, 0.008, 11)
                 X_noise = np.clip(X_noise, 0, None)
-                y_noise = score + np.random.normal(0, 0.015)
+                y_noise = score + np.random.normal(0, 0.008)
                 y_noise = max(0.1, min(1.0, y_noise))
                 X_list.append(X_noise)
                 y_list.append(y_noise)
@@ -250,7 +250,7 @@ def main():
 
     # 生成训练数据
     print('正在生成训练数据...', file=sys.stderr)
-    X, y = generate_training_data(dishes, USER_PROFILES, samples_per_dish=8)
+    X, y = generate_training_data(dishes, USER_PROFILES, samples_per_dish=24)
     print(f'生成 {len(X)} 条训练数据', file=sys.stderr)
 
     # 训练
