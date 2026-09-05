@@ -166,15 +166,22 @@ function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||
 // 咸淡/热量: 无超出概念, 精确+2; 差1级+1; 差2级+0
 function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?1:0;}
 function computeDishMatch(prefs,dish){
- const md={taste:0,cuisine:0,calorie:0,rating:0};
+ const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=1;
  if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=1;
  if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
  if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
+ // 价格软打分: 区间内+2, 邻近-1, 区间外-2; 无偏好+1
+ const p=parseFloat(dish.price);
+ if(!isNaN(p)&&prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
+  if(prefs['价格区间']==='经济')md.price=p<20?2:(p<30?-1:-2);
+  else if(prefs['价格区间']==='适中')md.price=(p>=20&&p<=50)?2:(p<20||p>50?-1:0);
+  else if(prefs['价格区间']==='品质')md.price=p>50?2:(p>40?-1:-2);
+ }else md.price=1;
  const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
- const total=md.taste+md.cuisine+md.calorie+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/12};
+ const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/14};
 }
 
 function generateDishReason(prefs,dish){
@@ -818,12 +825,8 @@ async function fetchRecommendations(isRefresh){
  let dishes=dishData.filter(d=>{
   if(d.is_active===false)return false;
   if(d.category==='飲品与酒水'||d.category==='主食')return false;
-  if(prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
-   const p=parseFloat(d.price);if(!isNaN(p)){
-    if(prefs['价格区间']==='经济'&&p>=20)return false;
-    if(prefs['价格区间']==='适中'&&(p<20||p>50))return false;
-    if(prefs['价格区间']==='品质'&&p<=50)return false;
-  }}
+  // 价格改为软打分(computeDishMatch),不再硬过滤
+  const p=parseFloat(d.price);if(!isNaN(p)){}
   // 饮食要求筛选
   const r=prefs['饮食_宗教'];
   if(r!=='无特殊要求'){if(r==='清真'&&!d.isHalal)return false;if(r==='素食'&&!d.isVegetarian)return false;}
@@ -845,7 +848,7 @@ async function fetchRecommendations(isRefresh){
   dishes.forEach(d=>{
    const {matchDetails,totalMatch}=computeDishMatch(prefs,d);d.matchDetails=matchDetails;
    const pred=preds.find(p=>p.id==d.id);const ml=pred?pred.score:0;
-   const rule=Math.min(totalMatch/12,1);
+   const rule=Math.min(totalMatch/14,1);
    // 评分全为默认3.5时归一化会放大ML噪声, 用绝对分ml/5让规则主导
    const mlNorm=Math.max(0,Math.min(1,ml/5));
    d.matchIndex=Math.round((rule*0.6+mlNorm*0.4)*100)/100;d.mlScore=ml;d.matchRate=rule*0.6+mlNorm*0.4;
@@ -871,16 +874,22 @@ async function fallback(prefs,blk,dishes){
  console.log('🔄本地推荐(决策树模型)');const start=Date.now();await loadDecisionTreeModel();
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
-  const md={taste:0,cuisine:0,calorie:0,rating:0};
+  const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
   if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=1;
   if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
   if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
   if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.5;
   if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],d.calorie);else md.calorie=1;
+  const pv=parseFloat(d.price);
+  if(!isNaN(pv)&&prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
+   if(prefs['价格区间']==='经济')md.price=pv<20?2:(pv<30?-1:-2);
+   else if(prefs['价格区间']==='适中')md.price=(pv>=20&&pv<=50)?2:(pv<20||pv>50?-1:0);
+   else if(prefs['价格区间']==='品质')md.price=pv>50?2:(pv>40?-1:-2);
+  }else md.price=1;
   md.rating=Math.round((ps/5)*2.5*10)/10;
-  const total=md.taste+md.cuisine+md.calorie+md.rating;
-  d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/12;
-  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
+  const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
+  d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/14;
+  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 价格'+md.price+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const a=prefs['allergies']||[],r=prefs['饮食_宗教'];
@@ -921,7 +930,7 @@ function displayRecommendations(){
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
   const matchRatePct=isFinite(d.matchRate)?(d.matchRate*100).toFixed(1):'0';
  const img=(d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:160px;height:160px;border-radius:12px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:3.5rem;vertical-align:middle;margin-left:12px;">'+esc(d.image_url)+'</span>':''));
-	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.type!=='盲盒尝鲜'&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
+	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.type!=='盲盒尝鲜'&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+价格'+(d.matchDetails?.price||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
  loading.classList.add('d-none');result.classList.remove('d-none');
 }
