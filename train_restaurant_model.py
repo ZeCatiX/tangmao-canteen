@@ -113,38 +113,38 @@ def encode_dish(dish, user_pref):
 
 def compute_score(X, is_sig, price_val, rating_val, category):
     """基于特征向量计算合理的目标评分（匹配用户偏好的程度）"""
-    # 评分贡献 18%
-    score = rating_val / 5 * 0.18
+    # 评分贡献 15%
+    score = rating_val / 5 * 0.15
 
-    # 口味匹配贡献 30%（辣度超出重罚，咸淡差级，甜酸精确）
-    spiciness_diff = X[0] - X[7]  # 菜辣度 - 用户辣度
-    if spiciness_diff > 0:  # 菜比用户辣 → 超出承受
+    # 口味匹配贡献 40%（辣度超出重罚，咸淡差级，甜酸精确）
+    spiciness_diff = X[0] - X[7]
+    if spiciness_diff > 0:
         spiciness_match = 0.2
     else:
         spiciness_match = 1.0 - min(abs(spiciness_diff) / 4, 1.0) * 0.5
     saltiness_match = 1.0 - min(abs(X[1] - X[8]) / 3, 1.0) * 0.3
     sweetness_match = 1.0 if abs(X[2] - X[9]) == 0 else 0.4
-    score += spiciness_match * 0.15 + saltiness_match * 0.08 + sweetness_match * 0.07
+    score += spiciness_match * 0.20 + saltiness_match * 0.12 + sweetness_match * 0.08
 
-    # 热量匹配贡献 10%
-    cal_match = 1.0 - min(abs(X[3] - 2) / 3, 1.0) * 0.5  # 差级匹配
-    score += cal_match * 0.10
+    # 热量匹配贡献 12%
+    cal_match = 1.0 - min(abs(X[3] - 2) / 3, 1.0) * 0.5
+    score += cal_match * 0.12
 
     # 招牌贡献 8%
     score += is_sig * 0.08
 
-    # 价格贡献 17% — 适中价格偏好
+    # 价格贡献 10% — 适中价格偏好
     ideal_price = 28.0
     price_dist = abs(price_val - ideal_price) / 80
     price_pref = max(0, 1.0 - price_dist * 1.5)
-    score += price_pref * 0.17
+    score += price_pref * 0.10
 
     # 类别贡献 5%
     cat_bonus = {'热菜': 0.05, '凉菜': 0.03, '主食': 0.02, '汤品': 0.04, '甜品': 0.03}
     score += cat_bonus.get(category, 0.02) * 0.05
 
-    # 用户偏好强度贡献 12%
-    score += (X[7] / 4) * 0.04 + (X[9] / 4) * 0.04 + (X[8] / 3) * 0.04
+    # 用户偏好强度贡献 10%
+    score += (X[7] / 4) * 0.04 + (X[9] / 4) * 0.03 + (X[8] / 3) * 0.03
 
     # 映射到 0.1~1.0
     score = score * 0.7 + 0.3
