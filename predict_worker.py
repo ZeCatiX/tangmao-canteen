@@ -50,14 +50,12 @@ def extract_number(value):
                 return 0.0
     return 0.0
 
-# 预定义映射表
+# 预定义映射表（与train_restaurant_model.py一致）
 ORD_MAPPINGS = {
-    '辣度': {'不辣': 0, '微辣': 1, '中辣': 2, '重辣': 3},
-    '咸淡': {'清淡': 0, '适中': 1, '偏咸': 2},
-    '甜酸': {'无味': 0, '甜味': 1, '酸味': 2, '酸甜': 3},
-    '营养_热量': {'低卡': 0, '适中': 1, '高能量': 2},
-    '营养_蛋白': {'低脂': 0, '高蛋白': 1, '均衡': 2},
-    '营养_蔬菜': {'少菜': 0, '适量': 1, '多蔬菜': 2},
+    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4},
+    '咸淡': {'无': 0, '清淡': 1, '适中': 2, '偏咸': 3},
+    '甜酸': {'无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4},
+    '热量': {'无': 0, '低': 1, '中': 2, '高': 3},
     '价格区间': {'经济型（<12元）': 0, '标准型（12-20元）': 1, '品质型（20元以上）': 2,
                   '经济': 0, '适中': 1, '品质': 2, '无': 0, '不限': 0}
 }
@@ -71,30 +69,31 @@ def encode_features_batch(user_prefs, dishes, model_data):
     scaler = model_data.get('scaler')
     n_samples = len(dishes)
 
-    # ★ 检测模型格式：新模型（11维，无OHE/scaler）or 旧模型（25维）
+    # ★ 检测模型格式：新模型（10维，无OHE/scaler）or 旧模型（25维）
     if ohe is None:
-        # 新模型格式：9维特征
-        # [辣度, 咸淡, 甜酸, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸]
-        X = np.zeros((n_samples, 9))
+        # 新模型格式：10维特征
+        # [辣度, 咸淡, 甜酸, 热量, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸]
+        X = np.zeros((n_samples, 10))
         for i, d in enumerate(dishes):
-            X[i, 0] = ORD_MAPPINGS['辣度'].get(d.get('spiciness', '无'), 0)
-            X[i, 1] = ORD_MAPPINGS['咸淡'].get(d.get('saltiness', '无'), 0)
-            X[i, 2] = ORD_MAPPINGS['甜酸'].get(d.get('sweetness', '无'), 0)
+            X[i, 0] = ORD_MAPPINGS['辣度'].get(d.get('spiciness', '无'), 1)
+            X[i, 1] = ORD_MAPPINGS['咸淡'].get(d.get('saltiness', '无'), 1)
+            X[i, 2] = ORD_MAPPINGS['甜酸'].get(d.get('sweetness', '无'), 1)
+            X[i, 3] = ORD_MAPPINGS['热量'].get(d.get('calorie', '中'), 2)
             price = extract_number(d.get('price', '0'))
-            X[i, 3] = price / 100
+            X[i, 4] = price / 100
             # 检测是否招牌菜
             tags = d.get('tags', [])
             if isinstance(tags, list):
-                X[i, 4] = 1.0 if '招牌' in tags else 0.0
+                X[i, 5] = 1.0 if '招牌' in tags else 0.0
             elif isinstance(tags, str):
-                X[i, 4] = 1.0 if '招牌' in tags else 0.0
+                X[i, 5] = 1.0 if '招牌' in tags else 0.0
             else:
-                X[i, 4] = 0.0
+                X[i, 5] = 0.0
             rating = extract_number(d.get('rating', '0'))
-            X[i, 5] = rating / 5
-            X[i, 6] = ORD_MAPPINGS['辣度'].get(user_prefs.get('辣度', '无'), 0)
-            X[i, 7] = ORD_MAPPINGS['咸淡'].get(user_prefs.get('咸淡', '无'), 0)
-            X[i, 8] = ORD_MAPPINGS['甜酸'].get(user_prefs.get('甜酸', '无'), 0)
+            X[i, 6] = rating / 5
+            X[i, 7] = ORD_MAPPINGS['辣度'].get(user_prefs.get('辣度', '无'), 1)
+            X[i, 8] = ORD_MAPPINGS['咸淡'].get(user_prefs.get('咸淡', '无'), 1)
+            X[i, 9] = ORD_MAPPINGS['甜酸'].get(user_prefs.get('甜酸', '无'), 1)
         return X
 
     # 旧模型格式：25维特征（含OHE/scaler/交互特征等）
