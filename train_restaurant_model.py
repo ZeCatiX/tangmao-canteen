@@ -23,7 +23,7 @@ ORD_MAPPINGS = {
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
                  '用户辣度', '用户咸淡', '用户甜酸']
 
-# 用户偏好组合模板（删麻辣，加热量）
+# 用户偏好组合模板（20种，覆盖辣度×咸淡×甜酸×热量的多样化组合）
 USER_PROFILES = [
     {'辣度': '微辣', '咸淡': '适中', '甜酸': '甜酸', 'calorie': '中'},
     {'辣度': '不辣', '咸淡': '清淡', '甜酸': '无味', 'calorie': '低'},
@@ -35,6 +35,16 @@ USER_PROFILES = [
     {'辣度': '中辣', '咸淡': '偏咸', '甜酸': '偏甜', 'calorie': '高'},
     {'辣度': '不辣', '咸淡': '清淡', '甜酸': '偏甜', 'calorie': '低'},
     {'辣度': '重辣', '咸淡': '适中', '甜酸': '无味', 'calorie': '高'},
+    {'辣度': '中辣', '咸淡': '清淡', '甜酸': '无味', 'calorie': '低'},
+    {'辣度': '微辣', '咸淡': '适中', '甜酸': '偏甜', 'calorie': '中'},
+    {'辣度': '不辣', '咸淡': '偏咸', '甜酸': '偏酸', 'calorie': '中'},
+    {'辣度': '重辣', '咸淡': '清淡', '甜酸': '甜酸', 'calorie': '中'},
+    {'辣度': '中辣', '咸淡': '适中', '甜酸': '无味', 'calorie': '中'},
+    {'辣度': '微辣', '咸淡': '偏咸', '甜酸': '无味', 'calorie': '高'},
+    {'辣度': '不辣', '咸淡': '适中', '甜酸': '偏酸', 'calorie': '低'},
+    {'辣度': '重辣', '咸淡': '偏咸', '甜酸': '偏酸', 'calorie': '高'},
+    {'辣度': '中辣', '咸淡': '清淡', '甜酸': '甜酸', 'calorie': '低'},
+    {'辣度': '微辣', '咸淡': '适中', '甜酸': '偏酸', 'calorie': '中'},
 ]
 
 
@@ -138,11 +148,11 @@ def compute_score(X, is_sig, price_val, rating_val, category):
 
     # 映射到 0.1~1.0
     score = score * 0.7 + 0.3
-    score += np.random.normal(0, 0.025)
+    score += np.random.normal(0, 0.015)
     return max(0.1, min(1.0, score))
 
 
-def generate_training_data(dishes, user_profiles, samples_per_dish=4):
+def generate_training_data(dishes, user_profiles, samples_per_dish=8):
     """生成训练数据集"""
     X_list, y_list = [], []
     for dish in dishes:
@@ -153,9 +163,9 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=4):
             y_list.append(score)
             # 额外带噪声样本
             for _ in range(samples_per_dish - 1):
-                X_noise = X + np.random.normal(0, 0.02, 10)
+                X_noise = X + np.random.normal(0, 0.015, 10)
                 X_noise = np.clip(X_noise, 0, None)
-                y_noise = score + np.random.normal(0, 0.02)
+                y_noise = score + np.random.normal(0, 0.015)
                 y_noise = max(0.1, min(1.0, y_noise))
                 X_list.append(X_noise)
                 y_list.append(y_noise)
@@ -222,7 +232,7 @@ def main():
 
     # 生成训练数据
     print('正在生成训练数据...', file=sys.stderr)
-    X, y = generate_training_data(dishes, USER_PROFILES, samples_per_dish=4)
+    X, y = generate_training_data(dishes, USER_PROFILES, samples_per_dish=8)
     print(f'生成 {len(X)} 条训练数据', file=sys.stderr)
 
     # 训练
