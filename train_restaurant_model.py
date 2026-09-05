@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-唐猫庭院 - 菜品推荐模型训练脚本
-基于9维特征（辣度、咸淡、甜酸、价格、招牌、评分、用户辣度、用户咸淡、用户甜酸）
+唐猫庭院 - 菜品推荐模型训练脚本 v2
+基于10维特征（辣度、咸淡、甜酸、热量、价格、招牌、评分、用户辣度、用户咸淡、用户甜酸）
 训练随机森林回归模型，从PostgreSQL加载数据，生成合成训练集
 """
 import pickle, json, sys, os, random
@@ -11,29 +11,30 @@ from sklearn.model_selection import train_test_split
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ═══════════════════════════════════════════════
-# 1. 特征编码映射
+# 1. 特征编码映射（统一数据库选项，删麻辣，加热量）
 # ═══════════════════════════════════════════════
 ORD_MAPPINGS = {
-    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4, '麻辣': 5},
+    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4},
     '咸淡': {'无': 0, '清淡': 1, '适中': 2, '偏咸': 3},
-    '甜酸': {'无': 0, '无味': 1, '微甜': 2, '酸甜': 3, '偏酸': 4, '偏甜': 5},
+    '甜酸': {'无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4},
+    '热量': {'无': 0, '低': 1, '中': 2, '高': 3},
 }
 
-FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '价格', '招牌', '评分',
+FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
                  '用户辣度', '用户咸淡', '用户甜酸']
 
-# 用户偏好组合模板
+# 用户偏好组合模板（删麻辣，加热量）
 USER_PROFILES = [
-    {'辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜'},
-    {'辣度': '不辣', '咸淡': '清淡', '甜酸': '无味'},
-    {'辣度': '重辣', '咸淡': '偏咸', '甜酸': '偏甜'},
-    {'辣度': '中辣', '咸淡': '适中', '甜酸': '微甜'},
-    {'辣度': '微辣', '咸淡': '偏咸', '甜酸': '偏酸'},
-    {'辣度': '不辣', '咸淡': '适中', '甜酸': '酸甜'},
-    {'辣度': '麻辣', '咸淡': '适中', '甜酸': '无味'},
-    {'辣度': '微辣', '咸淡': '清淡', '甜酸': '酸甜'},
-    {'辣度': '中辣', '咸淡': '偏咸', '甜酸': '偏甜'},
-    {'辣度': '不辣', '咸淡': '清淡', '甜酸': '微甜'},
+    {'辣度': '微辣', '咸淡': '适中', '甜酸': '甜酸', 'calorie': '中'},
+    {'辣度': '不辣', '咸淡': '清淡', '甜酸': '无味', 'calorie': '低'},
+    {'辣度': '重辣', '咸淡': '偏咸', '甜酸': '偏甜', 'calorie': '高'},
+    {'辣度': '中辣', '咸淡': '适中', '甜酸': '偏甜', 'calorie': '中'},
+    {'辣度': '微辣', '咸淡': '偏咸', '甜酸': '偏酸', 'calorie': '中'},
+    {'辣度': '不辣', '咸淡': '适中', '甜酸': '甜酸', 'calorie': '低'},
+    {'辣度': '微辣', '咸淡': '清淡', '甜酸': '甜酸', 'calorie': '低'},
+    {'辣度': '中辣', '咸淡': '偏咸', '甜酸': '偏甜', 'calorie': '高'},
+    {'辣度': '不辣', '咸淡': '清淡', '甜酸': '偏甜', 'calorie': '低'},
+    {'辣度': '重辣', '咸淡': '适中', '甜酸': '无味', 'calorie': '高'},
 ]
 
 
@@ -50,7 +51,7 @@ def load_dishes_from_db():
     cur = conn.cursor()
     cur.execute('''
         SELECT id, name, category, spiciness, saltiness, sweetness,
-               price, rating, tags, is_halal, is_vegetarian, is_active
+               price, rating, tags, is_halal, is_vegetarian, is_active, calorie
         FROM dishes WHERE is_active = TRUE ORDER BY id
     ''')
     rows = cur.fetchall()
@@ -78,36 +79,46 @@ def parse_tags(tags):
 # 3. 生成训练数据
 # ═══════════════════════════════════════════════
 def encode_dish(dish, user_pref):
-    """将一道菜品 + 用户偏好编码为9维特征向量"""
-    _, name, category, spiciness, saltiness, sweetness, price, rating, tags, is_halal, is_vegetarian, is_active = dish
+    """将一道菜品 + 用户偏好编码为10维特征向量"""
+    _, name, category, spiciness, saltiness, sweetness, price, rating, tags, is_halal, is_vegetarian, is_active, calorie = dish
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
     price_val = float(price) if price and float(price) > 0 else 20.0
     rating_val = float(rating) if rating and float(rating) > 0 else 4.0
+    cal_val = calorie if calorie else '中'
 
-    X = np.zeros(9)
+    X = np.zeros(10)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
-    X[3] = price_val / 100
-    X[4] = is_sig
-    X[5] = rating_val / 5
-    X[6] = ORD_MAPPINGS['辣度'].get(user_pref['辣度'], 1)
-    X[7] = ORD_MAPPINGS['咸淡'].get(user_pref['咸淡'], 1)
-    X[8] = ORD_MAPPINGS['甜酸'].get(user_pref['甜酸'], 1)
+    X[3] = ORD_MAPPINGS['热量'].get(cal_val, 2)
+    X[4] = price_val / 100
+    X[5] = is_sig
+    X[6] = rating_val / 5
+    X[7] = ORD_MAPPINGS['辣度'].get(user_pref['辣度'], 1)
+    X[8] = ORD_MAPPINGS['咸淡'].get(user_pref['咸淡'], 1)
+    X[9] = ORD_MAPPINGS['甜酸'].get(user_pref['甜酸'], 1)
     return X, name, is_sig, price_val, rating_val, category
 
 
 def compute_score(X, is_sig, price_val, rating_val, category):
     """基于特征向量计算合理的目标评分（匹配用户偏好的程度）"""
-    # 评分贡献 20%
-    score = rating_val / 5 * 0.20
+    # 评分贡献 18%
+    score = rating_val / 5 * 0.18
 
-    # 口味匹配贡献 35%
-    spiciness_match = 1.0 - min(abs(X[0] - X[6]) / 5, 1.0)
-    saltiness_match = 1.0 - min(abs(X[1] - X[7]) / 3, 1.0)
-    sweetness_match = 1.0 - min(abs(X[2] - X[8]) / 5, 1.0)
-    score += spiciness_match * 0.15 + saltiness_match * 0.08 + sweetness_match * 0.12
+    # 口味匹配贡献 30%（辣度超出重罚，咸淡差级，甜酸精确）
+    spiciness_diff = X[0] - X[7]  # 菜辣度 - 用户辣度
+    if spiciness_diff > 0:  # 菜比用户辣 → 超出承受
+        spiciness_match = 0.2
+    else:
+        spiciness_match = 1.0 - min(abs(spiciness_diff) / 4, 1.0) * 0.5
+    saltiness_match = 1.0 - min(abs(X[1] - X[8]) / 3, 1.0) * 0.3
+    sweetness_match = 1.0 if abs(X[2] - X[9]) == 0 else 0.4
+    score += spiciness_match * 0.15 + saltiness_match * 0.08 + sweetness_match * 0.07
+
+    # 热量匹配贡献 10%
+    cal_match = 1.0 - min(abs(X[3] - 2) / 3, 1.0) * 0.5  # 差级匹配
+    score += cal_match * 0.10
 
     # 招牌贡献 8%
     score += is_sig * 0.08
@@ -122,8 +133,8 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     cat_bonus = {'热菜': 0.05, '凉菜': 0.03, '主食': 0.02, '汤品': 0.04, '甜品': 0.03}
     score += cat_bonus.get(category, 0.02) * 0.05
 
-    # 用户偏好强度贡献 15%
-    score += (X[6] / 5) * 0.05 + (X[8] / 5) * 0.05 + (X[7] / 3) * 0.05
+    # 用户偏好强度贡献 12%
+    score += (X[7] / 4) * 0.04 + (X[9] / 4) * 0.04 + (X[8] / 3) * 0.04
 
     # 映射到 0.1~1.0
     score = score * 0.7 + 0.3
@@ -142,7 +153,7 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=4):
             y_list.append(score)
             # 额外带噪声样本
             for _ in range(samples_per_dish - 1):
-                X_noise = X + np.random.normal(0, 0.02, 9)
+                X_noise = X + np.random.normal(0, 0.02, 10)
                 X_noise = np.clip(X_noise, 0, None)
                 y_noise = score + np.random.normal(0, 0.02)
                 y_noise = max(0.1, min(1.0, y_noise))
@@ -234,7 +245,7 @@ def main():
             **metrics,
             'real_feedback_count': 0,
             'training_samples': len(X),
-            'feature_count': 9,
+            'feature_count': 10,
             'feature_names': FEATURE_NAMES
         }
     }
@@ -249,7 +260,7 @@ def main():
         'importance': importance,
         'metrics': metrics,
         'training_samples': len(X),
-        'feature_count': 9,
+        'feature_count': 10,
     }
     print(json.dumps(result, ensure_ascii=False))
 
