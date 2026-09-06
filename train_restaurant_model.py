@@ -171,15 +171,25 @@ def compute_score(X, is_sig, price_val, rating_val, category):
 
 
 def generate_training_data(dishes, user_profiles, samples_per_dish=24):
-    """生成训练数据集"""
+    """生成训练数据集（模拟真实用户: 用户差异+评分偏态+少量反规则）"""
     X_list, y_list = [], []
-    for dish in dishes:
-        for up in user_profiles:
+    for up in user_profiles:
+        # 用户差异: 每个模拟用户有偏好偏移(±0.5级) + 评分倾向(0.85~1.15)
+        user_bias = np.random.normal(0, 0.5)     # 口味容忍偏移
+        user_scale = np.random.uniform(0.85, 1.15)  # 评分倾向: 有人严有人松
+        rebel = np.random.random() < 0.1          # 10% 用户不按规则(爱吃超出辣度的菜)
+        for dish in dishes:
             X, name, is_sig, price_val, rating_val, category = encode_dish(dish, up)
+            up2 = dict(up)
+            # 反规则用户: 辣度容忍+1级
+            if rebel:
+                spice_shift = {'无': '无', '不辣': '微辣', '微辣': '中辣', '中辣': '重辣', '重辣': '重辣'}
+                up2['辣度'] = spice_shift.get(up['辣度'], up['辣度'])
             score = compute_score(X, is_sig, price_val, rating_val, category)
+            score = score * user_scale + user_bias * 0.01
+            score = max(0.1, min(1.0, score))
             X_list.append(X)
             y_list.append(score)
-            # 额外带噪声样本
             for _ in range(samples_per_dish - 1):
                 X_noise = X + np.random.normal(0, 0.008, 11)
                 X_noise = np.clip(X_noise, 0, None)
