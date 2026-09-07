@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const userStorage = require('./user_storage');
-const { generateToken, authMiddleware, softAuth } = require('./auth');
+const { generateToken, authMiddleware, softAuth, isTokenBlacklisted } = require('./auth');
 const multer = require('multer');
 const logger = require('./logger');
 const db = require('./db');
@@ -356,7 +356,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 // 管理后台认证中间件（排除登录接口）
-function adminAuth(req, res, next) {
+async function adminAuth(req, res, next) {
   // 登录接口不需要认证
   if (req.path === '/login') return next();
 
@@ -368,6 +368,13 @@ function adminAuth(req, res, next) {
     const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
     if (decoded.role !== 'admin') {
       return res.status(403).json({ success: false, error: '无管理权限' });
+    }
+    // 已吊销的 token 视同无效
+    if (decoded.jti) {
+      const blacklisted = await isTokenBlacklisted(decoded.jti);
+      if (blacklisted) {
+        return res.status(401).json({ success: false, error: '登录已过期，请重新登录' });
+      }
     }
     req.admin = decoded;
     next();
