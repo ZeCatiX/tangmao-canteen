@@ -79,6 +79,12 @@ CREATE TABLE IF NOT EXISTS preference_log (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS token_blacklist (
+  jti VARCHAR(64) PRIMARY KEY,
+  created_at TIMESTAMP DEFAULT NOW(),
+  expires_at TIMESTAMP NOT NULL
+);
+
 -- 添加外键约束和索引（增强数据完整性）
 ALTER TABLE feedback ADD CONSTRAINT fk_feedback_dish FOREIGN KEY (dish_id) REFERENCES dishes(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_feedback_dish_id ON feedback(dish_id);
