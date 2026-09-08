@@ -546,6 +546,19 @@ function endRecommendation(){
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  currentRecommendations.forEach(d=>{if(!ordered.includes(d.id))ordered.push(d.id);});
  try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
+ // 推荐菜全部加入购物车（统一走结算流程：订单号/加菜/时间线）
+ const cart0=getCart();
+ currentRecommendations.forEach(d=>{
+  const p=parseFloat(d.price)||0;
+  const ex=cart0.find(c=>c.id===d.id);
+  if(ex)ex.qty=(ex.qty||1)+1;
+  else cart0.push({id:d.id,name:d.name,price:isNaN(p)?0:p,qty:1,image_url:d.image_url||''});
+ });
+ saveCart(cart0);updateCartBadge();
+ showCart();
+ showMessage('已加入购物车','推荐菜品已全部加入购物车，填写桌号后点「去结算」下单',null,3000);
+ return;
+ // ── 以下旧逻辑已不可达（保留待清理）──
  // 创建订单（发送到服务器）
  const items=currentRecommendations.map(d=>{const p=parseFloat(d.price);return{id:d.id,name:d.name,price:isNaN(p)?0:p,type:d.type||'偏好推荐',matchRate:d.matchRate||0};});
  const total=items.reduce((s,i)=>s+i.price,0);
@@ -866,6 +879,15 @@ function checkoutCart(){
   const isAI=currentRecommendations&&currentRecommendations.length>0;
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
+  // AI 模式：填充推荐统计（推荐菜品数/平均匹配度/最高匹配度）
+  if(isAI){
+   const cnt=currentRecommendations.length;
+   const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
+   const avg=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
+   const top=rates.length?Math.round(Math.max(...rates)*100):0;
+   const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+   es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
+  }
   clearCart();
   showSection('end-section');
   // AI 流程：渲染模型评估 + 特征重要性图表（checkoutCart 不走 endRecommendations，需手动调）
