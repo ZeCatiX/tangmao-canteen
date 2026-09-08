@@ -986,6 +986,17 @@ async function fallback(prefs,blk,dishes){
 
 
 // ═══════════════ 推荐结果渲染 ═══════════════
+function renderRecipeCartBtn(d,cart){
+ const ci=cart?cart.find(c=>c.id===d.id):null;
+ if(ci)return '<div class="d-inline-flex align-items-center" style="gap:4px;margin-right:4px;"><button class="btn btn-sm btn-outline-success cart-qty-minus" data-id="'+d.id+'" style="border-color:#27ae60;color:#27ae60;padding:2px 8px;line-height:1;">−</button><span class="cart-qty-val" data-id="'+d.id+'" style="font-weight:700;color:#27ae60;min-width:22px;text-align:center;">'+(ci.qty||1)+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus" data-id="'+d.id+'" style="border-color:#27ae60;color:#27ae60;padding:2px 8px;line-height:1;">+</button></div>';
+ return '<button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button>';
+}
+function refreshRecipeCartBtn(id){
+ const rec=document.getElementById('recommendation-result');if(!rec)return;
+ const d=currentRecommendations.find(x=>x.id===id)||dishData.find(x=>x.id===id);if(!d)return;
+ const old=rec.querySelector('[data-id="'+id+'"].cart-qty-val, [data-id="'+id+'"].add-to-cart-btn');
+ if(old)old.outerHTML=renderRecipeCartBtn(d,getCart());
+}
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
  fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
@@ -999,6 +1010,7 @@ function displayRecommendations(){
  const old=result._delegateHandler;if(old)result.removeEventListener('click',old);
  const handler=e=>{const t=e.target.closest('button');if(!t)return;({'refresh-recommendations':()=>fetchRecommendations(true),'end-recommendation':()=>endRecommendation(),'end-logout-btn':()=>{resetRecommendation();showSection('home-section');}})[t.id]?.();};
  result.addEventListener('click',handler);result._delegateHandler=handler;
+ const cart=getCart();
  let fav=[],blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u){fav=u.favorites||[];blk=u.blacklist||[];}}
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  const dl=$('dish-list');if(!dl){console.warn('dish-list 元素未找到');loading.classList.add('d-none');return;}dl.innerHTML='';
@@ -1011,7 +1023,7 @@ function displayRecommendations(){
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
   const matchRatePct=isFinite(d.matchRate)?(d.matchRate*100).toFixed(1):'0';
  const img=(d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:160px;height:160px;border-radius:12px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:3.5rem;vertical-align:middle;margin-left:12px;">'+esc(d.image_url)+'</span>':''));
-	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+((d.type!=='盲盒尝鲜'||(d.type==='盲盒尝鲜'&&d.blindMode==='smart'))&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+价格'+(d.matchDetails?.price||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2"><button class="btn btn-sm btn-outline-success me-1 add-to-cart-btn" data-id="'+d.id+'" data-name="'+esc(d.name)+'" data-price="'+(d.price!==null&&d.price!==undefined?d.price:'')+'" data-image="'+esc(d.image_url||'')+'" style="border-color:#27ae60;color:#27ae60;"><i class="bi bi-cart-plus"></i> 加入</button><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'&&d.blindMode==='random'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
+	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+img+'</h5>'+'<p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+((d.type!=='盲盒尝鲜'||(d.type==='盲盒尝鲜'&&d.blindMode==='smart'))&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+价格'+(d.matchDetails?.price||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>')+'<div class="dish-actions mt-2">'+renderRecipeCartBtn(d,cart)+'<button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'&&d.blindMode==='random'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
  loading.classList.add('d-none');result.classList.remove('d-none');
 }
@@ -1147,10 +1159,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   if(target.classList.contains('add-to-cart-btn')){
    const dish=dishData.find(d=>d.id===id);
    if(dish){addToCart(dish,1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();}else{showMessage('提示','菜品数据未加载');}
+   if(target.closest('#recommendation-result'))refreshRecipeCartBtn(id);
    return;
   }
-  if(target.classList.contains('cart-qty-plus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)+1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else showCart();}
-  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)-1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else showCart();}
+  if(target.classList.contains('cart-qty-plus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)+1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else if(document.getElementById('cart-section')?.classList.contains('active'))showCart();refreshRecipeCartBtn(id);}
+  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)-1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else if(document.getElementById('cart-section')?.classList.contains('active'))showCart();refreshRecipeCartBtn(id);}
   else if(target.classList.contains('cart-remove-btn')){removeFromCart(id);showCart();}
  });
  // 购物车数量输入变更
