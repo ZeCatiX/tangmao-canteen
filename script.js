@@ -557,50 +557,6 @@ function endRecommendation(){
  saveCart(cart0);updateCartBadge();
  showCart();
  showMessage('已加入购物车','推荐菜品已全部加入购物车，填写桌号后点「去结算」下单',null,3000);
- return;
- // ── 以下旧逻辑已不可达（保留待清理）──
- // 创建订单（发送到服务器）
- const items=currentRecommendations.map(d=>{const p=parseFloat(d.price);return{id:d.id,name:d.name,price:isNaN(p)?0:p,type:d.type||'偏好推荐',matchRate:d.matchRate||0};});
- const total=items.reduce((s,i)=>s+i.price,0);
- const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})}).catch(()=>{showMessage('下单失败','网络错误，请稍后重试');});
- const $s=id=>{const el=document.getElementById(id);return el;};
- // 缓冲过渡
- const rl=$s('recommendation-loading'),rr=$s('recommendation-result');
- if(rl)rl.classList.remove('d-none');
- if(rr)rr.classList.add('d-none');
- if(rl)rl.innerHTML='<div class="text-center py-5"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-3" style="color:#8b7a6a;letter-spacing:2px;font-size:0.9rem;">正在生成推荐总结...</p><div class="mt-2" style="width:120px;height:3px;background:var(--gold-light);border-radius:2px;margin:0 auto;overflow:hidden;"><div style="width:40%;height:100%;background:var(--gold);border-radius:2px;animation:loadingBar 0.8s ease-in-out infinite alternate;"></div></div></div>';
- // 预计算所有值（避免 DOM 读写交错触发 reflow）
- const cnt=currentRecommendations.length;
- const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
- const avgMatch=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
- const topMatch=rates.length?Math.round(Math.max(...rates)*100):0;
- const cart=getCart();
- const cartCount=cart.reduce((s,d)=>s+(d.qty||1),0);
- const cartTotal=cart.reduce((s,d)=>s+(parseFloat(d.price)||0)*(d.qty||1),0);
- const cartListHTML=cart.length?cart.map(d=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(d.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(d.qty||1)+'</strong> · '+formatPrice(d.price)+'</span></div>').join(''):'<div class="text-center py-3" style="color:var(--text-light);font-size:0.9rem;"><i class="bi bi-cart-x me-1"></i>购物车空空如也，先去点几道菜吧</div>';
- const aiStats=[...document.querySelectorAll('#end-section .ai-stat')];
- const noAI=document.getElementById('end-no-ai');
- const eEls={count:document.getElementById('end-dish-count'),avg:document.getElementById('end-avg-match'),top:document.getElementById('end-top-match'),cartCount:document.getElementById('end-cart-count'),cartTotal:document.getElementById('end-cart-total'),cartList:document.getElementById('end-cart-list')};
- // 用 rAF 批量写 DOM（一次 reflow），延迟渲染图表确保 canvas 尺寸就绪
- requestAnimationFrame(()=>{
-  showSection('end-section');
-  if(eEls.count)eEls.count.textContent=cnt;
-  if(eEls.avg)eEls.avg.textContent=avgMatch+'%';
-  if(eEls.top)eEls.top.textContent=topMatch+'%';
-  aiStats.forEach(el=>el.style.display='');
-  if(noAI)noAI.style.display='none';
-  if(eEls.cartCount)eEls.cartCount.textContent=cartCount;
-  if(eEls.cartTotal)eEls.cartTotal.textContent=Math.round(cartTotal*100)/100;
-  if(eEls.cartList)eEls.cartList.innerHTML=cartListHTML;
-  const addBtn=document.getElementById('end-add-more');
-  if(addBtn)addBtn.onclick=()=>{if(typeof resetRecommendation==='function')resetRecommendation();showSection('home-section');};
-  // 延迟渲染图表/指标，确保 end-section 可见 + canvas 尺寸正确
-  setTimeout(()=>{
-   displayModelMetrics();
-   displayFeatureImportance();
-  },100);
- });
 }
 function displayModelMetrics(){
  const el=document.getElementById('model-metrics');
