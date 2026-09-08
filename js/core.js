@@ -119,13 +119,13 @@ function selectBlindBoxDish(prefs,top,blk){
   if(rand<=0){
    const d=w.d;
    const m=computeDishMatch(prefs,d);
-   return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
+   return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',blindMode:'smart',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
   }
  }
  // 保底
  const d=eligible[Math.floor(Math.random()*eligible.length)];
  const m=computeDishMatch(prefs,d);
- return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
+ return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',blindMode:'smart',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
 }
 
 
@@ -471,7 +471,7 @@ function displayRecommendations(){
   const tagBadges=d.tags&&d.tags.includes('招牌')?'<span class="badge bg-warning me-1">⭐招牌</span>':'';
   const orderedBadge=isOrdered?'<span class="badge" style="background:#8b7a6a;color:#fff;font-size:0.7rem;">已点过</span> ':'';
   const blindBoxClass=d.type==='盲盒尝鲜'?'blind-box-card':'';
-  dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'</h5><p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.matchIndex?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+(d.matchRate*100).toFixed(1)+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
+  dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'</h5><p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.matchIndex?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'&&d.blindMode==='random'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+(d.matchRate*100).toFixed(1)+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
  });
  if(loading)loading.classList.add('d-none');if(result)result.classList.remove('d-none');
 }
