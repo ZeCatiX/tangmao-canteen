@@ -167,9 +167,9 @@ function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||
 function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?1:0;}
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
- if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=1;
- if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=1;
- if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
+ if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=2;
+ if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=2;
+ if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=2;
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
  if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
  // 价格软打分: 区间内+2, 邻近-1, 区间外-2; 无偏好+1
@@ -179,7 +179,7 @@ function computeDishMatch(prefs,dish){
   else if(prefs['价格区间']==='适中')md.price=(p>=20&&p<=50)?2:(p<20||p>50?-1:0);
   else if(prefs['价格区间']==='品质')md.price=p>50?2:(p>40?-1:-2);
  }else md.price=1;
- const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
+ const s=parseFloat(dish.rating);md.rating=!isNaN(s)?Math.round((s/5)*2.5*10)/10:2.0;
  const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
  return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/14};
 }

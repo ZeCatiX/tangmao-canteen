@@ -75,7 +75,7 @@ function computeDishMatch(prefs,dish){
  if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
  // 营养部分简化
  md.nutrition+=2;
- const s=parseFloat(dish.rating);if(!isNaN(s))md.rating=Math.round((s/5)*2.5*10)/10;
+ const s=parseFloat(dish.rating);md.rating=!isNaN(s)?Math.round((s/5)*2.5*10)/10:2.0;
  const total=md.taste+md.cuisine+md.nutrition+md.rating;
  return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
 }
