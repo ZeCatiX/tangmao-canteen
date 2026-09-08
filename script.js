@@ -564,7 +564,7 @@ function endRecommendation(){
  const aiStats=[...document.querySelectorAll('#end-section .ai-stat')];
  const noAI=document.getElementById('end-no-ai');
  const eEls={count:document.getElementById('end-dish-count'),avg:document.getElementById('end-avg-match'),top:document.getElementById('end-top-match'),cartCount:document.getElementById('end-cart-count'),cartTotal:document.getElementById('end-cart-total'),cartList:document.getElementById('end-cart-list')};
- // 用 rAF 批量写 DOM（一次 reflow）
+ // 用 rAF 批量写 DOM（一次 reflow），延迟渲染图表确保 canvas 尺寸就绪
  requestAnimationFrame(()=>{
   showSection('end-section');
   if(eEls.count)eEls.count.textContent=cnt;
@@ -577,8 +577,11 @@ function endRecommendation(){
   if(eEls.cartList)eEls.cartList.innerHTML=cartListHTML;
   const addBtn=document.getElementById('end-add-more');
   if(addBtn)addBtn.onclick=()=>{if(typeof resetRecommendation==='function')resetRecommendation();showSection('home-section');};
-  displayModelMetrics();
-  displayFeatureImportance();
+  // 延迟渲染图表/指标，确保 end-section 可见 + canvas 尺寸正确
+  setTimeout(()=>{
+   displayModelMetrics();
+   displayFeatureImportance();
+  },100);
  });
 }
 function displayModelMetrics(){
@@ -629,6 +632,9 @@ function displayFeatureImportance(){
    const colors=['#8b1a1a','#b83a2a','#c0392b','#d45a4a','#e8a090','#e8d5b0','#c9a96e','#a8884e','#7a6a4e','#5a4a3e','#3a2a2e','#c0885e','#d0986e','#a0704e','#805030'];
    if(typeof Chart!=='undefined'){
     try {
+     // 强制同步 canvas 尺寸（避免不可见时 clientWidth=0 导致 chart 不渲染）
+     const cw=el.clientWidth||el.parentElement.clientWidth||553,ch=el.clientHeight||280;
+     el.width=cw;el.height=ch;
      featureImportanceChart=new Chart(el.getContext('2d'),{
       type:'bar',
       data:{labels,datasets:[{label:'重要性',data,backgroundColor:colors.slice(0,labels.length),borderRadius:4}]},
@@ -857,6 +863,10 @@ function checkoutCart(){
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
   clearCart();
   showSection('end-section');
+  // AI 流程：渲染模型评估 + 特征重要性图表（checkoutCart 不走 endRecommendations，需手动调）
+  if(isAI){
+   setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);
+  }
  }).catch(()=>showMessage(isAddMore?'加菜失败':'下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
 
