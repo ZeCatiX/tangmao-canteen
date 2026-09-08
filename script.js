@@ -312,6 +312,11 @@ function showSection(sectionId,skipScroll){
   updateModeDisplay();
  }
  updateFloatBar();
+ // 进入推荐页：刷新加购按钮与购物车同步（清空/修改后返回也能恢复）
+ if(sectionId==='recommendation-section'&&typeof refreshRecipeCartBtn==='function'){
+  const ids=[...document.querySelectorAll('#recommendation-result [data-recipe-cart]')].map(el=>parseInt(el.dataset.recipeCart));
+  ids.forEach(id=>refreshRecipeCartBtn(id));
+ }
 }
 
 function updateModeDisplay(){const el=document.getElementById('current-recommendation-mode'),sel=document.getElementById('recommendation-mode');if(!el||!sel)return;el.textContent=({auto:'自动选择（优先API）',api:'后端API推荐（更智能）',local:'本地推荐（更快速）'})[sel.value]||'自动选择（优先API）';}
@@ -1137,16 +1142,12 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   showSection(prev,true);
   // 全部菜单页: 恢复滚动位置 + 重新渲染卡片(清空后按钮回归"加入")
   if(prev==='dataset-section'){renderMenuTable();const sy=parseInt(sessionStorage.getItem('datasetScrollY')||'0');window.scrollTo(0,sy);}
-  // 推荐页: 刷新加购按钮
+  // 推荐页: 整体刷新加购按钮（与购物车同步，清空后恢复"加入"）
   if(prev==='recommendation-section'){
-   const cart=getCart();
-   document.querySelectorAll('#recommendation-result .add-to-cart-btn').forEach(btn=>{
-    const id=parseInt(btn.dataset.id);
-    const ci=cart.find(c=>c.id===id);
-    btn.innerHTML=ci?'<i class="bi bi-check-circle me-1"></i>已加 '+(ci.qty||1):'<i class="bi bi-cart-plus"></i> 加入';
-   });
+   const ids=[...document.querySelectorAll('#recommendation-result [data-recipe-cart]')].map(el=>parseInt(el.dataset.recipeCart));
+   ids.forEach(id=>refreshRecipeCartBtn(id));
    const riceBtn=document.getElementById('add-rice-btn');
-   if(riceBtn){const rc=cart.find(c=>c.id===parseInt(riceBtn.dataset.id));if(!rc)riceBtn.innerHTML='<i class="bi bi-plus-circle me-1"></i>加一碗米饭';}
+   if(riceBtn){const rc=getCart().find(c=>c.id===parseInt(riceBtn.dataset.id));if(!rc)riceBtn.innerHTML='<i class="bi bi-plus-circle me-1"></i>加一碗米饭';}
   }
  });
  click('cart-clear-btn',()=>{clearCart();showCart();});
