@@ -764,20 +764,29 @@ function deleteAccount(){
 }
 
 // ═══════════════ 购物车功能 ═══════════════
+function renderRoundsHTML(rounds){
+ if(!rounds||!rounds.length)return '';
+ return rounds.map((r,i)=>{
+  const cur=i===rounds.length-1;
+  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
+   +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#fdf6f0;border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +'</div>';
+ }).join('');
+}
 function showCart(){
  window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
- // 已结算区（本次用餐已下单的菜，分割线下方为待加菜）
- let settled=[];try{settled=JSON.parse(localStorage.getItem('lastOrderItems')||'[]')}catch(e){}
+ // 已结算区（时间线：每轮独立，当前轮高亮）
+ const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
  const sSec=document.getElementById('settled-section'),sDiv=document.getElementById('settled-divider');
- if(settled.length){
+ if(rounds.length){
   if(sSec)sSec.style.display='block';
   if(sDiv)sDiv.classList.remove('d-none');
   const si=document.getElementById('settled-order-info');
-  if(si)si.textContent='订单 #'+(localStorage.getItem('lastOrderId')||'-')+' · 共 '+settled.reduce((s,x)=>s+(x.qty||1),0)+' 件 · '+settled.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0).toFixed(2)+' 元';
+  if(si)si.textContent='订单 #'+(localStorage.getItem('lastOrderId')||'-')+' · 共 '+rounds.reduce((s,r)=>s+r.items.reduce((a,x)=>a+(x.qty||1),0),0)+' 件 · '+rounds.reduce((s,r)=>s+(parseFloat(r.total)||0),0).toFixed(2)+' 元';
   const sl=document.getElementById('settled-list');
-  if(sl)sl.innerHTML=settled.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;margin-bottom:4px;"><span style="font-size:0.88rem;">'+esc(x.name)+'</span><span style="font-size:0.82rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
+  if(sl)sl.innerHTML=renderRoundsHTML(rounds);
  }else{
   if(sSec)sSec.style.display='none';
   if(sDiv)sDiv.classList.add('d-none');
@@ -825,27 +834,26 @@ function checkoutCart(){
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
   localStorage.setItem('lastOrderId',d.orderId);
   localStorage.setItem('lastOrderTable',tableNumber);
-  // 累计本次点餐（加菜合并到历史，同菜累加数量）
-  const prevItems=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderItems')||'[]')}catch(e){return[]}})();
-  const orderItems=prevItems.map(x=>({...x}));
-  cart.forEach(x=>{const ex=orderItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else orderItems.push({...x});});
-  try{localStorage.setItem('lastOrderItems',JSON.stringify(orderItems))}catch(e){};
-  const orderCount=orderItems.reduce((s,x)=>s+(x.qty||1),0);
-  const orderTotal=orderItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0);
+  // 记录本轮（时间线轮次）
+  const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  rounds.push({round:rounds.length+1,label:(rounds.length===0?'第1轮点餐':'第'+(rounds.length+1)+'轮加菜'),time,items:cart.map(x=>({...x})),total});
+  try{localStorage.setItem('lastOrderRounds',JSON.stringify(rounds))}catch(e){};
+  const allItems=[];
+  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
+  const orderCount=allItems.reduce((s,x)=>s+(x.qty||1),0);
+  const orderTotal=allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0);
   const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   ec('end-order-id',d.orderId);
   ec('end-cart-count',orderCount);
   ec('end-cart-total',Math.round(orderTotal*100)/100);
-  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=isAddMore?'· 加菜已追加':'· 下单成功';
-  // 已结算区（本次用餐之前下的菜）
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
   const esl=document.getElementById('end-settled-list');
-  if(esl)esl.innerHTML=prevItems.length?('<div style="font-size:0.78rem;color:#27ae60;margin-bottom:6px;font-weight:500;"><i class="bi bi-check-circle me-1"></i>已结算</div>'+prevItems.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;margin-bottom:4px;"><span style="font-size:0.88rem;">'+esc(x.name)+'</span><span style="font-size:0.82rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')):'';
-  // 分割线：已结算 / 本轮加菜
+  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
   const ediv=document.getElementById('end-add-divider');
-  if(ediv)ediv.classList.toggle('d-none',!prevItems.length);
-  // 本轮加菜（本次提交的菜）
+  if(ediv)ediv.classList.add('d-none');
   const cl=document.getElementById('end-cart-list');
-  if(cl)cl.innerHTML=cart.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
+  if(cl)cl.innerHTML='';
   const isAI=currentRecommendations&&currentRecommendations.length>0;
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
@@ -1097,8 +1105,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');showSection('home-section');});
  click('end-add-more',()=>{resetRecommendation();showSection('home-section');});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
