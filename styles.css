@@ -1054,3 +1054,12 @@ html.dark-mode #end-satisfaction .sat-star { color: var(--text-light) !important
     color: black !important;
   }
 }
+
+/* === 暗色模式系统级覆盖：内联硬编码色（[style*=...] 属性选择器兜底，所有页面共用） === */
+html.dark-mode [style*="background:#fff"], html.dark-mode [style*="background: #fff"] { background: #1a1a1a !important; }
+html.dark-mode [style*="background:#fdf6f0"] { background: #1a1a1a !important; }
+html.dark-mode [style*="background:#faf6f0"] { background: #1a1a1a !important; }
+html.dark-mode [style*="color:#2c1810"] { color: #e0d5c1 !important; }
+html.dark-mode [style*="color:#8b7a6a"] { color: #a89880 !important; }
+html.dark-mode [style*="color:#756558"] { color: #a89880 !important; }
+html.dark-mode [style*="color:#ddd"] { color: #777 !important; }
