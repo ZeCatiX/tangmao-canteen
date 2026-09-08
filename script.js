@@ -598,8 +598,8 @@ function displayModelMetrics(){
    ];
    el.innerHTML=items.map(i=>
     '<div style="text-align:center;min-width:100px;flex:1;">'+
-    '<div style="font-size:1.5rem;font-weight:700;color:#2c1810;">'+i.value+'</div>'+
-    '<div style="font-size:0.8rem;color:#8b7a6a;margin-top:2px;">'+i.desc+'</div>'+
+    '<div style="font-size:1.5rem;font-weight:700;color:var(--text);">'+i.value+'</div>'+
+    '<div style="font-size:0.8rem;color:var(--text-light);margin-top:2px;">'+i.desc+'</div>'+
     '<div style="font-size:0.7rem;color:#c9a96e;">'+i.label+'</div>'+
     '</div>'
    ).join('');
@@ -619,7 +619,7 @@ function displayFeatureImportance(){
  if(parent&&!parent.querySelector('.loading-text')){
   const tip=document.createElement('p');
   tip.className='loading-text';
-  tip.style.cssText='color:#8b7a6a;font-size:0.85rem;text-align:center;padding:20px;';
+  tip.style.cssText='color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px;';
   tip.textContent='正在加载特征数据...';
   parent.appendChild(tip);
  }
@@ -773,7 +773,7 @@ function renderRoundsHTML(rounds){
  return rounds.map((r,i)=>{
   const cur=i===rounds.length-1;
   return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
-   +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:#fdf6f0;border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
    +'</div>';
  }).join('');
 }
