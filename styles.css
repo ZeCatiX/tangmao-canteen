@@ -196,7 +196,7 @@ body {
 /* 三特征卡 */
 #home-section .row.g-4 .p-3 {
   background: linear-gradient(165deg, #fdfaf5, #faf3e8) !important;
-  border: 1px solid rgba(201,169,110,0.15) !important;
+  border: 1px solid rgba(201,169,110,0.45) !important;
   border-radius: var(--radius) !important;
   padding: 1.5rem 1rem !important;
   position: relative;
