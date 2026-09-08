@@ -826,7 +826,8 @@ function checkoutCart(){
   localStorage.setItem('lastOrderId',d.orderId);
   localStorage.setItem('lastOrderTable',tableNumber);
   // 累计本次点餐（加菜合并到历史，同菜累加数量）
-  let orderItems=[];try{orderItems=JSON.parse(localStorage.getItem('lastOrderItems')||'[]')}catch(e){}
+  const prevItems=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderItems')||'[]')}catch(e){return[]}})();
+  const orderItems=prevItems.map(x=>({...x}));
   cart.forEach(x=>{const ex=orderItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else orderItems.push({...x});});
   try{localStorage.setItem('lastOrderItems',JSON.stringify(orderItems))}catch(e){};
   const orderCount=orderItems.reduce((s,x)=>s+(x.qty||1),0);
@@ -836,8 +837,15 @@ function checkoutCart(){
   ec('end-cart-count',orderCount);
   ec('end-cart-total',Math.round(orderTotal*100)/100);
   const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=isAddMore?'· 加菜已追加':'· 下单成功';
+  // 已结算区（本次用餐之前下的菜）
+  const esl=document.getElementById('end-settled-list');
+  if(esl)esl.innerHTML=prevItems.length?('<div style="font-size:0.78rem;color:#27ae60;margin-bottom:6px;font-weight:500;"><i class="bi bi-check-circle me-1"></i>已结算</div>'+prevItems.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;margin-bottom:4px;"><span style="font-size:0.88rem;">'+esc(x.name)+'</span><span style="font-size:0.82rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')):'';
+  // 分割线：已结算 / 本轮加菜
+  const ediv=document.getElementById('end-add-divider');
+  if(ediv)ediv.classList.toggle('d-none',!prevItems.length);
+  // 本轮加菜（本次提交的菜）
   const cl=document.getElementById('end-cart-list');
-  if(cl)cl.innerHTML=orderItems.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
+  if(cl)cl.innerHTML=cart.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
   const isAI=currentRecommendations&&currentRecommendations.length>0;
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
