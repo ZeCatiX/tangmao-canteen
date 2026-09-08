@@ -554,7 +554,7 @@ function endRecommendation(){
   const cnt=currentRecommendations.length;
   const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
   const allRates=currentRecommendations.map(d=>d.matchRate||0);
-  const avgMatch=allRates.length?Math.round(allRates.reduce((a,b)=>a+b,0)/allRates.length*100):0;
+  const avgMatch=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
   const topMatch=rates.length?Math.round(Math.max(...rates)*100):0;
   const e=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   e('end-dish-count',cnt);
