@@ -562,6 +562,8 @@ function endRecommendation(){
   e('end-dish-count',cnt);
   e('end-avg-match',avgMatch+'%');
   e('end-top-match',topMatch+'%');
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display='');
+  const noAI=document.getElementById('end-no-ai');if(noAI)noAI.style.display='none';
   // 本次点餐（购物车）
   const cart=getCart();
   e('end-cart-count',getCartCount());
@@ -801,9 +803,17 @@ function checkoutCart(){
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
+  // 填充点餐完成界面（普通模式：隐藏AI统计，显示AI未启用）
+  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ec('end-cart-count',cart.reduce((s,x)=>s+(x.qty||1),0));
+  ec('end-cart-total',total);
+  const cl=document.getElementById('end-cart-list');
+  if(cl)cl.innerHTML=cart.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display='none');
+  const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display='block';
   clearCart();
   if(tableInput)tableInput.value='';
-  showMessage('下单成功 ✓','订单号: '+d.orderId+' | 桌号: '+tableNumber+' | 合计: '+total+'元\n\n厨房已接单，正在为您准备',function(){showSection('home-section');});
+  showSection('end-section');
  }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
 
