@@ -560,6 +560,20 @@ function endRecommendation(){
   e('end-dish-count',cnt);
   e('end-avg-match',avgMatch+'%');
   e('end-top-match',topMatch+'%');
+  // 本次点餐（购物车）
+  const cart=getCart();
+  e('end-cart-count',getCartCount());
+  e('end-cart-total',getCartTotal());
+  const cl=document.getElementById('end-cart-list');
+  if(cl){
+   if(!cart.length){
+    cl.innerHTML='<div class="text-center py-3" style="color:var(--text-light);font-size:0.9rem;"><i class="bi bi-cart-x me-1"></i>购物车空空如也，先去点几道菜吧</div>';
+   }else{
+    cl.innerHTML=cart.map(d=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(d.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(d.qty||1)+'</strong> · '+formatPrice(d.price)+'</span></div>').join('');
+   }
+  }
+  const addBtn=document.getElementById('end-add-more');
+  if(addBtn)addBtn.onclick=()=>{if(typeof resetRecommendations==='function')resetRecommendations();showSection('home-section');};
   displayModelMetrics();
   displayFeatureImportance();
  },1500);

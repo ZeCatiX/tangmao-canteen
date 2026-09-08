@@ -563,6 +563,20 @@
                             <p style="color:var(--text-light);font-size:0.95rem;letter-spacing:2px;">菜品已记录，厨房正在为您准备</p>
                         </div>
 
+                        <!-- 本次点餐 -->
+                        <div class="px-4 pt-4">
+                            <div class="p-4" style="background:#fff;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
+                                <h5 style="font-family:'Noto Serif SC',serif;color:var(--text);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                                    <span><i class="bi bi-bag-check me-2" style="color:var(--primary-accent);"></i>本次点餐</span>
+                                    <span style="font-size:0.85rem;color:var(--text-light);">共 <strong id="end-cart-count" style="color:var(--primary-accent);">0</strong> 件 · 合计 <strong id="end-cart-total" style="color:var(--primary-accent);font-size:1.15rem;">0</strong> 元</span>
+                                </h5>
+                                <div id="end-cart-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+                                <button class="btn w-100 py-2 mt-3" id="end-add-more" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:10px;font-size:0.9rem;letter-spacing:1px;box-shadow:0 4px 12px rgba(201,169,110,0.25);">
+                                    <i class="bi bi-plus-circle me-2"></i>加菜 / 继续点餐
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 数据卡片区 -->
                         <div class="px-4 pb-4">
                             <div class="row g-3 mb-4">
