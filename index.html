@@ -567,8 +567,8 @@
                         <div class="px-4 pt-4">
                             <div class="p-4" style="background:#fff;border-radius:12px;border:1px solid rgba(201,169,110,0.15);">
                                 <h5 style="font-family:'Noto Serif SC',serif;color:var(--text);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                                    <span><i class="bi bi-bag-check me-2" style="color:var(--primary-accent);"></i>本次点餐</span>
-                                    <span style="font-size:0.85rem;color:var(--text-light);">共 <strong id="end-cart-count" style="color:var(--primary-accent);">0</strong> 件 · 合计 <strong id="end-cart-total" style="color:var(--primary-accent);font-size:1.15rem;">0</strong> 元</span>
+                                    <span><i class="bi bi-bag-check me-2" style="color:var(--primary-accent);"></i>本次点餐 <small id="end-order-tip" style="color:var(--green);font-size:0.75rem;font-weight:400;"></small></span>
+                                    <span style="font-size:0.85rem;color:var(--text-light);">订单号 <strong id="end-order-id" style="color:var(--primary-accent);">-</strong> · 共 <strong id="end-cart-count" style="color:var(--primary-accent);">0</strong> 件 · 合计 <strong id="end-cart-total" style="color:var(--primary-accent);font-size:1.15rem;">0</strong> 元</span>
                                 </h5>
                                 <div id="end-cart-list" style="display:flex;flex-direction:column;gap:6px;"></div>
                                 <button class="btn w-100 py-2 mt-3" id="end-add-more" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:10px;font-size:0.9rem;letter-spacing:1px;box-shadow:0 4px 12px rgba(201,169,110,0.25);">
@@ -912,7 +912,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261114"></script>
+    <script src="script.js?v=20261115"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>

@@ -798,25 +798,32 @@ function checkoutCart(){
  const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
+ // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
+ const lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
+ const lastOrderTable=localStorage.getItem('lastOrderTable')||'';
+ const isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
+ const url=isAddMore?('/api/order/'+lastOrderId+'/add'):'/api/order';
+ fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
-  if(!d.success){showMessage('下单失败',d.error||'服务器错误');return;}
+  if(!d.success){showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');return;}
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
-  // 填充点餐完成界面（普通模式：隐藏AI统计，显示AI未启用）
+  localStorage.setItem('lastOrderId',d.orderId);
+  localStorage.setItem('lastOrderTable',tableNumber);
   const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  ec('end-cart-count',cart.reduce((s,x)=>s+(x.qty||1),0));
-  ec('end-cart-total',total);
+  ec('end-order-id',d.orderId);
+  ec('end-cart-count',isAddMore?(d.dishCount||0):cart.reduce((s,x)=>s+(x.qty||1),0));
+  ec('end-cart-total',isAddMore?(d.totalPrice||total):total);
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=isAddMore?'· 加菜已追加':'· 下单成功';
   const cl=document.getElementById('end-cart-list');
   if(cl)cl.innerHTML=cart.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
   const isAI=currentRecommendations&&currentRecommendations.length>0;
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
   clearCart();
-  if(tableInput)tableInput.value='';
   showSection('end-section');
- }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
+ }).catch(()=>showMessage(isAddMore?'加菜失败':'下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
 
 // 桌号同步: 偏好页输入 → localStorage → 购物车自动填
@@ -1062,8 +1069,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');showSection('home-section');});
  click('end-add-more',()=>{resetRecommendation();showSection('home-section');});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
