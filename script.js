@@ -578,7 +578,7 @@ function endRecommendation(){
    }
   }
   const addBtn=document.getElementById('end-add-more');
-  if(addBtn)addBtn.onclick=()=>{if(typeof resetRecommendations==='function')resetRecommendations();showSection('home-section');};
+  if(addBtn)addBtn.onclick=()=>{if(typeof resetRecommendation==='function')resetRecommendation();showSection('home-section');};
   displayModelMetrics();
   displayFeatureImportance();
  },1500);
@@ -1064,6 +1064,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
  click('new-recommendation',()=>{resetRecommendation();showSection('preference-section');});
  click('end-logout',()=>{resetRecommendation();showSection('home-section');});
+ click('end-add-more',()=>{resetRecommendation();showSection('home-section');});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
