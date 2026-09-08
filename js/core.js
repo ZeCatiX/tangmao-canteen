@@ -118,12 +118,14 @@ function selectBlindBoxDish(prefs,top,blk){
   rand-=w.score;
   if(rand<=0){
    const d=w.d;
-   return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:0,matchRate:0.5};
+   const m=computeDishMatch(prefs,d);
+   return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
   }
  }
  // 保底
  const d=eligible[Math.floor(Math.random()*eligible.length)];
- return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:0,matchRate:0.5};
+ const m=computeDishMatch(prefs,d);
+ return{...d,reason:'🔮 盲盒推荐：试试这个吧，说不定有惊喜！',type:'盲盒尝鲜',matchIndex:Math.round(m.matchRate*100)/100,matchRate:m.matchRate,matchDetails:m.matchDetails};
 }
 
 
