@@ -82,7 +82,8 @@ function updateFloatBar(){
  const bar=document.getElementById('float-cart-bar');
  if(!bar)return;
  const c=getCartCount();
- if(c>0){bar.style.display='flex';document.getElementById('float-cart-count').textContent=c;document.getElementById('float-cart-total').textContent=getCartTotal();}
+ const onEnd=document.getElementById('end-section')?.classList.contains('active');
+ if(c>0&&!onEnd){bar.style.display='flex';document.getElementById('float-cart-count').textContent=c;document.getElementById('float-cart-total').textContent=getCartTotal();}
  else bar.style.display='none';
 }
 
@@ -309,6 +310,7 @@ function showSection(sectionId,skipScroll){
   const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
   updateModeDisplay();
  }
+ updateFloatBar();
 }
 
 function updateModeDisplay(){const el=document.getElementById('current-recommendation-mode'),sel=document.getElementById('recommendation-mode');if(!el||!sel)return;el.textContent=({auto:'自动选择（优先API）',api:'后端API推荐（更智能）',local:'本地推荐（更快速）'})[sel.value]||'自动选择（优先API）';}
