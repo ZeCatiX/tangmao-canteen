@@ -498,6 +498,19 @@
                     <button class="btn btn-sm btn-outline-light" id="cart-close-btn" style="border-radius:20px;padding:2px 12px;font-size:0.8rem;">✕ 关闭</button>
                 </div>
                 <div class="card-body p-4">
+                    <!-- 已结算区（本次用餐已下单的菜） -->
+                    <div id="settled-section" class="mb-3" style="display:none;">
+                        <div class="d-flex align-items-center mb-2 flex-wrap" style="gap:8px;">
+                            <span class="badge rounded-pill px-2" style="background:rgba(39,174,96,0.1);color:#27ae60;border:1px solid rgba(39,174,96,0.3);font-weight:500;"><i class="bi bi-check-circle me-1"></i>已结算</span>
+                            <span id="settled-order-info" style="font-size:0.78rem;color:var(--text-light);letter-spacing:1px;">订单 #- · 共 0 件 · 0 元</span>
+                        </div>
+                        <div id="settled-list"></div>
+                    </div>
+                    <!-- 分割线：已结算 / 待加菜 -->
+                    <div id="settled-divider" class="d-none text-center position-relative py-1" style="color:var(--text-light);">
+                        <div style="border-top:1px dashed rgba(201,169,110,0.35);"></div>
+                        <span class="position-absolute top-50 start-50 translate-middle" style="background:#fdf6f0;padding:0 12px;font-size:0.72rem;letter-spacing:3px;border-radius:10px;color:var(--text-light);">待加菜</span>
+                    </div>
                     <div id="cart-empty" class="text-center py-5" style="color:var(--text-light);">
                         <i class="bi bi-cart" style="font-size:3rem;display:block;margin-bottom:12px;opacity:0.3;"></i>
                         <p>购物车是空的</p>
@@ -912,7 +925,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261116"></script>
+    <script src="script.js?v=20261117"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>

@@ -768,6 +768,20 @@ function showCart(){
  window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
+ // 已结算区（本次用餐已下单的菜，分割线下方为待加菜）
+ let settled=[];try{settled=JSON.parse(localStorage.getItem('lastOrderItems')||'[]')}catch(e){}
+ const sSec=document.getElementById('settled-section'),sDiv=document.getElementById('settled-divider');
+ if(settled.length){
+  if(sSec)sSec.style.display='block';
+  if(sDiv)sDiv.classList.remove('d-none');
+  const si=document.getElementById('settled-order-info');
+  if(si)si.textContent='订单 #'+(localStorage.getItem('lastOrderId')||'-')+' · 共 '+settled.reduce((s,x)=>s+(x.qty||1),0)+' 件 · '+settled.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0).toFixed(2)+' 元';
+  const sl=document.getElementById('settled-list');
+  if(sl)sl.innerHTML=settled.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;margin-bottom:4px;"><span style="font-size:0.88rem;">'+esc(x.name)+'</span><span style="font-size:0.82rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
+ }else{
+  if(sSec)sSec.style.display='none';
+  if(sDiv)sDiv.classList.add('d-none');
+ }
  if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';if(tb)tb.innerHTML='';}else{
   if(empty)empty.style.display='none';if(content)content.style.display='block';
   if(tb)tb.innerHTML=cart.map(x=>{
