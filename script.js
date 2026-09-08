@@ -83,7 +83,8 @@ function updateFloatBar(){
  if(!bar)return;
  const c=getCartCount();
  const onEnd=document.getElementById('end-section')?.classList.contains('active');
- if(c>0&&!onEnd){bar.style.display='flex';document.getElementById('float-cart-count').textContent=c;document.getElementById('float-cart-total').textContent=getCartTotal();}
+ const onCart=document.getElementById('cart-section')?.classList.contains('active');
+ if(c>0&&!onEnd&&!onCart){bar.style.display='flex';document.getElementById('float-cart-count').textContent=c;document.getElementById('float-cart-total').textContent=getCartTotal();}
  else bar.style.display='none';
 }
 
@@ -809,8 +810,9 @@ function checkoutCart(){
   ec('end-cart-total',total);
   const cl=document.getElementById('end-cart-list');
   if(cl)cl.innerHTML=cart.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fdf6f0;border-radius:8px;"><span style="font-size:0.9rem;">'+esc(x.name)+'</span><span style="font-size:0.85rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('');
-  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display='none');
-  const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display='block';
+  const isAI=currentRecommendations&&currentRecommendations.length>0;
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
+  const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
   clearCart();
   if(tableInput)tableInput.value='';
   showSection('end-section');
