@@ -1025,8 +1025,8 @@ function refreshRecipeCartBtn(id){
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
  fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
- // 缓存推荐结果到 localStorage
- try { localStorage.setItem('cachedRecommendations', JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode', currentRecommendationMode); } catch(e) {}
+ // 缓存推荐结果到 localStorage（仅登录用户；游客不缓存）
+ try { if(currentUser&&currentUser!=='guest'){localStorage.setItem('cachedRecommendations', JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode', currentRecommendationMode);} } catch(e) {}
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
  if(!loading||!result)return;
  const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
@@ -1323,16 +1323,20 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  const savedPrefs=localStorage.getItem('savedPrefs');
  const cb2=document.getElementById('continue-btn');
  if(currentUser&&currentUser!=='guest'&&(savedPrefs||getUserData(currentUser)?.preferences?.spiciness)){if(cb2)cb2.classList.remove('d-none');}
-// 检查是否有缓存的推荐结果
+// 检查是否有缓存的推荐结果（仅登录用户；游客不支持）
 try {
   const cached = localStorage.getItem('cachedRecommendations');
   const vcb = document.getElementById('view-cached-btn');
   if (cached && vcb) {
-    const parsed = JSON.parse(cached);
-    if (Array.isArray(parsed) && parsed.length > 0) vcb.classList.remove('d-none');
+    if (currentUser&&currentUser!=='guest') {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) vcb.classList.remove('d-none');
+    } else vcb.classList.add('d-none');
   }
 } catch(e) {}
 click('view-cached-btn', () => {
+  // 游客不支持查看上次推荐
+  if(!currentUser||currentUser==='guest'){showMessage('提示','登录后才能查看上次推荐');return;}
   try {
     const cached = localStorage.getItem('cachedRecommendations');
     const mode = localStorage.getItem('cachedRecMode') || '本地推荐';
