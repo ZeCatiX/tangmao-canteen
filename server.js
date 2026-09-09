@@ -973,7 +973,7 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const existing = await pool.query('SELECT items, total_price, status FROM orders WHERE id=$1', [orderId]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在' });
     const row = existing.rows[0];
-    if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + row.status + '，不能加菜' });
+    if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
     const mergedItems = [...oldItems, ...items];
     const oldTotal = parseFloat(row.total_price) || 0;

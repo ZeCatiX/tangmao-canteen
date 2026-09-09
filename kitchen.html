@@ -140,15 +140,26 @@
               + '<div class="items">' + items + '</div>'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
               + '<span class="status">' + (o.status === 'confirmed' ? '✅ 已确认' : '📌 待处理') + '</span>'
-              + '<button class="btn-complete" onclick="completeOrder(' + o.id + ')">完成</button>'
+              + '<button class="btn-complete" onclick="completeOrder(' + o.id + ', this)">完成</button>'
               + '</div>'
               + '</div>';
           }).join('');
         }).catch(() => {});
     }
 
-    function completeOrder(id) {
-      if (!confirm('确定此订单已完成？此操作不可撤销。')) return;
+    function completeOrder(id, btn) {
+      // 二次点击确认（不依赖原生 confirm，任何环境可用）
+      if (btn && btn.dataset.armed !== '1') {
+        btn.dataset.armed = '1';
+        btn.dataset.orig = btn.textContent;
+        btn.textContent = '再点确认';
+        btn.style.background = '#e74c3c';
+        setTimeout(function () {
+          if (btn.dataset.armed === '1') { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig || '完成'; btn.style.background = ''; }
+        }, 3000);
+        return;
+      }
+      if (btn) { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig || '完成'; btn.style.background = ''; }
       const token = getToken();
       if (!token) return;
       fetch('/api/orders/' + id + '/status', {
@@ -183,6 +194,7 @@
     // 初始化：检查是否已有 token
     if (getToken()) {
       document.getElementById('login-overlay').style.display = 'none';
+      loadOrders(); // 立即加载（否则要等 10 秒轮询才出订单）
     }
 
     updateTime();
