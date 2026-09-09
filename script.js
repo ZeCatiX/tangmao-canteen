@@ -752,6 +752,8 @@ function renderRoundsHTML(rounds){
  }).join('');
 }
 function showCart(){
+ // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
+ const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
  window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
@@ -804,9 +806,9 @@ function checkoutCart(){
  const lastOrderTable=localStorage.getItem('lastOrderTable')||'';
  const isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
  const url=isAddMore?('/api/order/'+lastOrderId+'/add'):'/api/order';
- // 点击后立即显示过渡动画（不等 fetch，网络慢也有反馈）
- const cc=document.getElementById('cart-content');
- if(cc){cc.innerHTML='<div class="text-center py-5"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-3" style="color:var(--text-light);letter-spacing:2px;font-size:0.9rem;">正在提交订单...</p><div class="mt-2" style="width:120px;height:3px;background:var(--gold-light);border-radius:2px;margin:0 auto;overflow:hidden;"><div style="width:40%;height:100%;background:var(--gold);border-radius:2px;animation:loadingBar 0.8s ease-in-out infinite alternate;"></div></div></div>';}
+ // 点击后立即显示过渡动画（独立覆盖层，不破坏购物车 DOM 结构）
+ const clo=document.getElementById('cart-loading');
+ if(clo)clo.style.display='flex';
  fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
   if(!d.success){showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;}
@@ -849,6 +851,7 @@ function checkoutCart(){
   }
   clearCart();
   setTimeout(()=>{
+   const clo2=document.getElementById('cart-loading');if(clo2)clo2.style.display='none';
    showSection('end-section');
    if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
   },800);

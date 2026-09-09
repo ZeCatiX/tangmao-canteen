@@ -10,7 +10,7 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23d35400' d='M8 0C3.58 0 0 3.58 0 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14.5c-3.59 0-6.5-2.91-6.5-6.5S4.41 1.5 8 1.5 14.5 4.41 14.5 8 11.59 14.5 8 14.5zm-2.5-7h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0-2h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5zm0 4h5c.28 0 .5.22.5.5s-.22.5-.5.5h-5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5z'/%3E%3C/svg%3E" type="image/svg+xml">
     <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="styles.css?v=20261024">
+    <link rel="stylesheet" href="styles.css?v=20261025">
     <script>
       (function(){
         try {
@@ -492,10 +492,16 @@
 
             <!-- 购物车面板 -->
         <section id="cart-section" class="section">
-            <div class="card shadow-lg rounded-4">
+            <div class="card shadow-lg rounded-4" style="position:relative;">
                 <div class="card-header text-white d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));">
                     <h2 class="mb-0" style="font-size:1.1rem;letter-spacing:1px;"><i class="bi bi-cart3 me-2"></i>我的购物车</h2>
                     <button class="btn btn-sm btn-outline-light" id="cart-close-btn" style="border-radius:20px;padding:2px 12px;font-size:0.8rem;">✕ 关闭</button>
+                </div>
+                <div id="cart-loading" style="display:none;position:absolute;inset:0;z-index:20;background:rgba(250,246,240,0.92);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+                    <div class="text-center">
+                        <div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div>
+                        <p class="mt-3 mb-0" style="color:var(--text-light);letter-spacing:2px;font-size:0.9rem;">正在提交订单...</p>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <!-- 已结算区（本次用餐已下单的菜） -->
@@ -930,7 +936,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261131"></script>
+    <script src="script.js?v=20261132"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
