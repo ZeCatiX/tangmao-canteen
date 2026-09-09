@@ -134,7 +134,7 @@
             const time = o.created_at ? new Date(o.created_at).toLocaleTimeString() : '';
             return '<div class="order-card" data-id="' + o.id + '">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-              + '<span class="table-num">' + esc(o.table_number ? '桌号 ' + o.table_number : '外卖') + '</span>'
+              + '<span class="table-num">' + esc(o.table_number ? (o.table_number === '打包' ? '🥡 打包带走' : '桌号 ' + o.table_number) : '外卖') + '</span>'
               + '<span class="time">' + time + '</span>'
               + '</div>'
               + '<div class="items">' + items + '</div>'

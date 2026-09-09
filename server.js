@@ -327,9 +327,11 @@ app.get('/api/table-view', async (req, res) => {
   try {
     const t = String(req.query.t || '');
     const idx = t.lastIndexOf('.');
-    const num = idx > 0 ? t.slice(0, idx) : '';
+    const rawNum = idx > 0 ? t.slice(0, idx) : '';
     const sig = idx > 0 ? t.slice(idx + 1) : '';
-    if (!/^\d{1,4}$/.test(num) || !sig || tableSig(num) !== sig) {
+    const num = /^\d{1,2}$/.test(rawNum) ? String(parseInt(rawNum, 10)).padStart(2, '0') : '';
+    // 兼容旧版一位桌号链接：签名按原样或补零后匹配均可
+    if (!num || !sig || (tableSig(num) !== sig && tableSig(rawNum) !== sig)) {
       return res.status(403).json({ success: false, error: '无效的桌码' });
     }
     const pool = db;

@@ -14,6 +14,7 @@ function sig(n) {
 
 console.log('桌号\t链接（用二维码工具生成图片后贴到对应餐桌）');
 for (let i = 1; i <= MAX; i++) {
-  console.log(i + '号桌\t' + BASE + '/?t=' + i + '.' + sig(i));
+  const t = String(i).padStart(2, '0');
+  console.log(t + '号桌\t' + BASE + '/?t=' + t + '.' + sig(t));
 }
 console.log('\n提示：链接即凭证，请勿外传；如泄露可在 .env 修改 TABLE_SECRET 后重新生成。');

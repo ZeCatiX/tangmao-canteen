@@ -103,6 +103,13 @@
                     <p class="text-muted mt-2 mb-0" style="font-size:0.85rem;letter-spacing:2px;">唐猫庭院 · 千年陕菜</p>
                 </div>
 
+                <div class="text-center mb-3">
+                    <div id="table-status-card" style="display:inline-flex;align-items:center;gap:12px;padding:8px 18px;border-radius:24px;background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.4);">
+                        <span style="font-size:0.92rem;color:var(--text);">📍 <span id="table-status-text">未选择桌号</span></span>
+                        <button class="btn btn-sm" id="table-change-btn" style="background:var(--gold);color:#fff;border:none;border-radius:14px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;">选择桌号</button>
+                    </div>
+                </div>
+
                 <div class="text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);">
@@ -958,13 +965,7 @@
                             </button>
                         </div>
                     </div>
-                    <!-- 挪桌 -->
-                    <div id="addon-view-move" style="display:none;">
-                        <p class="mb-2" style="color:var(--text);">将当前订单挪到几号桌？</p>
-                        <input type="text" id="addon-move-input" class="form-control text-center mb-3" placeholder="新桌号" style="max-width:160px;margin:0 auto;" inputmode="numeric">
-                        <button class="btn btn-sm px-4" id="addon-move-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;letter-spacing:2px;">确认挪桌</button>
-                        <button class="btn btn-link btn-sm" id="addon-back-1" style="color:var(--text-light);">返回</button>
-                    </div>
+                    <!-- 挪桌已并入统一选桌器（点「挪桌」直接打开选桌） -->
                     <!-- 给别桌加菜 -->
                     <div id="addon-view-other" style="display:none;">
                         <p class="mb-2" style="color:var(--text);">给几号桌点菜？<small style="color:var(--text-light);">（将创建新订单）</small></p>
@@ -1016,6 +1017,26 @@
             </div>
         </div>
     </div>
+    <!-- 选桌（网格 + 输入 + 打包） -->
+    <div class="modal fade" id="table-picker-modal" tabindex="-1" inert aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:16px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:16px 16px 0 0;">
+                    <h5 class="modal-title" style="letter-spacing:2px;" id="table-picker-title">请选择桌号</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭" id="table-picker-close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="table-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;"></div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input type="text" id="table-input" class="form-control text-center" placeholder="桌号" maxlength="2" inputmode="numeric" style="max-width:110px;">
+                        <button class="btn" id="table-input-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:8px;padding:6px 18px;letter-spacing:1px;">确认</button>
+                        <button class="btn ms-auto" id="table-takeaway" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:8px;padding:6px 14px;">🥡 打包带走</button>
+                    </div>
+                    <div id="table-picker-hint" style="font-size:0.75rem;color:var(--text-light);margin-top:8px;">桌号为 1-2 位数字：输入 1 或 01 均指 01 号桌</div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="message-modal" tabindex="-1" inert aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1033,7 +1054,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261165"></script>
+    <script src="script.js?v=20261166"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
