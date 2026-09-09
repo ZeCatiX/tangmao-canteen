@@ -493,16 +493,39 @@ function login(){
  .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('login-btn');if(b)b.disabled=false;});
 }
 
+// 注册表单行内错误提示
+function setRegErr(field,msg){
+ const el=document.getElementById('register-'+field+'-err');
+ if(!el)return;
+ if(msg){el.textContent=msg;el.style.display='block';}
+ else{el.textContent='';el.style.display='none';}
+}
+function clearRegErrs(){['username','password','confirm'].forEach(f=>setRegErr(f,''));}
+
 function register(){
  const uEl=document.getElementById('register-username'),pEl=document.getElementById('register-password'),cEl=document.getElementById('register-confirm'),bEl=document.getElementById('register-btn');
  const aEl=document.getElementById('agree-privacy');
  if(!uEl||!pEl||!cEl){showMessage('页面错误','注册表单元素未找到');return;}
- if(bEl)bEl.disabled=true;const u=uEl.value.trim(),p=pEl.value,c=cEl.value;
- if(!u||!p){showMessage('注册失败','请填写完整信息');if(bEl)bEl.disabled=false;return;}
- if(p!==c){showMessage('注册失败','两次密码不一致');if(bEl)bEl.disabled=false;return;}
+ if(bEl)bEl.disabled=true;
+ const u=uEl.value.trim(),p=pEl.value,c=cEl.value;
+ clearRegErrs();
+ const fail=(field,msg)=>{setRegErr(field,msg);if(bEl)bEl.disabled=false;};
+ if(!u){fail('username','请填写用户名');return;}
+ if(u.length<2||u.length>20){fail('username','用户名需 2-20 个字符');return;}
+ if(!p){fail('password','请填写密码');return;}
+ if(p.length<8||p.length>20){fail('password','密码需 8-20 位');return;}
+ if(!/[A-Z]/.test(p)){fail('password','密码须包含大写字母');return;}
+ if(!/[a-z]/.test(p)){fail('password','密码须包含小写字母');return;}
+ if(!/[0-9]/.test(p)){fail('password','密码须包含数字');return;}
+ if(p!==c){fail('confirm','两次输入的密码不一致');return;}
  if(!aEl||!aEl.checked){showMessage('注册失败','请阅读并同意隐私政策');if(bEl)bEl.disabled=false;return;}
  fetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
- .then(r=>r.json()).then(d=>{if(!d.success){showMessage('注册失败',d.error||'注册失败');return;}
+ .then(r=>r.json()).then(d=>{if(!d.success){
+  const err=d.error||'注册失败';
+  if(err.includes('用户名'))setRegErr('username',err);
+  else if(err.includes('密码'))setRegErr('password',err);
+  else showMessage('注册失败',err);
+  return;}
  if(d.token)localStorage.setItem('userToken',d.token);
  currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();if(!users.find(x=>x.username===u))users.push({username:u,created_at:new Date().toISOString(),lastLogin:new Date().toISOString(),favorites:[],blacklist:[],preferences:{}});saveUsers(users);
  showMessage('注册成功','欢迎，'+u+'！',function(){
