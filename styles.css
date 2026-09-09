@@ -1064,3 +1064,9 @@ html.dark-mode [style*="color:#8b7a6a"] { color: #a89880 !important; }
 html.dark-mode [style*="color:#756558"] { color: #a89880 !important; }
 html.dark-mode [style*="color:#ddd"] { color: #777 !important; }
 html.dark-mode #cart-loading { background: rgba(26,26,26,0.92) !important; }
+
+/* 购物车数量控件：紧凑固定尺寸（覆盖移动端 .btn 触控 44px 规则与全局圆角） */
+.cart-qty-minus, .cart-qty-plus { min-height: 30px !important; height: 30px !important; padding: 0 8px !important; font-size: 0.9rem !important; line-height: 1 !important; }
+.cart-qty-minus { border-radius: 6px 0 0 6px !important; }
+.cart-qty-plus { border-radius: 0 6px 6px 0 !important; }
+.cart-qty-input { min-height: 30px !important; height: 30px !important; border-radius: 0 !important; }
