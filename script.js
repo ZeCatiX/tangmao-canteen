@@ -1199,14 +1199,26 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    const el=document.getElementById(x==='main'?'addon-main':'addon-view-'+x);
    if(el)el.style.display=(x===v)?(x==='main'?'':'block'):'none';
   });
+  const pending=ssGet('sidePendingTable');
+  const curTable=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
   const pt=document.getElementById('addon-pick-table');
-  if(pt)pt.textContent=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
+  if(pt)pt.textContent=(v==='pick'&&pending)?pending:curTable;
   // 表头实时同步（给别桌切换/挪桌后返回主视图不再显示旧订单）
-  const at=document.getElementById('addon-table');if(at)at.textContent=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
+  const at=document.getElementById('addon-table');if(at)at.textContent=curTable;
   const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(ssGet('lastOrderId')||'-');
+ }
+ // 给别桌：确认时只暂存待切桌号，等用户真正开始点菜（AI推荐/浏览菜单）才切换状态——返回即取消
+ function applySideOrderSwitch(){
+  const pending=ssGet('sidePendingTable');
+  if(!pending)return;
+  ssRemove('sidePendingTable');
+  ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>ssRemove(k));
+  ssSet('lastOrderTable',pending);ssSet('lockedTable',pending);
  }
  function openAddonPanel(){
   const m=document.getElementById('addon-modal');if(!m)return;
+  // 清理未完成的「给别桌」暂存（关弹窗后重开 = 取消该操作）
+  if(ssGet('sidePendingTable')){ssRemove('sidePendingTable');if(ssGet('orderBackup')){ssRemove('orderBackup');ssRemove('sideOrder');}}
   const t=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
   const at=document.getElementById('addon-table');if(at)at.textContent=t;
   const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(ssGet('lastOrderId')||'-');
@@ -1264,16 +1276,22 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    const backup={lastOrderId:ssGet('lastOrderId'),lastOrderTable:ssGet('lastOrderTable'),lastOrderItems:ssGet('lastOrderItems'),lastOrderRounds:ssGet('lastOrderRounds'),lastOrderAI:ssGet('lastOrderAI'),lastOrderStats:ssGet('lastOrderStats'),lockedTable:ssGet('lockedTable')};
    ssSet('orderBackup',JSON.stringify(backup));ssSet('sideOrder','1');
   }
-  ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>ssRemove(k));
-  ssSet('lastOrderTable',to);
-  ssSet('lockedTable',to);
+  // 只暂存待切桌号，真正开始点菜（AI推荐/浏览菜单）时才切换——点「返回」= 取消给别桌
+  ssSet('sidePendingTable',to);
   showAddonView('pick');
  });
- click('addon-ai',()=>{closeAddonPanel();resetRecommendation();showSection('preference-section');});
- click('addon-menu',()=>{closeAddonPanel();showDataset();});
+ click('addon-ai',()=>{applySideOrderSwitch();closeAddonPanel();resetRecommendation();showSection('preference-section');});
+ click('addon-menu',()=>{applySideOrderSwitch();closeAddonPanel();showDataset();});
  click('addon-back-1',()=>showAddonView('main'));
  click('addon-back-2',()=>showAddonView('main'));
- click('addon-back-3',()=>showAddonView('main'));
+ click('addon-back-3',()=>{
+  // 从「给别桌」的选菜视图返回 = 取消给别桌，恢复本桌
+  if(ssGet('sidePendingTable')){
+   ssRemove('sidePendingTable');
+   if(ssGet('orderBackup')){ssRemove('orderBackup');ssRemove('sideOrder');}
+  }
+  showAddonView('main');
+ });
  // 「查看订单」：从 localStorage 重建点餐完成界面（跳走/刷新后随时可回）
  click('banner-view-order',()=>rebuildEndView());
  // rebuildEndView 已提升为顶层函数（checkoutCart 的别桌恢复也需调用）
