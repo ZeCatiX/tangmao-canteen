@@ -546,17 +546,8 @@ function endRecommendation(){
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  currentRecommendations.forEach(d=>{if(!ordered.includes(d.id))ordered.push(d.id);});
  try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
- // 推荐菜全部加入购物车（统一走结算流程：订单号/加菜/时间线）
- const cart0=getCart();
- currentRecommendations.forEach(d=>{
-  const p=parseFloat(d.price)||0;
-  const ex=cart0.find(c=>c.id===d.id);
-  if(ex)ex.qty=(ex.qty||1)+1;
-  else cart0.push({id:d.id,name:d.name,price:isNaN(p)?0:p,qty:1,image_url:d.image_url||''});
- });
- saveCart(cart0);updateCartBadge();
+ // 选好了 = 跳购物车结算（购物车里是用户自己加购的菜，不自动添加推荐菜）
  showCart();
- showMessage('已加入购物车','推荐菜品已全部加入购物车，填写桌号后点「去结算」下单',null,3000);
 }
 function displayModelMetrics(){
  const el=document.getElementById('model-metrics');
