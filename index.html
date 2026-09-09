@@ -118,6 +118,9 @@
                     <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:var(--primary-accent);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-clock-history me-2"></i>查看上次推荐
                     </button>
+                    <button class="btn btn-lg px-5 py-3 d-none" id="table-bill-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.5);color:var(--gold);line-height:1.5;margin-top:8px;">
+                        <i class="bi bi-receipt me-2"></i><span id="table-bill-btn-txt">本桌账单</span>
+                    </button>
                     <div class="mt-3">
                         <button class="btn btn-outline-secondary btn-sm" id="login-btn" style="border-radius:20px;padding:4px 18px;font-size:0.82rem;border-color:rgba(201,169,110,0.4);color:var(--text-light);">
                             <i class="bi bi-person me-1"></i>登录
@@ -990,7 +993,18 @@
             </div>
         </div>
     </div>
-    <!-- 被赠桌小票（只读，本地数据） -->
+    <!-- 本桌账单（免登录，凭签名桌码只读查看） -->
+    <div class="modal fade" id="table-bill-modal" tabindex="-1" inert aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:16px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:16px 16px 0 0;">
+                    <h5 class="modal-title" style="letter-spacing:2px;" id="table-bill-title">本桌账单</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body" id="table-bill-body"></div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="gift-receipt-modal" tabindex="-1" inert aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius:16px;">
@@ -1019,7 +1033,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261161"></script>
+    <script src="script.js?v=20261164"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>

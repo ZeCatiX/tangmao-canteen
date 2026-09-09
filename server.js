@@ -319,6 +319,28 @@ app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'kitchen.htm
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: dishData }));
 
+// ─── 本桌账单（免登录，凭签名桌码）───
+// 桌码 = <桌号>.<HMAC前16位>：没有签名密钥无法伪造，避免"随便输桌号就能看别人账单"
+const TABLE_SECRET = process.env.TABLE_SECRET || process.env.JWT_SECRET || 'tangmao-table-secret';
+function tableSig(n) { return require('crypto').createHmac('sha256', TABLE_SECRET).update(String(n)).digest('hex').slice(0, 16); }
+app.get('/api/table-view', async (req, res) => {
+  try {
+    const t = String(req.query.t || '');
+    const idx = t.lastIndexOf('.');
+    const num = idx > 0 ? t.slice(0, idx) : '';
+    const sig = idx > 0 ? t.slice(idx + 1) : '';
+    if (!/^\d{1,4}$/.test(num) || !sig || tableSig(num) !== sig) {
+      return res.status(403).json({ success: false, error: '无效的桌码' });
+    }
+    const pool = db;
+    const r = await pool.query(
+      "SELECT id, items, total_price, dish_count, status, created_at FROM orders WHERE table_number = $1 AND status <> 'cancelled' ORDER BY id DESC LIMIT 20",
+      [num]
+    );
+    res.json({ success: true, tableNumber: num, orders: r.rows });
+  } catch (e) { logger.error('桌码查询失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // ═══════════════════════════════════════════════
 // 管理后台认证
 // ═══════════════════════════════════════════════

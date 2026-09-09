@@ -9,6 +9,8 @@ var apiAvailabilityCache=null,apiCacheTimestamp=0;
 var dishData=[];  // 菜品数据，从API加载
 var starRatingDish=null,starRatingValue=0,ratingReturnTo='recommendation-section';  // 全局评分状态
 var _initialized=false;
+// 页面初始查询串（showSection 的 pushState 会抹掉它，桌码解析需要提前捕获）
+var __initialSearch=(typeof location!=='undefined'&&location.search)||'';
 const API_CACHE_DURATION=30000;
 const $=id=>document.getElementById(id);
 // HTML 转义，防止 XSS
@@ -780,6 +782,46 @@ function renderRoundsHTML(rounds){
  }
  return html;
 }
+// 本桌账单（免登录，凭签名桌码只读查看）
+function showTableBill(){
+ const t=ssGet('tableToken')||'';
+ if(!t){showMessage('提示','请扫描餐桌上的二维码');return;}
+ const box=document.getElementById('table-bill-body');
+ const title=document.getElementById('table-bill-title');
+ if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">加载中...</div>';
+ const m=document.getElementById('table-bill-modal');
+ if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
+ fetch('/api/table-view?t='+encodeURIComponent(t)).then(r=>r.json()).then(d=>{
+  if(!box)return;
+  if(!d.success){box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">'+esc(d.error||'读取失败')+'</div>';return;}
+  if(title)title.textContent=d.tableNumber+' 号桌 · 账单';
+  const orders=d.orders||[];
+  if(!orders.length){box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">本桌暂无订单</div>';return;}
+  let grand=0;
+  box.innerHTML=orders.map(o=>{
+   let sub=0;
+   const rows=(o.items||[]).map(x=>{
+    const qty=parseInt(x.qty||x.quantity)||1;
+    const p=x.giftFrom?0:(parseFloat(x.price)||0); // 赠菜恒按 0 计（防脏数据误计）
+    sub+=p*qty;
+    if(x.giftFrom){
+     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">🎁 '+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">×'+qty+'（'+esc(String(x.giftFrom))+'桌赠）</span></span><span style="font-size:0.86rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.72rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span></div>';
+    }
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">'+esc(x.name)+' <span style="font-size:0.72rem;color:var(--text-light);">×'+qty+'</span></span><span style="font-size:0.86rem;color:var(--text-light);">'+(p*qty).toFixed(2)+'元</span></div>';
+   }).join('');
+   const st=(o.status==='completed'?'✅ 已完成':o.status==='confirmed'?'🔥 已确认':'📌 待处理');
+   grand+=sub;
+   const tm=o.created_at?new Date(o.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+   return '<div style="border-left:2px solid rgba(201,169,110,0.4);padding-left:10px;margin-bottom:14px;">'
+    +'<div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-light);padding-bottom:4px;"><span>订单 #'+esc(String(o.id))+' · '+esc(tm)+'</span><span>'+st+'</span></div>'
+    +rows
+    +'<div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(201,169,110,0.3);font-size:0.85rem;"><span style="color:var(--text-light);">小计</span><strong style="color:var(--text);">'+sub.toFixed(2)+'元</strong></div>'
+    +'</div>';
+  }).join('')
+  +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(201,169,110,0.12);border-radius:10px;margin-top:6px;"><span style="font-size:0.9rem;color:var(--text);">合计</span><strong style="color:var(--primary-accent);font-size:1.2rem;">'+grand.toFixed(2)+' 元</strong></div>'
+  +'<div style="font-size:0.72rem;color:var(--text-light);text-align:center;margin-top:8px;">账单仅供参考，以收银为准</div>';
+ }).catch(()=>{if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">网络错误</div>';});
+}
 function toggleGiftRounds(head){
  const block=head.closest('[data-gift]');if(!block)return;
  const body=block.querySelector('.gift-body');if(!body)return;
@@ -1466,6 +1508,22 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  }
  window.updateHomeButtons=updateHomeButtons;
  updateHomeButtons();
+ // ─── 桌码：?t=<桌号>.<签名>（扫桌上的二维码）→ 显示「本桌账单」入口 + 预填桌号 ───
+ (function initTableToken(){
+  try{
+   const sp=new URLSearchParams(__initialSearch);
+   const t=sp.get('t')||'';
+   if(!/^\d{1,4}\.[0-9a-f]{8,}$/i.test(t))return;
+   ssSet('tableToken',t);
+   const num=t.split('.')[0];
+   ssSet('tableNumber',num); // 桌码即当前桌，同步到会话桌号（否则 showCart 会当残留清掉）
+   const btn=document.getElementById('table-bill-btn');
+   if(btn){btn.classList.remove('d-none');const txt=document.getElementById('table-bill-btn-txt');if(txt)txt.textContent='本桌账单（'+num+'号桌）';}
+   const ti=document.getElementById('cart-table-number');if(ti&&!ti.value)ti.value=num;
+   const pt=document.getElementById('pref-table-number');if(pt&&!pt.value)pt.value=num;
+  }catch(e){}
+ })();
+ click('table-bill-btn',showTableBill);
 click('view-cached-btn', () => {
   // 游客不支持查看上次推荐
   if(!currentUser||currentUser==='guest'){showMessage('提示','登录后才能查看上次推荐');return;}
