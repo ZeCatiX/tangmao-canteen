@@ -999,7 +999,15 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const row = existing.rows[0];
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
-    const mergedItems = [...oldItems, ...items];
+    // 同菜合并：id 与赠菜标记都相同才合并（普通菜与赠菜价格不同，不能混为一行）
+    const keyOf = it => (it.id) + '|' + (it.giftTo || '') + '|' + (it.giftFrom || '');
+    const mergedItems = oldItems.map(x => ({ ...x }));
+    for (const it of items) {
+      const k = keyOf(it);
+      const ex = mergedItems.find(m => keyOf(m) === k);
+      if (ex) ex.qty = (parseInt(ex.qty || ex.quantity, 10) || 1) + (parseInt(it.qty || it.quantity, 10) || 1);
+      else mergedItems.push({ ...it });
+    }
     const oldTotal = parseFloat(row.total_price) || 0;
     const addTotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0) * (i.qty || 1), 0);
     const newTotal = oldTotal + addTotal;
