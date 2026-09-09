@@ -777,7 +777,7 @@ function renderRoundsHTML(rounds){
    +'<span style="font-size:0.8rem;font-weight:600;color:var(--gold);">🎁 赠给 '+tables+' 号桌 · 本桌付费 '+gTotal.toFixed(2)+' 元</span>'
    +'<span style="display:flex;align-items:center;gap:10px;white-space:nowrap;"><span onclick="event.stopPropagation();showGiftReceipt(\''+esc(String(gifts[0].r.giftTo))+'\')" style="font-size:0.72rem;color:var(--primary-accent);text-decoration:underline;">被赠桌小票</span><span class="gift-toggle-txt" style="font-size:0.72rem;color:var(--text-light);">隐藏</span></span></div>'
    +'<div class="gift-body" style="display:flex;flex-direction:column;margin-top:6px;">'
-   +merged.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">→'+esc(String(x.giftTo))+'桌</span></span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +merged.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">→'+esc(String(x.giftTo))+'号桌</span></span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
    +'</div></div>';
  }
  return html;
@@ -805,7 +805,7 @@ function showTableBill(){
     const p=x.giftFrom?0:(parseFloat(x.price)||0); // 赠菜恒按 0 计（防脏数据误计）
     sub+=p*qty;
     if(x.giftFrom){
-     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">🎁 '+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">×'+qty+'（'+esc(String(x.giftFrom))+'桌赠）</span></span><span style="font-size:0.86rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.72rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span></div>';
+     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">🎁 '+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">×'+qty+'（'+esc(String(x.giftFrom))+'号桌赠）</span></span><span style="font-size:0.86rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.72rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span></div>';
     }
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">'+esc(x.name)+' <span style="font-size:0.72rem;color:var(--text-light);">×'+qty+'</span></span><span style="font-size:0.86rem;color:var(--text-light);">'+(p*qty).toFixed(2)+'元</span></div>';
    }).join('');
