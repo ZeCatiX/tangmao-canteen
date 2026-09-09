@@ -546,9 +546,9 @@ app.post('/api/user/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, error: '用户名和密码不能为空' });
     if (username.trim().length < 2) return res.status(400).json({ success: false, error: '用户名至少2个字符' });
-    if (username.trim().length > 50) return res.status(400).json({ success: false, error: '用户名不能超过50个字符' });
+    if (username.trim().length > 50) return res.status(400).json({ success: false, error: '用户名不能超过20个字符' });
     if (password.length < 8) return res.status(400).json({ success: false, error: '密码至少8个字符' });
-    if (password.length > 128) return res.status(400).json({ success: false, error: '密码不能超过128个字符' });
+    if (password.length > 128) return res.status(400).json({ success: false, error: '密码不能超过20个字符' });
     if (!/[A-Z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含大写字母' });
     if (!/[a-z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含小写字母' });
     if (!/[0-9]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含数字' });
