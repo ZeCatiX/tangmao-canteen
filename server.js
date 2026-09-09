@@ -985,6 +985,21 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
   } catch (e) { logger.error('加菜API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 挪桌：修改进行中订单的桌号（订单跟客人走）
+app.patch('/api/order/:id/table', softAuth, async (req, res) => {
+  try {
+    const orderId = parseInt(req.params.id);
+    const { tableNumber } = req.body;
+    if (!orderId || !tableNumber) return res.status(400).json({ success: false, error: '参数无效' });
+    const pool = db;
+    const colCheck = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'");
+    if (colCheck.rows.length === 0) return res.json({ success: false, error: '订单表不支持桌号' });
+    const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled') RETURNING id", [String(tableNumber), orderId]);
+    if (r.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或已完成' });
+    res.json({ success: true, orderId, tableNumber });
+  } catch (e) { logger.error('改桌号API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 app.get('/api/orders', authMiddleware, async (req, res) => {
   try {
     const { status } = req.query;

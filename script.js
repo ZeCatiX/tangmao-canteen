@@ -782,7 +782,7 @@ function showCart(){
  }
  showSection('cart-section');
 }
-function checkoutCart(){
+async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
  if(bEl)bEl.disabled=true;
@@ -790,12 +790,20 @@ function checkoutCart(){
  const tableNumber=tableInput?tableInput.value.trim():'';
  if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
- const lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
- const lastOrderTable=localStorage.getItem('lastOrderTable')||'';
- const isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
- // 换桌提醒：已有进行中订单但桌号不同 → 本次是【新订单】而非加菜，让用户明确确认
+ let lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
+ let lastOrderTable=localStorage.getItem('lastOrderTable')||'';
+ let isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
+ // 换桌处理（用户视角：改桌号通常是「挪桌」）：确定=原订单改送新桌+菜品追加；取消=开新单
  if(lastOrderId>0&&lastOrderTable&&lastOrderTable!==tableNumber){
-  if(!confirm('你已有 '+lastOrderTable+' 号桌进行中的订单。\n\n当前桌号 '+tableNumber+' 将创建【新订单】（不是加菜，厨房会分单上菜）。\n\n继续下单吗？')){if(bEl)bEl.disabled=false;return;}
+  const moveTable=confirm('检测到你已有 '+lastOrderTable+' 号桌进行中的订单，桌号已改为 '+tableNumber+'。\n\n【确定】= 挪桌：原订单改送 '+tableNumber+' 号桌，本次菜品追加到原订单\n【取消】= 原订单不动，按 '+tableNumber+' 号桌创建全新订单');
+  if(moveTable){
+   try{
+    const tr=await fetch('/api/order/'+lastOrderId+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber})});
+    const tj=await tr.json();
+    if(tj.success){localStorage.setItem('lastOrderTable',tableNumber);lastOrderTable=tableNumber;isAddMore=true;}
+    // 改桌号失败（如订单已完成）→ 降级为开新单
+   }catch(e){}
+  }
  }
  const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
