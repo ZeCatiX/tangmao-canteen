@@ -823,6 +823,7 @@ async function checkoutCart(){
  const tableInput=document.getElementById('cart-table-number');
  const tableNumber=lockedTable||(tableInput?tableInput.value.trim():'');
  if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
+ if(!/^\d{1,4}$/.test(tableNumber)){showMessage('桌号格式不对','桌号请输入 1-4 位数字，例如 6');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
  // 桌号锁定机制下 tableNumber 恒等于锁定值；挪桌/给别桌均在加菜面板内完成（无原生 confirm，沙箱环境不可用）
  let lastOrderId=parseInt(ssGet('lastOrderId')||'0');
@@ -1162,6 +1163,9 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   });
   const pt=document.getElementById('addon-pick-table');
   if(pt)pt.textContent=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
+  // 表头实时同步（给别桌切换/挪桌后返回主视图不再显示旧订单）
+  const at=document.getElementById('addon-table');if(at)at.textContent=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
+  const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(ssGet('lastOrderId')||'-');
  }
  function openAddonPanel(){
   const m=document.getElementById('addon-modal');if(!m)return;
@@ -1193,6 +1197,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-move-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写新桌号');return;}
+  if(!/^\d{1,4}$/.test(to)){showMessage('提示','桌号请输入 1-4 位数字');return;}
   const cur=ssGet('lastOrderTable')||ssGet('lockedTable')||'';
   if(to===cur){showMessage('提示','新桌号与当前桌号相同');return;}
   const oid=parseInt(ssGet('lastOrderId')||'0');
@@ -1213,6 +1218,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-other-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写桌号');return;}
+  if(!/^\d{1,4}$/.test(to)){showMessage('提示','桌号请输入 1-4 位数字');return;}
   const cur=ssGet('lockedTable')||ssGet('lastOrderTable')||'';
   if(to===cur){showMessage('提示','这就是当前桌号——本桌加菜请选「本桌加菜」');return;}
   ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>ssRemove(k));
