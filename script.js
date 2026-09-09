@@ -692,7 +692,10 @@ function showProfile(){
 function cancelFavorite(){
  const u=getUserData(currentUser);
  if(!u?.favorites?.length){showMessage('提示','收藏列表为空');return;}
- if(!confirm('确定要取消所有收藏吗？'))return;
+ // 二次点击确认（沙箱 iframe 中原生 confirm 不可用）
+ const btn=document.getElementById('cancel-favorite-btn');
+ if(btn&&btn.dataset.armed!=='1'){btn.dataset.armed='1';const t=btn.textContent;btn.textContent='再次点击确认';btn.style.color='#c0392b';setTimeout(()=>{btn.dataset.armed='';btn.textContent=t;btn.style.color='';},3000);return;}
+ if(btn){btn.dataset.armed='';}
  u.favorites=[];
  updateUserData(currentUser,{favorites:[]});
  fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:[]})}).catch(()=>{});
@@ -702,7 +705,9 @@ function cancelFavorite(){
 function cancelBlacklist(){
  const u=getUserData(currentUser);
  if(!u?.blacklist?.length){showMessage('提示','列表为空');return;}
- if(!confirm('确定要清空黑名单吗？'))return;
+ const btn=document.getElementById('cancel-blacklist-btn');
+ if(btn&&btn.dataset.armed!=='1'){btn.dataset.armed='1';const t=btn.textContent;btn.textContent='再次点击确认';btn.style.color='#c0392b';setTimeout(()=>{btn.dataset.armed='';btn.textContent=t;btn.style.color='';},3000);return;}
+ if(btn){btn.dataset.armed='';}
  u.blacklist=[];
  updateUserData(currentUser,{blacklist:[]});
  fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:[]})}).catch(()=>{});
@@ -806,21 +811,10 @@ async function checkoutCart(){
  const tableNumber=lockedTable||(tableInput?tableInput.value.trim():'');
  if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
+ // 桌号锁定机制下 tableNumber 恒等于锁定值；挪桌/给别桌均在加菜面板内完成（无原生 confirm，沙箱环境不可用）
  let lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
  let lastOrderTable=localStorage.getItem('lastOrderTable')||'';
  let isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
- // 换桌处理（用户视角：改桌号通常是「挪桌」）：确定=原订单改送新桌+菜品追加；取消=开新单
- if(lastOrderId>0&&lastOrderTable&&lastOrderTable!==tableNumber){
-  const moveTable=confirm('检测到你已有 '+lastOrderTable+' 号桌进行中的订单，桌号已改为 '+tableNumber+'。\n\n【确定】= 挪桌：原订单改送 '+tableNumber+' 号桌，本次菜品追加到原订单\n【取消】= 原订单不动，按 '+tableNumber+' 号桌创建全新订单');
-  if(moveTable){
-   try{
-    const tr=await fetch('/api/order/'+lastOrderId+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber})});
-    const tj=await tr.json();
-    if(tj.success){localStorage.setItem('lastOrderTable',tableNumber);lastOrderTable=tableNumber;isAddMore=true;}
-    // 改桌号失败（如订单已完成）→ 降级为开新单
-   }catch(e){}
-  }
- }
  const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
@@ -1144,12 +1138,21 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
  click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('preference-section');});
  click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('home-section');});
- // ─── 加菜面板（桌号锁定）───
+ // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
+ function showAddonView(v){
+  ['main','move','other','pick'].forEach(x=>{
+   const el=document.getElementById(x==='main'?'addon-main':'addon-view-'+x);
+   if(el)el.style.display=(x===v)?(x==='main'?'':'block'):'none';
+  });
+  const pt=document.getElementById('addon-pick-table');
+  if(pt)pt.textContent=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'-';
+ }
  function openAddonPanel(){
   const m=document.getElementById('addon-modal');if(!m)return;
   const t=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'-';
   const at=document.getElementById('addon-table');if(at)at.textContent=t;
   const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(localStorage.getItem('lastOrderId')||'-');
+  showAddonView('main');
   m.inert=false;m.removeAttribute('aria-hidden');
   bootstrap.Modal.getOrCreateInstance(m).show();
  }
@@ -1159,33 +1162,42 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inst=bootstrap.Modal.getInstance(m);if(inst)inst.hide();
  }
  click('end-add-more',()=>openAddonPanel());
- // 挪桌：原订单改送新桌（不需要点菜）
- click('end-move-table',()=>{
-  const cur=localStorage.getItem('lastOrderTable')||localStorage.getItem('lockedTable')||'';
-  const to=prompt('将 '+cur+' 号桌的订单挪到几号桌？','');
-  if(!to||!to.trim()||to.trim()===cur)return;
+ // 本桌加菜 → 选菜方式（桌号已锁定）
+ click('addon-do-add',()=>showAddonView('pick'));
+ // 挪桌（面板内输入，无 prompt）
+ click('addon-do-move',()=>showAddonView('move'));
+ click('addon-move-confirm',()=>{
+  const inp=document.getElementById('addon-move-input');
+  const to=inp?inp.value.trim():'';
+  if(!to){showMessage('提示','请填写新桌号');return;}
   const oid=parseInt(localStorage.getItem('lastOrderId')||'0');
   if(!oid){showMessage('提示','当前没有进行中的订单');return;}
-  fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:to.trim()})})
+  fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:to})})
   .then(r=>r.json()).then(d=>{
    if(!d.success){showMessage('挪桌失败',d.error||'服务器错误');return;}
-   localStorage.setItem('lastOrderTable',to.trim());localStorage.setItem('lockedTable',to.trim());
-   const et=document.getElementById('end-order-table');if(et)et.textContent=to.trim();
-   const ei=document.getElementById('settled-order-info');if(ei&&ei.textContent)ei.textContent=ei.textContent.replace(/桌号 \S+/,'桌号 '+to.trim());
-   showMessage('挪桌成功','订单已改送 '+to.trim()+' 号桌',null,2500);
+   localStorage.setItem('lastOrderTable',to);localStorage.setItem('lockedTable',to);
+   const et=document.getElementById('end-order-table');if(et)et.textContent=to;
+   const ei=document.getElementById('settled-order-info');if(ei&&ei.textContent)ei.textContent=ei.textContent.replace(/桌号 \S+/,'桌号 '+to);
+   closeAddonPanel();
+   showMessage('挪桌成功','订单已改送 '+to+' 号桌',null,2500);
   }).catch(()=>showMessage('挪桌失败','网络错误，请稍后重试'));
  });
- // 给别桌点菜：填桌号 → 切换到新桌新订单 → 打开面板
- click('end-other-table',()=>{
-  const to=prompt('给几号桌点菜？','');
-  if(!to||!to.trim())return;
+ // 给别桌加菜（面板内输入，无 prompt）→ 切换新桌新订单 → 选菜方式
+ click('addon-do-other',()=>showAddonView('other'));
+ click('addon-other-confirm',()=>{
+  const inp=document.getElementById('addon-other-input');
+  const to=inp?inp.value.trim():'';
+  if(!to){showMessage('提示','请填写桌号');return;}
   ['lastOrderId','lastOrderItems','lastOrderRounds'].forEach(k=>localStorage.removeItem(k));
-  localStorage.setItem('lastOrderTable',to.trim());
-  localStorage.setItem('lockedTable',to.trim());
-  openAddonPanel();
+  localStorage.setItem('lastOrderTable',to);
+  localStorage.setItem('lockedTable',to);
+  showAddonView('pick');
  });
  click('addon-ai',()=>{closeAddonPanel();resetRecommendation();showSection('preference-section');});
  click('addon-menu',()=>{closeAddonPanel();showDataset();});
+ click('addon-back-1',()=>showAddonView('main'));
+ click('addon-back-2',()=>showAddonView('main'));
+ click('addon-back-3',()=>showAddonView('main'));
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{

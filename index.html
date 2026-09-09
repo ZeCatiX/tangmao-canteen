@@ -595,9 +595,6 @@
                                     <span class="position-absolute top-50 start-50 translate-middle" style="background:var(--cream-dark);padding:0 12px;font-size:0.72rem;letter-spacing:3px;color:var(--text-light);">本轮加菜</span>
                                 </div>
                                 <div id="end-cart-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-                                <button class="btn w-100 py-2 mt-3" id="end-add-more" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:10px;font-size:0.9rem;letter-spacing:1px;box-shadow:0 4px 12px rgba(201,169,110,0.25);">
-                                    <i class="bi bi-plus-circle me-2"></i>加菜 / 继续点餐
-                                </button>
                             </div>
                         </div>
 
@@ -673,24 +670,14 @@
 
                             <!-- 操作按钮 -->
                             <div class="row g-3">
-                                <div class="col-6 col-md-3">
-                                    <button class="btn w-100 py-3" id="end-add-more" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:12px;font-size:0.9rem;letter-spacing:1px;box-shadow:0 4px 12px rgba(201,169,110,0.25);">
-                                        <div style="font-size:1.3rem;">🍽️</div>直接加菜
+                                <div class="col-6">
+                                    <button class="btn w-100 py-3" id="end-add-more" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:12px;font-size:0.95rem;letter-spacing:1px;box-shadow:0 4px 12px rgba(201,169,110,0.25);">
+                                        <i class="bi bi-plus-circle me-2"></i>加菜 / 继续点餐
                                     </button>
                                 </div>
-                                <div class="col-6 col-md-3">
-                                    <button class="btn w-100 py-3" id="end-move-table" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;font-size:0.9rem;letter-spacing:1px;">
-                                        <div style="font-size:1.3rem;">🔀</div>挪桌
-                                    </button>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <button class="btn w-100 py-3" id="end-other-table" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;font-size:0.9rem;letter-spacing:1px;">
-                                        <div style="font-size:1.3rem;">🍱</div>给别桌点菜
-                                    </button>
-                                </div>
-                                <div class="col-6 col-md-3">
+                                <div class="col-6">
                                     <button class="btn w-100 py-3" id="new-recommendation" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;font-size:0.95rem;letter-spacing:1px;box-shadow:0 4px 16px rgba(184,58,42,0.2);">
-                                        <div style="font-size:1.3rem;">🔄</div>重新点餐
+                                        <i class="bi bi-arrow-repeat me-2"></i>重新点餐
                                     </button>
                                 </div>
                             </div>
@@ -935,7 +922,7 @@
         <div style="font-size:0.85rem;">合计 <strong id="float-cart-total" style="font-size:1.1rem;">0</strong> 元</div>
         <button class="btn btn-sm btn-light" style="font-weight:600;white-space:nowrap;" onclick="event.stopPropagation();showCart()">去结算 <i class="bi bi-arrow-right"></i></button>
     </div>
-    <!-- 加菜/点菜面板（桌号锁定） -->
+    <!-- 加菜/点菜面板（桌号锁定，全面板内操作，不依赖原生弹窗） -->
     <div class="modal fade" id="addon-modal" tabindex="-1" inert aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content" style="border-radius:16px;">
@@ -944,19 +931,55 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭" id="addon-close"></button>
                 </div>
                 <div class="modal-body text-center py-4">
-                    <p class="mb-1" style="font-size:1.05rem;color:var(--text);">为 <strong id="addon-table" style="color:var(--primary-accent);font-size:1.2rem;">-</strong> 号桌点菜</p>
-                    <p class="mb-4" style="font-size:0.78rem;color:var(--text-light);">桌号已锁定 · 订单 <span id="addon-order">#-</span> · 点菜期间不可更改</p>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <button class="btn w-100 py-3" id="addon-ai" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;letter-spacing:1px;">
-                                <div style="font-size:1.5rem;">🤖</div><small>AI 推荐</small>
+                    <p class="mb-3" style="font-size:0.82rem;color:var(--text-light);">当前订单 <span id="addon-order">#-</span> · 桌号 <strong id="addon-table" style="color:var(--primary-accent);">-</strong></p>
+                    <!-- 第一层：三个操作 -->
+                    <div id="addon-main" class="row g-3">
+                        <div class="col-12">
+                            <button class="btn w-100 py-3" id="addon-do-add" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:12px;letter-spacing:2px;">
+                                🍽️ 本桌加菜
                             </button>
                         </div>
                         <div class="col-6">
-                            <button class="btn w-100 py-3" id="addon-menu" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;letter-spacing:1px;">
-                                <div style="font-size:1.5rem;">📄</div><small>浏览菜单</small>
+                            <button class="btn w-100 py-2" id="addon-do-move" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;letter-spacing:1px;">
+                                🔀 挪桌
                             </button>
                         </div>
+                        <div class="col-6">
+                            <button class="btn w-100 py-2" id="addon-do-other" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;letter-spacing:1px;">
+                                🍱 给别桌加菜
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 挪桌 -->
+                    <div id="addon-view-move" style="display:none;">
+                        <p class="mb-2" style="color:var(--text);">将当前订单挪到几号桌？</p>
+                        <input type="text" id="addon-move-input" class="form-control text-center mb-3" placeholder="新桌号" style="max-width:160px;margin:0 auto;" inputmode="numeric">
+                        <button class="btn btn-sm px-4" id="addon-move-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;letter-spacing:2px;">确认挪桌</button>
+                        <button class="btn btn-link btn-sm" id="addon-back-1" style="color:var(--text-light);">返回</button>
+                    </div>
+                    <!-- 给别桌加菜 -->
+                    <div id="addon-view-other" style="display:none;">
+                        <p class="mb-2" style="color:var(--text);">给几号桌点菜？<small style="color:var(--text-light);">（将创建新订单）</small></p>
+                        <input type="text" id="addon-other-input" class="form-control text-center mb-3" placeholder="别桌桌号" style="max-width:160px;margin:0 auto;" inputmode="numeric">
+                        <button class="btn btn-sm px-4" id="addon-other-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;letter-spacing:2px;">开始点菜</button>
+                        <button class="btn btn-link btn-sm" id="addon-back-2" style="color:var(--text-light);">返回</button>
+                    </div>
+                    <!-- 第二层：选菜方式 -->
+                    <div id="addon-view-pick" style="display:none;">
+                        <p class="mb-3" style="font-size:1.02rem;color:var(--text);">为 <strong id="addon-pick-table" style="color:var(--primary-accent);font-size:1.2rem;">-</strong> 号桌点菜 <small style="color:var(--text-light);">· 桌号已锁定</small></p>
+                        <div class="row g-3 mb-2">
+                            <div class="col-6">
+                                <button class="btn w-100 py-3" id="addon-ai" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:12px;letter-spacing:1px;">
+                                    <div style="font-size:1.5rem;">🤖</div><small>AI 推荐</small>
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn w-100 py-3" id="addon-menu" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:12px;letter-spacing:1px;">
+                                    <div style="font-size:1.5rem;">📄</div><small>浏览菜单</small>
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-link btn-sm" id="addon-back-3" style="color:var(--text-light);">返回</button>
                     </div>
                 </div>
             </div>
@@ -979,7 +1002,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261137"></script>
+    <script src="script.js?v=20261139"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
