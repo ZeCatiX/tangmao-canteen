@@ -814,6 +814,36 @@ function showCart(){
  }
  showSection('cart-section');
 }
+ function rebuildEndView(){
+  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  if(!rounds.length){showMessage('提示','当前没有进行中的订单');return;}
+  const allItems=[];
+  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
+  const cnt=allItems.reduce((s,x)=>s+(x.qty||1),0);
+  const tot=Math.round(allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0)*100)/100;
+  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ec('end-order-id',ssGet('lastOrderId')||'-');
+  ec('end-order-table',ssGet('lastOrderTable')||'-');
+  ec('end-cart-count',cnt);
+  ec('end-cart-total',tot);
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
+  const esl=document.getElementById('end-settled-list');
+  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
+  const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
+  const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
+  // AI 属性读持久化状态（结算后推荐内存已归零，回看不能变「AI未启用」）
+  const isAI=ssGet('lastOrderAI')==='1';
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
+  const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
+  if(isAI){
+   const st=(()=>{try{return JSON.parse(ssGet('lastOrderStats')||'{}')}catch(e){return{}}})();
+   const es3=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+   es3('end-dish-count',st.count??'-');es3('end-avg-match',(st.avg??'-')+'%');es3('end-top-match',(st.top??'-')+'%');
+  }
+  if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
+  showSection('end-section');
+ }
+
 async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
@@ -842,6 +872,19 @@ async function checkoutCart(){
    // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
    if((d.error||'').includes('不能加菜')){ssRemove('lastOrderId');ssRemove('lastOrderTable');ssRemove('lastOrderItems');ssRemove('lastOrderRounds');ssRemove('lockedTable');ssRemove('lastOrderAI');ssRemove('lastOrderStats');ssRemove('tableNumber');}
    showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
+  }
+  // 给别桌加菜：该桌订单提交成功 → 恢复本桌订单状态（临时离开结束）
+  if(ssGet('sideOrder')==='1'){
+   const backup=(()=>{try{return JSON.parse(ssGet('orderBackup')||'null')}catch(e){return null}})();
+   ssRemove('sideOrder');ssRemove('orderBackup');
+   if(backup&&backup.lastOrderId){
+    ssSet('lastOrderId',backup.lastOrderId);ssSet('lastOrderTable',backup.lastOrderTable);ssSet('lastOrderItems',backup.lastOrderItems);ssSet('lastOrderRounds',backup.lastOrderRounds);ssSet('lastOrderAI',backup.lastOrderAI);ssSet('lastOrderStats',backup.lastOrderStats);ssSet('lockedTable',backup.lockedTable);
+    const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+    clearCart();
+    rebuildEndView();
+    showMessage('已提交','已为 '+tableNumber+' 号桌下单（订单 #'+d.orderId+'），已返回您的订单',null,3000);
+    return;
+   }
   }
   // 新订单（首单/换桌）不继承上一单的时间线轮次
   if(!isAddMore){ssRemove('lastOrderRounds');ssRemove('lastOrderItems');}
@@ -1147,8 +1190,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>ssRemove(k));showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>ssRemove(k));showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));showSection('home-section');});
  // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
  function showAddonView(v){
   ['main','move','other','pick'].forEach(x=>{
@@ -1215,6 +1258,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   if(!/^\d{1,4}$/.test(to)){showMessage('提示','桌号请输入 1-4 位数字');return;}
   const cur=ssGet('lockedTable')||ssGet('lastOrderTable')||'';
   if(to===cur){showMessage('提示','这就是当前桌号——本桌加菜请选「本桌加菜」');return;}
+  // 备份本桌订单状态（给别桌=临时离开，该桌订单提交后自动恢复本桌）
+  if(ssGet('lastOrderId')){
+   const backup={lastOrderId:ssGet('lastOrderId'),lastOrderTable:ssGet('lastOrderTable'),lastOrderItems:ssGet('lastOrderItems'),lastOrderRounds:ssGet('lastOrderRounds'),lastOrderAI:ssGet('lastOrderAI'),lastOrderStats:ssGet('lastOrderStats'),lockedTable:ssGet('lockedTable')};
+   ssSet('orderBackup',JSON.stringify(backup));ssSet('sideOrder','1');
+  }
   ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>ssRemove(k));
   ssSet('lastOrderTable',to);
   ssSet('lockedTable',to);
@@ -1227,35 +1275,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('addon-back-3',()=>showAddonView('main'));
  // 「查看订单」：从 localStorage 重建点餐完成界面（跳走/刷新后随时可回）
  click('banner-view-order',()=>rebuildEndView());
- function rebuildEndView(){
-  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
-  if(!rounds.length){showMessage('提示','当前没有进行中的订单');return;}
-  const allItems=[];
-  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
-  const cnt=allItems.reduce((s,x)=>s+(x.qty||1),0);
-  const tot=Math.round(allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0)*100)/100;
-  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  ec('end-order-id',ssGet('lastOrderId')||'-');
-  ec('end-order-table',ssGet('lastOrderTable')||'-');
-  ec('end-cart-count',cnt);
-  ec('end-cart-total',tot);
-  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
-  const esl=document.getElementById('end-settled-list');
-  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
-  const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
-  const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
-  // AI 属性读持久化状态（结算后推荐内存已归零，回看不能变「AI未启用」）
-  const isAI=ssGet('lastOrderAI')==='1';
-  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
-  const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
-  if(isAI){
-   const st=(()=>{try{return JSON.parse(ssGet('lastOrderStats')||'{}')}catch(e){return{}}})();
-   const es3=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-   es3('end-dish-count',st.count??'-');es3('end-avg-match',(st.avg??'-')+'%');es3('end-top-match',(st.top??'-')+'%');
-  }
-  if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
-  showSection('end-section');
- }
+ // rebuildEndView 已提升为顶层函数（checkoutCart 的别桌恢复也需调用）
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
