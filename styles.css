@@ -1070,3 +1070,8 @@ html.dark-mode #cart-loading { background: rgba(26,26,26,0.92) !important; }
 .cart-qty-minus { border-radius: 6px 0 0 6px !important; }
 .cart-qty-plus { border-radius: 0 6px 6px 0 !important; }
 .cart-qty-input { min-height: 30px !important; height: 30px !important; border-radius: 0 !important; }
+
+/* 弹窗滚动条补偿修复：强制滚动条常驻 + 禁用 Bootstrap 的 body padding 补偿
+   （长内容页开弹窗时 body 被加 padding-right 导致整页左移 5px，看起来像卡顿） */
+html { overflow-y: scroll !important; }
+body.modal-open { padding-right: 0 !important; }
