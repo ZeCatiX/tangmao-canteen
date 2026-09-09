@@ -443,8 +443,8 @@ function login(){
      // 隐藏home区登录/注册按钮
      const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
      if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
-     // 登录后重查「查看上次推荐」按钮（页面加载时可能是游客态被隐藏）
-     try{const vcb=document.getElementById('view-cached-btn');const c=vcb?localStorage.getItem('cachedRecommendations_'+u):null;if(vcb){if(c){const p=JSON.parse(c);if(Array.isArray(p)&&p.length>0)vcb.classList.remove('d-none');}else vcb.classList.add('d-none');}}catch(e){}
+     // 登录后重查首页两个"上次"按钮（页面加载时可能是游客态被隐藏）
+     if(window.updateHomeButtons)window.updateHomeButtons();
      showSection('preference-section');if(d.user?.preferences)loadUserPreferences(d.user.preferences);
    });})
  .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('login-btn');if(b)b.disabled=false;});
@@ -467,6 +467,7 @@ function register(){
      if(pi)pi.classList.remove('d-none');if(nu)nu.classList.add('d-none');
      const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
      if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+     if(window.updateHomeButtons)window.updateHomeButtons();
      showSection('preference-section');
    });})
  .catch(()=>{showMessage('注册失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('register-btn');if(b)b.disabled=false;});
@@ -639,7 +640,7 @@ function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
  if(token){fetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
- currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('错误','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
@@ -1359,22 +1360,28 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    document.getElementById('end-sat-hint').textContent='感谢您的评价！';
   });
  }
- // 检查是否显示"继续上次推荐"
- const savedPrefs=localStorage.getItem('savedPrefs');
- const cb2=document.getElementById('continue-btn');
- if(currentUser&&currentUser!=='guest'&&(savedPrefs||getUserData(currentUser)?.preferences?.spiciness)){if(cb2)cb2.classList.remove('d-none');}
-// 检查是否有缓存的推荐结果（仅登录用户，缓存按用户隔离；游客不支持）
-try {
-  const vcb = document.getElementById('view-cached-btn');
-  if (vcb) {
-    if (currentUser&&currentUser!=='guest') {
-      const cached = localStorage.getItem('cachedRecommendations_'+currentUser);
-      const parsed = cached ? JSON.parse(cached) : null;
-      if (Array.isArray(parsed) && parsed.length > 0) vcb.classList.remove('d-none');
-      else vcb.classList.add('d-none');
+ // 首页两个"上次"按钮的显隐（init/登录/退出统一走此函数，避免只在加载时判一次）
+ function updateHomeButtons(){
+  try{
+   const savedPrefs=localStorage.getItem('savedPrefs');
+   const cb2=document.getElementById('continue-btn');
+   if(cb2){
+    if(currentUser&&currentUser!=='guest'&&(savedPrefs||getUserData(currentUser)?.preferences?.spiciness))cb2.classList.remove('d-none');
+    else cb2.classList.add('d-none');
+   }
+   const vcb=document.getElementById('view-cached-btn');
+   if(vcb){
+    if(currentUser&&currentUser!=='guest'){
+     const cached=localStorage.getItem('cachedRecommendations_'+currentUser);
+     const parsed=cached?JSON.parse(cached):null;
+     if(Array.isArray(parsed)&&parsed.length>0)vcb.classList.remove('d-none');
+     else vcb.classList.add('d-none');
     } else vcb.classList.add('d-none');
-  }
-} catch(e) {}
+   }
+  }catch(e){}
+ }
+ window.updateHomeButtons=updateHomeButtons;
+ updateHomeButtons();
 click('view-cached-btn', () => {
   // 游客不支持查看上次推荐
   if(!currentUser||currentUser==='guest'){showMessage('提示','登录后才能查看上次推荐');return;}
