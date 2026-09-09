@@ -1170,6 +1170,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-move-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写新桌号');return;}
+  const cur=localStorage.getItem('lastOrderTable')||localStorage.getItem('lockedTable')||'';
+  if(to===cur){showMessage('提示','新桌号与当前桌号相同');return;}
   const oid=parseInt(localStorage.getItem('lastOrderId')||'0');
   if(!oid){showMessage('提示','当前没有进行中的订单');return;}
   fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:to})})
@@ -1188,6 +1190,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-other-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写桌号');return;}
+  const cur=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'';
+  if(to===cur){showMessage('提示','这就是当前桌号——本桌加菜请选「本桌加菜」');return;}
   ['lastOrderId','lastOrderItems','lastOrderRounds'].forEach(k=>localStorage.removeItem(k));
   localStorage.setItem('lastOrderTable',to);
   localStorage.setItem('lockedTable',to);
