@@ -371,6 +371,47 @@ function showDataset(){
  showSection('dataset-section');
  renderMenuTable();
 }
+// ─── 分类元数据（唯一配置源：分类新增/改名只需改这里，下拉框/快捷按钮/图标/排序全部自动生成）───
+const CATEGORY_CONFIG=[
+ {cat:'主食',emoji:'🍚',tab:''},
+ {cat:'招牌与游西安必打卡',emoji:'🏆',tab:'招牌'},
+ {cat:'热销菜品',emoji:'🔥',tab:'热销'},
+ {cat:'传承陕菜',emoji:'🍲',tab:'陕菜'},
+ {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜'},
+ {cat:'特色凉菜',emoji:'🥗',tab:'凉菜'},
+ {cat:'田园时蔬·汤羹',emoji:'🥬',tab:'汤羹'},
+ {cat:'陕西小吃',emoji:'🥟',tab:'小吃'},
+ {cat:'飲品与酒水',emoji:'🍹',tab:'饮品'}
+];
+function catOrderOf(cat){const i=CATEGORY_CONFIG.findIndex(c=>c.cat===cat);return i===-1?999:i;}
+function catEmojiOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m?m.emoji:'🍽';}
+function catTabLabelOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.tab?m.tab:cat;}
+// 从菜品实际分类生成分类 UI；分类集合变化时自动重建并保留当前选中
+function buildCategoryUI(){
+ const cats=[...new Set(dishData.map(d=>d.category).filter(Boolean))].sort((a,b)=>catOrderOf(a)-catOrderOf(b)||a.localeCompare(b,'zh'));
+ const key=cats.join('|');
+ const tabs=document.getElementById('category-tabs');
+ if(tabs&&tabs.dataset.cats!==key){
+  const cur=(tabs.querySelector('.cat-tab.active')||{dataset:{}}).dataset.cat||'';
+  tabs.innerHTML='<button class="btn btn-sm cat-tab" data-cat="" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;">全部</button>'
+   +cats.map(c=>'<button class="btn btn-sm cat-tab" data-cat="'+esc(c)+'" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;">'+esc(catTabLabelOf(c))+'</button>').join('');
+  tabs.dataset.cats=key;
+  tabs.querySelectorAll('.cat-tab').forEach(t=>{
+   const on=t.dataset.cat===cur;
+   t.classList.toggle('active',on);
+   t.style.background=on?'var(--primary)':'transparent';
+   t.style.color=on?'#fff':'var(--text)';
+   t.style.border=on?'none':'1px solid var(--gold-light)';
+  });
+ }
+ const sel=document.getElementById('menu-filter-cat');
+ if(sel&&sel.dataset.cats!==key){
+  const cur=sel.value;
+  sel.innerHTML='<option value="">全部分类</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join('');
+  sel.dataset.cats=key;
+  if(cur&&cats.includes(cur))sel.value=cur;
+ }
+}
 function renderMenuTable(){
  const container=document.getElementById('dataset-table-body');if(!container)return;
  // 如果 dishData 为空，最多重试 3 次
@@ -380,12 +421,12 @@ function renderMenuTable(){
   return;
  }
  renderMenuTable._retryCount=0;
+ buildCategoryUI();
  const q=document.getElementById('menu-search')?.value?.trim().toLowerCase()||'';
  const cat=document.getElementById('menu-filter-cat')?.value||'';
  const spice=document.getElementById('menu-filter-spice')?.value||'';
  const priceRange=document.getElementById('menu-filter-price')?.value||'';
- const catOrder=['主食','招牌与游西安必打卡','招牌','热销菜品','传承陕菜','江湖海鲜','特色凉菜','田园时蔬·汤羹','田园时蔬','陕西小吃','飲品与酒水'];
- const sorted=[...dishData].sort((a,b)=>catOrder.indexOf(a.category)-catOrder.indexOf(b.category)||a.id-b.id);
+ const sorted=[...dishData].sort((a,b)=>catOrderOf(a.category)-catOrderOf(b.category)||a.id-b.id);
  const filtered=sorted.filter(d=>{
   if(q&&!d.name.toLowerCase().includes(q))return false;
   if(cat&&d.category!==cat)return false;
@@ -406,8 +447,7 @@ function renderMenuTable(){
  filtered.forEach(d=>{
   if(d.category!==lastCat){
    lastCat=d.category;lastSub='';
-   const catEmoji={'主食':'🍚','招牌':'🏆','招牌与游西安必打卡':'🏆','热销菜品':'🔥','传承陕菜':'🍲','江湖海鲜':'🦐','特色凉菜':'🥗','田园时蔬':'🥬','田园时蔬·汤羹':'🥬','陕西小吃':'🥟','飲品与酒水':'🍹'}[d.category]||'🍽';
-   html+='<div class="dish-cat-sep">'+catEmoji+' '+esc(d.category)+'</div>';
+   html+='<div class="dish-cat-sep">'+catEmojiOf(d.category)+' '+esc(d.category)+'</div>';
   }
   // 飲品与酒水二级分隔
   if(d.category==='飲品与酒水'){
@@ -1296,14 +1336,23 @@ document.addEventListener('DOMContentLoaded',function(){
  const cartTable=$('cart-table-number');
  if(cartTable){const saved=ssGet('tableNumber');if(saved)cartTable.value=saved;cartTable.addEventListener('input',()=>syncTableNumber(cartTable));}
  // 分类Tab切换
- document.querySelectorAll('.cat-tab').forEach(tab=>{
-  tab.addEventListener('click',()=>{
-   document.querySelectorAll('.cat-tab').forEach(t=>{t.classList.remove('active');t.style.background='transparent';t.style.color='var(--text)';t.style.border='1px solid var(--gold-light)';});
-   tab.classList.add('active');tab.style.background='var(--primary)';tab.style.color='#fff';tab.style.border='none';
-   const cat=tab.dataset.cat;
-   const catSel=$('menu-filter-cat');if(catSel){catSel.value=cat;catSel.dispatchEvent(new Event('change'));}
+ // 分类快捷按钮（事件委托：按钮由 buildCategoryUI 动态生成）
+ (function(){
+  const wrap=document.getElementById('category-tabs');
+  if(!wrap)return;
+  wrap.addEventListener('click',e=>{
+   const tab=e.target.closest('.cat-tab');if(!tab)return;
+   wrap.querySelectorAll('.cat-tab').forEach(t=>{
+    const on=t===tab;
+    t.classList.toggle('active',on);
+    t.style.background=on?'var(--primary)':'transparent';
+    t.style.color=on?'#fff':'var(--text)';
+    t.style.border=on?'none':'1px solid var(--gold-light)';
+   });
+   const catSel=document.getElementById('menu-filter-cat');
+   if(catSel){catSel.value=tab.dataset.cat||'';catSel.dispatchEvent(new Event('change'));}
   });
- });
+ })();
  // 全部菜单页滚动时保存位置
  window.addEventListener('scroll',()=>{if(document.getElementById('dataset-section')?.classList.contains('active'))sessionStorage.setItem('datasetScrollY',window.scrollY);});
 

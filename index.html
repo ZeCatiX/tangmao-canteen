@@ -797,18 +797,8 @@
                         <div class="mb-4">
                             <p>浏览本店全部菜品，共 <span id="menu-count">62</span> 道。</p>
                         </div>
-                        <!-- 分类Tab -->
-                        <div class="category-tabs d-flex flex-wrap gap-2 mb-3" id="category-tabs">
-                            <button class="btn btn-sm cat-tab active" data-cat="" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:var(--primary);color:#fff;border:none;">全部</button>
-                            <button class="btn btn-sm cat-tab" data-cat="招牌与游西安必打卡" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">招牌</button>
-                            <button class="btn btn-sm cat-tab" data-cat="陕西小吃" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">小吃</button>
-                            <button class="btn btn-sm cat-tab" data-cat="特色凉菜" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">凉菜</button>
-                            <button class="btn btn-sm cat-tab" data-cat="热销菜品" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">热销</button>
-                            <button class="btn btn-sm cat-tab" data-cat="传承陕菜" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">陕菜</button>
-                            <button class="btn btn-sm cat-tab" data-cat="田园时蔬·汤羹" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">汤羹</button>
-                            <button class="btn btn-sm cat-tab" data-cat="江湖海鲜" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">海鲜</button>
-                            <button class="btn btn-sm cat-tab" data-cat="飲品与酒水" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;background:transparent;border:1px solid var(--gold-light);color:var(--text);">饮品</button>
-                        </div>
+                        <!-- 分类Tab（由 script.js 的 buildCategoryUI 从菜品数据生成） -->
+                        <div class="category-tabs d-flex flex-wrap gap-2 mb-3" id="category-tabs"></div>
 
                         <!-- 搜索和筛选 -->
                         <div class="row g-2 mb-4">
@@ -818,7 +808,6 @@
                             <div class="col-md-2">
                                 <select class="form-select" id="menu-filter-cat" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                                     <option value="">全部分类</option>
-                                    <option>主食</option><option>招牌与游西安必打卡</option><option>热销菜品</option><option>传承陕菜</option><option>江湖海鲜</option><option>特色凉菜</option><option>田园时蔬·汤羹</option><option>陕西小吃</option><option>飲品与酒水</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
@@ -1054,7 +1043,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261170"></script>
+    <script src="script.js?v=20261171"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
