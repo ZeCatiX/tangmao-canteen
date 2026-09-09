@@ -14,31 +14,34 @@
   <style>
     :root { --primary: #b83a2a; --primary-dark: #8b1a1a; --primary-light: #cf5240; --gold: #c9a96e; --gold-light: #e8d5b0; --gold-dark: #a8884e; --green: #2d8a6e; --cream: #faf6f0; --cream-dark: #f0e8d8; --brown: #1a0f0a; --brown-light: #4a3028; --text: #2c1810; --text-light: #756558; --radius: 12px; --radius-lg: 18px; --ease: cubic-bezier(0.4, 0, 0.2, 1); }
     html.dark-mode { --cream: #1a1a1a; --cream-dark: #1a1a1a; --text: #e0d5c1; --text-light: #a89880; --brown: #e0d5c1; --brown-light: #c4b698; --gold: #c9a96e; --gold-light: #d4b87a; --primary: #d0453a; --primary-dark: #b8352a; }
+    /* 厨房看板配色：默认深色，切换 light-mode 为浅色 */
+    :root { --k-bg:#1a0f0a; --k-card:#2c1810; --k-text:#e8d5b0; --k-muted:#8b7a6a; --k-border:rgba(201,169,110,0.15); --k-input-bg:#1a0f0a; --k-overlay:rgba(26,15,10,0.95); }
+    html.light-mode { --k-bg:#faf6f0; --k-card:#ffffff; --k-text:#2c1810; --k-muted:#756558; --k-border:rgba(201,169,110,0.4); --k-input-bg:#ffffff; --k-overlay:rgba(250,246,240,0.95); }
     * { box-sizing: border-box; }
-    body { background: #1a0f0a; font-family: 'Noto Sans SC', sans-serif; padding: 20px; }
+    body { background: var(--k-bg); font-family: 'Noto Sans SC', sans-serif; padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; color: #c9a96e; margin-bottom: 20px; }
     .header h2 { font-family: 'Noto Serif SC', serif; letter-spacing: 4px; margin: 0; }
-    .header span { color: #8b7a6a; font-size: 0.9rem; }
-    .order-card { background: #2c1810; border: 1px solid rgba(201,169,110,0.15); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .header span { color: var(--k-muted); font-size: 0.9rem; }
+    .order-card { background: var(--k-card); border: 1px solid var(--k-border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
     .order-card .table-num { font-size: 1.3rem; font-weight: 700; color: #c9a96e; }
-    .order-card .time { font-size: 0.78rem; color: #8b7a6a; }
+    .order-card .time { font-size: 0.78rem; color: var(--k-muted); }
     .order-card .items { margin: 8px 0; }
-    .order-card .item { display: flex; justify-content: space-between; color: #e8d5b0; font-size: 0.9rem; padding: 4px 0; }
+    .order-card .item { display: flex; justify-content: space-between; color: var(--k-text); font-size: 0.9rem; padding: 4px 0; }
     .order-card .status { font-size: 0.78rem; color: #f1c40f; }
     .btn-complete { background: #27ae60; color: #fff; border: none; border-radius: 8px; padding: 6px 20px; font-size: 0.85rem; cursor: pointer; }
     .btn-complete:hover { background: #219a52; }
-    .empty { text-align: center; color: #8b7a6a; padding: 60px 0; font-size: 1rem; }
-    .refresh-bar { text-align: center; color: #8b7a6a; font-size: 0.78rem; margin-top: 20px; }
+    .empty { text-align: center; color: var(--k-muted); padding: 60px 0; font-size: 1rem; }
+    .refresh-bar { text-align: center; color: var(--k-muted); font-size: 0.78rem; margin-top: 20px; }
     /* 登录覆盖层 */
-    .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26,15,10,0.95); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .login-box { background: #2c1810; border: 1px solid rgba(201,169,110,0.3); border-radius: 12px; padding: 30px; width: 320px; }
+    .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--k-overlay); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .login-box { background: var(--k-card); border: 1px solid var(--k-border); border-radius: 12px; padding: 30px; width: 320px; }
     .login-box h3 { color: #c9a96e; text-align: center; margin-bottom: 20px; font-family: 'Noto Serif SC', serif; }
-    .login-box input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid rgba(201,169,110,0.3); border-radius: 6px; background: #1a0f0a; color: #e8d5b0; font-size: 0.9rem; }
+    .login-box input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid var(--k-border); border-radius: 6px; background: var(--k-input-bg); color: var(--k-text); font-size: 0.9rem; }
     .login-box input:focus { outline: none; border-color: #c9a96e; }
     .login-box button { width: 100%; padding: 10px; background: #c9a96e; color: #1a0f0a; border: none; border-radius: 6px; font-size: 0.95rem; cursor: pointer; font-weight: 600; }
     .login-box button:hover { background: #d4b87a; }
     .login-box .error { color: #e74c3c; font-size: 0.8rem; text-align: center; margin-top: 8px; display: none; }
-    .login-box .hint { color: #8b7a6a; font-size: 0.75rem; text-align: center; margin-top: 10px; }
+    .login-box .hint { color: var(--k-muted); font-size: 0.75rem; text-align: center; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -179,15 +182,16 @@
     function initDarkMode() {
       const btn = document.getElementById('dark-mode-toggle');
       if (!btn) return;
-      const saved = localStorage.getItem('darkMode');
-      const prefers = window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches;
-      const dark = saved !== null ? saved === 'true' : prefers;
-      if (dark) document.documentElement.classList.add('dark-mode');
+      // 厨房默认深色；用独立键，避免与前台深浅设置互相干扰
+      const saved = localStorage.getItem('kitchenDarkMode');
+      let dark = saved !== null ? saved === 'true' : true;
+      document.documentElement.classList.toggle('light-mode', !dark);
       btn.textContent = dark ? '☀️' : '🌙';
       btn.addEventListener('click', function() {
-        const isDark = document.documentElement.classList.toggle('dark-mode');
-        localStorage.setItem('darkMode', isDark);
-        this.textContent = isDark ? '☀️' : '🌙';
+        dark = !dark;
+        document.documentElement.classList.toggle('light-mode', !dark);
+        localStorage.setItem('kitchenDarkMode', dark);
+        this.textContent = dark ? '☀️' : '🌙';
       });
     }
 
