@@ -802,7 +802,13 @@ function checkoutCart(){
  if(clo)clo.style.display='flex';
  fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
-  if(!d.success){showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;}
+  if(!d.success){
+   // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
+   if((d.error||'').includes('不能加菜')){localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');}
+   showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
+  }
+  // 新订单（首单/换桌）不继承上一单的时间线轮次
+  if(!isAddMore){localStorage.removeItem('lastOrderRounds');localStorage.removeItem('lastOrderItems');}
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
@@ -841,6 +847,8 @@ function checkoutCart(){
    es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
   }
   clearCart();
+  // 结算完成，推荐状态归零（避免残留 recommendedIds/推荐统计影响后续菜单加购的结算与重新推荐）
+  resetRecommendation();
   setTimeout(()=>{
    const clo2=document.getElementById('cart-loading');if(clo2)clo2.style.display='none';
    showSection('end-section');
