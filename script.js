@@ -1378,6 +1378,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    document.getElementById('end-sat-hint').textContent='感谢您的评价！';
   });
  }
+ // 页面加载时清理被刷新打断的「给别桌」中间态（暂存/备份跨刷新无意义）
+ ['sidePendingTable','sideOrder','orderBackup'].forEach(k=>ssRemove(k));
  // 首页两个"上次"按钮的显隐（init/登录/退出统一走此函数，避免只在加载时判一次）
  function updateHomeButtons(){
   try{
