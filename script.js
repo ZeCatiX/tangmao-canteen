@@ -833,7 +833,7 @@ async function checkoutCart(){
  .then(r=>r.json()).then(d=>{
   if(!d.success){
    // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
-   if((d.error||'').includes('不能加菜')){localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');}
+   if((d.error||'').includes('不能加菜')){localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');localStorage.removeItem('lockedTable');localStorage.removeItem('lastOrderAI');localStorage.removeItem('lastOrderStats');localStorage.removeItem('tableNumber');}
    showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
   }
   // 新订单（首单/换桌）不继承上一单的时间线轮次
@@ -876,7 +876,10 @@ async function checkoutCart(){
    const top=rates.length?Math.round(Math.max(...rates)*100):0;
    const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
    es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
-  }
+   // AI 属性与统计持久化（rebuildEndView 回看/刷新后保持一致）
+   localStorage.setItem('lastOrderAI','1');
+   localStorage.setItem('lastOrderStats',JSON.stringify({count:cnt,avg,top}));
+  }else{localStorage.setItem('lastOrderAI','0');localStorage.removeItem('lastOrderStats');}
   clearCart();
   // 结算完成，推荐状态归零（避免残留 recommendedIds/推荐统计影响后续菜单加购的结算与重新推荐）
   resetRecommendation();
@@ -1143,8 +1146,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>localStorage.removeItem(k));showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>localStorage.removeItem(k));showSection('home-section');});
  // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
  function showAddonView(v){
   ['main','move','other','pick'].forEach(x=>{
@@ -1199,7 +1202,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   if(!to){showMessage('提示','请填写桌号');return;}
   const cur=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'';
   if(to===cur){showMessage('提示','这就是当前桌号——本桌加菜请选「本桌加菜」');return;}
-  ['lastOrderId','lastOrderItems','lastOrderRounds'].forEach(k=>localStorage.removeItem(k));
+  ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>localStorage.removeItem(k));
   localStorage.setItem('lastOrderTable',to);
   localStorage.setItem('lockedTable',to);
   showAddonView('pick');
@@ -1228,9 +1231,15 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   if(esl)esl.innerHTML=renderRoundsHTML(rounds);
   const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
   const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
-  const isAI=currentRecommendations&&currentRecommendations.length>0;
+  // AI 属性读持久化状态（结算后推荐内存已归零，回看不能变「AI未启用」）
+  const isAI=localStorage.getItem('lastOrderAI')==='1';
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
+  if(isAI){
+   const st=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderStats')||'{}')}catch(e){return{}}})();
+   const es3=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+   es3('end-dish-count',st.count??'-');es3('end-avg-match',(st.avg??'-')+'%');es3('end-top-match',(st.top??'-')+'%');
+  }
   if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
   showSection('end-section');
  }
