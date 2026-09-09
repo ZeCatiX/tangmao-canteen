@@ -309,6 +309,13 @@ function showSection(sectionId,skipScroll){
    sel.addEventListener('change',updateModeDisplay);
   }
   const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
+  // 桌号锁定：加菜流程中偏好页桌号同样锁定
+  const lockedTable1=localStorage.getItem('lockedTable')||'';
+  const ptb=document.getElementById('pref-table-number');
+  if(ptb){
+   if(lockedTable1){ptb.value=lockedTable1;ptb.disabled=true;ptb.style.background='var(--cream-dark)';}
+   else{ptb.disabled=false;ptb.style.background='';}
+  }
   updateModeDisplay();
  }
  updateFloatBar();
@@ -745,6 +752,13 @@ function renderRoundsHTML(rounds){
 function showCart(){
  // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
  const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+ // 桌号锁定：加菜/给别桌流程中桌号不可改
+ const lockedTable0=localStorage.getItem('lockedTable')||'';
+ const tin=document.getElementById('cart-table-number');
+ if(tin){
+  if(lockedTable0){tin.value=lockedTable0;tin.disabled=true;tin.style.background='var(--cream-dark)';}
+  else{tin.disabled=false;tin.style.background='';}
+ }
  window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
@@ -786,8 +800,10 @@ async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
  if(bEl)bEl.disabled=true;
+ // 桌号：锁定状态优先（加菜/给别桌流程中不可改），否则读输入框
+ const lockedTable=localStorage.getItem('lockedTable')||'';
  const tableInput=document.getElementById('cart-table-number');
- const tableNumber=tableInput?tableInput.value.trim():'';
+ const tableNumber=lockedTable||(tableInput?tableInput.value.trim():'');
  if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
  let lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
@@ -826,6 +842,7 @@ async function checkoutCart(){
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
   localStorage.setItem('lastOrderId',d.orderId);
   localStorage.setItem('lastOrderTable',tableNumber);
+  localStorage.setItem('lockedTable',tableNumber);
   // 记录本轮（时间线轮次）
   const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
   const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
@@ -1125,9 +1142,50 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');showSection('home-section');});
- click('end-add-more',()=>{resetRecommendation();showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable'].forEach(k=>localStorage.removeItem(k));showSection('home-section');});
+ // ─── 加菜面板（桌号锁定）───
+ function openAddonPanel(){
+  const m=document.getElementById('addon-modal');if(!m)return;
+  const t=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'-';
+  const at=document.getElementById('addon-table');if(at)at.textContent=t;
+  const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(localStorage.getItem('lastOrderId')||'-');
+  m.inert=false;m.removeAttribute('aria-hidden');
+  bootstrap.Modal.getOrCreateInstance(m).show();
+ }
+ function closeAddonPanel(){
+  const m=document.getElementById('addon-modal');if(!m)return;
+  m.inert=true;
+  const inst=bootstrap.Modal.getInstance(m);if(inst)inst.hide();
+ }
+ click('end-add-more',()=>openAddonPanel());
+ // 挪桌：原订单改送新桌（不需要点菜）
+ click('end-move-table',()=>{
+  const cur=localStorage.getItem('lastOrderTable')||localStorage.getItem('lockedTable')||'';
+  const to=prompt('将 '+cur+' 号桌的订单挪到几号桌？','');
+  if(!to||!to.trim()||to.trim()===cur)return;
+  const oid=parseInt(localStorage.getItem('lastOrderId')||'0');
+  if(!oid){showMessage('提示','当前没有进行中的订单');return;}
+  fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:to.trim()})})
+  .then(r=>r.json()).then(d=>{
+   if(!d.success){showMessage('挪桌失败',d.error||'服务器错误');return;}
+   localStorage.setItem('lastOrderTable',to.trim());localStorage.setItem('lockedTable',to.trim());
+   const et=document.getElementById('end-order-table');if(et)et.textContent=to.trim();
+   const ei=document.getElementById('settled-order-info');if(ei&&ei.textContent)ei.textContent=ei.textContent.replace(/桌号 \S+/,'桌号 '+to.trim());
+   showMessage('挪桌成功','订单已改送 '+to.trim()+' 号桌',null,2500);
+  }).catch(()=>showMessage('挪桌失败','网络错误，请稍后重试'));
+ });
+ // 给别桌点菜：填桌号 → 切换到新桌新订单 → 打开面板
+ click('end-other-table',()=>{
+  const to=prompt('给几号桌点菜？','');
+  if(!to||!to.trim())return;
+  ['lastOrderId','lastOrderItems','lastOrderRounds'].forEach(k=>localStorage.removeItem(k));
+  localStorage.setItem('lastOrderTable',to.trim());
+  localStorage.setItem('lockedTable',to.trim());
+  openAddonPanel();
+ });
+ click('addon-ai',()=>{closeAddonPanel();resetRecommendation();showSection('preference-section');});
+ click('addon-menu',()=>{closeAddonPanel();showDataset();});
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
