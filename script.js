@@ -406,7 +406,7 @@ function renderMenuTable(){
  filtered.forEach(d=>{
   if(d.category!==lastCat){
    lastCat=d.category;lastSub='';
-   const catEmoji={'主食':'🍚','招牌':'🏆','热销菜品':'🔥','传承陕菜':'🍲','江湖海鲜':'🦐','特色凉菜':'🥗','田园时蔬':'🥬','陕西小吃':'🥟','飲品与酒水':'🍹'}[d.category]||'🍽';
+   const catEmoji={'主食':'🍚','招牌':'🏆','招牌与游西安必打卡':'🏆','热销菜品':'🔥','传承陕菜':'🍲','江湖海鲜':'🦐','特色凉菜':'🥗','田园时蔬':'🥬','田园时蔬·汤羹':'🥬','陕西小吃':'🥟','飲品与酒水':'🍹'}[d.category]||'🍽';
    html+='<div class="dish-cat-sep">'+catEmoji+' '+esc(d.category)+'</div>';
   }
   // 飲品与酒水二级分隔
