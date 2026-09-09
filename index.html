@@ -504,6 +504,11 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
+                    <!-- 进行中订单提示条（跳走后回来也能找到订单） -->
+                    <div id="cart-order-banner" class="mb-3" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 14px;background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.3);border-radius:10px;">
+                        <span style="font-size:0.85rem;color:var(--text);">正在为 <strong id="banner-table" style="color:var(--primary-accent);">-</strong> 号桌加菜 · 订单 <span id="banner-oid" style="color:var(--primary-accent);">#-</span></span>
+                        <button class="btn btn-sm" id="banner-view-order" style="background:var(--gold);color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;">查看订单</button>
+                    </div>
                     <!-- 已结算区（本次用餐已下单的菜） -->
                     <div id="settled-section" class="mb-3" style="display:none;">
                         <div class="d-flex align-items-center mb-2 flex-wrap" style="gap:8px;">
@@ -1002,7 +1007,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261140"></script>
+    <script src="script.js?v=20261141"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>

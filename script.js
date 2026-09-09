@@ -757,6 +757,13 @@ function renderRoundsHTML(rounds){
 function showCart(){
  // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
  const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+ // 进行中订单提示条（跳走后回来的入口）
+ const ltB=localStorage.getItem('lockedTable')||'',loB=localStorage.getItem('lastOrderId')||'';
+ const banner=document.getElementById('cart-order-banner');
+ if(banner){
+  if(ltB&&loB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
+  else banner.style.display='none';
+ }
  // 桌号锁定：加菜/给别桌流程中桌号不可改
  const lockedTable0=localStorage.getItem('lockedTable')||'';
  const tin=document.getElementById('cart-table-number');
@@ -1202,6 +1209,31 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('addon-back-1',()=>showAddonView('main'));
  click('addon-back-2',()=>showAddonView('main'));
  click('addon-back-3',()=>showAddonView('main'));
+ // 「查看订单」：从 localStorage 重建点餐完成界面（跳走/刷新后随时可回）
+ click('banner-view-order',()=>rebuildEndView());
+ function rebuildEndView(){
+  const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  if(!rounds.length){showMessage('提示','当前没有进行中的订单');return;}
+  const allItems=[];
+  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
+  const cnt=allItems.reduce((s,x)=>s+(x.qty||1),0);
+  const tot=Math.round(allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0)*100)/100;
+  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ec('end-order-id',localStorage.getItem('lastOrderId')||'-');
+  ec('end-order-table',localStorage.getItem('lastOrderTable')||'-');
+  ec('end-cart-count',cnt);
+  ec('end-cart-total',tot);
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
+  const esl=document.getElementById('end-settled-list');
+  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
+  const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
+  const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
+  const isAI=currentRecommendations&&currentRecommendations.length>0;
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
+  const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
+  if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
+  showSection('end-section');
+ }
  // 购物车事件绑定
  click('nav-cart',e=>{e.preventDefault();showCart();});
  click('cart-close-btn',()=>{
