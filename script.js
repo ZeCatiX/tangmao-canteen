@@ -804,9 +804,12 @@ function checkoutCart(){
  const lastOrderTable=localStorage.getItem('lastOrderTable')||'';
  const isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
  const url=isAddMore?('/api/order/'+lastOrderId+'/add'):'/api/order';
+ // 点击后立即显示过渡动画（不等 fetch，网络慢也有反馈）
+ const cc=document.getElementById('cart-content');
+ if(cc){cc.innerHTML='<div class="text-center py-5"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-3" style="color:var(--text-light);letter-spacing:2px;font-size:0.9rem;">正在提交订单...</p><div class="mt-2" style="width:120px;height:3px;background:var(--gold-light);border-radius:2px;margin:0 auto;overflow:hidden;"><div style="width:40%;height:100%;background:var(--gold);border-radius:2px;animation:loadingBar 0.8s ease-in-out infinite alternate;"></div></div></div>';}
  fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
-  if(!d.success){showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');return;}
+  if(!d.success){showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;}
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
@@ -844,15 +847,12 @@ function checkoutCart(){
    const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
    es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
   }
-  // 立即显示过渡动画（不等 fetch，避免网络慢时购物车无反馈）
-  const cc=document.getElementById('cart-content');
-  if(cc){cc.innerHTML='<div class="text-center py-5"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-3" style="color:var(--text-light);letter-spacing:2px;font-size:0.9rem;">正在提交订单...</p><div class="mt-2" style="width:120px;height:3px;background:var(--gold-light);border-radius:2px;margin:0 auto;overflow:hidden;"><div style="width:40%;height:100%;background:var(--gold);border-radius:2px;animation:loadingBar 0.8s ease-in-out infinite alternate;"></div></div></div>';}
   clearCart();
   setTimeout(()=>{
    showSection('end-section');
    if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
   },800);
- }).catch(()=>showMessage(isAddMore?'加菜失败':'下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
+ }).catch(()=>{showMessage(isAddMore?'加菜失败':'下单失败','网络错误，请稍后重试');showCart();}).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
 
 // 桌号同步: 偏好页输入 → localStorage → 购物车自动填
