@@ -803,9 +803,9 @@ function showCart(){
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
    return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+'</td>'
-    +'<td><div class="input-group input-group-sm" style="width:100px;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">−</button>'
-    +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:36px;height:28px;font-size:0.8rem;">'
-    +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">+</button></div></td>'
+    +'<td><div class="input-group input-group-sm" style="width:100px;align-items:center;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;height:28px;line-height:1;display:flex;align-items:center;justify-content:center;">−</button>'
+    +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:36px;height:28px;font-size:0.8rem;line-height:28px;padding:0;">'
+    +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;height:28px;line-height:1;display:flex;align-items:center;justify-content:center;">+</button></div></td>'
     +'<td>'+price.toFixed(2)+'</td><td style="color:#c0392b;font-weight:600;">'+subtotal.toFixed(2)+'</td>'
     +'<td><button class="btn btn-sm btn-outline-danger cart-remove-btn" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;font-size:0.7rem;"><i class="bi bi-x"></i></button></td></tr>';
   }).join('');
