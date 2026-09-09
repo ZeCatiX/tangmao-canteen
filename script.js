@@ -23,6 +23,10 @@ function authHeaders(){const t=localStorage.getItem('userToken');return t?{'Auth
 const DEFAULT_DISH_IMG='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
 function dishImg(url,size,alt){size=size||50;const u=url||'';const st='width:'+size+'px;height:'+size+'px;border-radius:6px;object-fit:cover;';const st2='width:'+size+'px;height:'+size+'px;display:inline-flex;align-items:center;justify-content:center;font-size:'+Math.round(size*0.6)+'px;';if(u.startsWith('/uploads/')||u.startsWith('data:'))return '<img src="'+esc(u)+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';if(u)return '<span style="'+st2+'">'+esc(u)+'</span>';return '<img src="'+DEFAULT_DISH_IMG+'" style="'+st+'" alt="'+esc(alt||'')+'" loading="lazy">';}
 
+// 订单/桌号状态存 sessionStorage（一次浏览会话内有效：跳走/刷新保留，关标签重开=新用餐自动干净）
+function ssGet(k){return sessionStorage.getItem(k)}
+function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
+function ssRemove(k){sessionStorage.removeItem(k)}
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
 function safeFetch(url, opts) {
   const fetcher = opts?.method
@@ -310,7 +314,7 @@ function showSection(sectionId,skipScroll){
   }
   const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
   // 桌号锁定：加菜流程中偏好页桌号同样锁定
-  const lockedTable1=localStorage.getItem('lockedTable')||'';
+  const lockedTable1=ssGet('lockedTable')||'';
   const ptb=document.getElementById('pref-table-number');
   if(ptb){
    if(lockedTable1){ptb.value=lockedTable1;ptb.disabled=true;ptb.style.background='var(--cream-dark)';}
@@ -758,30 +762,30 @@ function showCart(){
  // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
  const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
  // 进行中订单提示条（跳走后回来的入口）
- const ltB=localStorage.getItem('lockedTable')||'',loB=localStorage.getItem('lastOrderId')||'';
+ const ltB=ssGet('lockedTable')||'',loB=ssGet('lastOrderId')||'';
  const banner=document.getElementById('cart-order-banner');
  if(banner){
   if(ltB&&loB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
   else banner.style.display='none';
  }
  // 桌号锁定：加菜/给别桌流程中桌号不可改
- const lockedTable0=localStorage.getItem('lockedTable')||'';
+ const lockedTable0=ssGet('lockedTable')||'';
  const tin=document.getElementById('cart-table-number');
  if(tin){
   if(lockedTable0){tin.value=lockedTable0;tin.disabled=true;tin.style.background='var(--cream-dark)';}
-  else{tin.disabled=false;tin.style.background='';}
+  else{tin.disabled=false;tin.style.background='';if(!ssGet('tableNumber'))tin.value='';}
  }
  window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
  // 已结算区（时间线：每轮独立，当前轮高亮）
- const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
+ const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
  const sSec=document.getElementById('settled-section'),sDiv=document.getElementById('settled-divider');
  if(rounds.length){
   if(sSec)sSec.style.display='block';
   if(sDiv)sDiv.classList.remove('d-none');
   const si=document.getElementById('settled-order-info');
-  if(si)si.textContent='订单 #'+(localStorage.getItem('lastOrderId')||'-')+' · 桌号 '+(localStorage.getItem('lastOrderTable')||'-')+' · 共 '+rounds.reduce((s,r)=>s+r.items.reduce((a,x)=>a+(x.qty||1),0),0)+' 件 · '+rounds.reduce((s,r)=>s+(parseFloat(r.total)||0),0).toFixed(2)+' 元';
+  if(si)si.textContent='订单 #'+(ssGet('lastOrderId')||'-')+' · 桌号 '+(ssGet('lastOrderTable')||'-')+' · 共 '+rounds.reduce((s,r)=>s+r.items.reduce((a,x)=>a+(x.qty||1),0),0)+' 件 · '+rounds.reduce((s,r)=>s+(parseFloat(r.total)||0),0).toFixed(2)+' 元';
   const sl=document.getElementById('settled-list');
   if(sl)sl.innerHTML=renderRoundsHTML(rounds);
  }else{
@@ -813,14 +817,14 @@ async function checkoutCart(){
  if(!cart.length){showMessage('提示','购物车是空的');return;}
  if(bEl)bEl.disabled=true;
  // 桌号：锁定状态优先（加菜/给别桌流程中不可改），否则读输入框
- const lockedTable=localStorage.getItem('lockedTable')||'';
+ const lockedTable=ssGet('lockedTable')||'';
  const tableInput=document.getElementById('cart-table-number');
  const tableNumber=lockedTable||(tableInput?tableInput.value.trim():'');
  if(!tableNumber){showMessage('请输入桌号','下单前请填写桌号，让厨房知道送哪桌');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
  // 桌号锁定机制下 tableNumber 恒等于锁定值；挪桌/给别桌均在加菜面板内完成（无原生 confirm，沙箱环境不可用）
- let lastOrderId=parseInt(localStorage.getItem('lastOrderId')||'0');
- let lastOrderTable=localStorage.getItem('lastOrderTable')||'';
+ let lastOrderId=parseInt(ssGet('lastOrderId')||'0');
+ let lastOrderTable=ssGet('lastOrderTable')||'';
  let isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
  const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
@@ -833,22 +837,22 @@ async function checkoutCart(){
  .then(r=>r.json()).then(d=>{
   if(!d.success){
    // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
-   if((d.error||'').includes('不能加菜')){localStorage.removeItem('lastOrderId');localStorage.removeItem('lastOrderTable');localStorage.removeItem('lastOrderItems');localStorage.removeItem('lastOrderRounds');localStorage.removeItem('lockedTable');localStorage.removeItem('lastOrderAI');localStorage.removeItem('lastOrderStats');localStorage.removeItem('tableNumber');}
+   if((d.error||'').includes('不能加菜')){ssRemove('lastOrderId');ssRemove('lastOrderTable');ssRemove('lastOrderItems');ssRemove('lastOrderRounds');ssRemove('lockedTable');ssRemove('lastOrderAI');ssRemove('lastOrderStats');ssRemove('tableNumber');}
    showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
   }
   // 新订单（首单/换桌）不继承上一单的时间线轮次
-  if(!isAddMore){localStorage.removeItem('lastOrderRounds');localStorage.removeItem('lastOrderItems');}
+  if(!isAddMore){ssRemove('lastOrderRounds');ssRemove('lastOrderItems');}
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
-  localStorage.setItem('lastOrderId',d.orderId);
-  localStorage.setItem('lastOrderTable',tableNumber);
-  localStorage.setItem('lockedTable',tableNumber);
+  ssSet('lastOrderId',d.orderId);
+  ssSet('lastOrderTable',tableNumber);
+  ssSet('lockedTable',tableNumber);
   // 记录本轮（时间线轮次）
-  const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
   const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   rounds.push({round:rounds.length+1,label:(rounds.length===0?'第1轮点餐':'第'+(rounds.length+1)+'轮加菜'),time,items:cart.map(x=>({...x})),total});
-  try{localStorage.setItem('lastOrderRounds',JSON.stringify(rounds))}catch(e){};
+  try{ssSet('lastOrderRounds',JSON.stringify(rounds))}catch(e){};
   const allItems=[];
   rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
   const orderCount=allItems.reduce((s,x)=>s+(x.qty||1),0);
@@ -877,9 +881,9 @@ async function checkoutCart(){
    const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
    es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
    // AI 属性与统计持久化（rebuildEndView 回看/刷新后保持一致）
-   localStorage.setItem('lastOrderAI','1');
-   localStorage.setItem('lastOrderStats',JSON.stringify({count:cnt,avg,top}));
-  }else{localStorage.setItem('lastOrderAI','0');localStorage.removeItem('lastOrderStats');}
+   ssSet('lastOrderAI','1');
+   ssSet('lastOrderStats',JSON.stringify({count:cnt,avg,top}));
+  }else{ssSet('lastOrderAI','0');ssRemove('lastOrderStats');}
   clearCart();
   // 结算完成，推荐状态归零（避免残留 recommendedIds/推荐统计影响后续菜单加购的结算与重新推荐）
   resetRecommendation();
@@ -894,7 +898,7 @@ async function checkoutCart(){
 // 桌号同步: 偏好页输入 → localStorage → 购物车自动填
 function syncTableNumber(from){
   const val=from?.value?.trim()||'';
-  if(val)localStorage.setItem('tableNumber',val);
+  if(val)ssSet('tableNumber',val);
   const cart=document.getElementById('cart-table-number');
   if(cart&&val)cart.value=val;
 }
@@ -1081,10 +1085,10 @@ document.addEventListener('DOMContentLoaded',function(){
  const submit=(id,fn)=>{const el=$(id);if(el)el.addEventListener('submit',e=>{e.preventDefault();fn();});};
  // 桌号同步: 偏好页输入实时存localStorage
  const prefTable=$('pref-table-number');
- if(prefTable){const saved=localStorage.getItem('tableNumber');if(saved)prefTable.value=saved;prefTable.addEventListener('input',()=>syncTableNumber(prefTable));}
+ if(prefTable){const saved=ssGet('tableNumber');if(saved)prefTable.value=saved;prefTable.addEventListener('input',()=>syncTableNumber(prefTable));}
  // 购物车桌号自动填
  const cartTable=$('cart-table-number');
- if(cartTable){const saved=localStorage.getItem('tableNumber');if(saved)cartTable.value=saved;cartTable.addEventListener('input',()=>syncTableNumber(cartTable));}
+ if(cartTable){const saved=ssGet('tableNumber');if(saved)cartTable.value=saved;cartTable.addEventListener('input',()=>syncTableNumber(cartTable));}
  // 分类Tab切换
  document.querySelectorAll('.cat-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{
@@ -1146,8 +1150,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>localStorage.removeItem(k));showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>localStorage.removeItem(k));showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>ssRemove(k));showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber'].forEach(k=>ssRemove(k));showSection('home-section');});
  // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
  function showAddonView(v){
   ['main','move','other','pick'].forEach(x=>{
@@ -1155,13 +1159,13 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    if(el)el.style.display=(x===v)?(x==='main'?'':'block'):'none';
   });
   const pt=document.getElementById('addon-pick-table');
-  if(pt)pt.textContent=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'-';
+  if(pt)pt.textContent=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
  }
  function openAddonPanel(){
   const m=document.getElementById('addon-modal');if(!m)return;
-  const t=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'-';
+  const t=ssGet('lockedTable')||ssGet('lastOrderTable')||'-';
   const at=document.getElementById('addon-table');if(at)at.textContent=t;
-  const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(localStorage.getItem('lastOrderId')||'-');
+  const ao=document.getElementById('addon-order');if(ao)ao.textContent='#'+(ssGet('lastOrderId')||'-');
   showAddonView('main');
   m.inert=false;m.removeAttribute('aria-hidden');
   bootstrap.Modal.getOrCreateInstance(m).show();
@@ -1180,14 +1184,14 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-move-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写新桌号');return;}
-  const cur=localStorage.getItem('lastOrderTable')||localStorage.getItem('lockedTable')||'';
+  const cur=ssGet('lastOrderTable')||ssGet('lockedTable')||'';
   if(to===cur){showMessage('提示','新桌号与当前桌号相同');return;}
-  const oid=parseInt(localStorage.getItem('lastOrderId')||'0');
+  const oid=parseInt(ssGet('lastOrderId')||'0');
   if(!oid){showMessage('提示','当前没有进行中的订单');return;}
   fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:to})})
   .then(r=>r.json()).then(d=>{
    if(!d.success){showMessage('挪桌失败',d.error||'服务器错误');return;}
-   localStorage.setItem('lastOrderTable',to);localStorage.setItem('lockedTable',to);
+   ssSet('lastOrderTable',to);ssSet('lockedTable',to);
    const et=document.getElementById('end-order-table');if(et)et.textContent=to;
    const ei=document.getElementById('settled-order-info');if(ei&&ei.textContent)ei.textContent=ei.textContent.replace(/桌号 \S+/,'桌号 '+to);
    closeAddonPanel();
@@ -1200,11 +1204,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const inp=document.getElementById('addon-other-input');
   const to=inp?inp.value.trim():'';
   if(!to){showMessage('提示','请填写桌号');return;}
-  const cur=localStorage.getItem('lockedTable')||localStorage.getItem('lastOrderTable')||'';
+  const cur=ssGet('lockedTable')||ssGet('lastOrderTable')||'';
   if(to===cur){showMessage('提示','这就是当前桌号——本桌加菜请选「本桌加菜」');return;}
-  ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>localStorage.removeItem(k));
-  localStorage.setItem('lastOrderTable',to);
-  localStorage.setItem('lockedTable',to);
+  ['lastOrderId','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats'].forEach(k=>ssRemove(k));
+  ssSet('lastOrderTable',to);
+  ssSet('lockedTable',to);
   showAddonView('pick');
  });
  click('addon-ai',()=>{closeAddonPanel();resetRecommendation();showSection('preference-section');});
@@ -1215,15 +1219,15 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  // 「查看订单」：从 localStorage 重建点餐完成界面（跳走/刷新后随时可回）
  click('banner-view-order',()=>rebuildEndView());
  function rebuildEndView(){
-  const rounds=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
   if(!rounds.length){showMessage('提示','当前没有进行中的订单');return;}
   const allItems=[];
   rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
   const cnt=allItems.reduce((s,x)=>s+(x.qty||1),0);
   const tot=Math.round(allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0)*100)/100;
   const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  ec('end-order-id',localStorage.getItem('lastOrderId')||'-');
-  ec('end-order-table',localStorage.getItem('lastOrderTable')||'-');
+  ec('end-order-id',ssGet('lastOrderId')||'-');
+  ec('end-order-table',ssGet('lastOrderTable')||'-');
   ec('end-cart-count',cnt);
   ec('end-cart-total',tot);
   const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
@@ -1232,11 +1236,11 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
   const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
   // AI 属性读持久化状态（结算后推荐内存已归零，回看不能变「AI未启用」）
-  const isAI=localStorage.getItem('lastOrderAI')==='1';
+  const isAI=ssGet('lastOrderAI')==='1';
   document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
   const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
   if(isAI){
-   const st=(()=>{try{return JSON.parse(localStorage.getItem('lastOrderStats')||'{}')}catch(e){return{}}})();
+   const st=(()=>{try{return JSON.parse(ssGet('lastOrderStats')||'{}')}catch(e){return{}}})();
    const es3=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
    es3('end-dish-count',st.count??'-');es3('end-avg-match',(st.avg??'-')+'%');es3('end-top-match',(st.top??'-')+'%');
   }
