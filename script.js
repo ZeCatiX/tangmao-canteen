@@ -443,6 +443,8 @@ function login(){
      // 隐藏home区登录/注册按钮
      const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
      if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+     // 登录后重查「查看上次推荐」按钮（页面加载时可能是游客态被隐藏）
+     try{const vcb=document.getElementById('view-cached-btn');const c=vcb?localStorage.getItem('cachedRecommendations_'+u):null;if(vcb){if(c){const p=JSON.parse(c);if(Array.isArray(p)&&p.length>0)vcb.classList.remove('d-none');}else vcb.classList.add('d-none');}}catch(e){}
      showSection('preference-section');if(d.user?.preferences)loadUserPreferences(d.user.preferences);
    });})
  .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('login-btn');if(b)b.disabled=false;});
@@ -637,7 +639,7 @@ function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
  if(token){fetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
- currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('错误','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
@@ -1025,8 +1027,8 @@ function refreshRecipeCartBtn(id){
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
  fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
- // 缓存推荐结果到 localStorage（仅登录用户；游客不缓存）
- try { if(currentUser&&currentUser!=='guest'){localStorage.setItem('cachedRecommendations', JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode', currentRecommendationMode);} } catch(e) {}
+ // 缓存推荐结果到 localStorage（仅登录用户，键按用户隔离；游客不缓存）
+ try { if(currentUser&&currentUser!=='guest'){localStorage.setItem('cachedRecommendations_'+currentUser, JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode_'+currentUser, currentRecommendationMode);} } catch(e) {}
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
  if(!loading||!result)return;
  const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
@@ -1172,8 +1174,15 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  }
  function closeAddonPanel(){
   const m=document.getElementById('addon-modal');if(!m)return;
-  m.inert=true;
-  const inst=bootstrap.Modal.getInstance(m);if(inst)inst.hide();
+  const inst=bootstrap.Modal.getInstance(m);
+  if(inst){try{inst.hide();}catch(e){}}
+  // 兜底：fade 过渡卡 _isTransitioning 时 hide 被静默忽略（同 message-modal 的坑）
+  setTimeout(()=>{
+   if(m.classList.contains('show')){
+    const mm=bootstrap.Modal.getInstance(m);
+    if(mm){mm._isTransitioning=false;try{mm.hide();}catch(e){}}
+   }
+  },400);
  }
  click('end-add-more',()=>openAddonPanel());
  // 本桌加菜 → 选菜方式（桌号已锁定）
@@ -1334,14 +1343,15 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  const savedPrefs=localStorage.getItem('savedPrefs');
  const cb2=document.getElementById('continue-btn');
  if(currentUser&&currentUser!=='guest'&&(savedPrefs||getUserData(currentUser)?.preferences?.spiciness)){if(cb2)cb2.classList.remove('d-none');}
-// 检查是否有缓存的推荐结果（仅登录用户；游客不支持）
+// 检查是否有缓存的推荐结果（仅登录用户，缓存按用户隔离；游客不支持）
 try {
-  const cached = localStorage.getItem('cachedRecommendations');
   const vcb = document.getElementById('view-cached-btn');
-  if (cached && vcb) {
+  if (vcb) {
     if (currentUser&&currentUser!=='guest') {
-      const parsed = JSON.parse(cached);
+      const cached = localStorage.getItem('cachedRecommendations_'+currentUser);
+      const parsed = cached ? JSON.parse(cached) : null;
       if (Array.isArray(parsed) && parsed.length > 0) vcb.classList.remove('d-none');
+      else vcb.classList.add('d-none');
     } else vcb.classList.add('d-none');
   }
 } catch(e) {}
@@ -1349,8 +1359,8 @@ click('view-cached-btn', () => {
   // 游客不支持查看上次推荐
   if(!currentUser||currentUser==='guest'){showMessage('提示','登录后才能查看上次推荐');return;}
   try {
-    const cached = localStorage.getItem('cachedRecommendations');
-    const mode = localStorage.getItem('cachedRecMode') || '本地推荐';
+    const cached = localStorage.getItem('cachedRecommendations_'+currentUser);
+    const mode = localStorage.getItem('cachedRecMode_'+currentUser) || '本地推荐';
     if (cached) {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
