@@ -798,9 +798,9 @@ function updateTableStatusCard(){
  if(txt)txt.textContent=t?tableLabel(t):'未选择桌号';
  if(btn)btn.textContent=t?'更换':'选择桌号';
  const ti=document.getElementById('cart-table-number');
- if(ti){ti.value=t==='打包'?'打包':(t||'');ti.readOnly=!!t;ti.placeholder=t?'':'点击选择桌号';ti.style.background=t?'var(--cream-dark)':'';}
+ if(ti){ti.value=t==='打包'?'打包':(t||'');ti.readOnly=!!t;ti.placeholder=t?'':'选择桌号';ti.style.background=t?'var(--cream-dark)':'';}
  const pt=document.getElementById('pref-table-number');
- if(pt){pt.value=t==='打包'?'打包':(t||'');pt.readOnly=!!t;pt.placeholder=t?'':'点击选择桌号';pt.style.background=t?'var(--cream-dark)':'';}
+ if(pt){pt.value=t==='打包'?'打包':(t||'');pt.readOnly=!!t;pt.placeholder=t?'':'选择桌号';pt.style.background=t?'var(--cream-dark)':'';}
 }
 var _tablePickIntent=null;
 function openTablePicker(intent){
