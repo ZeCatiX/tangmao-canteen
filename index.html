@@ -179,16 +179,19 @@
                             <div class="card-body p-5">
                                 <form id="register-form">
                                     <div class="mb-3">
-                                        <label for="register-username" class="form-label">用户名</label>
+                                        <label for="register-username" class="form-label">用户名 <small style="color:var(--text-light);font-size:0.75rem;">（2-50字符）</label>
                                         <input type="text" class="form-control" id="register-username" required minlength="2" maxlength="50" autocomplete="username">
+                                        <small id="register-username-err" class="form-text" style="display:none;color:#e74c3c;"></small>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="register-password" class="form-label">密码</label>
+                                        <label for="register-password" class="form-label">密码 <small style="color:var(--text-light);font-size:0.75rem;">（8-128位，须含大小写字母和数字）</small></label>
                                         <input type="password" class="form-control" id="register-password" required minlength="8" maxlength="128" autocomplete="new-password">
+                                        <small id="register-password-err" class="form-text" style="display:none;color:#e74c3c;"></small>
                                     </div>
                                     <div class="mb-3">
                                         <label for="register-confirm" class="form-label">确认密码</label>
                                         <input type="password" class="form-control" id="register-confirm" required minlength="8" maxlength="128" name="register-confirm" autocomplete="new-password">
+                                        <small id="register-confirm-err" class="form-text" style="display:none;color:#e74c3c;"></small>
                                     </div>
                                     <div class="mb-3 form-check">
                                         <input type="checkbox" class="form-check-input" id="agree-privacy" required>
@@ -1043,7 +1046,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261171"></script>
+    <script src="script.js?v=20261172"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
