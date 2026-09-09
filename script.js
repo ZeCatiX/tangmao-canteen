@@ -27,6 +27,7 @@ function dishImg(url,size,alt){size=size||50;const u=url||'';const st='width:'+s
 function ssGet(k){return sessionStorage.getItem(k)}
 function ssSet(k,v){try{sessionStorage.setItem(k,v)}catch(e){}}
 function ssRemove(k){sessionStorage.removeItem(k)}
+function ssRemovePrefix(prefix){try{Object.keys(sessionStorage).filter(k=>k.startsWith(prefix)).forEach(k=>sessionStorage.removeItem(k));}catch(e){}}
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
 function safeFetch(url, opts) {
   const fetcher = opts?.method
@@ -754,12 +755,55 @@ function deleteAccount(){
 // ═══════════════ 购物车功能 ═══════════════
 function renderRoundsHTML(rounds){
  if(!rounds||!rounds.length)return '';
- return rounds.map((r,i)=>{
-  const cur=i===rounds.length-1;
-  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
+ const lastIdx=rounds.length-1;
+ const normal=rounds.map((r,i)=>({r,i})).filter(o=>!o.r.giftTo);
+ const gifts=rounds.map((r,i)=>({r,i})).filter(o=>o.r.giftTo);
+ let html=normal.map(o=>{
+  const r=o.r,cur=o.i===lastIdx;
+  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||o.i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
    +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
    +'</div>';
  }).join('');
+ // 赠菜区（本桌付费，赠给别桌）：分割线分开 + 可折叠
+ if(gifts.length){
+  const merged=[];
+  gifts.forEach(o=>o.r.items.forEach(x=>{const ex=merged.find(m=>m.id===x.id&&String(m.giftTo)===String(o.r.giftTo));if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else merged.push({...x,giftTo:o.r.giftTo});}));
+  const tables=[...new Set(gifts.map(o=>String(o.r.giftTo)))].join('、');
+  const gTotal=gifts.reduce((s,o)=>s+(parseFloat(o.r.total)||0),0);
+  html+='<div data-gift="1" style="border-left:2px solid rgba(201,169,110,0.55);padding-left:10px;margin-bottom:12px;">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:8px;" onclick="toggleGiftRounds(this)">'
+   +'<span style="font-size:0.8rem;font-weight:600;color:var(--gold);">🎁 赠给 '+tables+' 号桌 · 本桌付费 '+gTotal.toFixed(2)+' 元</span>'
+   +'<span style="display:flex;align-items:center;gap:10px;white-space:nowrap;"><span onclick="event.stopPropagation();showGiftReceipt(\''+esc(String(gifts[0].r.giftTo))+'\')" style="font-size:0.72rem;color:var(--primary-accent);text-decoration:underline;">被赠桌小票</span><span class="gift-toggle-txt" style="font-size:0.72rem;color:var(--text-light);">隐藏</span></span></div>'
+   +'<div class="gift-body" style="display:flex;flex-direction:column;margin-top:6px;">'
+   +merged.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">→'+esc(String(x.giftTo))+'桌</span></span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +'</div></div>';
+ }
+ return html;
+}
+function toggleGiftRounds(head){
+ const block=head.closest('[data-gift]');if(!block)return;
+ const body=block.querySelector('.gift-body');if(!body)return;
+ const hidden=body.style.display==='none';
+ body.style.display=hidden?'flex':'none';
+ const t=head.querySelector('.gift-toggle-txt');if(t)t.textContent=hidden?'隐藏':'显示';
+}
+// 被赠桌小票（只读）：赠菜 0 元 + 原价划线，合计不计费
+function showGiftReceipt(table){
+ const raw=ssGet('giftReceipt_'+table);
+ let data=null;try{data=raw?JSON.parse(raw):null}catch(e){}
+ const box=document.getElementById('gift-receipt-body');
+ const title=document.getElementById('gift-receipt-title');
+ if(!data||!box){showMessage('提示','未找到该桌的小票记录');return;}
+ if(title)title.textContent=data.table+' 号桌 · 赠菜单';
+ box.innerHTML='<div style="font-size:0.78rem;color:var(--text-light);margin-bottom:10px;">订单 #'+esc(String(data.id))+' · 来自 '+(data.from?esc(String(data.from))+' 号桌赠送':'赠送')+'</div>'
+  +(data.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--cream-dark);border-radius:8px;margin-bottom:6px;">'
+   +'<span style="font-size:0.9rem;">🎁 '+esc(x.name)+' <span style="font-size:0.75rem;color:var(--gold);">×'+(x.qty||1)+'</span></span>'
+   +'<span style="font-size:0.9rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.75rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span>'
+   +'</div>').join('')
+  +'<div style="border-top:1px dashed rgba(201,169,110,0.35);margin:10px 0 0;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">'
+  +'<span style="color:var(--text-light);">合计（赠菜不计费）</span><strong style="color:var(--primary-accent);font-size:1.05rem;">0.00 元</strong></div>';
+ const m=document.getElementById('gift-receipt-modal');
+ if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
 }
 function showCart(){
  // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
@@ -860,8 +904,14 @@ async function checkoutCart(){
  let lastOrderId=parseInt(ssGet('lastOrderId')||'0');
  let lastOrderTable=ssGet('lastOrderTable')||'';
  let isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
- const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ // 赠菜双向记账：给别桌加菜时，被赠桌记 0 元（标原价+赠出桌），赠出桌正常计费（标赠给桌）
+ const isSideOrder=ssGet('sideOrder')==='1';
+ let myTableForGift='';
+ if(isSideOrder){try{myTableForGift=JSON.parse(ssGet('orderBackup')||'{}').lastOrderTable||''}catch(e){}}
+ const payItems=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ const items=isSideOrder?payItems.map(i=>({...i,price:0,origPrice:i.price,giftFrom:myTableForGift})):payItems;
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
+ const payTotal=payItems.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
  const url=isAddMore?('/api/order/'+lastOrderId+'/add'):'/api/order';
  // 点击后立即显示过渡动画（独立覆盖层，不破坏购物车 DOM 结构）
@@ -874,16 +924,30 @@ async function checkoutCart(){
    if((d.error||'').includes('不能加菜')){ssRemove('lastOrderId');ssRemove('lastOrderTable');ssRemove('lastOrderItems');ssRemove('lastOrderRounds');ssRemove('lockedTable');ssRemove('lastOrderAI');ssRemove('lastOrderStats');ssRemove('tableNumber');}
    showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
   }
-  // 给别桌加菜：该桌订单提交成功 → 恢复本桌订单状态（临时离开结束）
+  // 给别桌加菜：该桌订单提交成功 → 赠菜追加到本桌订单（本桌付钱）+ 恢复本桌状态
   if(ssGet('sideOrder')==='1'){
    const backup=(()=>{try{return JSON.parse(ssGet('orderBackup')||'null')}catch(e){return null}})();
    ssRemove('sideOrder');ssRemove('orderBackup');
    if(backup&&backup.lastOrderId){
-    ssSet('lastOrderId',backup.lastOrderId);ssSet('lastOrderTable',backup.lastOrderTable);ssSet('lastOrderItems',backup.lastOrderItems);ssSet('lastOrderRounds',backup.lastOrderRounds);ssSet('lastOrderAI',backup.lastOrderAI);ssSet('lastOrderStats',backup.lastOrderStats);ssSet('lockedTable',backup.lockedTable);
-    const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
-    clearCart();
-    rebuildEndView();
-    showMessage('已提交','已为 '+tableNumber+' 号桌下单（订单 #'+d.orderId+'），已返回您的订单',null,3000);
+    const finishSide=()=>{
+     ssSet('lastOrderId',backup.lastOrderId);ssSet('lastOrderTable',backup.lastOrderTable);ssSet('lastOrderItems',backup.lastOrderItems);ssSet('lastOrderRounds',backup.lastOrderRounds);ssSet('lastOrderAI',backup.lastOrderAI);ssSet('lastOrderStats',backup.lastOrderStats);ssSet('lockedTable',backup.lockedTable);
+     const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+     clearCart();
+     rebuildEndView();
+     showMessage('已提交','已为 '+tableNumber+' 号桌赠菜 '+payItems.length+' 道（订单 #'+d.orderId+'），费用计入本桌，已返回您的订单',null,3500);
+    };
+    // 本桌时间线记录赠菜轮次
+    const giftPayItems=payItems.map(x=>({...x,giftTo:tableNumber}));
+    let rounds=[];try{rounds=JSON.parse(backup.lastOrderRounds||'[]')}catch(e){}
+    const nD=new Date(),tm=String(nD.getHours()).padStart(2,'0')+':'+String(nD.getMinutes()).padStart(2,'0');
+    rounds.push({round:rounds.length+1,label:'赠给 '+tableNumber+' 号桌',time:tm,items:giftPayItems,total:Math.round(payTotal*100)/100,giftTo:tableNumber});
+    backup.lastOrderRounds=JSON.stringify(rounds);
+    // 保存被赠桌小票（本地只读视图：0元+原价）
+    ssSet('giftReceipt_'+tableNumber,JSON.stringify({id:d.orderId,table:tableNumber,from:myTableForGift,items:items}));
+    // 追加到本桌订单（本桌计费，标记 giftTo）
+    fetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems})})
+     .then(()=>{}).catch(()=>{showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
+     .finally(finishSide);
     return;
    }
   }
@@ -1191,8 +1255,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');showSection('home-section');});
  // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
  function showAddonView(v){
   ['main','move','other','pick'].forEach(x=>{

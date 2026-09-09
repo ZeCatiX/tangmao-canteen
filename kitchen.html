@@ -123,9 +123,14 @@
             return;
           }
           container.innerHTML = d.orders.map(o => {
-            const items = (o.items || []).map(i =>
-              '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + (parseInt(i.quantity) || 1) + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>'
-            ).join('');
+            const items = (o.items || []).filter(i => !i.giftTo).map(i => {
+              const qty = parseInt(i.qty || i.quantity) || 1;
+              if (i.giftFrom) {
+                const op = parseFloat(i.origPrice) || 0;
+                return '<div class="item"><span>🎁 ' + esc(i.name || '未知') + ' × ' + qty + ' <span style="color:#c9a96e;font-size:0.85em;">(' + esc(String(i.giftFrom)) + '桌赠)</span></span><span>0元 <span style="color:#8b7a6a;text-decoration:line-through;font-size:0.85em;">' + op + '元</span></span></div>';
+              }
+              return '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + qty + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>';
+            }).join('');
             const time = o.created_at ? new Date(o.created_at).toLocaleTimeString() : '';
             return '<div class="order-card" data-id="' + o.id + '">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'

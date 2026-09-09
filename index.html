@@ -990,6 +990,18 @@
             </div>
         </div>
     </div>
+    <!-- 被赠桌小票（只读，本地数据） -->
+    <div class="modal fade" id="gift-receipt-modal" tabindex="-1" inert aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px;">
+                <div class="modal-header" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#fff;border:none;border-radius:16px 16px 0 0;">
+                    <h5 class="modal-title" style="letter-spacing:2px;" id="gift-receipt-title">被赠桌小票</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body" id="gift-receipt-body" style="max-height:60vh;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
     <div class="modal fade" id="message-modal" tabindex="-1" inert aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1007,7 +1019,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261159"></script>
+    <script src="script.js?v=20261161"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
