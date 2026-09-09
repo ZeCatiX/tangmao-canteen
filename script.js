@@ -1289,7 +1289,18 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
   showCart();
  });
  const me=$('message-modal'),cb=$('modal-close-btn'),cf=$('modal-confirm-btn');
- const closeModal=()=>{if(!me)return;const m=bootstrap.Modal.getInstance(me);if(!m)return;if(document.activeElement)document.activeElement&&document.activeElement.blur();me.inert=true;m.hide();setTimeout(()=>me.setAttribute('aria-hidden','true'),100);};
+ const closeModal=()=>{
+  if(!me)return;
+  const m=bootstrap.Modal.getInstance(me);
+  if(m){try{m.hide();}catch(e){}}
+  // 兜底：fade 过渡卡在 transitioning 态时 BS 会静默忽略 hide（fresh 首点必现）——400ms 后仍显示则强制解卡重试
+  setTimeout(()=>{
+   if(me.classList.contains('show')){
+    const mm=bootstrap.Modal.getInstance(me);
+    if(mm){mm._isTransitioning=false;try{mm.hide();}catch(e){}}
+   }
+  },400);
+ };
  if(cb)cb.addEventListener('click',e=>{e.preventDefault();closeModal();});
  if(cf)cf.addEventListener('click',e=>{e.preventDefault();closeModal();});
  if(me)me.addEventListener('hidden.bs.modal',()=>{me.inert=true;me.setAttribute('aria-hidden','true');if(me.contains(document.activeElement))document.activeElement&&document.activeElement.blur();});
