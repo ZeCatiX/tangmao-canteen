@@ -887,6 +887,7 @@ function loadRecommendationLog() {
 }
 
 function loadModelManagement() {
+  loadAutoRetrainToggle();   // 每次进入本页都刷新开关的真实状态（登录后首次进入也能拿到）
   // 加载模型信息
   fetch('/api/admin/model-info').then(r => r.json()).then(d => {
     if (!d.success) return;
@@ -993,7 +994,9 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
 });
 
 // 自动重训开关：未上线时 feedback 里全是测试用例，默认关闭（只收集、不自动重训）
-(function initAutoRetrainToggle() {
+// 抽成函数供 loadModelManagement() 调用 —— 否则登录后进入本页不会刷新真实状态
+let _autoRetrainBound = false;
+function loadAutoRetrainToggle() {
   const toggle = document.getElementById('auto-retrain-toggle');
   const hint = document.getElementById('auto-retrain-hint');
   if (!toggle) return;
@@ -1003,20 +1006,23 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
       ? '已开启：新反馈攒够阈值会自动重训'
       : '已关闭：反馈照常收集，但不会自动重训（未上线前建议关闭）';
   };
+  if (!_autoRetrainBound) {
+    _autoRetrainBound = true;
+    toggle.addEventListener('change', function () {
+      const want = this.checked;
+      fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoRetrain: want })
+      }).then(r => r.json())
+        .then(d => { if (d.success) render(d.settings.autoRetrain); else { render(!want); alert('保存失败'); } })
+        .catch(() => { render(!want); alert('保存失败，网络错误'); });
+    });
+  }
   fetch('/api/admin/settings').then(r => r.json())
     .then(d => { if (d.success) render(d.settings.autoRetrain); })
     .catch(() => { if (hint) hint.textContent = '读取设置失败'; });
-  toggle.addEventListener('change', function () {
-    const want = this.checked;
-    fetch('/api/admin/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ autoRetrain: want })
-    }).then(r => r.json())
-      .then(d => { if (d.success) render(d.settings.autoRetrain); else { render(!want); alert('保存失败'); } })
-      .catch(() => { render(!want); alert('保存失败，网络错误'); });
-  });
-})();
+}
 
 function loadModelInfo() {
   fetch('/api/admin/model-info').then(r => r.json()).then(d => {
