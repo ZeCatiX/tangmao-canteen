@@ -655,7 +655,11 @@ app.post('/api/user-favorites', authMiddleware, async (req, res) => {
     const { favorites } = req.body;
     const username = req.user.username;
     if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    const updated = await userStorage.updateUser(username, { favorites: favorites || [] });
+    // 只接受正整数菜品 ID：这些值会进前端渲染，放开任意字符串 = 存储型 XSS 的入口
+    const list = Array.isArray(favorites)
+      ? favorites.map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 500)
+      : [];
+    await userStorage.updateUser(username, { favorites: list });
     res.json({ success: true, message: '收藏已同步' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
@@ -665,7 +669,11 @@ app.post('/api/user-blacklist', authMiddleware, async (req, res) => {
     const { blacklist } = req.body;
     const username = req.user.username;
     if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    const updated = await userStorage.updateUser(username, { blacklist: blacklist || [] });
+    // 同收藏：只接受正整数菜品 ID
+    const list = Array.isArray(blacklist)
+      ? blacklist.map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 500)
+      : [];
+    await userStorage.updateUser(username, { blacklist: list });
     res.json({ success: true, message: '黑名单已同步' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
