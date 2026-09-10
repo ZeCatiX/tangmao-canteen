@@ -322,7 +322,7 @@ def main():
         'importance': importance,
         'metrics': metrics,
         'training_samples': len(X),
-        'feature_count': 11,
+        'feature_count': 12,
     }
     print(json.dumps(result, ensure_ascii=False))
 
