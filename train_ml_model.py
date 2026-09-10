@@ -41,7 +41,7 @@ def load_data():
     """加载菜品和真实反馈数据"""
     import psycopg2
     conn = psycopg2.connect(host='localhost',port=5432,database='tangmao',
-        user='postgres',password=os.environ['PG_PASSWORD'])
+        user='postgres',password=os.environ.get('PG_PASSWORD', ''))
     cur = conn.cursor()
 
     # 加载菜品

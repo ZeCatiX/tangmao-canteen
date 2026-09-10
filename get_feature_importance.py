@@ -28,7 +28,7 @@ ORD_MAPPINGS = {
 import psycopg2
 try:
     conn = psycopg2.connect(host='localhost', port=5432, database='tangmao',
-        user='postgres', password=os.environ['PG_PASSWORD'])
+        user='postgres', password=os.environ.get('PG_PASSWORD', ''))
     cur = conn.cursor()
     cur.execute('SELECT spiciness, saltiness, sweetness, calorie, price, rating, tags FROM dishes WHERE is_active = TRUE')
     dishes = cur.fetchall()

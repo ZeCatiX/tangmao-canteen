@@ -9,12 +9,14 @@ from sklearn.ensemble import RandomForestRegressor
 sys.stdout.reconfigure(encoding='utf-8')
 
 ORD_MAPPINGS = {
-    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4, '麻辣': 5},
+    '辣度': {'无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4},
     '咸淡': {'无': 0, '清淡': 1, '适中': 2, '偏咸': 3},
-    '甜酸': {'无': 0, '无味': 1, '微甜': 2, '酸甜': 3, '偏酸': 4, '偏甜': 5},
+    '甜酸': {'无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4},
+    '热量': {'无': 0, '低': 1, '中': 2, '高': 3},
+    '价格区间': {'经济': 1, '适中': 2, '品质': 3, '无': 0},
 }
-FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '价格', '招牌', '评分',
-                 '用户辣度', '用户咸淡', '用户甜酸']
+FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
+                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格']
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'recommendation_model.pkl')
 
@@ -24,13 +26,13 @@ def load_feedback_from_db():
     import psycopg2
     conn = psycopg2.connect(
         host='localhost', port=5432, database='tangmao',
-        user='postgres', password=os.environ['PG_PASSWORD']
+        user='postgres', password=os.environ.get('PG_PASSWORD', '')
     )
     cur = conn.cursor()
     # 获取有user_preferences的反馈，同时关联菜品数据
     cur.execute('''
         SELECT f.dish_id, f.rating, f.user_preferences, f.created_at,
-               d.spiciness, d.saltiness, d.sweetness, d.price, d.rating as dish_rating, d.tags
+               d.spiciness, d.saltiness, d.sweetness, d.price, d.rating as dish_rating, d.tags, d.calorie
         FROM feedback f
         JOIN dishes d ON f.dish_id = d.id
         WHERE f.user_preferences IS NOT NULL
@@ -55,12 +57,13 @@ def parse_tags(tags):
 
 
 def encode_feedback(fb_row):
-    """将一条反馈数据编码为9维特征 + 目标值"""
-    dish_id, rating, user_prefs, created_at, spiciness, saltiness, sweetness, price, dish_rating, tags = fb_row
+    """将一条反馈数据编码为11维特征 + 目标值（特征顺序/映射须与线上模型 train_restaurant_model.py 的 encode_dish 严格一致）"""
+    dish_id, rating, user_prefs, created_at, spiciness, saltiness, sweetness, price, dish_rating, tags, calorie = fb_row
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
     price_val = float(price) if price and float(price) > 0 else 20.0
     dish_rating_val = float(dish_rating) if dish_rating and float(dish_rating) > 0 else 4.0
+    cal_val = calorie if calorie else '中'
 
     # 解析user_preferences JSON
     if isinstance(user_prefs, str):
@@ -69,21 +72,24 @@ def encode_feedback(fb_row):
     else:
         prefs = user_prefs
 
-    X = np.zeros(9)
+    X = np.zeros(11)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
-    X[3] = price_val / 100
-    X[4] = is_sig
-    X[5] = dish_rating_val / 5
+    X[3] = ORD_MAPPINGS['热量'].get(cal_val, 2)
+    X[4] = price_val / 100
+    X[5] = is_sig
+    X[6] = dish_rating_val / 5
 
     # 用户偏好（从user_preferences中提取）
     user_spice = prefs.get('spiciness') or prefs.get('辣度', '无')
     user_salty = prefs.get('saltiness') or prefs.get('咸淡', '无')
     user_sweet = prefs.get('sweetness') or prefs.get('甜酸', '无')
-    X[6] = ORD_MAPPINGS['辣度'].get(user_spice, 1)
-    X[7] = ORD_MAPPINGS['咸淡'].get(user_salty, 1)
-    X[8] = ORD_MAPPINGS['甜酸'].get(user_sweet, 1)
+    user_price = prefs.get('价格区间') or prefs.get('price') or prefs.get('价格', '无')
+    X[7] = ORD_MAPPINGS['辣度'].get(user_spice, 1)
+    X[8] = ORD_MAPPINGS['咸淡'].get(user_salty, 1)
+    X[9] = ORD_MAPPINGS['甜酸'].get(user_sweet, 1)
+    X[10] = ORD_MAPPINGS['价格区间'].get(user_price, 0)
 
     # 目标值：评分映射到0.1~1.0
     y = max(0.1, min(1.0, float(rating) / 5))
@@ -168,7 +174,7 @@ def main():
         'mae': float(np.mean(np.abs(y_fb - y_pred))),
         'real_feedback_count': len(feedbacks),
         'training_samples': len(X_combined),
-        'feature_count': 9,
+        'feature_count': 11,
         'feature_names': FEATURE_NAMES,
     }
 
