@@ -1,1 +1,53 @@
-{"success": true, "importance": [{"feature": "用户咸淡", "importance": 0.2022}, {"feature": "用户辣度", "importance": 0.1896}, {"feature": "用户甜酸", "importance": 0.1555}, {"feature": "辣度", "importance": 0.1168}, {"feature": "价格", "importance": 0.1162}, {"feature": "热量", "importance": 0.0592}, {"feature": "甜酸", "importance": 0.05}, {"feature": "用户价格", "importance": 0.0403}, {"feature": "咸淡", "importance": 0.0366}, {"feature": "招牌", "importance": 0.0334}, {"feature": "评分", "importance": 0.0}], "method": "排列重要性 + 平滑归一化"}
+{
+  "success": true,
+  "importance": [
+    {
+      "feature": "用户甜酸",
+      "importance": 0.3148
+    },
+    {
+      "feature": "价格",
+      "importance": 0.1979
+    },
+    {
+      "feature": "用户价格",
+      "importance": 0.1651
+    },
+    {
+      "feature": "用户辣度",
+      "importance": 0.1427
+    },
+    {
+      "feature": "甜酸",
+      "importance": 0.0519
+    },
+    {
+      "feature": "辣度",
+      "importance": 0.0492
+    },
+    {
+      "feature": "用户咸淡",
+      "importance": 0.0366
+    },
+    {
+      "feature": "咸淡",
+      "importance": 0.0167
+    },
+    {
+      "feature": "用户热量",
+      "importance": 0.0152
+    },
+    {
+      "feature": "招牌",
+      "importance": 0.0051
+    },
+    {
+      "feature": "热量",
+      "importance": 0.0048
+    },
+    {
+      "feature": "评分",
+      "importance": 0.0
+    }
+  ]
+}
