@@ -1592,7 +1592,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    document.getElementById('end-sat-submit').disabled=false;
   });
   document.getElementById('end-sat-submit').addEventListener('click',function(){
-   fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dishId:0,score:satVal,userPreferences:{},userId:currentUser||'guest',type:'overall_satisfaction'})}).catch(e=>console.warn('满意度评价提交失败:',e));
+   fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:0,score:satVal,userPreferences:{},userId:currentUser||'guest',type:'overall_satisfaction'})}).catch(e=>console.warn('满意度评价提交失败:',e));
    this.textContent='已提交 ✓';this.disabled=true;this.style.background='#27ae60';
    document.getElementById('end-sat-hint').textContent='感谢您的评价！';
   });
