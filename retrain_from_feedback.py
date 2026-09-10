@@ -144,8 +144,12 @@ def main():
     dishes = load_dishes_from_db()
     X_syn, y_syn = generate_training_data(dishes, USER_PROFILES, samples_per_dish=4)
 
-    # 将真实反馈数据附加到合成数据中（权重可以调整）
-    repeat_factor = max(1, len(X_syn) // (len(X_fb) * 10))  # 真实反馈权重为合成数据的10%
+    # 将真实反馈数据附加到合成数据中
+    # 原式只保证「反馈总量≈合成数据的10%」，反馈只有几条时会把每行复制成百上千份，
+    # 导致单条反馈就能带偏模型（刚上线/反馈稀少时尤其严重）。加每行上限：
+    # 反馈影响力随证据量增长，条数少时自然只占小权重。
+    REPEAT_CAP = 10
+    repeat_factor = min(max(1, len(X_syn) // (len(X_fb) * 10)), REPEAT_CAP)
     X_fb_weighted = np.repeat(X_fb, repeat_factor, axis=0)
     y_fb_weighted = np.repeat(y_fb, repeat_factor, axis=0)
 
