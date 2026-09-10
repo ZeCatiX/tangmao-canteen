@@ -434,6 +434,13 @@
             </button>
             <span id="retrain-status" style="font-size:0.85rem;color:#8b7a6a;"></span>
           </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(201,169,110,0.15);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:#4a3028;margin:0;">
+              <input type="checkbox" id="auto-retrain-toggle" style="width:16px;height:16px;cursor:pointer;">
+              按用户反馈自动重训
+            </label>
+            <span id="auto-retrain-hint" style="font-size:0.78rem;color:#8b7a6a;"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -582,6 +589,8 @@
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/orders</td><td>-</td><td>CSV</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/feedback</td><td>-</td><td>CSV</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/popular-dishes</td><td>-</td><td>CSV</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/settings</td><td>-</td><td>{success, settings}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/settings</td><td>{autoRetrain}</td><td>{success, settings}</td></tr>
             </tbody>
           </table>
           <div style="padding:8px 12px;font-size:0.78rem;color:#8b7a6a;background:#fdfaf5;border-top:1px solid rgba(201,169,110,0.1);">
@@ -982,6 +991,32 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
     }).catch(() => { status.textContent = '训练失败，网络错误'; })
     .finally(() => { btn.disabled = false; });
 });
+
+// 自动重训开关：未上线时 feedback 里全是测试用例，默认关闭（只收集、不自动重训）
+(function initAutoRetrainToggle() {
+  const toggle = document.getElementById('auto-retrain-toggle');
+  const hint = document.getElementById('auto-retrain-hint');
+  if (!toggle) return;
+  const render = (on) => {
+    toggle.checked = !!on;
+    if (hint) hint.textContent = on
+      ? '已开启：新反馈攒够阈值会自动重训'
+      : '已关闭：反馈照常收集，但不会自动重训（未上线前建议关闭）';
+  };
+  fetch('/api/admin/settings').then(r => r.json())
+    .then(d => { if (d.success) render(d.settings.autoRetrain); })
+    .catch(() => { if (hint) hint.textContent = '读取设置失败'; });
+  toggle.addEventListener('change', function () {
+    const want = this.checked;
+    fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoRetrain: want })
+    }).then(r => r.json())
+      .then(d => { if (d.success) render(d.settings.autoRetrain); else { render(!want); alert('保存失败'); } })
+      .catch(() => { render(!want); alert('保存失败，网络错误'); });
+  });
+})();
 
 function loadModelInfo() {
   fetch('/api/admin/model-info').then(r => r.json()).then(d => {

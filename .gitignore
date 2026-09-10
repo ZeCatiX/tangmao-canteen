@@ -61,3 +61,6 @@ ssl/
 # 运行时指标数据（服务器自动写入，不应提交）
 metrics_history.json
 model_metrics.json
+
+# 运行时开关（后台切换 autoRetrain 等，服务器自动写入）
+runtime_settings.json

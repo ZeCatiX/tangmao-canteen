@@ -199,7 +199,7 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
 
 // 静态文件服务（只允许前端需要的文件类型，阻止敏感文件泄露）
 const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
-const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
+const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   const ext = path.extname(req.path).toLowerCase();
@@ -817,6 +817,18 @@ app.get('/api/admin/model-history', (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 运行时开关读写（目前只有 autoRetrain：是否按用户反馈自动重训）
+app.get('/api/admin/settings', (req, res) => res.json({ success: true, settings: { ...runtimeSettings } }));
+app.post('/api/admin/settings', (req, res) => {
+  try {
+    const { autoRetrain } = req.body || {};
+    if (typeof autoRetrain === 'boolean') runtimeSettings.autoRetrain = autoRetrain;
+    saveRuntimeSettings();
+    logger.info(`自动重训开关 → ${runtimeSettings.autoRetrain ? '开启' : '关闭'}`);
+    res.json({ success: true, settings: { ...runtimeSettings } });
+  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // 一键触发重训练（异步执行，不阻塞服务器）
 app.post('/api/admin/retrain', async (req, res) => {
   try {
@@ -1409,6 +1421,20 @@ app.post('/api/predict-rf', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════
+// 运行时开关（持久化到 runtime_settings.json）
+// ───────────────────────────────────────────────
+// 目前只有「按用户反馈自动重训」一项。未上线时 feedback 里全是测试用例，
+// 拿它们自动重训会把模型带偏 —— 所以默认关闭：反馈照常收集进库，
+// 但不自动拿去重训。上线积累到真实反馈后再来后台打开。
+const RUNTIME_SETTINGS_PATH = path.join(__dirname, 'runtime_settings.json');
+const runtimeSettings = { autoRetrain: false };
+try { Object.assign(runtimeSettings, readJSON(RUNTIME_SETTINGS_PATH)); } catch (e) { /* 首次运行无文件，用默认值 */ }
+function saveRuntimeSettings() {
+  try { fs.writeFileSync(RUNTIME_SETTINGS_PATH, JSON.stringify(runtimeSettings, null, 2)); }
+  catch (e) { logger.warn('保存运行时设置失败: ' + (e?.message || '')); }
+}
+
+// ═══════════════════════════════════════════════
 // 模型版本管理 & 自动重训练
 // ═══════════════════════════════════════════════
 let modelInfo = { version: '1.0', trainedAt: null, feedbackCount: 0, r2: 0 };
@@ -1453,6 +1479,8 @@ function backupOldModel() {
 // 检查反馈数量并决定是否重训练
 let _isRetrainingCheck = false;
 async function checkAndRetrain() {
+  // 开关关闭时直接跳过（未上线，feedback 里全是测试用例，不拿它们自动重训）
+  if (!runtimeSettings.autoRetrain) return;
   if (_isRetrainingCheck || global._isRetraining) return;
   _isRetrainingCheck = true;
   global._isRetraining = true;
