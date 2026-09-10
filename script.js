@@ -179,7 +179,7 @@ function computeDishMatch(prefs,dish){
  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=2;
  if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=2;
  if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=2;
- if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
+ if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.0;   // 原 1.5：会压过明确的口味偏好（差一级的匹配 +1 也盖不过），降到 1.0 让精确匹配能赢
  if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
  // 价格软打分: 区间内+2, 邻近-1, 区间外-2; 无偏好+1
  const p=parseFloat(dish.price);
@@ -1260,7 +1260,7 @@ async function fallback(prefs,blk,dishes){
   if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=1;
   if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
   if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
-  if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.5;
+  if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.0;   // 与 computeDishMatch 保持一致
   if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],d.calorie);else md.calorie=1;
   const pv=parseFloat(d.price);
   if(!isNaN(pv)&&prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){

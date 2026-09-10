@@ -149,8 +149,12 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     else:
         taste += 2 if X[2] == X[9] else -1
 
-    # ── 菜系 cuisine：招牌→+1.5，无→0 ──
-    cuisine = 1.5 if is_sig else 0.0
+    # ── 菜系 cuisine：招牌→+1.0，无→0 ──
+    # 原为 +1.5，但那会压过明确的口味偏好（差一级的匹配只有 +1），
+    # 导致「不管用户要什么，前几名永远是那 4 道招牌菜」。降到 1.0 后：
+    # 精确匹配(+2) 能赢过「差一级(+1) + 招牌(1.0)」，招牌只在同等匹配时打破平局。
+    # 注意：改这里必须同步改 script.js 的 computeDishMatch / fallback，否则训练与线上脱节。
+    cuisine = 1.0 if is_sig else 0.0
 
     # ── 热量 calorie：精确→+2；差1级→+1；差2级→+0；无偏好→+1 ──
     if X[11] == 0:       # 用户无热量偏好
