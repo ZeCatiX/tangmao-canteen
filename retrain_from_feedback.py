@@ -161,7 +161,9 @@ def main():
 
     # 评估
     y_pred = model.predict(X_fb)
-    r2 = 1 - np.sum((y_fb - y_pred)**2) / np.sum((y_fb - y_fb.mean())**2)
+    ss_tot = np.sum((y_fb - y_fb.mean())**2)
+    # 反馈样本过少或评分全相同时 ss_tot=0，除法会得 -inf 污染指标；此时 R² 无意义，记 0
+    r2 = (1 - np.sum((y_fb - y_pred)**2) / ss_tot) if ss_tot > 1e-12 else 0.0
     mse = np.mean((y_fb - y_pred)**2)
     print(f'\n微调后在反馈数据上的表现:', file=sys.stderr)
     print(f'  R²: {r2:.4f}, MSE: {mse:.6f}', file=sys.stderr)
