@@ -786,7 +786,7 @@ function loadDailyTrend() {
         ]
       },
       options: { responsive: true, plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } } }
+        scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 8, precision: 0 } } } }
     });
   }).catch(() => { console.warn('数据加载失败'); });
 }
@@ -832,7 +832,7 @@ function loadUserActivity() {
       type: 'bar',
       data: { labels, datasets: [{ label: '活跃用户', data, backgroundColor: 'rgba(184,58,42,0.6)', borderRadius: 4 }] },
       options: { responsive: true, plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } } } }
+        scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 8, precision: 0 } } } }
     });
   }).catch(() => { console.warn('数据加载失败'); });
 }
@@ -992,7 +992,7 @@ function loadDishes() {
   fetch('/api/dishes').then(r => r.json()).then(d => {
     if (!d.success) return;
     document.querySelector('#dish-table-body').innerHTML = d.dishes.map(x =>
-      `<tr><td>${esc(x.id)}</td><td>${x.image_url?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span></td>
+      `<tr><td>${esc(x.id)}</td><td>${x.image_url?(x.image_url.startsWith('/')||x.image_url.startsWith('http')?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:`<span style="font-size:1.3rem;margin-right:6px;vertical-align:middle;">${esc(x.image_url)}</span>`):""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span></td>
         <td><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
     ).join('');
   }).catch(() => { console.warn('数据加载失败'); });
@@ -1012,8 +1012,11 @@ function editDish(id) {
     document.getElementById('dish-tags').value = (dish.tags||[]).join(', ');
     document.getElementById('dish-saltiness').value = dish.saltiness || '适中';
     document.getElementById('dish-sweetness').value = dish.sweetness || '无味';
-        document.getElementById('dish-image-preview').src = dish.image_url || '';
-    document.getElementById('dish-image-preview').style.display = dish.image_url ? 'block' : 'none';
+        const _iu = dish.image_url || '';
+    const _isPath = _iu && (_iu.startsWith('/') || _iu.startsWith('http'));
+    const _pv = document.getElementById('dish-image-preview');
+    _pv.src = _isPath ? _iu : '';
+    _pv.style.display = _isPath ? 'block' : 'none';
     document.getElementById('dish-description').value = dish.description || '';
 document.getElementById('dish-active').checked = dish.is_active !== false;
     var a = dish.allergies || {};
