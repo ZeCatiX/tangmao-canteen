@@ -790,6 +790,7 @@ function cancelBlacklist(){
 function addToFavorites(dishId){if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
  if(!user.favorites)user.favorites=[];if(user.favorites.includes(dishId)){showMessage('提示','已收藏');return;}
+ if(user.blacklist?.includes(dishId)){user.blacklist=user.blacklist.filter(id=>id!==dishId);updateUserData(currentUser,{blacklist:user.blacklist});fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});}
  user.favorites.push(dishId);updateUserData(currentUser,{favorites:user.favorites});const dish=dishData.find(d=>d.id===dishId);showMessage('成功','已收藏'+(dish?dish.name:''));
  fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});
  displayRecommendations();}
