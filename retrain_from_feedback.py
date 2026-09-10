@@ -62,7 +62,7 @@ def encode_feedback(fb_row):
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
     price_val = float(price) if price and float(price) > 0 else 20.0
-    dish_rating_val = float(dish_rating) if dish_rating and float(dish_rating) > 0 else 4.0
+    dish_rating_val = float(dish_rating) if dish_rating and float(dish_rating) > 0 else 3.5  # 与 serve 侧一致（见 server.js loadDishData）
     cal_val = calorie if calorie else '中'
 
     # 解析user_preferences JSON

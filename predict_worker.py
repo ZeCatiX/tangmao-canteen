@@ -91,11 +91,11 @@ def encode_features_batch(user_prefs, dishes, model_data):
             else:
                 X[i, 5] = 0.0
             rating = extract_number(d.get('rating', '0'))
-            # 与训练保持一致：缺失/无效评分按 4.0 处理
-            # （DB 里 110 道菜的 rating 全为 NULL，训练侧默认 4.0；此前预测侧默认 0.0，
-            #   同一道菜在训练和上线时特征值不同 = train/serve skew）
+            # 与训练保持一致：缺失/无效评分按 3.5 处理
+            # （server.js loadDishData 对 NULL 评分兜底为 '3.5' 再发给前端，
+            #   训练侧也必须用同一默认值，否则 train/serve 特征值不同）
             if rating <= 0:
-                rating = 4.0
+                rating = 3.5
             X[i, 6] = rating / 5
             X[i, 7] = ORD_MAPPINGS['辣度'].get(user_prefs.get('辣度', '无'), 1)
             X[i, 8] = ORD_MAPPINGS['咸淡'].get(user_prefs.get('咸淡', '无'), 1)

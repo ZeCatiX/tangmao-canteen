@@ -90,7 +90,7 @@ def encode_dish(dish, user_pref):
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
     price_val = float(price) if price and float(price) > 0 else 20.0
-    rating_val = float(rating) if rating and float(rating) > 0 else 4.0
+    rating_val = float(rating) if rating and float(rating) > 0 else 3.5  # 缺失评分兜底 3.5，与 server.js loadDishData 给前端的值一致（否则 train/serve 特征值不同）
     cal_val = calorie if calorie else '中'
 
     X = np.zeros(12)

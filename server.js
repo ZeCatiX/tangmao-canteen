@@ -293,6 +293,29 @@ async function loadDishData() {
     dishData = [];
   }
 }
+// 把用户反馈评分汇总回 dishes.rating
+// 背景：菜品评分这一列从来没被自动写过（其他地方都是实时 JOIN AVG 算），
+// 导致「评分」特征恒为兜底值。这里在每次重训后顺带汇总一次 —— 上线后有真实反馈自动"活"过来。
+// 只统计针对具体菜品的反馈（dish_id>0，排除 dish_id=0 的整体满意度），
+// 且至少 MIN_RATINGS 条才回写（避免个别评分/测试数据定义一道菜）。
+async function syncDishRatings() {
+  const MIN_RATINGS = 3;
+  try {
+    const r = await db.query(
+      `UPDATE dishes d SET rating = sub.avg
+         FROM (SELECT dish_id, ROUND(AVG(rating)::numeric, 1) AS avg, COUNT(*) AS n
+                 FROM feedback WHERE dish_id > 0 GROUP BY dish_id) sub
+        WHERE d.id = sub.dish_id AND sub.n >= $1 AND d.rating IS DISTINCT FROM sub.avg`,
+      [MIN_RATINGS]
+    );
+    if (r.rowCount > 0) logger.info(`已按用户反馈同步 ${r.rowCount} 道菜的评分`);
+    return r.rowCount;
+  } catch (e) {
+    logger.warn('同步菜品评分失败: ' + (e?.message || String(e)));
+    return 0;
+  }
+}
+
 // 服务器启动后异步加载菜品数据
 loadDishData();
 
@@ -830,6 +853,7 @@ app.post('/api/admin/retrain', async (req, res) => {
         modelInfo.trainedAt = new Date().toISOString();
         loadModelInfo();
         logger.info(`手动重训练完成，模型版本: ${modelInfo.version}`);
+        try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
         try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
       } else {
         logger.warn('手动重训练失败: ' + (stderr?.substring(0, 200) || ''));
@@ -1461,6 +1485,7 @@ async function checkAndRetrain() {
             modelInfo.trainedAt = new Date().toISOString();
             loadModelInfo();
             logger.info(`自动重训练完成，模型版本: ${modelInfo.version}`);
+            try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
             try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
           } else {
             logger.warn('自动重训练失败，退出码: ' + code);
