@@ -943,11 +943,12 @@ document.getElementById('retrain-btn')?.addEventListener('click', function() {
   fetch('/api/admin/retrain', { method: 'POST' })
     .then(r => r.json()).then(d => {
       if (d.success) {
-        status.textContent = '训练完成' + d.version;
+        // 后端是异步训练、立即返回「已开始」，响应里没有 version；不能谎报「训练完成」
+        status.textContent = d.message || '重训练已开始，将在后台进行';
         loadModelManagement();
         loadModelInfo();
       } else {
-        status.textContent = '训练失败，请重试';
+        status.textContent = d.message || '训练失败，请重试';
       }
     }).catch(() => { status.textContent = '训练失败，网络错误'; })
     .finally(() => { btn.disabled = false; });
