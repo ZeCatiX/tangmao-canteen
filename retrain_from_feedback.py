@@ -142,7 +142,7 @@ def main():
     from train_restaurant_model import generate_training_data, load_dishes_from_db, USER_PROFILES
 
     dishes = load_dishes_from_db()
-    X_syn, y_syn = generate_training_data(dishes, USER_PROFILES, samples_per_dish=4)
+    X_syn, y_syn = generate_training_data(dishes, USER_PROFILES, samples_per_dish=1)
 
     # 将真实反馈数据附加到合成数据中
     # 原式只保证「反馈总量≈合成数据的10%」，反馈只有几条时会把每行复制成百上千份，
