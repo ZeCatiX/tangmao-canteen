@@ -30,6 +30,11 @@ if (!process.env.ADMIN_PASS || process.env.ADMIN_PASS === 'admin123' || process.
   console.error('❌ 安全错误: 管理后台使用默认密码或密码强度不足，请在 .env 中设置长度 ≥ 8 位的强密码！');
   process.exit(1);
 }
+// 桌码签名密钥：缺失会退化成源码里公开的常量，任何人都能伪造桌码查看别桌账单
+if (!process.env.TABLE_SECRET || process.env.TABLE_SECRET === 'tangmao-table-secret' || process.env.TABLE_SECRET.length < 16) {
+  console.error('❌ 安全错误: TABLE_SECRET 未设置或强度不足（<16位），桌码可被伪造，请在 .env 中设置强随机密钥！');
+  process.exit(1);
+}
 
 // ═══════════════════════════════════════════════
 // 安全中间件
@@ -323,6 +328,11 @@ app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: dishData 
 // 桌码 = <桌号>.<HMAC前16位>：没有签名密钥无法伪造，避免"随便输桌号就能看别人账单"
 const TABLE_SECRET = process.env.TABLE_SECRET || process.env.JWT_SECRET || 'tangmao-table-secret';
 function tableSig(n) { return require('crypto').createHmac('sha256', TABLE_SECRET).update(String(n)).digest('hex').slice(0, 16); }
+// 常量时间比较：避免字符串 !== 逐字符短路产生的计时侧信道（与 admin 登录同一套路）
+function tableSigEq(expect, got) {
+  const a = Buffer.from(String(expect)), b = Buffer.from(String(got));
+  return a.length === b.length && require('crypto').timingSafeEqual(a, b);
+}
 app.get('/api/table-view', async (req, res) => {
   try {
     const t = String(req.query.t || '');
@@ -331,7 +341,7 @@ app.get('/api/table-view', async (req, res) => {
     const sig = idx > 0 ? t.slice(idx + 1) : '';
     const num = /^\d{1,2}$/.test(rawNum) ? String(parseInt(rawNum, 10)).padStart(2, '0') : '';
     // 兼容旧版一位桌号链接：签名按原样或补零后匹配均可
-    if (!num || !sig || (tableSig(num) !== sig && tableSig(rawNum) !== sig)) {
+    if (!num || !sig || !(tableSigEq(tableSig(num), sig) || tableSigEq(tableSig(rawNum), sig))) {
       return res.status(403).json({ success: false, error: '无效的桌码' });
     }
     const pool = db;
