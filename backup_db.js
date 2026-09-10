@@ -11,7 +11,7 @@ const DB_NAME = process.env.PG_DATABASE || 'tangmao';
 const DB_USER = process.env.PG_USER || 'postgres';
 const DB_HOST = process.env.PG_HOST || 'localhost';
 const DB_PORT = process.env.PG_PORT || '5432';
-const MAX_BACKUPS = 7; // 保留最近7天
+const MAX_BACKUPS = 3; // 只保留 3 份：当前 + 上一版 + 上上一版（多留几份是为了防止"昨天的数据就是错的"）
 
 // 自动检测 pg_dump 路径（支持多个版本）
 function findPgDump() {
