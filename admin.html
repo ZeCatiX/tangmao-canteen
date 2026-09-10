@@ -437,7 +437,7 @@
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(201,169,110,0.15);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:#4a3028;margin:0;">
               <input type="checkbox" id="auto-retrain-toggle" style="width:16px;height:16px;cursor:pointer;">
-              按用户反馈自动重训
+              启用用户反馈重训
             </label>
             <span id="auto-retrain-hint" style="font-size:0.78rem;color:#8b7a6a;"></span>
           </div>
@@ -1003,8 +1003,8 @@ function loadAutoRetrainToggle() {
   const render = (on) => {
     toggle.checked = !!on;
     if (hint) hint.textContent = on
-      ? '已开启：新反馈攒够阈值会自动重训'
-      : '已关闭：反馈照常收集，但不会自动重训（未上线前建议关闭）';
+      ? '已开启：反馈攒够阈值会自动重训，「重新训练模型」按钮也可用'
+      : '已关闭：反馈照常收集但不用于重训，且「重新训练模型」按钮会被拦下（未上线前建议关闭）';
   };
   if (!_autoRetrainBound) {
     _autoRetrainBound = true;

@@ -832,6 +832,11 @@ app.post('/api/admin/settings', (req, res) => {
 // 一键触发重训练（异步执行，不阻塞服务器）
 app.post('/api/admin/retrain', async (req, res) => {
   try {
+    // 反馈重训开关关闭时一律不重训（手动按钮走的也是 retrain_from_feedback.py，
+    // 同样吃 feedback 数据 —— 未上线时那些都是测试用例，会把模型带偏）
+    if (!runtimeSettings.autoRetrain) {
+      return res.status(409).json({ success: false, message: '用户反馈重训已关闭（未上线时反馈都是测试数据）。如需重训，请先打开上方开关。' });
+    }
     // 检查是否正在训练
     if (global._isRetraining || _isRetrainingCheck) {
       return res.status(409).json({ success: false, message: '模型正在训练中，请稍后' });
