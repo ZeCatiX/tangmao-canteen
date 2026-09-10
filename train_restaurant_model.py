@@ -4,7 +4,7 @@
 基于10维特征（辣度、咸淡、甜酸、热量、价格、招牌、评分、用户辣度、用户咸淡、用户甜酸）
 训练随机森林回归模型，从PostgreSQL加载数据，生成合成训练集
 """
-import pickle, json, sys, os, random
+import pickle, json, sys, os, random, itertools
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -27,21 +27,35 @@ FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '�
 # 模拟用户池：按接近真实人群的比例随机生成
 # （原来手写 30 个用户太少，靠"同一道题抄 24 遍"凑数据量 —— 那是虚高 R² 和模型膨胀的根源）
 # 用独立 Random(seed) 保证可复现，且不受全局 np.random 状态影响
-def make_user_profiles(n=800, seed=20260101):
-    rng = random.Random(seed)
-    profs = []
-    for _ in range(n):
-        profs.append({
-            '辣度': rng.choices(['不辣', '微辣', '中辣', '重辣'], weights=[35, 40, 18, 7])[0],
-            '咸淡': rng.choices(['清淡', '适中', '偏咸'], weights=[30, 55, 15])[0],
-            '甜酸': rng.choices(['无味', '偏甜', '偏酸', '甜酸'], weights=[45, 25, 18, 12])[0],
-            'calorie': rng.choices(['低', '中', '高'], weights=[30, 50, 20])[0],
-            '价格': rng.choices(['经济', '适中', '品质'], weights=[40, 45, 15])[0],
-        })
+# 偏好各维度的全部取值（与 index.html 的下拉框一一对应）
+# 注意「无」= 无所谓，而且 UI 里**它就是每个下拉框的默认选项**（value="无" selected）
+PREF_DIMS = {
+    '辣度':    ['无', '不辣', '微辣', '中辣', '重辣'],
+    '咸淡':    ['无', '清淡', '适中', '偏咸'],
+    '甜酸':    ['无', '无味', '偏甜', '偏酸', '甜酸'],
+    'calorie': ['无', '低', '中', '高'],
+    '价格':    ['无', '经济', '适中', '品质'],
+}
+
+
+def make_user_profiles(n=None, seed=20260101):
+    """生成模拟用户偏好组合 —— 系统性覆盖整个输入空间。
+
+    枚举 5 个维度的**完整笛卡尔积**（5×4×5×4×4 = 1600 种），而不是随机采样。
+    旧版只随机采"每维都有具体偏好"的组合（432 种、全不含「无」），
+    而 UI 里每个维度的**默认值就是「无所谓」** —— 用户不改直接提交是最常见路径，
+    模型却从没见过这类输入，只能外推（实测会把招牌菜打低分，与规则完全相反）。
+    """
+    keys = list(PREF_DIMS)
+    combos = list(itertools.product(*(PREF_DIMS[k] for k in keys)))
+    profs = [dict(zip(keys, c)) for c in combos]
+    random.Random(seed).shuffle(profs)   # 打散，避免同一维度的值聚在一起
+    if n is not None and n < len(profs):
+        profs = profs[:n]
     return profs
 
 
-USER_PROFILES = make_user_profiles(800)
+USER_PROFILES = make_user_profiles()   # 全量 1600 种组合
 
 
 # ═══════════════════════════════════════════════
@@ -207,11 +221,8 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
 # ═══════════════════════════════════════════════
 # 4. 训练模型
 # ═══════════════════════════════════════════════
-def train_model(X_train, y_train, X_test, y_test):
-    """训练随机森林回归模型。
-    X_test/y_test 必须是「另一批全新模拟用户」的数据：不能再用同一批数据随机切分，
-    否则同一"用户×菜品"簇的样本会同时进训练和测试，R² 会虚高（旧版 0.98 就是这么来的）。
-    """
+def fit_model(X, y):
+    """拟合随机森林（不评估）"""
     model = RandomForestRegressor(
         n_estimators=300,      # 数据不再靠复印件撑量，不需要那么多深树
         max_depth=12,          # 原 20：太深会把单点噪声也背进去
@@ -219,18 +230,29 @@ def train_model(X_train, y_train, X_test, y_test):
         random_state=42,
         n_jobs=-1
     )
-    model.fit(X_train, y_train)
+    model.fit(X, y)
+    return model
 
-    # 评估（用全新用户的数据）
+
+def evaluate(model, X_test, y_test):
+    """在给定数据上算指标"""
     y_pred = model.predict(X_test)
     r2 = 1 - np.sum((y_test - y_pred)**2) / np.sum((y_test - y_test.mean())**2)
-    mse = np.mean((y_test - y_pred)**2)
-    rmse = np.sqrt(mse)
-    mae = np.mean(np.abs(y_test - y_pred))
+    mse = float(np.mean((y_test - y_pred)**2))
+    return {'r2': float(r2), 'mse': mse, 'rmse': float(np.sqrt(mse)),
+            'mae': float(np.mean(np.abs(y_test - y_pred)))}
 
-    print(f'训练集: {len(X_train)} 条, 测试集(全新模拟用户): {len(X_test)} 条', file=sys.stderr)
-    print(f'R²: {r2:.4f}, MSE: {mse:.6f}, RMSE: {rmse:.4f}, MAE: {mae:.4f}', file=sys.stderr)
-    return model, {'r2': float(r2), 'mse': float(mse), 'rmse': float(rmse), 'mae': float(mae)}
+
+def train_model(X_train, y_train, X_test, y_test):
+    """训练 + 评估。
+    X_test/y_test 必须是模型**没见过的偏好组合**（按组合划分，不是把同一批数据随机切），
+    否则同一"用户×菜品"的样本会同时进训练和测试，R² 虚高。
+    """
+    model = fit_model(X_train, y_train)
+    metrics = evaluate(model, X_test, y_test)
+    print(f'训练集: {len(X_train)} 条, 留出集(没见过的偏好组合): {len(X_test)} 条', file=sys.stderr)
+    print(f"R²: {metrics['r2']:.4f}, MSE: {metrics['mse']:.6f}, RMSE: {metrics['rmse']:.4f}, MAE: {metrics['mae']:.4f}", file=sys.stderr)
+    return model, metrics
 
 
 # ═══════════════════════════════════════════════
@@ -261,19 +283,27 @@ def main():
         print(f'数据库连接失败: {e}', file=sys.stderr)
         sys.exit(1)
 
-    # 生成训练数据（一批模拟用户）
+    # 偏好组合全量 1600 种，按**组合**划分 80% 训练 / 20% 留出：
+    # 留出集是模型没见过的组合，R² 才是真实泛化能力（不是把同一批数据随机切）
+    split = len(USER_PROFILES) * 4 // 5
+    train_profiles, holdout_profiles = USER_PROFILES[:split], USER_PROFILES[split:]
+
     print('正在生成训练数据...', file=sys.stderr)
-    X, y = generate_training_data(dishes, USER_PROFILES, samples_per_dish=1)
-    print(f'生成 {len(X)} 条训练数据（{len(USER_PROFILES)} 位模拟用户）', file=sys.stderr)
+    X, y = generate_training_data(dishes, train_profiles, samples_per_dish=1)
+    X_ho, y_ho = generate_training_data(dishes, holdout_profiles, samples_per_dish=1)
+    print(f'训练 {len(X)} 条（{len(train_profiles)} 种偏好组合）', file=sys.stderr)
+    print(f'留出 {len(X_ho)} 条（{len(holdout_profiles)} 种模型没见过的组合）', file=sys.stderr)
 
-    # 生成测试数据：另一批全新模拟用户（诚实评估，与训练用户完全不重叠）
-    test_profiles = make_user_profiles(200, seed=777)
-    X_te, y_te = generate_training_data(dishes, test_profiles, samples_per_dish=1)
-    print(f'生成 {len(X_te)} 条测试数据（{len(test_profiles)} 位全新模拟用户）', file=sys.stderr)
-
-    # 训练 + 评估
+    # 训练 + 诚实评估
     print('正在训练模型...', file=sys.stderr)
-    model, metrics = train_model(X, y, X_te, y_te)
+    model, metrics = train_model(X, y, X_ho, y_ho)
+
+    # 上线用的模型：用**全量组合**再拟合一次，覆盖 UI 能产生的每一种偏好输入
+    # （留出集只用于给出诚实指标；上线模型不该对 20% 的用户是盲区）
+    print('用全量偏好组合重训上线模型...', file=sys.stderr)
+    X_all = np.vstack([X, X_ho])
+    y_all = np.concatenate([y, y_ho])
+    model = fit_model(X_all, y_all)
 
     # 特征重要性
     importance = export_feature_importance(model)
@@ -290,7 +320,7 @@ def main():
         'metrics': {
             **metrics,
             'real_feedback_count': 0,
-            'training_samples': len(X),
+            'training_samples': len(X_all),
             'feature_count': 12,
             'feature_names': FEATURE_NAMES
         }
@@ -308,7 +338,7 @@ def main():
         json.dump({
             **metrics,
             'feature_count': 12,
-            'training_samples': len(X),
+            'training_samples': len(X_all),
             'real_feedback_count': 0,
             'trained_at': datetime.datetime.now().isoformat(),
         }, f, ensure_ascii=False, indent=2)
@@ -321,7 +351,7 @@ def main():
         'success': True,
         'importance': importance,
         'metrics': metrics,
-        'training_samples': len(X),
+        'training_samples': len(X_all),
         'feature_count': 12,
     }
     print(json.dumps(result, ensure_ascii=False))
