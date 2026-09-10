@@ -1428,8 +1428,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
- click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');showSection('preference-section');});
- click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');showSection('home-section');});
+ click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');updateTableStatusCard();showSection('preference-section');});
+ click('end-logout',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');updateTableStatusCard();showSection('home-section');});
  // ─── 加菜面板（桌号锁定，全面板内操作，无原生弹窗依赖）───
  function showAddonView(v){
   ['main','move','other','pick'].forEach(x=>{
