@@ -121,6 +121,9 @@ def main():
         else:
             report['verdict'] = 'rule'
             report['note'] = f'规则相关性高 {-diff:+.3f} —— ML 目前还不如规则，继续攒反馈再训'
+        # 小样本下相关系数本身波动很大，差异 0.05 的门槛挡不住噪声，必须提示
+        if n < 100:
+            report['caveat'] = f'样本仅 {n} 条，相关系数波动大，结论仅供参考（建议 ≥100 条再定论）'
     except Exception as e:
         report['note'] = f'生成失败: {e}'
     return report

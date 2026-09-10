@@ -65,3 +65,6 @@ model_metrics.json
 
 # 运行时开关（后台切换 autoRetrain 等，服务器自动写入）
 runtime_settings.json
+
+# 推荐效果报告（后台点「重新生成」时写入）
+recommendation_effect.json

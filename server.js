@@ -222,7 +222,7 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
 
 // 静态文件服务（只允许前端需要的文件类型，阻止敏感文件泄露）
 const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
-const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
+const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_effect.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   const ext = path.extname(req.path).toLowerCase();
@@ -337,6 +337,18 @@ async function syncDishRatings() {
     logger.warn('同步菜品评分失败: ' + (e?.message || String(e)));
     return 0;
   }
+}
+
+// 重新生成「推荐效果报告」（重训后调用，保证报告对应当前模型）
+function refreshRecommendationEffect() {
+  try {
+    const { spawn } = require('child_process');
+    const proc = spawn('python', ['recommendation_effect_report.py'], {
+      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe']
+    });
+    proc.on('error', e => logger.warn('生成推荐效果报告失败: ' + e.message));
+    proc.on('close', code => { if (code !== 0) logger.warn('生成推荐效果报告失败，退出码: ' + code); });
+  } catch (e) { logger.warn('生成推荐效果报告失败: ' + (e?.message || '')); }
 }
 
 // 服务器启动后异步加载菜品数据
@@ -860,6 +872,33 @@ app.post('/api/admin/settings', (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 推荐效果报告：ML vs 规则（回答「ML 有没有打过规则」）
+// GET 读缓存文件；POST 触发重新生成（跑 Python，几秒钟）
+const RECOMMENDATION_EFFECT_PATH = path.join(__dirname, 'recommendation_effect.json');
+app.get('/api/admin/recommendation-effect', (req, res) => {
+  try {
+    res.json({ success: true, report: readJSON(RECOMMENDATION_EFFECT_PATH) });
+  } catch (e) {
+    res.json({ success: true, report: null, message: '尚未生成过，点「重新生成」试试' });
+  }
+});
+app.post('/api/admin/recommendation-effect', (req, res) => {
+  try {
+    const { spawn } = require('child_process');
+    const proc = spawn('python', ['recommendation_effect_report.py'], {
+      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe']
+    });
+    let err = '';
+    proc.stderr.on('data', d => { err += d.toString(); });
+    proc.on('close', code => {
+      if (code !== 0) return res.status(500).json({ success: false, error: '生成失败: ' + err.slice(0, 200) });
+      try { res.json({ success: true, report: readJSON(RECOMMENDATION_EFFECT_PATH) }); }
+      catch (e) { res.status(500).json({ success: false, error: '报告文件读取失败' }); }
+    });
+    proc.on('error', e => res.status(500).json({ success: false, error: 'Python 启动失败: ' + e.message }));
+  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // 一键触发重训练（异步执行，不阻塞服务器）
 app.post('/api/admin/retrain', async (req, res) => {
   try {
@@ -903,6 +942,7 @@ app.post('/api/admin/retrain', async (req, res) => {
         logger.info(`手动重训练完成，模型版本: ${modelInfo.version}`);
         try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
         try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+        refreshRecommendationEffect();
       } else {
         logger.warn('手动重训练失败: ' + (stderr?.substring(0, 200) || ''));
       }
@@ -1551,6 +1591,7 @@ async function checkAndRetrain() {
             logger.info(`自动重训练完成，模型版本: ${modelInfo.version}`);
             try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
             try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+            refreshRecommendationEffect();
           } else {
             logger.warn('自动重训练失败，退出码: ' + code);
           }

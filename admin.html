@@ -444,6 +444,20 @@
         </div>
       </div>
     </div>
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">推荐效果：ML 有没有打过规则？</div>
+        <div class="card-body" style="padding:1rem;">
+          <div id="rec-effect-body" style="font-size:0.88rem;color:#4a3028;">加载中...</div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-sm" id="rec-effect-refresh" style="background:#8b5a2b;color:#fff;border:none;border-radius:6px;padding:5px 16px;">
+              <i class="bi bi-arrow-clockwise"></i> 重新生成
+            </button>
+            <span id="rec-effect-status" style="font-size:0.8rem;color:#8b7a6a;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="col-lg-6">
       <div class="card">
         <div class="card-header">版本对比（R2 / MSE / MAE）</div>
@@ -591,6 +605,8 @@
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/popular-dishes</td><td>-</td><td>CSV</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/settings</td><td>-</td><td>{success, settings}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/settings</td><td>{autoRetrain}</td><td>{success, settings}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/recommendation-effect</td><td>-</td><td>{success, report}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/recommendation-effect</td><td>-</td><td>{success, report}（重新生成）</td></tr>
             </tbody>
           </table>
           <div style="padding:8px 12px;font-size:0.78rem;color:#8b7a6a;background:#fdfaf5;border-top:1px solid rgba(201,169,110,0.1);">
@@ -888,6 +904,7 @@ function loadRecommendationLog() {
 
 function loadModelManagement() {
   loadAutoRetrainToggle();   // 每次进入本页都刷新开关的真实状态（登录后首次进入也能拿到）
+  loadRecEffect();           // 推荐效果报告
   // 加载模型信息
   fetch('/api/admin/model-info').then(r => r.json()).then(d => {
     if (!d.success) return;
@@ -1023,6 +1040,54 @@ function loadAutoRetrainToggle() {
     .then(d => { if (d.success) render(d.settings.autoRetrain); })
     .catch(() => { if (hint) hint.textContent = '读取设置失败'; });
 }
+
+// 推荐效果：ML 有没有打过规则？（数据源：feedback 里带偏好的真实评分）
+function renderRecEffect(r) {
+  const el = document.getElementById('rec-effect-body');
+  if (!el) return;
+  if (!r) { el.innerHTML = '<span style="color:#8b7a6a;">还没有报告 —— 点下方「重新生成」</span>'; return; }
+  if (r.verdict === 'insufficient') {
+    el.innerHTML = '<div style="color:#8b7a6a;">还不能判断：' + esc(r.note || '') + '</div>'
+      + '<div style="font-size:0.82rem;color:#8b7a6a;margin-top:6px;">当前样本：<strong>' + (r.sample_size || 0) + '</strong> 条真实评分</div>';
+    return;
+  }
+  const badge = r.verdict === 'ml' ? '<span class="badge bg-success">ML 胜出</span>'
+              : r.verdict === 'rule' ? '<span class="badge bg-warning">规则仍更强</span>'
+              : '<span class="badge bg-secondary">不相上下</span>';
+  el.innerHTML =
+    '<div style="margin-bottom:10px;">' + badge + ' <span style="font-size:0.85rem;">' + esc(r.note || '') + '</span></div>'
+    + '<table class="table table-sm mb-0" style="font-size:0.85rem;max-width:540px;">'
+    + '<thead><tr><th>来源</th><th>与真实评分的相关性</th><th>平均误差</th></tr></thead><tbody>'
+    + '<tr><td>规则匹配</td><td>' + r.rule.spearman.toFixed(3) + '</td><td>' + r.rule.mae.toFixed(3) + '</td></tr>'
+    + '<tr><td>ML 模型</td><td><strong>' + r.ml.spearman.toFixed(3) + '</strong></td><td>' + r.ml.mae.toFixed(3) + '</td></tr>'
+    + '</tbody></table>'
+    + '<div style="font-size:0.78rem;color:#8b7a6a;margin-top:8px;">'
+    + '样本 ' + r.sample_size + ' 条真实评分 · 生成于 ' + String(r.generated_at || '').slice(0, 19).replace('T', ' ')
+    + (r.caveat ? '<br>⚠️ ' + esc(r.caveat) : '') + '</div>';
+}
+function loadRecEffect() {
+  const el = document.getElementById('rec-effect-body');
+  if (!el) return;
+  fetch('/api/admin/recommendation-effect').then(r => r.json())
+    .then(d => { if (d.success) renderRecEffect(d.report); })
+    .catch(() => { el.innerHTML = '<span style="color:#8b7a6a;">读取失败</span>'; });
+}
+(function bindRecEffect() {
+  const btn = document.getElementById('rec-effect-refresh');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    const st = document.getElementById('rec-effect-status');
+    btn.disabled = true; if (st) st.textContent = '生成中（要跑 Python，约几秒）...';
+    fetch('/api/admin/recommendation-effect', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) { renderRecEffect(d.report); if (st) st.textContent = '已更新'; }
+        else if (st) st.textContent = d.error || '生成失败';
+      })
+      .catch(() => { if (st) st.textContent = '网络错误'; })
+      .finally(() => { btn.disabled = false; setTimeout(() => { if (st) st.textContent = ''; }, 4000); });
+  });
+})();
 
 function loadModelInfo() {
   fetch('/api/admin/model-info').then(r => r.json()).then(d => {
