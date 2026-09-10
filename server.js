@@ -54,8 +54,8 @@ if (process.env.NODE_ENV === 'production') {
   if (!process.env.CORS_ORIGIN || /localhost|127\.0\.0\.1/.test(process.env.CORS_ORIGIN)) {
     console.warn('⚠️  生产环境 CORS_ORIGIN 仍指向 localhost —— 前端与后端同源部署可忽略；跨域部署请改成真实域名');
   }
-  if (!process.env.SSL_KEY || !process.env.SSL_CERT) {
-    console.warn('⚠️  生产环境未配置 HTTPS 证书 —— 若前面有 Nginx/CDN 反向代理终止 TLS 可忽略，否则密码与 token 会明文传输');
+  if (!process.env.SSL_KEY || !process.env.SSL_CERT || /^\.?\/?ssl[\\/]/.test(process.env.SSL_KEY)) {
+    console.warn('⚠️  生产环境未配置正式 HTTPS 证书（未设置，或仍指向开发用的 ./ssl/ 自签名证书）—— 若前面有 Nginx/CDN 反向代理终止 TLS 可忽略，否则浏览器会拦截、且密码与 token 明文传输');
   }
 }
 
