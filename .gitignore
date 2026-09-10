@@ -1,5 +1,6 @@
 # 环境配置
 .env*
+!/.env.production.example
 .env.local
 
 # 日志

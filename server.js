@@ -37,6 +37,29 @@ if (!process.env.TABLE_SECRET || process.env.TABLE_SECRET === 'tangmao-table-sec
 }
 
 // ═══════════════════════════════════════════════
+// 生产环境配置守卫
+// 开发用的 .env 为方便测试把限流放得很宽（.env 里有注释说明），
+// 部署时若整份带上去 = 暴力破解随便打。以 NODE_ENV=production 为开关校验，
+// 配置不合格直接拒绝启动（fail-closed）。生产模板见 .env.production.example
+// ═══════════════════════════════════════════════
+if (process.env.NODE_ENV === 'production') {
+  const rlMax = parseInt(process.env.RATE_LIMIT_MAX || '1000');
+  const loginMax = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '30');
+  const adminLoginMax = parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '30');
+  const registerMax = parseInt(process.env.REGISTER_RATE_LIMIT_MAX || '5');
+  if (rlMax > 5000 || loginMax > 60 || adminLoginMax > 60 || registerMax > 60) {
+    console.error(`❌ 安全错误: 生产环境限流阈值过宽（RATE_LIMIT_MAX=${rlMax}, LOGIN_RATE_LIMIT_MAX=${loginMax}, ADMIN_LOGIN_RATE_LIMIT_MAX=${adminLoginMax}, REGISTER_RATE_LIMIT_MAX=${registerMax}）—— 测试用的宽松值不能带到线上，请参考 .env.production.example`);
+    process.exit(1);
+  }
+  if (!process.env.CORS_ORIGIN || /localhost|127\.0\.0\.1/.test(process.env.CORS_ORIGIN)) {
+    console.warn('⚠️  生产环境 CORS_ORIGIN 仍指向 localhost —— 前端与后端同源部署可忽略；跨域部署请改成真实域名');
+  }
+  if (!process.env.SSL_KEY || !process.env.SSL_CERT) {
+    console.warn('⚠️  生产环境未配置 HTTPS 证书 —— 若前面有 Nginx/CDN 反向代理终止 TLS 可忽略，否则密码与 token 会明文传输');
+  }
+}
+
+// ═══════════════════════════════════════════════
 // 安全中间件
 // ═══════════════════════════════════════════════
 
