@@ -246,8 +246,6 @@ while True:
         input_data = json.loads(line.strip())
         user_prefs = input_data['userPrefs']
         dishes = input_data['dishes']
-        with open('_recv_debug.json','w',encoding='utf-8') as _f:
-            import json as _j; _j.dump({'prefs':user_prefs,'dish0':dishes[0] if dishes else None,'n':len(dishes)},_f,ensure_ascii=False)
         
         # 使用优化的批量预测
         results = predict_dish_score_batch_optimized(user_prefs, dishes, _model_cache)
