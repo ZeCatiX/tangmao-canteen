@@ -70,11 +70,11 @@ def encode_features_batch(user_prefs, dishes, model_data):
     scaler = model_data.get('scaler')
     n_samples = len(dishes)
 
-    # ★ 检测模型格式：新模型（11维，无OHE/scaler）or 旧模型（25维）
+    # ★ 检测模型格式：新模型（12维，无OHE/scaler）or 旧模型（25维）
     if ohe is None:
-        # 新模型格式：11维特征
-        # [辣度, 咸淡, 甜酸, 热量, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸, 用户价格]
-        X = np.zeros((n_samples, 11))
+        # 新模型格式：12维特征
+        # [辣度, 咸淡, 甜酸, 热量, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸, 用户价格, 用户热量]
+        X = np.zeros((n_samples, 12))
         for i, d in enumerate(dishes):
             X[i, 0] = ORD_MAPPINGS['辣度'].get(d.get('spiciness', '无'), 1)
             X[i, 1] = ORD_MAPPINGS['咸淡'].get(d.get('saltiness', '无'), 1)
@@ -96,6 +96,7 @@ def encode_features_batch(user_prefs, dishes, model_data):
             X[i, 8] = ORD_MAPPINGS['咸淡'].get(user_prefs.get('咸淡', '无'), 1)
             X[i, 9] = ORD_MAPPINGS['甜酸'].get(user_prefs.get('甜酸', '无'), 1)
             X[i, 10] = ORD_MAPPINGS['价格区间'].get(user_prefs.get('价格区间', '无'), 0)
+            X[i, 11] = ORD_MAPPINGS['热量'].get(user_prefs.get('calorie', '无'), 0)
         return X
 
     # 旧模型格式：25维特征（含OHE/scaler/交互特征等）

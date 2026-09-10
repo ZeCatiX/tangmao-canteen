@@ -22,7 +22,7 @@ ORD_MAPPINGS = {
 }
 
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
-                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格']
+                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量']
 
 # 模拟用户池：按接近真实人群的比例随机生成
 # （原来手写 30 个用户太少，靠"同一道题抄 24 遍"凑数据量 —— 那是虚高 R² 和模型膨胀的根源）
@@ -93,7 +93,7 @@ def encode_dish(dish, user_pref):
     rating_val = float(rating) if rating and float(rating) > 0 else 4.0
     cal_val = calorie if calorie else '中'
 
-    X = np.zeros(11)
+    X = np.zeros(12)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
@@ -105,54 +105,65 @@ def encode_dish(dish, user_pref):
     X[8] = ORD_MAPPINGS['咸淡'].get(user_pref['咸淡'], 1)
     X[9] = ORD_MAPPINGS['甜酸'].get(user_pref['甜酸'], 1)
     X[10] = ORD_MAPPINGS['价格区间'].get(user_pref.get('价格', '无'), 0)
+    X[11] = ORD_MAPPINGS['热量'].get(user_pref.get('calorie', '无'), 0)
     return X, name, is_sig, price_val, rating_val, category
 
 
 def compute_score(X, is_sig, price_val, rating_val, category):
-    """基于特征向量计算合理的目标评分（匹配用户偏好的程度）"""
-    # 评分贡献 15%
-    score = rating_val / 5 * 0.15
-
-    # 口味匹配贡献 40%（辣度超出重罚，咸淡差级，甜酸精确）
-    spiciness_diff = X[0] - X[7]
-    if spiciness_diff > 0:
-        spiciness_match = 0.2
+    """与线上规则 computeDishMatch(script.js:177) 对齐的训练目标函数。
+    逻辑完全镜像 computeDishMatch 的阶梯式打分，确保 ML 学的规律和线上规则一致。
+    输出 0.1~1.0（= matchRate = total/14，与 computeDishMatch 的 matchRate 同口径）。"""
+    # ── 口味 taste（-3 ~ +6）──
+    taste = 0.0
+    # 辣度：菜比用户辣→-2(重罚)；精确→+2；差1级→+1；差2级→+0；无偏好→+2
+    if X[7] == 0:        # 用户无辣度偏好
+        taste += 2
+    elif X[0] > X[7]:    # 菜比用户偏好辣
+        taste -= 2
     else:
-        spiciness_match = 1.0 - min(abs(spiciness_diff) / 4, 1.0) * 0.5
-    saltiness_match = 1.0 - min(abs(X[1] - X[8]) / 3, 1.0) * 0.3
-    sweetness_match = 1.0 if abs(X[2] - X[9]) == 0 else 0.4
-    score += spiciness_match * 0.20 + saltiness_match * 0.12 + sweetness_match * 0.08
+        d = X[7] - X[0]
+        taste += 2 if d == 0 else (1 if d == 1 else 0)
+    # 咸淡：精确→+2；差1级→+1；差2级→+0；无偏好→+2
+    if X[8] == 0:
+        taste += 2
+    else:
+        d = abs(X[1] - X[8])
+        taste += 2 if d == 0 else (1 if d == 1 else 0)
+    # 甜酸：精确→+2；不匹配→-1；无偏好→+2
+    if X[9] == 0:
+        taste += 2
+    else:
+        taste += 2 if X[2] == X[9] else -1
 
-    # 热量匹配贡献 12%
-    cal_match = 1.0 - min(abs(X[3] - 2) / 3, 1.0) * 0.5
-    score += cal_match * 0.12
+    # ── 菜系 cuisine：招牌→+1.5，无→0 ──
+    cuisine = 1.5 if is_sig else 0.0
 
-    # 招牌贡献 8%
-    score += is_sig * 0.08
+    # ── 热量 calorie：精确→+2；差1级→+1；差2级→+0；无偏好→+1 ──
+    if X[11] == 0:       # 用户无热量偏好
+        calorie = 1.0
+    else:
+        d = abs(X[3] - X[11])
+        calorie = 2.0 if d == 0 else (1.0 if d == 1 else 0.0)
 
-    # 价格贡献 10% — 按用户价格区间匹配(经济<20/适中20-50/品质>50)
-    user_price = X[10]
-    if user_price == 1:  # 经济
-        price_match = 1.0 if price_val < 20 else 0.2
-    elif user_price == 3:  # 品质
-        price_match = 1.0 if price_val > 50 else 0.2
-    elif user_price == 2:  # 适中
-        price_match = 1.0 if 20 <= price_val <= 50 else 0.2
-    else:  # 无偏好
-        price_match = 0.7
-    score += price_match * 0.10
+    # ── 价格 price（三档制，与 computeDishMatch 一致）──
+    if X[10] == 0:       # 无偏好
+        price = 1.0
+    elif X[10] == 1:     # 经济
+        price = 2.0 if price_val < 20 else (-1.0 if price_val < 30 else -2.0)
+    elif X[10] == 2:     # 适中
+        price = 2.0 if 20 <= price_val <= 50 else -1.0
+    elif X[10] == 3:     # 品质
+        price = 2.0 if price_val > 50 else (-1.0 if price_val > 40 else -2.0)
+    else:
+        price = 1.0
 
-    # 类别贡献 5%
-    cat_bonus = {'热菜': 0.05, '凉菜': 0.03, '主食': 0.02, '汤品': 0.04, '甜品': 0.03}
-    score += cat_bonus.get(category, 0.02) * 0.05
+    # ── 菜品评分 rating ──
+    rating = (rating_val / 5) * 2.5 if rating_val > 0 else 2.0
 
-    # 用户偏好强度贡献 10%
-    score += (X[7] / 4) * 0.04 + (X[9] / 4) * 0.03 + (X[8] / 3) * 0.03
-
-    # 映射到 0.1~1.0
-    score = score * 0.7 + 0.3
-    score += np.random.normal(0, 0.008)
-    return max(0.1, min(1.0, score))
+    # ── 总分 → matchRate（与 computeDishMatch 的 total/14 同口径）──
+    total = taste + cuisine + calorie + price + rating
+    match_rate = total / 14.0
+    return max(0.1, min(1.0, match_rate))
 
 
 def generate_training_data(dishes, user_profiles, samples_per_dish=1):
@@ -184,7 +195,7 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
             X_list.append(X)
             y_list.append(score)
             for _ in range(samples_per_dish - 1):
-                X_noise = X + np.random.normal(0, 0.008, 11)
+                X_noise = X + np.random.normal(0, 0.008, 12)
                 X_noise = np.clip(X_noise, 0, None)
                 y_noise = score + np.random.normal(0, 0.008)
                 y_noise = max(0.1, min(1.0, y_noise))
@@ -280,7 +291,7 @@ def main():
             **metrics,
             'real_feedback_count': 0,
             'training_samples': len(X),
-            'feature_count': 11,
+            'feature_count': 12,
             'feature_names': FEATURE_NAMES
         }
     }
@@ -296,7 +307,7 @@ def main():
     with open(os.path.join(os.path.dirname(__file__), 'model_metrics.json'), 'w', encoding='utf-8') as f:
         json.dump({
             **metrics,
-            'feature_count': 11,
+            'feature_count': 12,
             'training_samples': len(X),
             'real_feedback_count': 0,
             'trained_at': datetime.datetime.now().isoformat(),

@@ -16,7 +16,7 @@ ORD_MAPPINGS = {
     '价格区间': {'经济': 1, '适中': 2, '品质': 3, '无': 0},
 }
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
-                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格']
+                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量']
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'recommendation_model.pkl')
 
@@ -72,7 +72,7 @@ def encode_feedback(fb_row):
     else:
         prefs = user_prefs
 
-    X = np.zeros(11)
+    X = np.zeros(12)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
@@ -86,10 +86,12 @@ def encode_feedback(fb_row):
     user_salty = prefs.get('saltiness') or prefs.get('咸淡', '无')
     user_sweet = prefs.get('sweetness') or prefs.get('甜酸', '无')
     user_price = prefs.get('价格区间') or prefs.get('price') or prefs.get('价格', '无')
+    user_cal = prefs.get('calorie') or prefs.get('热量', '无')
     X[7] = ORD_MAPPINGS['辣度'].get(user_spice, 1)
     X[8] = ORD_MAPPINGS['咸淡'].get(user_salty, 1)
     X[9] = ORD_MAPPINGS['甜酸'].get(user_sweet, 1)
     X[10] = ORD_MAPPINGS['价格区间'].get(user_price, 0)
+    X[11] = ORD_MAPPINGS['热量'].get(user_cal, 0)
 
     # 目标值：评分映射到0.1~1.0
     y = max(0.1, min(1.0, float(rating) / 5))
@@ -180,7 +182,7 @@ def main():
         'mae': float(np.mean(np.abs(y_fb - y_pred))),
         'real_feedback_count': len(feedbacks),
         'training_samples': len(X_combined),
-        'feature_count': 11,
+        'feature_count': 12,
         'feature_names': FEATURE_NAMES,
     }
 
@@ -211,7 +213,7 @@ def main():
             json.dump({
                 'r2': float(_r2), 'mse': _mse, 'rmse': float(np.sqrt(_mse)),
                 'mae': float(np.mean(np.abs(y_te - yp_te))),
-                'feature_count': 11,
+                'feature_count': 12,
                 'training_samples': len(X_combined),
                 'real_feedback_count': len(feedbacks),
                 'trained_at': datetime.datetime.now().isoformat(),
