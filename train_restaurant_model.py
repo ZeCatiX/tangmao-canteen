@@ -190,8 +190,12 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
     """
     X_list, y_list = [], []
     SPICE_SHIFT = {'无': '无', '不辣': '微辣', '微辣': '中辣', '中辣': '重辣', '重辣': '重辣'}
+    # 「口不对心」用户比例：声明辣度 ≠ 真实口味。保留一点真实感，
+    # 但它会**磨平辣度惩罚** —— 实测 10% 时模型对规则的复现相关性从 0.73 掉到 0.45
+    # （「不辣」用户那组从 0.77 掉到 0.01，等于学不会"别给不吃辣的人推辣菜"），故压到 3%。
+    REBEL_RATE = 0.03
     for up in user_profiles:
-        rebel = np.random.random() < 0.1          # 10% 用户不按声明口味吃
+        rebel = np.random.random() < REBEL_RATE
         up_true = dict(up)
         if rebel:
             up_true['辣度'] = SPICE_SHIFT.get(up['辣度'], up['辣度'])
