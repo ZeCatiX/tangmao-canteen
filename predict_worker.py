@@ -217,6 +217,8 @@ def predict_dish_score_batch_optimized(user_prefs, dishes, model_data):
     
     # 批量预测
     scores = model.predict(X)
+    # DEBUG
+    print(f'[DEBUG] X.shape={X.shape} X[0]={X[0].tolist() if len(X)>0 else \"none\"} raw_scores={scores.tolist()}', file=sys.stderr)
 
     # 将预测的匹配度(0~1)映射到0~5分范围
     scores = scores * 5
