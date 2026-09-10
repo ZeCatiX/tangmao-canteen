@@ -2,7 +2,7 @@
 
 // ═══════════════ 全局变量与工具函数 ═══════════════
 // 唐猫庭院 - 菜品推荐系统 v2.0
-var currentUser=null,userProfile=null,currentRecommendations=[],recommendedIds=[],recommendedStats={count:0,rateSum:0,rateCount:0,topRate:0};
+var currentUser=null,userProfile=null,currentRecommendations=[],recommendedIds=[];
 var currentRecommendationMode='本地计算'; var featureImportanceChart=null;
 var decisionTreeModel=null,decisionTreeLoaded=false,decisionTreeLoading=false;
 var apiAvailabilityCache=null,apiCacheTimestamp=0;
@@ -700,9 +700,7 @@ function displayFeatureImportance(){
   if(lt)lt.textContent='加载失败';
  });
 }
-function resetRecommendation(){currentRecommendations=[];recommendedIds=[];userProfile=null;recommendedStats={count:0,rateSum:0,rateCount:0,topRate:0};}
-// 跨批次累积推荐统计（换一批/重进都会追加），供结算时展示会话内总推荐数与匹配度
-function accumulateRecStats(batch){batch.forEach(d=>{if(d.type==='盲盒尝鲜'||!isFinite(d.matchRate))return;recommendedStats.rateSum+=d.matchRate;recommendedStats.rateCount++;if(d.matchRate>recommendedStats.topRate)recommendedStats.topRate=d.matchRate;});}
+function resetRecommendation(){currentRecommendations=[];recommendedIds=[];userProfile=null;}
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
@@ -1151,9 +1149,10 @@ async function checkoutCart(){
   const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
   // AI 模式：填充推荐统计（推荐菜品数/平均匹配度/最高匹配度）
   if(isAI){
-   const cnt=recommendedIds.length;
-   const avg=recommendedStats.rateCount?Math.round(recommendedStats.rateSum/recommendedStats.rateCount*100):0;
-   const top=recommendedStats.rateCount?Math.round(recommendedStats.topRate*100):0;
+   const cnt=currentRecommendations.length;
+   const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
+   const avg=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
+   const top=rates.length?Math.round(Math.max(...rates)*100):0;
    const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
    es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
    // AI 属性与统计持久化（rebuildEndView 回看/刷新后保持一致）
@@ -1238,7 +1237,7 @@ async function fetchRecommendations(isRefresh){
   dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
-  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});accumulateRecStats(top);
+  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
   currentRecommendationMode='随机森林';displayRecommendations();
  };
  const callAPI=dlist=>{
@@ -1275,7 +1274,7 @@ async function fallback(prefs,blk,dishes){
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
- currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});accumulateRecStats(top);
+ currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
  currentRecommendationMode='决策树模型';console.log('🍽️决策树推荐 '+top.length+'个菜品,耗时'+(Date.now()-start)/1000+'s');console.log('📊排名:',top.slice(0,5).map((d,i)=>(i+1)+'.'+d.name+'('+Math.round((d.matchIndex||0)*100)+'%)').join('  '));if(top.find(d=>d.type==='盲盒尝鲜'))console.log('🎁盲盒:'+top.find(d=>d.type==='盲盒尝鲜').name);console.groupEnd();displayRecommendations();
 }
 
