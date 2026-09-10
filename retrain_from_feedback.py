@@ -194,6 +194,35 @@ def main():
     importance = [{'feature': FEATURE_NAMES[i], 'importance': round(float(imp[i]), 4)}
                   for i in range(len(FEATURE_NAMES))]
     importance.sort(key=lambda x: -x['importance'])
+
+    # 用「另一批全新模拟用户」给模型打诚实的分，并同步 metrics/重要性文件
+    # （反馈只有几条时，在反馈上算 R² 毫无意义；口径与 train_restaurant_model 一致。
+    #   另外：管理后台读的就是这两个文件，以前没人写 → 页面一直显示旧模型的数字）
+    try:
+        from train_restaurant_model import make_user_profiles
+        import datetime
+        _test = make_user_profiles(200, seed=777)
+        X_te, y_te = generate_training_data(dishes, _test, samples_per_dish=1)
+        yp_te = model.predict(X_te)
+        _r2 = 1 - np.sum((y_te - yp_te) ** 2) / np.sum((y_te - y_te.mean()) ** 2)
+        _mse = float(np.mean((y_te - yp_te) ** 2))
+        _dir = os.path.dirname(__file__)
+        with open(os.path.join(_dir, 'model_metrics.json'), 'w', encoding='utf-8') as f:
+            json.dump({
+                'r2': float(_r2), 'mse': _mse, 'rmse': float(np.sqrt(_mse)),
+                'mae': float(np.mean(np.abs(y_te - yp_te))),
+                'feature_count': 11,
+                'training_samples': len(X_combined),
+                'real_feedback_count': len(feedbacks),
+                'trained_at': datetime.datetime.now().isoformat(),
+            }, f, ensure_ascii=False, indent=2)
+        with open(os.path.join(_dir, 'feature_importance.json'), 'w', encoding='utf-8') as f:
+            json.dump({'success': True, 'importance': importance}, f, ensure_ascii=False, indent=2)
+        print(f'  诚实 R²(全新模拟用户 200 人): {_r2:.4f}', file=sys.stderr)
+        print('  已同步 model_metrics.json / feature_importance.json', file=sys.stderr)
+    except Exception as e:
+        print(f'  同步 metrics 文件失败: {e}', file=sys.stderr)
+
     print(json.dumps({'success': True, 'importance': importance}, ensure_ascii=False))
 
 

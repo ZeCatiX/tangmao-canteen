@@ -289,6 +289,22 @@ def main():
         pickle.dump(model_data, f)
     print(f'\n模型已保存: {model_path}', file=sys.stderr)
 
+    # 同步写 model_metrics.json / feature_importance.json
+    # （管理后台仪表盘读这两个文件；此前没有任何脚本写 model_metrics.json，
+    #   导致重训后页面上的 R²/特征重要性一直是旧模型的数字）
+    import datetime
+    with open(os.path.join(os.path.dirname(__file__), 'model_metrics.json'), 'w', encoding='utf-8') as f:
+        json.dump({
+            **metrics,
+            'feature_count': 11,
+            'training_samples': len(X),
+            'real_feedback_count': 0,
+            'trained_at': datetime.datetime.now().isoformat(),
+        }, f, ensure_ascii=False, indent=2)
+    with open(os.path.join(os.path.dirname(__file__), 'feature_importance.json'), 'w', encoding='utf-8') as f:
+        json.dump({'success': True, 'importance': importance}, f, ensure_ascii=False, indent=2)
+    print('已同步 model_metrics.json / feature_importance.json', file=sys.stderr)
+
     # 输出JSON（供前端调用）
     result = {
         'success': True,
