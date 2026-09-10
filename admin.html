@@ -505,6 +505,7 @@
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-favorites</td><td>{username, favorites[]}</td><td>{success}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-blacklist</td><td>{username, blacklist[]}</td><td>{success}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/delete</td><td>{username}</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/logout</td><td>-</td><td>{success}</td></tr>
             </tbody>
           </table>
         </div>
@@ -523,6 +524,23 @@
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/feedback</td><td>{dishId, score, userId}</td><td>{success}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/order</td><td>{userId, items[], totalPrice}</td><td>{success, orderId}</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/orders?userId=</td><td>userId</td><td>{success, orders[]}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/order/:id/add</td><td>{items[]}</td><td>{success, orderId}</td></tr>
+              <tr><td><span class="badge bg-primary">PATCH</span></td><td>/api/order/:id/table</td><td>{tableNumber}</td><td>{success, orderId, tableNumber}</td></tr>
+              <tr><td><span class="badge bg-primary">PUT</span></td><td>/api/orders/:id/status</td><td>{status}</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/feedback</td><td>（需登录）</td><td>{success, feedbacks[]}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">桌码 API（凭签名，无需登录）</div>
+        <div class="card-body" style="padding:0;">
+          <table class="table table-hover mb-0" style="font-size:0.82rem;">
+            <thead><tr><th>方法</th><th>路径</th><th>参数</th><th>返回</th></tr></thead>
+            <tbody>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/table-view</td><td>?t=&lt;桌号&gt;.&lt;签名&gt;</td><td>{success, tableNumber, orders[]}</td></tr>
             </tbody>
           </table>
         </div>
@@ -551,8 +569,19 @@
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/retrain</td><td>-</td><td>{success, message}</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/monitor</td><td>-</td><td>{success, monitor}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/dish</td><td>{name, price, ...}</td><td>{success, dish}</td></tr>
-              <tr><td><span class="badge bg-warning">PUT</span></td><td>/api/admin/dish/:id</td><td>{name, price, ...}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-danger">DELETE</span></td><td>/api/admin/dish/:id/permanent</td><td>-</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-primary">PUT</span></td><td>/api/admin/dish/:id</td><td>{name, price, ...}</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-danger">DELETE</span></td><td>/api/admin/dish/:id</td><td>-</td><td>{success}（下架）</td></tr>
+              <tr><td><span class="badge bg-danger">DELETE</span></td><td>/api/admin/dish/:id/permanent</td><td>-</td><td>{success}（永久删除）</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/dish/upload-image</td><td>multipart: image, dishId</td><td>{success, imageUrl}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/dish/batch-status</td><td>{ids[], isActive}</td><td>{success, message}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/dish/batch-delete</td><td>{ids[]}</td><td>{success, message}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/users</td><td>-</td><td>{success, users[]}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/users/:id</td><td>-</td><td>{success, user}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/users/:id/toggle</td><td>-</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/notifications</td><td>-</td><td>{success, notifications[]}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/orders</td><td>-</td><td>CSV</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/feedback</td><td>-</td><td>CSV</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/popular-dishes</td><td>-</td><td>CSV</td></tr>
             </tbody>
           </table>
           <div style="padding:8px 12px;font-size:0.78rem;color:#8b7a6a;background:#fdfaf5;border-top:1px solid rgba(201,169,110,0.1);">
