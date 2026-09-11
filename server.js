@@ -1075,17 +1075,38 @@ app.get('/api/admin/recommendation-stats', async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 服务端重算订单价格：按 dish id 查 DB，拒绝客户端价格；赠菜受方(giftFrom)记 0 元
+async function recomputeOrderItems(pool, items) {
+  const ids = items.map(i => parseInt(i.id)).filter(n => !isNaN(n));
+  const priceMap = {};
+  if (ids.length) {
+    const pr = await pool.query('SELECT id, price FROM dishes WHERE id = ANY($1::int[])', [ids]);
+    pr.rows.forEach(r => { priceMap[r.id] = parseFloat(r.price); });
+  }
+  const validated = items.map(i => {
+    const did = parseInt(i.id);
+    if (isNaN(did) || priceMap[did] === undefined) return null;
+    const dbPrice = priceMap[did];
+    return i.giftFrom ? { ...i, price: 0, origPrice: dbPrice } : { ...i, price: dbPrice };
+  });
+  if (validated.some(i => i === null)) return null;
+  const sum = validated.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || parseInt(i.quantity) || 1), 0);
+  return { validated, total: Math.round(sum * 100) / 100 };
+}
+
 // 订单 API（软身份验证）
 app.post('/api/order', softAuth, async (req, res) => {
   try {
-    const { userId, items, totalPrice, tableNumber } = req.body;
+    const { items, tableNumber } = req.body;  // userId 取 JWT、totalPrice 服务端重算，均不信任客户端
     if (!items || !items.length) return res.status(400).json({ success: false, error: '订单不能为空' });
-    if (items.some(i => { const p = parseFloat(i.price); return isNaN(p) || p < 0; })) return res.status(400).json({ success: false, error: '商品价格无效' });
-    if (totalPrice !== undefined && totalPrice !== null && totalPrice !== '') { const tp = parseFloat(totalPrice); if (!isNaN(tp) && tp < 0) return res.status(400).json({ success: false, error: '订单总价不能为负数' }); }
     const effectiveUserId = req.user?.username || 'guest';
     const pool = db;
+    // 服务端重算价格：按 dish id 查 DB，防止客户端篡改价格（0 元单）
+    const recomputed = await recomputeOrderItems(pool, items);
+    if (!recomputed) return res.status(400).json({ success: false, error: '订单包含无效菜品' });
+    const { validated: validatedItems, total: totalPrice } = recomputed;
     // 幂等性检查：同一用户 10 秒内相同内容的订单视为重复
-    const itemsStr = JSON.stringify(items);
+    const itemsStr = JSON.stringify(validatedItems);
     const tenSecAgo = new Date(Date.now() - 10000).toISOString();
     const existing = await pool.query(
       "SELECT id FROM orders WHERE user_id = $1 AND items::text = $2 AND created_at > $3 LIMIT 1",
@@ -1100,12 +1121,12 @@ app.post('/api/order', softAuth, async (req, res) => {
     if (colCheck.rows.length > 0) {
       result = await pool.query(
         "INSERT INTO orders (user_id, items, total_price, dish_count, table_number) VALUES ($1,$2,$3,$4,$5) RETURNING id",
-        [effectiveUserId, JSON.stringify(items), totalPrice || 0, items.length, tableNumber || null]
+        [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length, tableNumber || null]
       );
     } else {
       result = await pool.query(
         "INSERT INTO orders (user_id, items, total_price, dish_count) VALUES ($1,$2,$3,$4) RETURNING id",
-        [effectiveUserId, JSON.stringify(items), totalPrice || 0, items.length]
+        [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length]
       );
     }
     res.json({ success: true, message: '订单已创建', orderId: result.rows[0].id });
@@ -1118,7 +1139,6 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const orderId = parseInt(req.params.id);
     const { items } = req.body;
     if (!orderId || !items || !items.length) return res.status(400).json({ success: false, error: '参数无效' });
-    if (items.some(i => { const p = parseFloat(i.price); return isNaN(p) || p < 0; })) return res.status(400).json({ success: false, error: '商品价格无效' });
     // 归属校验：非管理员只能操作自己的订单（防止篡改他人在途订单）
     const effectiveUserId = req.user?.username || 'guest';
     const isAdmin = req.user?.role === 'admin';
@@ -1127,19 +1147,22 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     const row = existing.rows[0];
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
+    // 服务端重算加菜价格：按 dish id 查 DB，防止客户端篡改价格
+    const recomputed = await recomputeOrderItems(pool, items);
+    if (!recomputed) return res.status(400).json({ success: false, error: '加菜包含无效菜品' });
+    const addItems = recomputed.validated;
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
     // 同菜合并：id 与赠菜标记都相同才合并（普通菜与赠菜价格不同，不能混为一行）
     const keyOf = it => (it.id) + '|' + (it.giftTo || '') + '|' + (it.giftFrom || '');
     const mergedItems = oldItems.map(x => ({ ...x }));
-    for (const it of items) {
+    for (const it of addItems) {
       const k = keyOf(it);
       const ex = mergedItems.find(m => keyOf(m) === k);
       if (ex) ex.qty = (parseInt(ex.qty || ex.quantity, 10) || 1) + (parseInt(it.qty || it.quantity, 10) || 1);
       else mergedItems.push({ ...it });
     }
     const oldTotal = parseFloat(row.total_price) || 0;
-    const addTotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0) * (i.qty || 1), 0);
-    const newTotal = oldTotal + addTotal;
+    const newTotal = Math.round((oldTotal + recomputed.total) * 100) / 100;
     await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4' + (isAdmin ? '' : ' AND user_id=$5'),
       isAdmin ? [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId] : [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId, effectiveUserId]);
     res.json({ success: true, message: '加菜成功', orderId, addedCount: items.length, totalPrice: newTotal, dishCount: mergedItems.length });
