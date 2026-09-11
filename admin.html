@@ -1135,10 +1135,9 @@ function loadDishes() {
 }
 
 function editDish(id) {
-  fetch('/api/dishes').then(r => r.json()).then(d => {
-    if (!d.success) return;
-    const dish = d.dishes.find(x => x.id == id);
-    if (!dish) return;
+  fetch('/api/dishes/' + id).then(r => r.json()).then(d => {
+    if (!d.success || !d.dish) return;
+    const dish = d.dish;
     document.getElementById('edit-dish-id').value = id;
     document.getElementById('dish-name').value = dish.name;
     document.getElementById('dish-category').value = dish.category || '';
@@ -1165,7 +1164,7 @@ document.getElementById('dish-active').checked = dish.is_active !== false;
     document.getElementById('dish-vegetarian').checked = dish.isVegetarian || false;
     document.getElementById('dishModalTitle').textContent = '编辑菜品';
     document.getElementById('delete-dish-btn').style.display = 'inline-block';
-    document.getElementById('delete-dish-btn').onclick = function() { deleteDish(id); };
+    document.getElementById('delete-dish-btn').onclick = function() { deleteDish(id, this); };
     document.getElementById('save-dish-btn').onclick = () => saveDish(id);
     new bootstrap.Modal(document.getElementById('dishModal')).show();
   }).catch(() => { console.warn('数据加载失败'); });
@@ -1207,9 +1206,9 @@ document.getElementById('add-dish-btn').addEventListener('click', () => {
 document.getElementById('dish-image-upload').addEventListener('click', async () => {
   const fileInput = document.getElementById('dish-image-file');
   const file = fileInput.files?.[0];
-  if (!file) { alert('请先选择图片文件'); return; }
+  if (!file) { showToast('请先选择图片文件', 'warning'); return; }
   const editId = document.getElementById('edit-dish-id').value;
-  if (!editId) { alert('请先保存菜品信息再上传图片'); return; }
+  if (!editId) { showToast('请先保存菜品信息再上传图片', 'warning'); return; }
   const formData = new FormData();
   formData.append('image', file);
   formData.append('dishId', editId);
@@ -1224,12 +1223,12 @@ document.getElementById('dish-image-upload').addEventListener('click', async () 
     if (data.success) {
       document.getElementById('dish-image-preview').src = data.imageUrl;
       document.getElementById('dish-image-preview').style.display = 'block';
-      alert('图片上传成功');
+      showToast('图片上传成功');
     } else {
-      alert('上传失败: ' + (data.error || '未知错误'));
+      showToast('上传失败: ' + (data.error || '未知错误'), 'error');
     }
   } catch (e) {
-    alert('上传失败: ' + e.message);
+    showToast('上传失败: ' + e.message, 'error');
   }
 });
 
@@ -1237,15 +1236,15 @@ function saveDish(id) {
   const name = document.getElementById('dish-name').value.trim();
   const price = document.getElementById('dish-price').value;
   const rating = document.getElementById('dish-rating').value;
-  if (!name) { alert('菜品名称不能为空'); return; }
+  if (!name) { showToast('菜品名称不能为空', 'warning'); return; }
   const priceNum = parseFloat(price);
   const ratingNum = parseFloat(rating);
-  if (price === '' || isNaN(priceNum) || priceNum < 0) { alert('价格不能为空且不能小于0'); return; }
-  if (rating === '' || isNaN(ratingNum) || ratingNum < 0 || ratingNum > 5) { alert('评分必须在0-5之间'); return; }
+  if (price === '' || isNaN(priceNum) || priceNum < 0) { showToast('价格不能为空且不能小于0', 'warning'); return; }
+  if (rating === '' || isNaN(ratingNum) || ratingNum < 0 || ratingNum > 5) { showToast('评分必须在0-5之间', 'warning'); return; }
   // 评分最多保留一位小数
-  if (rating.indexOf('.') >= 0 && rating.split('.')[1].length > 1) { alert('评分最多保留一位小数，如 4.5'); return; }
+  if (rating.indexOf('.') >= 0 && rating.split('.')[1].length > 1) { showToast('评分最多保留一位小数，如 4.5', 'warning'); return; }
   // 价格最多保留一位小数
-  if (price.indexOf('.') >= 0 && price.split('.')[1].length > 1) { alert('价格最多保留一位小数，如 28.5'); return; }
+  if (price.indexOf('.') >= 0 && price.split('.')[1].length > 1) { showToast('价格最多保留一位小数，如 28.5', 'warning'); return; }
   const data = {
     name: name,
       description: document.getElementById('dish-description').value,
@@ -1271,24 +1270,25 @@ function saveDish(id) {
         var m=bootstrap.Modal.getInstance(document.getElementById('dishModal'));if(m)m.hide();
         // 保存菜品后等待服务器缓存刷新再重新加载列表
         setTimeout(function() { loadDishes(); loadStats(); }, 800);
-      } else { alert(d.error); }
-    }).catch(() => { alert('网络错误，请重试'); });
+      } else { showToast(d.error || '保存失败', 'error'); }
+    }).catch(() => { showToast('网络错误，请重试', 'error'); });
 }
 
-function deleteDish(id) {
-  if (!confirm('确定要永久删除此菜品吗？删除后不可恢复。')) return;
-  const token = localStorage.getItem('adminToken');
-  fetch('/api/admin/dish/' + id + '/permanent', {
-    method: 'DELETE',
-    headers: { 'Authorization': 'Bearer ' + token }
-  })
-    .then(r => r.json()).then(d => {
-      if (d.success) {
-        var m=bootstrap.Modal.getInstance(document.getElementById('dishModal'));if(m)m.hide();
-        // 删除菜品后等待服务器缓存刷新再重新加载列表
-        setTimeout(function() { loadDishes(); loadStats(); }, 800);
-      } else { alert(d.error); }
-    }).catch(() => { alert('网络错误，请重试'); });
+function deleteDish(id, btn) {
+  confirmAction(btn, '删除', function() {
+    const token = localStorage.getItem('adminToken');
+    fetch('/api/admin/dish/' + id + '/permanent', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+      .then(r => r.json()).then(d => {
+        if (d.success) {
+          var m=bootstrap.Modal.getInstance(document.getElementById('dishModal'));if(m)m.hide();
+          // 删除菜品后等待服务器缓存刷新再重新加载列表
+          setTimeout(function() { loadDishes(); loadStats(); }, 800);
+        } else { showToast(d.error || '删除失败', 'error'); }
+      }).catch(() => { showToast('网络错误，请重试', 'error'); });
+  });
 }
 
 
@@ -1392,6 +1392,21 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     setTimeout(function() { bar.style.display = 'none'; }, 3000);
   }
 
+  // 二次点击确认（不依赖原生 confirm，沙箱环境也可用）
+  function confirmAction(btn, label, onConfirm) {
+    if (btn && btn.dataset.armed !== '1') {
+      btn.dataset.armed = '1';
+      btn.dataset.orig = btn.textContent;
+      btn.textContent = '再点' + label;
+      btn.style.background = '#e74c3c';
+      btn.style.color = '#fff';
+      setTimeout(function() { if (btn.dataset.armed === '1') { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig || label; btn.style.background = ''; btn.style.color = ''; } }, 3000);
+      return;
+    }
+    if (btn) { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig || label; btn.style.background = ''; btn.style.color = ''; }
+    onConfirm();
+  }
+
   // 登录按钮
   const loginBtn = document.getElementById('admin-login-btn');
   if (loginBtn) {
@@ -1460,22 +1475,23 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
         if (!d.success) return;
         document.querySelector('#user-table-body').innerHTML = d.users.map(u =>
           '<tr><td>' + esc(u.id) + '</td><td>' + esc(u.username) + '</td><td>' + (u.created_at ? new Date(u.created_at).toLocaleString() : '-') + '</td><td>' + (u.last_login ? new Date(u.last_login).toLocaleString() : '从未登录') + '</td>'
-          + '<td><button class="btn btn-sm btn-outline-danger" onclick="deleteUser(' + esc(u.id) + ')" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;">删除</button></td></tr>'
+          + '<td><button class="btn btn-sm btn-outline-danger" onclick="deleteUser(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;">删除</button></td></tr>'
         ).join('');
       }).catch(() => { console.warn('数据加载失败'); });
   }
 
-  function deleteUser(id) {
-    if (!confirm('确定要删除此用户吗？')) return;
-    const token = localStorage.getItem('adminToken');
-    fetch('/api/admin/users/' + id + '/toggle', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-      .then(r => r.json()).then(d => {
-        if (d.success) { loadUsers(); alert('用户已删除'); }
-        else alert(d.error);
-      }).catch(() => alert('删除失败，网络错误'));
+  function deleteUser(id, btn) {
+    confirmAction(btn, '删除', function() {
+      const token = localStorage.getItem('adminToken');
+      fetch('/api/admin/users/' + id + '/toggle', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+        .then(r => r.json()).then(d => {
+          if (d.success) { loadUsers(); showToast('用户已删除'); }
+          else showToast(d.error || '删除失败', 'error');
+        }).catch(() => showToast('删除失败，网络错误', 'error'));
+    });
   }
 
   // 管理员点击导航时加载对应页面数据
