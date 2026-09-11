@@ -3,6 +3,11 @@
 唐猫庭院 - 完整AI模型训练系统
 包含：高级特征工程、多模型对比、交叉验证、超参数调优、模型评估报告
 """
+# ⚠ 已弃用：9维旧格式，运行会覆盖当前12维模型。改用 train_restaurant_model.py。
+import sys as _sys
+if "--allow-deprecated" not in _sys.argv:
+    _sys.stderr.write("此脚本已弃用（9维旧格式）。改用 train_restaurant_model.py。\n如确需运行：python deprecated/rgzn.py --allow-deprecated\n")
+    _sys.exit(1)
 import pickle, json, sys, os, random, time
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor

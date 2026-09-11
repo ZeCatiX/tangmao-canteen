@@ -3,6 +3,11 @@
 唐猫庭院 - 模型训练脚本（真实数据 + 合成数据联合训练）
 从PostgreSQL加载真实反馈，结合31000条合成数据训练模型
 """
+# ⚠ 已弃用：9维旧格式，运行会覆盖当前12维模型。改用 train_restaurant_model.py。
+import sys as _sys
+if "--allow-deprecated" not in _sys.argv:
+    _sys.stderr.write("此脚本已弃用（9维旧格式）。改用 train_restaurant_model.py。\n如确需运行：python deprecated/train_ml_model.py --allow-deprecated\n")
+    _sys.exit(1)
 import pickle, json, sys, os, random, numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
