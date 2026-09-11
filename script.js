@@ -610,7 +610,7 @@ function submitStarFeedback(){
  const prefs={spiciness:$g('spiciness'),saltiness:$g('saltiness'),sweetness:$g('sweetness'),price:$g('price'),allergies:[]};
  const uid=currentUser||'guest';
  fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:dish.id,score:starRatingValue,userPreferences:prefs,userId:uid})})
- .then(r=>r.json()).then(d=>{showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
+ .then(r=>r.json()).then(d=>{if(!d.success){showMessage('评价失败',d.error||'提交失败，请重试');return;}showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
 }
 function openStarFeedback(dish){
  starRatingDish=dish;starRatingValue=0;ratingReturnTo='recommendation-section';
@@ -1201,7 +1201,7 @@ async function fetchRecommendations(isRefresh){
   }
  }
 
- const up=userProfile||{};const prefs={'辣度':up.spiciness||'','咸淡':up.saltiness||'','甜酸':up.sweetness||'','价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion||'无','allergies':up.allergies||[],'calorie':up.calorie||'无','blindBoxMode':up.blindBoxMode||'smart'};
+ const up=userProfile||{};const prefs={'辣度':up.spiciness||'无','咸淡':up.saltiness||'无','甜酸':up.sweetness||'无','价格区间':up.price||'无','饮食_宗教':up.religion==='无'?'无特殊要求':up.religion||'无','allergies':up.allergies||[],'calorie':up.calorie||'无','blindBoxMode':up.blindBoxMode||'smart'};
  let blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u)blk=u.blacklist||[];}
 
  let dishes=dishData.filter(d=>{
@@ -1239,7 +1239,7 @@ async function fetchRecommendations(isRefresh){
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
   currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';displayRecommendations();
+  currentRecommendationMode='随机森林';console.groupEnd();displayRecommendations();
  };
  const callAPI=dlist=>{
   const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
@@ -1257,9 +1257,9 @@ async function fallback(prefs,blk,dishes){
  dishes.forEach(d=>{
   const ps=predictWithDecisionTree(prefs,d);
   const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
-  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=1;
-  if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=1;
-  if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=1;
+  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],d.spiciness);else md.taste+=2;
+  if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],d.saltiness);else md.taste+=2;
+  if(prefs['甜酸']!=='无'){if(d.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=2;
   if(d.tags&&d.tags.includes('招牌'))md.cuisine+=1.0;   // 与 computeDishMatch 保持一致
   if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],d.calorie);else md.calorie=1;
   const pv=parseFloat(d.price);
@@ -1268,10 +1268,11 @@ async function fallback(prefs,blk,dishes){
    else if(prefs['价格区间']==='适中')md.price=(pv>=20&&pv<=50)?2:(pv<20||pv>50?-1:0);
    else if(prefs['价格区间']==='品质')md.price=pv>50?2:(pv>40?-1:-2);
   }else md.price=1;
-  md.rating=Math.round((ps/5)*2.5*10)/10;
+  // 本地决策树模型(decision_tree_model.json)特征维度与 encodeDishFeaturesForTree 不匹配，预测值不可靠；rating 改用实际评分，与 computeDishMatch 一致
+  const rs=parseFloat(d.rating);md.rating=!isNaN(rs)?Math.round((rs/5)*2.5*10)/10:2.0;
   const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
   d.matchIndex=Math.round(total*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/14;
-  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 价格'+md.price+' 评分'+md.rating+(ps>=4.0?'（模型预测'+ps.toFixed(2)+'分）':'');d.type='偏好推荐';
+  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 价格'+md.price+' 评分'+md.rating;d.type='偏好推荐';
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
