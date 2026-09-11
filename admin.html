@@ -1043,8 +1043,8 @@ function loadAutoRetrainToggle() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ autoRetrain: want })
       }).then(r => r.json())
-        .then(d => { if (d.success) render(d.settings.autoRetrain); else { render(!want); alert('保存失败'); } })
-        .catch(() => { render(!want); alert('保存失败，网络错误'); });
+        .then(d => { if (d.success) render(d.settings.autoRetrain); else { render(!want); showToast('保存失败', 'error'); } })
+        .catch(() => { render(!want); showToast('保存失败，网络错误', 'error'); });
     });
   }
   fetch('/api/admin/settings').then(r => r.json())
@@ -1543,7 +1543,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   // 修复 CSV 导出缺少 Authorization 头
   function exportCSV(type) {
     const token = localStorage.getItem('adminToken');
-    if (!token) { alert('请先登录'); return; }
+    if (!token) { showToast('请先登录', 'warning'); return; }
     const urls = { 'popular-dishes': '/api/admin/export/popular-dishes', 'feedback': '/api/admin/export/feedback', 'orders': '/api/admin/export/orders' };
     const url = urls[type];
     if (!url) return;
@@ -1557,7 +1557,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
         link.click();
         URL.revokeObjectURL(link.href);
       })
-      .catch(e => alert('导出失败: ' + e.message));
+      .catch(e => showToast('导出失败: ' + e.message, 'error'));
   }
 
   // 加载通知
