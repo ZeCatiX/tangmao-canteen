@@ -1731,12 +1731,18 @@ app.get('/api/admin/monitor', (req, res) => {
     if (fs.existsSync(historyPath)) {
       metricsHistory = readJSON(historyPath);
     }
-    // 计算 R² 变化趋势
+    // 计算 R² 变化趋势（只在「同一模型版本」内比较：跳过重构前的旧记录，
+    // 避免把「重构去作弊」导致的 R² 回落误判为退化）
     let r2Trend = 'stable';
-    if (metricsHistory.length >= 3) {
-      const recent = metricsHistory.slice(-3);
+    let regimeStart = 0;
+    for (let i = 1; i < metricsHistory.length; i++) {
+      if (Math.abs(metricsHistory[i].r2 - metricsHistory[i - 1].r2) > 0.05) regimeStart = i;
+    }
+    const regime = metricsHistory.slice(regimeStart);
+    if (regime.length >= 3) {
+      const recent = regime.slice(-3);
       const avg = recent.reduce((s, e) => s + e.r2, 0) / recent.length;
-      const first = metricsHistory[metricsHistory.length - 3].r2;
+      const first = regime[regime.length - 3].r2;
       if (avg < first - 0.05) r2Trend = 'declining';
       else if (avg > first + 0.05) r2Trend = 'improving';
     }

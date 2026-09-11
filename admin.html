@@ -409,6 +409,7 @@
             <span>待处理: <strong id="monitor-pending">-</strong></span>
           </div>
           <div style="margin-top:8px;font-size:0.78rem;color:#8b7a6a;" id="monitor-r2-history"></div>
+          <div style="margin-top:4px;font-size:0.72rem;color:#a89880;display:none;" id="monitor-r2-note"></div>
         </div>
       </div>
     </div>
@@ -964,7 +965,14 @@ function loadMonitor() {
     document.getElementById('monitor-pending').textContent = m.pendingRequests || '0';
     const history = m.metricsHistory || [];
     if (history.length) {
-      document.getElementById('monitor-r2-history').textContent = 'R2历史: ' + history.map(h => h.r2.toFixed(4)).join(' -> ');
+      // 在 R² 显著跳变处标注「模型重构」，避免把去作弊后的回落误读为退化
+      const parts = history.map((h, i) => {
+        const mark = (i > 0 && Math.abs(h.r2 - history[i - 1].r2) > 0.05) ? ' ⚡模型重构 ' : '';
+        return mark + h.r2.toFixed(4);
+      });
+      document.getElementById('monitor-r2-history').textContent = 'R2历史: ' + parts.join(' -> ');
+      const note = document.getElementById('monitor-r2-note');
+      if (note) { note.textContent = '注：⚡处为模型重构（旧 R² 用复印样本虚高，重构后为真实值，回落非退化）'; note.style.display = 'block'; }
     }
   }).catch(() => { console.warn('数据加载失败'); });
 }
