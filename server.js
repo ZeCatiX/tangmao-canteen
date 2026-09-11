@@ -620,7 +620,8 @@ app.post('/api/user/register', async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ success: false, error: '用户名和密码不能为空' });
     if (username.trim().length < 2) return res.status(400).json({ success: false, error: '用户名至少2个字符' });
-    if (username.trim().length > 50) return res.status(400).json({ success: false, error: '用户名不能超过20个字符' });
+    if (username.trim().length > 20) return res.status(400).json({ success: false, error: '用户名不能超过20个字符' });
+    if (!/^[一-龥A-Za-z0-9_-]{2,20}$/.test(username.trim())) return res.status(400).json({ success: false, error: '用户名只能包含中英文、数字、下划线、短横线' });
     if (password.length < 8) return res.status(400).json({ success: false, error: '密码至少8个字符' });
     if (password.length > 128) return res.status(400).json({ success: false, error: '密码不能超过20个字符' });
     if (!/[A-Z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含大写字母' });
