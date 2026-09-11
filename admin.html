@@ -522,10 +522,10 @@
             <tbody>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/register</td><td>{username, password}</td><td>{success, user}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/login</td><td>{username, password}</td><td>{success, token, user}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-preferences</td><td>{username, preferences}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-favorites</td><td>{username, favorites[]}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-blacklist</td><td>{username, blacklist[]}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/delete</td><td>{username}</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-preferences</td><td>{preferences}（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-favorites</td><td>{favorites[]}（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user-blacklist</td><td>{blacklist[]}（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/delete</td><td>-（身份取自JWT）</td><td>{success}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/user/logout</td><td>-</td><td>{success}</td></tr>
             </tbody>
           </table>
@@ -540,11 +540,11 @@
             <thead><tr><th>方法</th><th>路径</th><th>参数</th><th>返回</th></tr></thead>
             <tbody>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/predict-rf</td><td>{userPrefs, dishes[]}</td><td>{success, predictions[]}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/preference-log</td><td>{spiciness, saltiness, ...}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/recommendation-log</td><td>{userType, userId}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/feedback</td><td>{dishId, score, userId}</td><td>{success}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/order</td><td>{userId, items[], totalPrice}</td><td>{success, orderId}</td></tr>
-              <tr><td><span class="badge bg-success">GET</span></td><td>/api/orders?userId=</td><td>userId</td><td>{success, orders[]}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/preference-log</td><td>{spiciness, saltiness, ...}（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/recommendation-log</td><td>-（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/feedback</td><td>{dishId, score, userPreferences}（身份取自JWT）</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/order</td><td>{items[], tableNumber}（身份/总价服务端算）</td><td>{success, orderId}</td></tr>
+              <tr><td><span class="badge bg-success">GET</span></td><td>/api/orders</td><td>?status=（身份取自JWT，管理员可加&amp;userId=）</td><td>{success, orders[]}</td></tr>
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/order/:id/add</td><td>{items[]}</td><td>{success, orderId}</td></tr>
               <tr><td><span class="badge bg-primary">PATCH</span></td><td>/api/order/:id/table</td><td>{tableNumber}</td><td>{success, orderId, tableNumber}</td></tr>
               <tr><td><span class="badge bg-primary">PUT</span></td><td>/api/orders/:id/status</td><td>{status}</td><td>{success}</td></tr>
@@ -598,7 +598,7 @@
               <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/dish/batch-delete</td><td>{ids[]}</td><td>{success, message}</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/users</td><td>-</td><td>{success, users[]}</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/users/:id</td><td>-</td><td>{success, user}</td></tr>
-              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/users/:id/toggle</td><td>-</td><td>{success}</td></tr>
+              <tr><td><span class="badge bg-warning">POST</span></td><td>/api/admin/users/:id/toggle</td><td>-</td><td>{success}（永久删除用户及关联数据）</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/notifications</td><td>-</td><td>{success, notifications[]}</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/orders</td><td>-</td><td>CSV</td></tr>
               <tr><td><span class="badge bg-success">GET</span></td><td>/api/admin/export/feedback</td><td>-</td><td>CSV</td></tr>
@@ -1311,11 +1311,11 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     if (appWrap) appWrap.style.display = show ? 'flex' : 'none';
   }
   
-  // 检查是否有已保存的 admin token
-  if (adminToken) {
-    // 用 stats 接口验证 token 是否有效
-    showAdmin(true);
-    // 拦截 fetch 自动注入 token，遇到 401 自动登出
+  // 拦截 fetch 自动注入 admin token，遇 401 自动登出（幂等：重复登录只注册一次）
+  let _adminFetchIntercepted = false;
+  function installAdminFetchInterceptor() {
+    if (_adminFetchIntercepted) return;
+    _adminFetchIntercepted = true;
     const origFetch = window.fetch;
     window.fetch = function(url, opts) {
       opts = opts || {};
@@ -1327,12 +1327,19 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
         if (resp.status === 401 && typeof url === 'string' && url.includes('/api/admin/') && !url.includes('/login')) {
           localStorage.removeItem('adminToken');
           showAdmin(false);
-          document.getElementById('admin-login-error').textContent = '登录已过期，请重新登录';
-          document.getElementById('admin-login-error').style.display = 'block';
+          const el = document.getElementById('admin-login-error');
+          if (el) { el.textContent = '登录已过期，请重新登录'; el.style.display = 'block'; }
         }
         return resp;
       });
     };
+  }
+
+  // 检查是否有已保存的 admin token
+  if (adminToken) {
+    // 用 stats 接口验证 token 是否有效
+    showAdmin(true);
+    installAdminFetchInterceptor();
     // 加载初始数据
     loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor(); loadNotifications();
   } else {
@@ -1402,24 +1409,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
           localStorage.setItem('adminToken', d.token);
           errEl.style.display = 'none';
           showAdmin(true);
-          // 拦截 fetch 自动注入 token，遇到 401 自动登出
-          const origFetch = window.fetch;
-          window.fetch = function(url, opts) {
-            opts = opts || {};
-            if (typeof url === 'string' && url.includes('/api/admin/')) {
-              opts.headers = opts.headers || {};
-              opts.headers['Authorization'] = 'Bearer ' + (localStorage.getItem('adminToken') || '');
-            }
-            return origFetch.call(window, url, opts).then(function(resp) {
-              if (resp.status === 401 && typeof url === 'string' && url.includes('/api/admin/') && !url.includes('/login')) {
-                localStorage.removeItem('adminToken');
-                showAdmin(false);
-                document.getElementById('admin-login-error').textContent = '登录已过期，请重新登录';
-                document.getElementById('admin-login-error').style.display = 'block';
-              }
-              return resp;
-            });
-          };
+          installAdminFetchInterceptor();
           loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor(); loadNotifications();
         } else {
           errEl.textContent = d.error || '登录失败';
