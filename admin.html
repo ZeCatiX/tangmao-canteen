@@ -625,10 +625,13 @@
   <div class="card">
     <div class="card-header">全部用户</div>
     <div class="card-body" style="padding:0;">
+      <div style="padding:10px 12px;border-bottom:1px solid rgba(201,169,110,0.1);">
+        <input class="form-control form-control-sm" id="user-search" placeholder="🔍 搜索用户名..." style="font-size:0.85rem;border-radius:8px;border:1.5px solid #e4dbcf;max-width:300px;">
+      </div>
       <div class="table-wrap" style="max-height:500px;">
         <table class="table table-hover mb-0" style="font-size:0.82rem;">
           <thead><tr><th>ID</th><th>用户名</th><th>注册时间</th><th>最后登录</th><th>操作</th></tr></thead>
-          <tbody id="user-table-body"></tbody>
+          <tbody id="user-table-body"><tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载中...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1466,19 +1469,53 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   }
 
   // 加载用户列表
+  var usersCache = [];
   function loadUsers() {
     const token = localStorage.getItem('adminToken');
+    document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载中...</td></tr>';
     fetch('/api/admin/users', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.json()).then(d => {
         if (!d.success) return;
-        document.querySelector('#user-table-body').innerHTML = d.users.map(u =>
-          '<tr><td>' + esc(u.id) + '</td><td>' + esc(u.username) + '</td><td>' + (u.created_at ? new Date(u.created_at).toLocaleString() : '-') + '</td><td>' + (u.last_login ? new Date(u.last_login).toLocaleString() : '从未登录') + '</td>'
-          + '<td><button class="btn btn-sm btn-outline-danger" onclick="deleteUser(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;">删除</button></td></tr>'
-        ).join('');
-      }).catch(() => { console.warn('数据加载失败'); });
+        usersCache = d.users;
+        renderUserRows(d.users);
+      }).catch(() => { document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载失败</td></tr>'; });
   }
+  function renderUserRows(users) {
+    if (!users.length) { document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">无匹配用户</td></tr>'; return; }
+    document.querySelector('#user-table-body').innerHTML = users.map(u =>
+      '<tr><td>' + esc(u.id) + '</td><td>' + esc(u.username) + '</td><td>' + (u.created_at ? new Date(u.created_at).toLocaleString() : '-') + '</td><td>' + (u.last_login ? new Date(u.last_login).toLocaleString() : '从未登录') + '</td>'
+      + '<td><button class="btn btn-sm btn-outline-secondary" onclick="toggleUserDetail(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;">详情</button>'
+      + '<button class="btn btn-sm btn-outline-danger" onclick="deleteUser(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;">删除</button></td></tr>'
+      + '<tr class="user-detail-row" id="user-detail-' + esc(u.id) + '" style="display:none;"><td colspan="5" style="background:#fdfaf5;padding:12px;">点击查看详情</td></tr>'
+    ).join('');
+  }
+  function toggleUserDetail(id, btn) {
+    const row = document.getElementById('user-detail-' + id);
+    if (!row) return;
+    const show = row.style.display === 'none';
+    document.querySelectorAll('.user-detail-row').forEach(r => { if (r !== row) r.style.display = 'none'; });
+    row.style.display = show ? '' : 'none';
+    btn.textContent = show ? '收起' : '详情';
+    if (show && !row.dataset.loaded) {
+      row.querySelector('td').textContent = '加载中...';
+      fetch('/api/admin/users/' + id, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') } })
+        .then(r => r.json()).then(d => {
+          if (!d.success || !d.user) { row.querySelector('td').textContent = '加载失败'; return; }
+          row.dataset.loaded = '1';
+          const u = d.user, p = u.preferences || {}, fav = u.favorites || [], blk = u.blacklist || [];
+          row.querySelector('td').innerHTML =
+            '<div style="font-size:0.82rem;line-height:1.8;">'
+            + '<div><strong>口味偏好：</strong>' + esc(p.spiciness||'-') + ' / ' + esc(p.saltiness||'-') + ' / ' + esc(p.sweetness||'-') + (p.price?' · 价格'+esc(p.price):'') + (p.calorie?' · 热量'+esc(p.calorie):'') + (p.religion&&p.religion!=='无'?' · '+esc(p.religion):'') + '</div>'
+            + '<div><strong>收藏 (' + fav.length + ')：</strong>' + (fav.length ? fav.map(x=>esc(String(x))).join(', ') : '无') + '</div>'
+            + '<div><strong>拉黑 (' + blk.length + ')：</strong>' + (blk.length ? blk.map(x=>esc(String(x))).join(', ') : '无') + '</div>'
+            + '</div>';
+        }).catch(() => { row.querySelector('td').textContent = '加载失败'; });
+    }
+  }
+  // 用户搜索（客户端过滤用户名）
+  (function(){ var s=document.getElementById('user-search'); if(s) s.addEventListener('input', function(){ var q=this.value.trim().toLowerCase(); renderUserRows((usersCache||[]).filter(u => (u.username||'').toLowerCase().includes(q))); }); })();
 
   function deleteUser(id, btn) {
     confirmAction(btn, '删除', function() {
