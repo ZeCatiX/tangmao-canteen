@@ -1242,7 +1242,7 @@ async function fetchRecommendations(isRefresh){
   currentRecommendationMode='随机森林';console.groupEnd();displayRecommendations();
  };
  const callAPI=dlist=>{
-  const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
+  const TIMEOUT=15000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
   const od=dlist.slice(0,100).map(d=>({id:d.id,spiciness:d.spiciness,saltiness:d.saltiness,sweetness:d.sweetness,vegetable:'适量',rating:d.rating,price:d.price,isHalal:d.isHalal||false,isVegetarian:d.isVegetarian||false,allergies:d.allergies,religion:d.religion||'无特殊要求',calorie:d.calorie||'0',protein:d.protein||'0',tags:d.tags||[]}));
   ft('/api/predict-rf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userPrefs:prefs,dishes:od})},TIMEOUT)
   .then(r=>r.ok?r.json():Promise.reject(Error('HTTP'+r.status))).then(d=>{if(d.success)processML(d.predictions||[]);else fallback(prefs,blk,dishes);}).catch(()=>fallback(prefs,blk,dishes));
@@ -1349,7 +1349,7 @@ document.addEventListener('DOMContentLoaded',function(){
     dishData=d.dishes;
     renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
   }
-}).catch(()=>console.warn('菜品数据加载超时/失败'));
+}).catch((e)=>{console.warn('菜品数据加载超时/失败',e);const tb=document.getElementById('dataset-table-body');if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#c0392b;">菜品数据加载失败，<a href="#" id="retry-load-dishes" style="color:#27ae60;font-weight:600;">点击重试</a></td></tr>';const rb=document.getElementById('retry-load-dishes');if(rb)rb.addEventListener('click',function(ev){ev.preventDefault();location.reload();});});
  setTimeout(()=>checkApiAvailability().then(a=>{if(a)console.log('API可用,ML模型已就绪');else console.log('ML模型启动中,暂用本地推荐(稍后自动恢复)')}),100);
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
