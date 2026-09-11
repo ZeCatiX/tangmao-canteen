@@ -381,6 +381,12 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html'))
 app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'kitchen.html')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: dishData }));
+app.get('/api/dishes/:id', (req, res) => {
+  const id = parseInt(req.params.id);
+  const dish = dishData.find(d => d.id == id);
+  if (!dish) return res.status(404).json({ success: false, error: '菜品不存在' });
+  res.json({ success: true, dish });
+});
 
 // ─── 本桌账单（免登录，凭签名桌码）───
 // 桌码 = <桌号>.<HMAC前16位>：没有签名密钥无法伪造，避免"随便输桌号就能看别人账单"

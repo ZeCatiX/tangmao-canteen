@@ -151,7 +151,7 @@ function checkApiAvailability(){
  if(apiAvailabilityCache===false&&ca<5000)return Promise.resolve(false);
  return new Promise(r=>{
   const c=new AbortController(),t=setTimeout(()=>c.abort(),3000);
-  fetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
+  safeFetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
   .then(res=>res.json()).then(d=>{apiAvailabilityCache=!!(d&&d.ready);apiCacheTimestamp=now;r(apiAvailabilityCache);})
   .catch(()=>{apiAvailabilityCache=null;apiCacheTimestamp=0;r(false);}).finally(()=>clearTimeout(t));
  });
@@ -474,7 +474,7 @@ function login(){
  if(bEl)bEl.disabled=true;
  const u=uEl.value.trim(),p=pEl.value;
  if(!u||!p){showMessage('登录失败','请输入用户名和密码');return;}
- fetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+ safeFetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('登录失败',d.error||'用户名或密码错误');return;}
  if(d.token)localStorage.setItem('userToken',d.token);
  currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();const i=users.findIndex(x=>x.username===u);
@@ -519,7 +519,7 @@ function register(){
  if(!/[0-9]/.test(p)){fail('password','密码须包含数字');return;}
  if(p!==c){fail('confirm','两次输入的密码不一致');return;}
  if(!aEl||!aEl.checked){showMessage('注册失败','请阅读并同意隐私政策');if(bEl)bEl.disabled=false;return;}
- fetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+ safeFetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){
   const err=d.error||'注册失败';
   if(err.includes('用户名'))setRegErr('username',err);
@@ -582,10 +582,10 @@ function submitPreference(){
  if(currentUser!=='guest'){
   updateUserData(currentUser,{preferences:userProfile});
   localStorage.setItem('savedPrefs','true');
-  fetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
+  safeFetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
 }
  // 记录偏好选择
- fetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
+ safeFetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
  showSection('recommendation-section');
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
  if(rl)rl.classList.remove('d-none');
@@ -609,7 +609,7 @@ function submitStarFeedback(){
  const $g=id=>{const el=document.getElementById(id);return el?el.value:'';};
  const prefs={spiciness:$g('spiciness'),saltiness:$g('saltiness'),sweetness:$g('sweetness'),price:$g('price'),allergies:[]};
  const uid=currentUser||'guest';
- fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:dish.id,score:starRatingValue,userPreferences:prefs,userId:uid})})
+ safeFetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:dish.id,score:starRatingValue,userPreferences:prefs,userId:uid})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('评价失败',d.error||'提交失败，请重试');return;}showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
 }
 function openStarFeedback(dish){
@@ -632,7 +632,7 @@ function endRecommendation(){
 function displayModelMetrics(){
  const el=document.getElementById('model-metrics');
  if(!el)return;
- fetch('/api/model-metrics').then(r=>r.json()).then(d=>{
+ safeFetch('/api/model-metrics').then(r=>r.json()).then(d=>{
   if(d.success&&d.metrics){
    const m=d.metrics;
    const items=[
@@ -669,7 +669,7 @@ function displayFeatureImportance(){
   parent.appendChild(tip);
  }
  if(featureImportanceChart){featureImportanceChart.destroy();featureImportanceChart=null;}
- fetch('/api/feature-importance').then(r=>r.json()).then(d=>{
+ safeFetch('/api/feature-importance').then(r=>r.json()).then(d=>{
   if(d.success&&d.importance&&d.importance.length){
    const imp=d.importance.filter(x=>x.importance>0.005).slice(0,15);
    const labels=imp.map(x=>x.feature);
@@ -705,7 +705,7 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
- if(token){fetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
+ if(token){safeFetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
  currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
@@ -715,11 +715,11 @@ function showProfile(){
  const $=id=>document.getElementById(id);
  const fl=$('favorites-list');if(fl)fl.innerHTML=user.favorites?.length?user.favorites.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+esc(String(id)))+'</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有收藏的菜品</p>';
  const bl=$('blacklist-list');if(bl)bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+esc(String(id)))+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
- document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
+ document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
  document.querySelectorAll('.cancel-blacklist').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.blacklist){u.blacklist=u.blacklist.filter(x=>x!=id);updateUserData(currentUser,{blacklist:u.blacklist});showMessage('成功','已取消',showProfile);}}));
  // 加载推荐历史
  const rh=$('rec-history-list');if(rh)rh.innerHTML='<p class="text-muted" style="font-size:0.85rem;">加载中...</p>';
- fetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
+ safeFetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
   if(d.success&&d.orders&&d.orders.length){
             const items=d.orders.slice(0,10).map((o,oi)=>{
     const dishList=o.items||[];
@@ -771,7 +771,7 @@ function cancelFavorite(){
  if(btn){btn.dataset.armed='';}
  u.favorites=[];
  updateUserData(currentUser,{favorites:[]});
- fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:[]})}).catch(()=>{});
+ safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:[]})}).catch(()=>{});
  showMessage('成功','已取消所有收藏');
  setTimeout(showProfile,1000);
 }
@@ -783,30 +783,30 @@ function cancelBlacklist(){
  if(btn){btn.dataset.armed='';}
  u.blacklist=[];
  updateUserData(currentUser,{blacklist:[]});
- fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:[]})}).catch(()=>{});
+ safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:[]})}).catch(()=>{});
  showMessage('成功','已清空黑名单');
  setTimeout(showProfile,1000);
 }
 function addToFavorites(dishId){if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
  if(!user.favorites)user.favorites=[];if(user.favorites.includes(dishId)){showMessage('提示','已收藏');return;}
- if(user.blacklist?.includes(dishId)){user.blacklist=user.blacklist.filter(id=>id!==dishId);updateUserData(currentUser,{blacklist:user.blacklist});fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});}
+ if(user.blacklist?.includes(dishId)){user.blacklist=user.blacklist.filter(id=>id!==dishId);updateUserData(currentUser,{blacklist:user.blacklist});safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});}
  user.favorites.push(dishId);updateUserData(currentUser,{favorites:user.favorites});const dish=dishData.find(d=>d.id===dishId);showMessage('成功','已收藏'+(dish?dish.name:''));
- fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});
+ safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});
  displayRecommendations();}
 function addToBlacklist(dishId){if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
  if(!user.blacklist)user.blacklist=[];if(user.blacklist.includes(dishId)){showMessage('提示','已拉黑');return;}
- if(user.favorites?.includes(dishId)){user.favorites=user.favorites.filter(id=>id!==dishId);updateUserData(currentUser,{favorites:user.favorites});fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});}
+ if(user.favorites?.includes(dishId)){user.favorites=user.favorites.filter(id=>id!==dishId);updateUserData(currentUser,{favorites:user.favorites});safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});}
  user.blacklist.push(dishId);updateUserData(currentUser,{blacklist:user.blacklist});const dish=dishData.find(d=>d.id===dishId);showMessage('成功','已拉黑'+(dish?dish.name:''));
- fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});
+ safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});
  displayRecommendations();}
 function deleteAccount(){
  const el=document.getElementById('message-modal'),cf=document.getElementById('modal-confirm-btn'),cb=document.getElementById('modal-close-btn');
  document.getElementById('modal-title').textContent='确认注销';document.getElementById('modal-body').textContent='确定要注销账号吗？此操作不可恢复！';
  const origCf=cf.onclick,origCb=cb.onclick;
  const cleanup=()=>{cf.onclick=origCf;cb.onclick=origCb;el.removeEventListener('hidden.bs.modal',cleanup);};
- cf.onclick=function(){const username=currentUser;fetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
+ cf.onclick=function(){const username=currentUser;safeFetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
  cb.onclick=function(){const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();};
  el.addEventListener('hidden.bs.modal',cleanup);
  el.inert=false;el.removeAttribute('aria-hidden');let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el,{focus:false});m.show();
@@ -894,7 +894,7 @@ async function applyTableChoice(t){
   const oid=parseInt(ssGet('lastOrderId')||'0');
   if(oid){
    try{
-    const r=await fetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:t})});
+    const r=await safeFetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:t})});
     const d=await r.json();
     if(!d.success){
      ['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');
@@ -922,7 +922,7 @@ function showTableBill(){
  if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">加载中...</div>';
  const m=document.getElementById('table-bill-modal');
  if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
- fetch('/api/table-view?t='+encodeURIComponent(t)).then(r=>r.json()).then(d=>{
+ safeFetch('/api/table-view?t='+encodeURIComponent(t)).then(r=>r.json()).then(d=>{
   if(!box)return;
   if(!d.success){box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">'+esc(d.error||'读取失败')+'</div>';return;}
   if(title)title.textContent=d.tableNumber+' 号桌 · 账单';
@@ -1082,7 +1082,7 @@ async function checkoutCart(){
  // 点击后立即显示过渡动画（独立覆盖层，不破坏购物车 DOM 结构）
  const clo=document.getElementById('cart-loading');
  if(clo)clo.style.display='flex';
- fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
+ safeFetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
   if(!d.success){
    // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
@@ -1110,7 +1110,7 @@ async function checkoutCart(){
     // 保存被赠桌小票（本地只读视图：0元+原价）
     ssSet('giftReceipt_'+tableNumber,JSON.stringify({id:d.orderId,table:tableNumber,from:myTableForGift,items:items}));
     // 追加到本桌订单（本桌计费，标记 giftTo）
-    fetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems})})
+    safeFetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems})})
      .then(()=>{}).catch(()=>{showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
      .finally(finishSide);
     return;
@@ -1242,7 +1242,7 @@ async function fetchRecommendations(isRefresh){
   currentRecommendationMode='随机森林';console.groupEnd();displayRecommendations();
  };
  const callAPI=dlist=>{
-  const TIMEOUT=15000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
+  const TIMEOUT=15000,ft=(url,opt,ms)=>Promise.race([safeFetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
   const od=dlist.slice(0,100).map(d=>({id:d.id,spiciness:d.spiciness,saltiness:d.saltiness,sweetness:d.sweetness,vegetable:'适量',rating:d.rating,price:d.price,isHalal:d.isHalal||false,isVegetarian:d.isVegetarian||false,allergies:d.allergies,religion:d.religion||'无特殊要求',calorie:d.calorie||'0',protein:d.protein||'0',tags:d.tags||[]}));
   ft('/api/predict-rf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userPrefs:prefs,dishes:od})},TIMEOUT)
   .then(r=>r.ok?r.json():Promise.reject(Error('HTTP'+r.status))).then(d=>{if(d.success)processML(d.predictions||[]);else fallback(prefs,blk,dishes);}).catch(()=>fallback(prefs,blk,dishes));
@@ -1295,7 +1295,7 @@ function refreshRecipeCartBtn(id){
 }
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
- fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
+ safeFetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
  // 缓存推荐结果到 localStorage（仅登录用户，键按用户隔离；游客不缓存）
  try { if(currentUser&&currentUser!=='guest'){localStorage.setItem('cachedRecommendations_'+currentUser, JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode_'+currentUser, currentRecommendationMode);} } catch(e) {}
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
@@ -1344,7 +1344,7 @@ document.addEventListener('DOMContentLoaded',function(){
  const shouldBeDark=savedDark!==null?savedDark==='true':prefersDark;
  if(shouldBeDark){document.documentElement.classList.add('dark-mode');const tb=document.getElementById('dark-mode-toggle');if(tb){const ic=tb.querySelector('i');if(ic)ic.className='bi bi-sun';}}
 	 // 从API加载菜品数据
- Promise.race([fetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
+ Promise.race([safeFetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
   if(d.success&&d.dishes.length){
     dishData=d.dishes;
     renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
@@ -1399,7 +1399,7 @@ document.addEventListener('DOMContentLoaded',function(){
   ids.forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   // 如果菜品数据为空，重新加载
   if(!dishData||!dishData.length){
-   fetch('/api/dishes').then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length){dishData=d.dishes;renderMenuTable();showMessage('提示','筛选条件已重置');}}).catch(()=>showMessage('提示','数据加载失败，请刷新页面'));
+   safeFetch('/api/dishes').then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length){dishData=d.dishes;renderMenuTable();showMessage('提示','筛选条件已重置');}}).catch(()=>showMessage('提示','数据加载失败，请刷新页面'));
    return;
   }
   renderMenuTable();
@@ -1593,7 +1593,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    document.getElementById('end-sat-submit').disabled=false;
   });
   document.getElementById('end-sat-submit').addEventListener('click',function(){
-   fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:0,score:satVal,userPreferences:{},userId:currentUser||'guest',type:'overall_satisfaction'})}).catch(e=>console.warn('满意度评价提交失败:',e));
+   safeFetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:0,score:satVal,userPreferences:{},userId:currentUser||'guest',type:'overall_satisfaction'})}).catch(e=>console.warn('满意度评价提交失败:',e));
    this.textContent='已提交 ✓';this.disabled=true;this.style.background='#27ae60';
    document.getElementById('end-sat-hint').textContent='感谢您的评价！';
   });
