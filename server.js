@@ -1115,7 +1115,7 @@ app.post('/api/order', softAuth, async (req, res) => {
     const itemsStr = JSON.stringify(validatedItems);
     const tenSecAgo = new Date(Date.now() - 10000).toISOString();
     const existing = await pool.query(
-      "SELECT id FROM orders WHERE user_id = $1 AND items::text = $2 AND created_at > $3 LIMIT 1",
+      "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > $3 LIMIT 1",
       [effectiveUserId, itemsStr, tenSecAgo]
     );
     if (existing.rows.length > 0) {
