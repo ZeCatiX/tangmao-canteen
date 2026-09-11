@@ -724,11 +724,13 @@ app.post('/api/user/delete', authMiddleware, async (req, res) => {
 // 偏好记录
 app.post('/api/preference-log', softAuth, async (req, res) => {
   try {
-    const { spiciness, saltiness, sweetness, price, calorie, religion, allergies, userId, recommendationMode } = req.body;
+    const { spiciness, saltiness, sweetness, price, calorie, religion, allergies, recommendationMode } = req.body;
+    // userId 取自 JWT，拒绝客户端伪造（与 /api/feedback、/api/order 一致）
+    const effectiveUserId = req.user?.username || 'guest';
     const pool = db;
     await pool.query(
       "INSERT INTO preference_log (spiciness, saltiness, sweetness, price, calorie, religion, allergies, user_id, recommendation_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-      [spiciness||null, saltiness||null, sweetness||null, price||null, calorie||null, religion||null, allergies||[], userId||'guest', recommendationMode||'auto']
+      [spiciness||null, saltiness||null, sweetness||null, price||null, calorie||null, religion||null, allergies||[], effectiveUserId, recommendationMode||'auto']
     );
     res.json({ success: true });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
@@ -737,9 +739,11 @@ app.post('/api/preference-log', softAuth, async (req, res) => {
 // 推荐次数记录
 app.post('/api/recommendation-log', softAuth, async (req, res) => {
   try {
-    const { userType, userId } = req.body;
+    // userType / userId 取自 JWT，拒绝客户端伪造
+    const effectiveUserId = req.user?.username || 'guest';
+    const effectiveUserType = req.user ? 'user' : 'guest';
     const pool = db;
-    await pool.query('INSERT INTO recommendation_log (user_type, user_id) VALUES ($1,$2)', [userType||'guest', userId||'guest']);
+    await pool.query('INSERT INTO recommendation_log (user_type, user_id) VALUES ($1,$2)', [effectiveUserType, effectiveUserId]);
     res.json({ success: true });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
@@ -1115,9 +1119,12 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const { items } = req.body;
     if (!orderId || !items || !items.length) return res.status(400).json({ success: false, error: '参数无效' });
     if (items.some(i => { const p = parseFloat(i.price); return isNaN(p) || p < 0; })) return res.status(400).json({ success: false, error: '商品价格无效' });
+    // 归属校验：非管理员只能操作自己的订单（防止篡改他人在途订单）
+    const effectiveUserId = req.user?.username || 'guest';
+    const isAdmin = req.user?.role === 'admin';
     const pool = db;
-    const existing = await pool.query('SELECT items, total_price, status FROM orders WHERE id=$1', [orderId]);
-    if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在' });
+    const existing = await pool.query('SELECT items, total_price, status FROM orders WHERE id=$1' + (isAdmin ? '' : ' AND user_id=$2'), isAdmin ? [orderId] : [orderId, effectiveUserId]);
+    if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     const row = existing.rows[0];
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
@@ -1133,8 +1140,8 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const oldTotal = parseFloat(row.total_price) || 0;
     const addTotal = items.reduce((s, i) => s + (parseFloat(i.price) || 0) * (i.qty || 1), 0);
     const newTotal = oldTotal + addTotal;
-    await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4',
-      [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]);
+    await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4' + (isAdmin ? '' : ' AND user_id=$5'),
+      isAdmin ? [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId] : [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId, effectiveUserId]);
     res.json({ success: true, message: '加菜成功', orderId, addedCount: items.length, totalPrice: newTotal, dishCount: mergedItems.length });
   } catch (e) { logger.error('加菜API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
@@ -1145,11 +1152,14 @@ app.patch('/api/order/:id/table', softAuth, async (req, res) => {
     const orderId = parseInt(req.params.id);
     const { tableNumber } = req.body;
     if (!orderId || !tableNumber) return res.status(400).json({ success: false, error: '参数无效' });
+    // 归属校验：非管理员只能改自己的在途订单桌号
+    const effectiveUserId = req.user?.username || 'guest';
+    const isAdmin = req.user?.role === 'admin';
     const pool = db;
     const colCheck = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'");
     if (colCheck.rows.length === 0) return res.json({ success: false, error: '订单表不支持桌号' });
-    const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled') RETURNING id", [String(tableNumber), orderId]);
-    if (r.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或已完成' });
+    const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled')" + (isAdmin ? "" : " AND user_id=$3") + " RETURNING id", isAdmin ? [String(tableNumber), orderId] : [String(tableNumber), orderId, effectiveUserId]);
+    if (r.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或无权操作' });
     res.json({ success: true, orderId, tableNumber });
   } catch (e) { logger.error('改桌号API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
