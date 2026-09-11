@@ -14,9 +14,9 @@
   <style>
     :root { --primary: #b83a2a; --primary-dark: #8b1a1a; --primary-light: #cf5240; --gold: #c9a96e; --gold-light: #e8d5b0; --gold-dark: #a8884e; --green: #2d8a6e; --cream: #faf6f0; --cream-dark: #f0e8d8; --brown: #1a0f0a; --brown-light: #4a3028; --text: #2c1810; --text-light: #756558; --radius: 12px; --radius-lg: 18px; --ease: cubic-bezier(0.4, 0, 0.2, 1); }
     html.dark-mode { --cream: #1a1a1a; --cream-dark: #1a1a1a; --text: #e0d5c1; --text-light: #a89880; --brown: #e0d5c1; --brown-light: #c4b698; --gold: #c9a96e; --gold-light: #d4b87a; --primary: #d0453a; --primary-dark: #b8352a; }
-    /* 厨房看板配色：默认深色，切换 light-mode 为浅色 */
-    :root { --k-bg:#1a0f0a; --k-card:#2c1810; --k-text:#e8d5b0; --k-muted:#8b7a6a; --k-border:rgba(201,169,110,0.15); --k-input-bg:#1a0f0a; --k-overlay:rgba(26,15,10,0.95); }
-    html.light-mode { --k-bg:#faf6f0; --k-card:#ffffff; --k-text:#2c1810; --k-muted:#756558; --k-border:rgba(201,169,110,0.4); --k-input-bg:#ffffff; --k-overlay:rgba(250,246,240,0.95); }
+    /* 厨房看板配色：默认浅色，dark-mode 切换为深色（与主站/后台统一用 dark-mode 类） */
+    :root { --k-bg:#faf6f0; --k-card:#ffffff; --k-text:#2c1810; --k-muted:#756558; --k-border:rgba(201,169,110,0.4); --k-input-bg:#ffffff; --k-overlay:rgba(250,246,240,0.95); }
+    html.dark-mode { --k-bg:#1a0f0a; --k-card:#2c1810; --k-text:#e8d5b0; --k-muted:#8b7a6a; --k-border:rgba(201,169,110,0.15); --k-input-bg:#1a0f0a; --k-overlay:rgba(26,15,10,0.95); }
     * { box-sizing: border-box; }
     body { background: var(--k-bg); font-family: 'Noto Sans SC', sans-serif; padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; color: #c9a96e; margin-bottom: 20px; }
@@ -192,18 +192,17 @@
       document.getElementById('current-time').textContent = new Date().toLocaleString();
     }
 
-    // 深色模式切换
+    // 深色模式切换（与主站/后台统一用 dark-mode 类；厨房默认深色，用独立键 kitchenDarkMode）
     function initDarkMode() {
       const btn = document.getElementById('dark-mode-toggle');
       if (!btn) return;
-      // 厨房默认深色；用独立键，避免与前台深浅设置互相干扰
       const saved = localStorage.getItem('kitchenDarkMode');
       let dark = saved !== null ? saved === 'true' : true;
-      document.documentElement.classList.toggle('light-mode', !dark);
+      document.documentElement.classList.toggle('dark-mode', dark);
       btn.textContent = dark ? '☀️' : '🌙';
       btn.addEventListener('click', function() {
         dark = !dark;
-        document.documentElement.classList.toggle('light-mode', !dark);
+        document.documentElement.classList.toggle('dark-mode', dark);
         localStorage.setItem('kitchenDarkMode', dark);
         this.textContent = dark ? '☀️' : '🌙';
       });
