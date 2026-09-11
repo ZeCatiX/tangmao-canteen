@@ -73,6 +73,14 @@
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
+    function showToast(msg) {
+      const eb = document.createElement('div');
+      eb.textContent = msg;
+      eb.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#e74c3c;color:#fff;padding:10px 22px;border-radius:8px;z-index:9999;font-size:0.95rem;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+      document.body.appendChild(eb);
+      setTimeout(() => eb.remove(), 3000);
+    }
+
     function getToken() {
       return localStorage.getItem('kitchenToken') || '';
     }
@@ -147,7 +155,10 @@
               + '</div>'
               + '</div>';
           }).join('');
-        }).catch(() => {});
+        }).catch(() => {
+          const c = document.getElementById('order-list');
+          if (c) c.insertAdjacentHTML('afterbegin', '<div class="conn-lost" style="padding:10px;margin:8px 0;background:#fff3cd;border:1px solid #ffe082;border-radius:6px;color:#856404;text-align:center;">⚠ 连接断开，正在重试…</div>');
+        });
     }
 
     function completeOrder(id, btn) {
@@ -171,7 +182,10 @@
         body: JSON.stringify({ status: 'completed' })
       }).then(r => r.json()).then(d => {
         if (d.success) loadOrders();
-      }).catch(() => {});
+      }).catch(() => {
+        showToast('⚠ 完成失败，请重试');
+        if (btn) { btn.dataset.armed = ''; btn.textContent = btn.dataset.orig || '完成'; btn.style.background = ''; }
+      });
     }
 
     function updateTime() {
