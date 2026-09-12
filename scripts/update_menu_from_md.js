@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
 
-const ROOT = 'C:/Users/Lenovo/Desktop/食堂网页';
+const ROOT = 'D:/食堂网页';
 const MD = path.join(ROOT, '唐猫庭院_完整菜单.md');
 const IMG_BASE = path.join(ROOT, '唐猫菜品', '20260728唐猫庭院菜品汇总');
 const UPLOADS = path.join(ROOT, 'uploads');

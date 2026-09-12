@@ -2,7 +2,7 @@
   "mcpServers": {
     "filesystem": {
       "command": "node",
-      "args": ["node_modules/@modelcontextprotocol/server-filesystem/dist/index.js", "C:\\Users\\Lenovo\\Desktop\\食堂网页"],
+      "args": ["node_modules/@modelcontextprotocol/server-filesystem/dist/index.js", "D:\\食堂网页"],
       "env": {}
     },
     "sequential-thinking": {
