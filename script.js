@@ -378,7 +378,7 @@ const CATEGORY_CONFIG=[
  {cat:'热销菜品',emoji:'🔥',tab:'热销'},
  {cat:'传承陕菜',emoji:'🍲',tab:'陕菜'},
  {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜'},
- {cat:'田园时蔬',emoji:'🥬',tab:'汤羹'},
+ {cat:'田园时蔬·汤羹',emoji:'🥬',tab:'汤羹'},
  {cat:'特色凉菜',emoji:'🥗',tab:'凉菜'},
  {cat:'陕西小吃',emoji:'🥟',tab:'小吃'},
  {cat:'飲品与酒水',emoji:'🍹',tab:'饮品'}
