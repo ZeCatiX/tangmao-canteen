@@ -374,7 +374,7 @@ function showDataset(){
 // ─── 分类元数据（唯一配置源：分类新增/改名只需改这里，下拉框/快捷按钮/图标/排序全部自动生成）───
 const CATEGORY_CONFIG=[
  {cat:'主食',emoji:'🍚',tab:''},
- {cat:'招牌',emoji:'🏆',tab:'招牌'},
+ {cat:'招牌与游西安必打卡',emoji:'🏆',tab:'招牌'},
  {cat:'热销菜品',emoji:'🔥',tab:'热销'},
  {cat:'传承陕菜',emoji:'🍲',tab:'陕菜'},
  {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜'},
