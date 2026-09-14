@@ -68,3 +68,6 @@ runtime_settings.json
 
 # 推荐效果报告（后台点「重新生成」时写入）
 recommendation_effect.json
+
+# 本地流程图渲染依赖（docs/flow.html 自托管 mermaid，CSP 禁外站脚本，2.5MB 不入库）
+/mermaid.min.js
