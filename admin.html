@@ -7,6 +7,9 @@
   <meta name="description" content="唐猫庭院管理后台 - 菜品管理、数据统计、用户管理、订单管理">
   <link rel="manifest" href="/manifest.json">
   <title>唐猫庭院 - 管理后台</title>
+  <link rel="icon" href="/assets/logo/logo-mark.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/logo/icons/icon-32x32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/assets/logo/icons/favicon.ico" type="image/x-icon">
   <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="node_modules/@fontsource/noto-sans-sc/400.css">
@@ -25,6 +28,8 @@
     .sidebar-brand { padding: 1.5rem 1.2rem 1rem; border-bottom: 1px solid rgba(201,169,110,0.1); text-align: center; }
     .sidebar-brand h5 { font-family: 'Noto Serif SC', serif; color: var(--gold); letter-spacing: 4px; font-size: 1.05rem; margin: 0; }
     .sidebar-brand small { color: rgba(201,169,110,0.35); letter-spacing: 2px; font-size: 0.65rem; }
+    .logo-mark { width: 1.35em; height: 1.35em; vertical-align: -0.32em; margin-right: 0.35em; }
+    .sidebar-brand .logo-mark { width: 46px; height: 46px; margin: 0 auto 8px; display: block; }
     .sidebar-nav { flex: 1; padding: 0.5rem 0; }
     .sidebar-nav a { display: flex; align-items: center; gap: 10px; color: rgba(201,169,110,0.5); text-decoration: none; padding: 0.75rem 1.2rem; font-size: 0.85rem; letter-spacing: 1px; transition: all 0.25s; border-left: 3px solid transparent; }
     .sidebar-nav a:hover { background: rgba(201,169,110,0.06); color: var(--gold); }
@@ -127,7 +132,7 @@
 <body>
 <div class="mobile-topbar">
   <div style="display:flex;justify-content:space-between;align-items:center;">
-    <h5>唐猫庭院</h5>
+    <h5><img src="/assets/logo/logo-mark.svg" alt="" class="logo-mark">唐猫庭院</h5>
     <div style="display:flex;align-items:center;gap:8px;">
       <small style="color:rgba(255,255,255,0.5);font-size:0.7rem;letter-spacing:1px;">管理后台</small>
       <button class="btn btn-sm" id="dark-mode-toggle-mobile" style="border-radius:50%;width:28px;height:28px;padding:0;background:transparent;border:1px solid rgba(201,169,110,0.3);color:#c9a96e;font-size:0.75rem;cursor:pointer;display:none;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
@@ -150,6 +155,7 @@
 
 <div id="admin-login-page" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--cream);">
   <div class="admin-login-box" style="border-radius:16px;padding:2.5rem;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.08);text-align:center;">
+    <img src="/assets/logo/logo-mark.svg" alt="唐猫庭院" style="width:62px;height:62px;margin:0 auto 12px;display:block;">
     <h3 style="font-family:'Noto Serif SC',serif;color:#2c1810;margin-bottom:4px;">唐猫庭院</h3>
     <p style="color:#8b7a6a;font-size:0.85rem;margin-bottom:24px;">管理后台登录</p>
     <form id="admin-login-form" onsubmit="return false;">
@@ -170,6 +176,7 @@
 <div class="app-wrap">
   <div class="sidebar d-none d-md-flex">
     <div class="sidebar-brand">
+      <img src="/assets/logo/logo-mark.svg" alt="唐猫庭院" class="logo-mark">
       <h5>唐猫庭院</h5>
       <small>管理后台</small>
     </div>
