@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>唐猫庭院 · 顾客完整流程</title>
+<script src="/mermaid.min.js"></script>
+<style>
+  body{font-family:'Noto Serif SC','Microsoft YaHei',serif;max-width:1150px;margin:0 auto;padding:28px;background:#faf6f0;color:#3a2a1a;}
+  h1{color:#c0392b;text-align:center;margin-bottom:6px;}
+  .sub{text-align:center;color:#8b5a2b;font-size:0.92rem;margin-bottom:8px;}
+  h2{color:#8b5a2b;border-bottom:2px solid #c9a96e;padding-bottom:6px;margin-top:44px;}
+  .mermaid{background:#fff;border:1px solid #e0d6c0;border-radius:14px;padding:22px;margin:16px 0;box-shadow:0 2px 12px rgba(139,90,43,0.08);text-align:center;}
+  .note{background:#fff8ec;border-left:4px solid #c9a96e;padding:12px 16px;border-radius:8px;font-size:0.86rem;color:#5a4030;margin:12px 0;}
+  .err{color:#c0392b;font-size:0.85rem;text-align:center;margin-top:10px;display:none;}
+</style>
+</head>
+<body>
+<h1>唐猫庭院 · 顾客完整流程</h1>
+<div class="sub">基于代码实际行为梳理 · 标注关键 API 与鉴权</div>
+
+<h2>一、点餐主流程(含加菜 / 挪桌 / 赠菜)</h2>
+<div class="mermaid">
+flowchart TD
+    StartN(["访问 / · 加载 GET /api/dishes 110道"]) --> Home["首页 home-section"]
+    Home --> BtnQ{"点哪个入口?"}
+    BtnQ -- "开始点餐 guest-btn" --> G1{"有桌号?"}
+    BtnQ -- "AI帮你选 ai-recommend-btn" --> G2{"有桌号?"}
+    BtnQ -. "导航栏 全部菜单 nav-dataset" .-> Menu["全部菜单 dataset<br/>分类/搜索/辣度/价格/排序<br/>⚠ 无桌号也能进(导航直入)"]
+    G1 -- 否 --> Pick1["openTablePicker(menu)<br/>选完→showDataset"]
+    G1 -- 是 --> Menu
+    Pick1 --> Menu
+    G2 -- 否 --> Pick2["openTablePicker(ai)<br/>选完→preference"]
+    G2 -- 是 --> Pref["口味偏好<br/>辣度/咸淡/甜酸/热量/价格"]
+    Pick2 --> Pref
+    Pref --> Rec["fetchRecommendations<br/>POST /api/predict-rf → Python worker<br/>失败回退 computeDishMatch"]
+    Rec --> RecRes["AI推荐结果<br/>换一批 / 加入购物车 / 结束"]
+    RecRes --> AddCart["加入购物车 addToCart"]
+    Menu --> AddCart
+    AddCart --> Cart["购物车 cart<br/>改数量 / 删除 / 清空 / 改桌号"]
+    Cart --> Ck{"结算:有桌号?"}
+    Ck -- 否 --> PickC["openTablePicker()<br/>选完回购物车→重新结算"]
+    PickC --> Cart
+    Ck -- 是 --> OrderQ{"进行中订单 且 同桌?"}
+    OrderQ -- 是加菜 --> AddMore["POST /api/order/:id/add"]
+    OrderQ -- 否新单 --> NewOrder["POST /api/order"]
+    AddMore --> Kitchen["厨房看板 kitchen.html 实时接单"]
+    NewOrder --> Kitchen
+    Kitchen --> Done["点餐完成 end-section<br/>记录轮次 lastOrderRounds"]
+    Done --> EndQ{"操作?"}
+    EndQ -- 评价 --> FB["POST /api/feedback<br/>整体满意度 + 菜品评分"]
+    EndQ -- 查看订单 --> View["rebuildEndView 时间线"]
+    EndQ -- 加菜 --> Panel["加菜面板 addon-modal"]
+    Panel --> PanelQ{"三选一"}
+    PanelQ -- 本桌加菜 --> S1["选菜 AI/菜单<br/>isAddMore→/order/:id/add"]
+    PanelQ -- 挪桌 --> S2["openTablePicker<br/>PATCH /order/:id/table"]
+    PanelQ -- 给别桌加菜 --> S3["切桌 sideOrder + 选菜<br/>赠菜双向记账"]
+    S3 --> Gt1["被赠桌:0元 giftFrom<br/>POST /api/order"]
+    S3 --> Gt2["本桌:正常计费 giftTo<br/>POST /order/{本桌id}/add"]
+    S3 --> Gt3["小票 showGiftReceipt<br/>账单 GET /api/table-view"]
+    S1 --> Cart
+    S2 --> Cart
+    Gt2 --> Cart
+    FB --> MLp["ML闭环:评价+日志+订单→重训→worker 更新"]
+</div>
+
+<h2>二、账户与登录流程</h2>
+<div class="mermaid">
+flowchart TD
+    NU["顶栏 登录 nav-user"] --> ChQ{"登录 / 注册"}
+    ChQ -- 登录 --> LI["POST /api/user/login → JWT"]
+    ChQ -- 注册 --> RG["POST /api/user/register → 自动登录"]
+    LI --> Prof["个人中心 profile-section showProfile"]
+    RG --> Prof
+    Prof --> F1["收藏列表 + 取消<br/>POST /api/user-favorites"]
+    Prof --> F2["黑名单 + 取消<br/>本地,不进推荐"]
+    Prof --> F3["点餐历史(近10单)<br/>GET /api/orders?userId"]
+    Prof --> F4["历史菜品补评分/复评<br/>→ feedback → POST /api/feedback"]
+    Prof --> F5["偏好保存<br/>POST /api/user-preferences"]
+    Prof --> F6["退出登录<br/>POST /api/user/logout (token_blacklist)"]
+    Prof --> F7["注销账号<br/>POST /api/user/delete"]
+    NU2["顶栏 我的 nav-profile<br/>(登录后显示)"] --> Prof
+</div>
+
+<h2>三、ML 反馈闭环</h2>
+<div class="mermaid">
+flowchart LR
+    E1["顾客评价<br/>/api/feedback"] --> E2["推荐日志<br/>/api/recommendation-log"]
+    E2 --> E3["订单<br/>/api/order"]
+    E3 --> E4["后台数据分析<br/>/admin"]
+    E4 --> E5["重训<br/>POST /api/admin/retrain"]
+    E5 --> E6["更新 predict_worker.py"]
+    E6 --> E7["推荐更准 ↺"]
+    E7 -.反馈回流.-> E1
+</div>
+
+<div class="note">
+<b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」两个<b>首页按钮</b>会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完回购物车重试)。<br>
+<b>鉴权两档</b>:<code>softAuth</code> 游客可用(下单/推荐/评价);<code>authMiddleware</code> 需登录(收藏/黑名单/历史/偏好)。<br>
+<b>状态存储</b>:<code>sessionStorage</code> 桌号·订单轮次·给别桌中间态;<code>localStorage</code> 用户·收藏·购物车·深色模式。<br>
+<b>赠菜记账</b>:被赠桌 0 元(原价划线),本桌正常计费,两边账单独立。
+</div>
+<div class="err" id="err">⚠ Mermaid 未加载,请检查 /mermaid.min.js 是否存在。</div>
+
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'default',flowchart:{curve:'basis',useMaxWidth:true}});
+  window.addEventListener('load',function(){
+    setTimeout(function(){
+      if(!document.querySelector('.mermaid svg')){
+        document.getElementById('err').style.display='block';
+      }
+    },2500);
+  });
+</script>
+</body>
+</html>
