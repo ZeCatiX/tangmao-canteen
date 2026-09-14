@@ -103,13 +103,7 @@ body {
   color: var(--gold);
   font-size: 1.15rem;
 }
-.navbar-brand .logo-mark {
-  width: 27px;
-  height: 27px;
-  margin-right: 0.55em;
-  vertical-align: -0.44em;
-  flex-shrink: 0;
-}
+.navbar-brand::before { content: '◆'; margin-right: 10px; font-size: 0.42rem; opacity: 0.5; }
 .navbar-brand::after  { content: '◆'; margin-left:  10px; font-size: 0.42rem; opacity: 0.5; }
 
 .navbar-dark .navbar-nav .nav-link {
