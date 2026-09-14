@@ -912,6 +912,7 @@ async function applyTableChoice(t){
  const intent=_tablePickIntent;_tablePickIntent=null;
  if(intent==='menu')showDataset();
  else if(intent==='ai')showSection('preference-section');
+ else if(intent==='checkout')checkoutCart();
 }
 // 本桌账单（免登录，凭签名桌码只读查看）
 function showTableBill(){
@@ -1063,7 +1064,7 @@ async function checkoutCart(){
  if(bEl)bEl.disabled=true;
  // 桌号：恒用锁定桌号（选桌后即锁定，改桌请用「更换/挪桌」）
  const tableNumber=ssGet('lockedTable')||'';
- if(!tableNumber){if(bEl)bEl.disabled=false;openTablePicker();return;}
+ if(!tableNumber){if(bEl)bEl.disabled=false;openTablePicker('checkout');return;}
  if(tableNumber!=='打包'&&!/^\d{2}$/.test(tableNumber)){showMessage('桌号格式不对','请重新选择桌号');if(bEl)bEl.disabled=false;return;}
  // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
  let lastOrderId=parseInt(ssGet('lastOrderId')||'0');
