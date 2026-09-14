@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>唐猫庭院 - 厨房看板</title>
+  <link rel="icon" href="/assets/logo/logo-mark.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/logo/icons/icon-32x32.png" type="image/png" sizes="32x32">
+  <link rel="shortcut icon" href="/assets/logo/icons/favicon.ico" type="image/x-icon">
   <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="node_modules/@fontsource/noto-sans-sc/400.css">
@@ -42,13 +45,16 @@
     .login-box button:hover { background: #d4b87a; }
     .login-box .error { color: #e74c3c; font-size: 0.8rem; text-align: center; margin-top: 8px; display: none; }
     .login-box .hint { color: var(--k-muted); font-size: 0.75rem; text-align: center; margin-top: 10px; }
+    .logo-mark { width: 1.35em; height: 1.35em; vertical-align: -0.32em; margin-right: 0.35em; }
+    .login-box .logo-mark { width: 58px; height: 58px; display: block; margin: 0 auto 10px; }
   </style>
 </head>
 <body>
   <!-- 登录覆盖层 -->
   <div class="login-overlay" id="login-overlay">
     <div class="login-box">
-      <h3>🏮 厨房看板登录</h3>
+      <img src="/assets/logo/logo-mark.svg" alt="唐猫庭院" class="logo-mark">
+      <h3>厨房看板登录</h3>
       <input type="text" id="login-user" placeholder="管理员账号" autocomplete="username" aria-label="管理员账号">
       <input type="password" id="login-pass" placeholder="管理员密码" autocomplete="current-password" aria-label="管理员密码">
       <button id="login-btn">登录</button>
@@ -58,7 +64,7 @@
   </div>
 
   <div class="header">
-    <h2>🏮 唐猫庭院 · 厨房看板</h2>
+    <h2><img src="/assets/logo/logo-mark.svg" alt="唐猫庭院" class="logo-mark">唐猫庭院 · 厨房看板</h2>
     <span style="display:flex;align-items:center;gap:12px;">
       <button id="dark-mode-toggle" style="background:transparent;border:1px solid rgba(201,169,110,0.4);border-radius:50%;width:32px;height:32px;color:#c9a96e;cursor:pointer;font-size:0.85rem;" title="切换深色/浅色模式" aria-label="切换深色/浅色模式">🌙</button>
       <span id="current-time"></span>
