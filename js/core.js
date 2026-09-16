@@ -51,7 +51,7 @@ function checkApiAvailability(){
  if(apiAvailabilityCache===false&&ca<5000)return Promise.resolve(false);
  return new Promise(r=>{
   const c=new AbortController(),t=setTimeout(()=>c.abort(),3000);
-  fetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
+  safeFetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
   .then(res=>res.json()).then(d=>{apiAvailabilityCache=!!(d&&d.ready);apiCacheTimestamp=now;r(apiAvailabilityCache);})
   .catch(()=>{apiAvailabilityCache=null;apiCacheTimestamp=0;r(false);}).finally(()=>clearTimeout(t));
  });
@@ -67,17 +67,30 @@ function removeUser(n){saveUsers(loadUsers().filter(u=>u.username!==n));}
 
 
 // ═══════════════ 菜品匹配计算 ═══════════════
+const SPICE_ORDER={'不辣':0,'微辣':1,'中辣':2,'重辣':3};
+const SALT_ORDER={'清淡':0,'适中':1,'偏咸':2};
+const CAL_ORDER={'低':0,'中':1,'高':2};
+// 辣度: 超出承受-2重罚; 精确+2; 差1级+1; 差2级+0
+function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;if(di>ui)return -2;const diff=ui-di;return diff===0?2:diff===1?1:0;}
+// 咸淡/热量: 无超出概念, 精确+2; 差1级+1; 差2级+0
+function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?1:0;}
 function computeDishMatch(prefs,dish){
- const md={taste:0,cuisine:0,nutrition:0,rating:0};
- const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
- ['辣度','咸淡','甜酸'].forEach(k=>{if(prefs[k]!=='无'){if(dish[keyMap[k]]===prefs[k])md.taste+=1;}else md.taste+=1;});
- // 招牌菜加分
- if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.5;
- // 营养部分简化
- md.nutrition+=2;
+ const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
+ if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=2;
+ if(prefs['咸淡']!=='无')md.taste+=gradeScoreSoft(SALT_ORDER,prefs['咸淡'],dish.saltiness);else md.taste+=2;
+ if(prefs['甜酸']!=='无'){if(dish.sweetness===prefs['甜酸'])md.taste+=2;else md.taste-=1;}else md.taste+=2;
+ if(dish.tags&&dish.tags.includes('招牌'))md.cuisine+=1.0;   // 原 1.5：会压过明确的口味偏好（差一级的匹配 +1 也盖不过），降到 1.0 让精确匹配能赢
+ if(prefs['calorie']!=='无')md.calorie=gradeScoreSoft(CAL_ORDER,prefs['calorie'],dish.calorie);else md.calorie=1;
+ // 价格软打分: 区间内+2, 邻近-1, 区间外-2; 无偏好+1
+ const p=parseFloat(dish.price);
+ if(!isNaN(p)&&prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
+  if(prefs['价格区间']==='经济')md.price=p<20?2:(p<30?-1:-2);
+  else if(prefs['价格区间']==='适中')md.price=(p>=20&&p<=50)?2:(p<20||p>50?-1:0);
+  else if(prefs['价格区间']==='品质')md.price=p>50?2:(p>40?-1:-2);
+ }else md.price=1;
  const s=parseFloat(dish.rating);md.rating=!isNaN(s)?Math.round((s/5)*2.5*10)/10:2.0;
- const total=md.taste+md.cuisine+md.nutrition+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/8.5};
+ const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/14};
 }
 
 function generateDishReason(prefs,dish){
@@ -98,9 +111,15 @@ function selectBlindBoxDish(prefs,top,blk){
  const eligible=dishData.filter(d=>!topIds.has(d.id)&&!recommendedIds.includes(d.id)&&!(blk&&blk.includes(d.id))
   &&!(r==='清真'&&!d.isHalal)&&!(r==='素食'&&!d.isVegetarian)
   &&!(a.includes('海鲜')&&d.allergies?.seafood)&&!(a.includes('花生')&&d.allergies?.peanut)
-  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten));
+  &&!(a.includes('鸡蛋')&&d.allergies?.egg)&&!(a.includes('大豆')&&d.allergies?.soy)&&!(a.includes('麸质')&&d.allergies?.gluten)
+  &&d.category!=='飲品与酒水'&&d.category!=='主食');
  if(!eligible.length)return null;
- // 偏好加权：与用户偏好匹配度越高，被选中的概率越大
+ // 纯随机模式
+ if(prefs['blindBoxMode']==='random'){
+  const d=eligible[Math.floor(Math.random()*eligible.length)];
+  return{...d,reason:'🔮 盲盒推荐：纯随机惊喜，试试这个吧！',type:'盲盒尝鲜',blindMode:'random',matchIndex:0,matchRate:0.5};
+ }
+ // 智能选模式：按偏好加权
  const keyMap={'辣度':'spiciness','咸淡':'saltiness','甜酸':'sweetness'};
  const weighted=eligible.map(d=>{
   let score=1;
@@ -169,13 +188,16 @@ function resetPreferenceForm(){
 const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院'};
 const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
 
-function showSection(sectionId){
+function showSection(sectionId,skipScroll){
  const el=document.getElementById(sectionId);
  if(!el){console.warn('showSection: 未找到元素',sectionId);return;}
+ // 记录上一页（关闭购物车时返回）
+ const cur=document.querySelector('.section.active');
+ if(cur&&cur.id!==sectionId)window._prevSection=cur.id;
  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
  el.classList.add('active');
- // 切换section时平滑滚动到顶部，提升浏览体验
- window.scrollTo({ top: 0, behavior: 'smooth' });
+ // 切换section时平滑滚动到顶部，提升浏览体验（购物车返回时跳过，恢复原位置）
+ if(!skipScroll)window.scrollTo({ top: 0, behavior: 'smooth' });
  // 记录导航历史（用于浏览器前进/后退）
  try { history.pushState({ section: sectionId }, '', window.location.pathname); } catch(e) {}
  updateUserNavbar();
@@ -194,7 +216,20 @@ function showSection(sectionId){
    sel.addEventListener('change',updateModeDisplay);
   }
   const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
+  // 桌号锁定：加菜流程中偏好页桌号同样锁定
+  const lockedTable1=ssGet('lockedTable')||'';
+  const ptb=document.getElementById('pref-table-number');
+  if(ptb){
+   if(lockedTable1){ptb.value=lockedTable1;ptb.disabled=true;ptb.style.background='var(--cream-dark)';}
+   else{ptb.disabled=false;ptb.style.background='';}
+  }
   updateModeDisplay();
+ }
+ updateFloatBar();
+ // 进入推荐页：刷新加购按钮与购物车同步（清空/修改后返回也能恢复）
+ if(sectionId==='recommendation-section'&&typeof refreshRecipeCartBtn==='function'){
+  const ids=[...document.querySelectorAll('#recommendation-result [data-recipe-cart]')].map(el=>parseInt(el.dataset.recipeCart));
+  ids.forEach(id=>refreshRecipeCartBtn(id));
  }
 }
 
@@ -232,24 +267,66 @@ function showMessage(title,msg,callback,autoClose){
 }
 
 function showDataset(){
+ sessionStorage.setItem('datasetScrollY',window.scrollY);
  showSection('dataset-section');
  renderMenuTable();
 }
+// ─── 分类元数据（唯一配置源：分类新增/改名只需改这里，下拉框/快捷按钮/图标/排序全部自动生成）───
+const CATEGORY_CONFIG=[
+ {cat:'主食',emoji:'🍚',tab:''},
+ {cat:'招牌与游西安必打卡',emoji:'🏆',tab:'招牌'},
+ {cat:'热销菜品',emoji:'🔥',tab:'热销'},
+ {cat:'传承陕菜',emoji:'🍲',tab:'陕菜'},
+ {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜'},
+ {cat:'田园时蔬·汤羹',emoji:'🥬',tab:'蔬羹'},
+ {cat:'特色凉菜',emoji:'🥗',tab:'凉菜'},
+ {cat:'陕西小吃',emoji:'🥟',tab:'小吃'},
+ {cat:'飲品与酒水',emoji:'🍹',tab:'饮品'}
+];
+function catOrderOf(cat){const i=CATEGORY_CONFIG.findIndex(c=>c.cat===cat);return i===-1?999:i;}
+function catEmojiOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m?m.emoji:'🍽';}
+function catTabLabelOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.tab?m.tab:cat;}
+// 从菜品实际分类生成分类 UI；分类集合变化时自动重建并保留当前选中
+function buildCategoryUI(){
+ const cats=[...new Set(dishData.map(d=>d.category).filter(Boolean))].sort((a,b)=>catOrderOf(a)-catOrderOf(b)||a.localeCompare(b,'zh'));
+ const key=cats.join('|');
+ const tabs=document.getElementById('category-tabs');
+ if(tabs&&tabs.dataset.cats!==key){
+  const cur=(tabs.querySelector('.cat-tab.active')||{dataset:{}}).dataset.cat||'';
+  tabs.innerHTML='<button class="btn btn-sm cat-tab" data-cat="" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;">全部</button>'
+   +cats.map(c=>'<button class="btn btn-sm cat-tab" data-cat="'+esc(c)+'" style="border-radius:20px;padding:4px 14px;font-size:0.82rem;">'+esc(catTabLabelOf(c))+'</button>').join('');
+  tabs.dataset.cats=key;
+  tabs.querySelectorAll('.cat-tab').forEach(t=>{
+   const on=t.dataset.cat===cur;
+   t.classList.toggle('active',on);
+   t.style.background=on?'var(--primary)':'transparent';
+   t.style.color=on?'#fff':'var(--text)';
+   t.style.border=on?'none':'1px solid var(--gold-light)';
+  });
+ }
+ const sel=document.getElementById('menu-filter-cat');
+ if(sel&&sel.dataset.cats!==key){
+  const cur=sel.value;
+  sel.innerHTML='<option value="">全部分类</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join('');
+  sel.dataset.cats=key;
+  if(cur&&cats.includes(cur))sel.value=cur;
+ }
+}
 function renderMenuTable(){
- const tb=document.getElementById('dataset-table-body');if(!tb)return;
- // 如果 dishData 为空，最多重试 3 次（避免无限堆积）
+ const container=document.getElementById('dataset-table-body');if(!container)return;
+ // 如果 dishData 为空，最多重试 3 次
  if(!dishData||!dishData.length){
   if(!renderMenuTable._retryCount)renderMenuTable._retryCount=0;
   if(renderMenuTable._retryCount<3){renderMenuTable._retryCount++;setTimeout(renderMenuTable,1000);}
   return;
  }
  renderMenuTable._retryCount=0;
+ buildCategoryUI();
  const q=document.getElementById('menu-search')?.value?.trim().toLowerCase()||'';
  const cat=document.getElementById('menu-filter-cat')?.value||'';
  const spice=document.getElementById('menu-filter-spice')?.value||'';
  const priceRange=document.getElementById('menu-filter-price')?.value||'';
- const catOrder=['招牌与游西安必打卡','热销菜品','传承陕菜','江湖海鲜','田园时蔬·汤羹','特色凉菜','陕西小吃'];
- const sorted=[...dishData].sort((a,b)=>catOrder.indexOf(a.category)-catOrder.indexOf(b.category)||a.id-b.id);
+ const sorted=[...dishData].sort((a,b)=>catOrderOf(a.category)-catOrderOf(b.category)||a.id-b.id);
  const filtered=sorted.filter(d=>{
   if(q&&!d.name.toLowerCase().includes(q))return false;
   if(cat&&d.category!==cat)return false;
@@ -257,22 +334,37 @@ function renderMenuTable(){
   if(priceRange){const p=parseFloat(d.price);if(isNaN(p))return false;const [lo,hi]=priceRange.split('-').map(Number);if(p<lo||p>=hi)return false;}
   return true;
  });
- // 排序
  const sortVal=document.getElementById('menu-sort')?.value||'';
  if(sortVal==='popular')filtered.sort((a,b)=>(b.order_count||0)-(a.order_count||0));
  else if(sortVal==='rating')filtered.sort((a,b)=>parseFloat(b.rating)-parseFloat(a.rating));
  else if(sortVal==='price_asc')filtered.sort((a,b)=>parseFloat(a.price)-parseFloat(b.price));
  else if(sortVal==='price_desc')filtered.sort((a,b)=>parseFloat(b.price)-parseFloat(a.price));
- tb.innerHTML='';
+ const cart=getCart();
+ // 按分类分组渲染，每组加分隔标题
+ let html='';let lastCat='',lastSub='';
+ const SUB_EMOJI={'特调饮品':'🍸','花酒天地':'🥂','茶饮':'🍵','一醉千年':'🏺','葡萄酒':'🍷','液体面包':'🍺','缤纷饮品':'🍹'};
+ const SUBS=['特调饮品','花酒天地','茶饮','一醉千年','葡萄酒','液体面包','缤纷饮品'];
  filtered.forEach(d=>{
-
-// ═══════════════ 推荐逻辑 ═══════════════
-  const r=document.createElement('tr');
-  const tags=d.tags&&d.tags.length?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
+  if(d.category!==lastCat){
+   lastCat=d.category;lastSub='';
+   html+='<div class="dish-cat-sep">'+catEmojiOf(d.category)+' '+esc(d.category)+'</div>';
+  }
+  // 飲品与酒水二级分隔
+  if(d.category==='飲品与酒水'){
+   const sub=d.tags&&d.tags.find(t=>SUBS.includes(t));
+   if(sub&&sub!==lastSub){
+    lastSub=sub;
+    html+='<div class="dish-sub-sep">'+(SUB_EMOJI[sub]||'·')+' '+esc(sub)+'</div>';
+   }
+  }
+  const ci=cart.find(c=>c.id===d.id);
+  const qty=ci?(ci.qty||1):0;
   const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
-  r.innerHTML='<td><img src="'+(d.image_url?esc(d.image_url):defaultImg)+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'"></td><td>'+esc(d.category)+'</td><td>'+(d.tags&&d.tags.includes('招牌')?'⭐ ':'')+esc(d.name)+'</td><td>'+esc(d.spiciness)+'</td><td>'+esc(formatPrice(d.price))+'</td><td>'+esc(d.rating)+'</td><td>'+esc(tags)+'</td><td style="text-align:center;white-space:nowrap;"><button class="btn btn-sm btn-link add-to-cart-btn" data-id="'+d.id+'" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#2e86c1;" title="加入购物车">🛒</button><button class="btn btn-sm btn-link" style="text-decoration:none;font-size:1rem;padding:0 4px;color:#e74c3c;" onclick="addToFavorites('+d.id+')" title="收藏">♥</button></td>';
-  tb.appendChild(r);
+  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
+  const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">招牌</span> ':'';
+  html+='<div class="dish-card">'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;">'+star+esc(d.name)+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(d.category)+' · '+esc(d.spiciness)+'</p><div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">'+esc(formatPrice(d.price))+'</strong>'+(qty>0?'<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>')+'</div></div></div>';
  });
+ container.innerHTML='<div class="dish-grid">'+html+'</div>';
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
 }
 
@@ -282,7 +374,7 @@ function login(){
  if(bEl)bEl.disabled=true;
  const u=uEl.value.trim(),p=pEl.value;
  if(!u||!p){showMessage('登录失败','请输入用户名和密码');return;}
- fetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+ safeFetch('/api/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('登录失败',d.error||'用户名或密码错误');return;}
  if(d.token)localStorage.setItem('userToken',d.token);
  currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();const i=users.findIndex(x=>x.username===u);
@@ -294,21 +386,46 @@ function login(){
      // 隐藏home区登录/注册按钮
      const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
      if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+     // 登录后重查首页两个"上次"按钮（页面加载时可能是游客态被隐藏）
+     if(window.updateHomeButtons)window.updateHomeButtons();
      showSection('preference-section');if(d.user?.preferences)loadUserPreferences(d.user.preferences);
    });})
  .catch(()=>{showMessage('登录失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('login-btn');if(b)b.disabled=false;});
 }
 
+// 注册表单行内错误提示
+function setRegErr(field,msg){
+ const el=document.getElementById('register-'+field+'-err');
+ if(!el)return;
+ if(msg){el.textContent=msg;el.style.display='block';}
+ else{el.textContent='';el.style.display='none';}
+}
+function clearRegErrs(){['username','password','confirm'].forEach(f=>setRegErr(f,''));}
+
 function register(){
  const uEl=document.getElementById('register-username'),pEl=document.getElementById('register-password'),cEl=document.getElementById('register-confirm'),bEl=document.getElementById('register-btn');
  const aEl=document.getElementById('agree-privacy');
  if(!uEl||!pEl||!cEl){showMessage('页面错误','注册表单元素未找到');return;}
- if(bEl)bEl.disabled=true;const u=uEl.value.trim(),p=pEl.value,c=cEl.value;
- if(!u||!p){showMessage('注册失败','请填写完整信息');if(bEl)bEl.disabled=false;return;}
- if(p!==c){showMessage('注册失败','两次密码不一致');if(bEl)bEl.disabled=false;return;}
+ if(bEl)bEl.disabled=true;
+ const u=uEl.value.trim(),p=pEl.value,c=cEl.value;
+ clearRegErrs();
+ const fail=(field,msg)=>{setRegErr(field,msg);if(bEl)bEl.disabled=false;};
+ if(!u){fail('username','请填写用户名');return;}
+ if(u.length<2||u.length>20){fail('username','用户名需 2-20 个字符');return;}
+ if(!p){fail('password','请填写密码');return;}
+ if(p.length<8||p.length>20){fail('password','密码需 8-20 位');return;}
+ if(!/[A-Z]/.test(p)){fail('password','密码须包含大写字母');return;}
+ if(!/[a-z]/.test(p)){fail('password','密码须包含小写字母');return;}
+ if(!/[0-9]/.test(p)){fail('password','密码须包含数字');return;}
+ if(p!==c){fail('confirm','两次输入的密码不一致');return;}
  if(!aEl||!aEl.checked){showMessage('注册失败','请阅读并同意隐私政策');if(bEl)bEl.disabled=false;return;}
- fetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
- .then(r=>r.json()).then(d=>{if(!d.success){showMessage('注册失败',d.error||'注册失败');return;}
+ safeFetch('/api/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+ .then(r=>r.json()).then(d=>{if(!d.success){
+  const err=d.error||'注册失败';
+  if(err.includes('用户名'))setRegErr('username',err);
+  else if(err.includes('密码'))setRegErr('password',err);
+  else showMessage('注册失败',err);
+  return;}
  if(d.token)localStorage.setItem('userToken',d.token);
  currentUser=u;localStorage.setItem('currentUser',u);const users=loadUsers();if(!users.find(x=>x.username===u))users.push({username:u,created_at:new Date().toISOString(),lastLogin:new Date().toISOString(),favorites:[],blacklist:[],preferences:{}});saveUsers(users);
  showMessage('注册成功','欢迎，'+u+'！',function(){
@@ -316,6 +433,7 @@ function register(){
      if(pi)pi.classList.remove('d-none');if(nu)nu.classList.add('d-none');
      const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
      if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+     if(window.updateHomeButtons)window.updateHomeButtons();
      showSection('preference-section');
    });})
  .catch(()=>{showMessage('注册失败','无法连接到服务器，请检查网络');}).finally(()=>{const b=document.getElementById('register-btn');if(b)b.disabled=false;});
@@ -354,9 +472,9 @@ function loadUserPreferences(prefs){
 function submitPreference(){
  const $=id=>document.getElementById(id);
  // null 保护：检查所有偏好元素是否存在
- const sp=$('spiciness'),sa=$('saltiness'),sw=$('sweetness'),pr=$('price'),ca=$('calorie'),re=$('religion'),rm=$('recommendation-mode');
- if(!sp||!sa||!sw||!pr||!ca||!re||!rm){showMessage('页面错误','偏好设置表单未完全加载');return;}
- userProfile={spiciness:sp.value,saltiness:sa.value,sweetness:sw.value,price:pr.value,calorie:ca.value,religion:re.value,allergies:[],recommendationMode:rm.value};
+ const sp=$('spiciness'),sa=$('saltiness'),sw=$('sweetness'),pr=$('price'),ca=$('calorie'),re=$('religion'),rm=$('recommendation-mode'),bm=$('blind-box-mode');
+ if(!sp||!sa||!sw||!pr||!ca||!re||!rm||!bm){showMessage('页面错误','偏好设置表单未完全加载');return;}
+ userProfile={spiciness:sp.value,saltiness:sa.value,sweetness:sw.value,price:pr.value,calorie:ca.value,religion:re.value,allergies:[],recommendationMode:rm.value,blindBoxMode:bm.value};
  if($('allergy-none')&&!$('allergy-none').checked){
   const amap={'allergy-seafood':'海鲜','allergy-peanut':'花生','allergy-egg':'鸡蛋','allergy-soy':'大豆','allergy-gluten':'麸质'};
   Object.keys(amap).forEach(k=>{if($(k).checked)userProfile.allergies.push(amap[k]);});
@@ -364,10 +482,10 @@ function submitPreference(){
  if(currentUser!=='guest'){
   updateUserData(currentUser,{preferences:userProfile});
   localStorage.setItem('savedPrefs','true');
-  fetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
+  safeFetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
 }
  // 记录偏好选择
- fetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
+ safeFetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
  showSection('recommendation-section');
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
  if(rl)rl.classList.remove('d-none');
@@ -375,106 +493,13 @@ function submitPreference(){
  fetchRecommendations();
 }
 
-async function fetchRecommendations(isRefresh){
- console.group(isRefresh?'🔍刷新':'🔍推荐');
- const start=Date.now();
- const $=id=>document.getElementById(id);
- const rl=$('recommendation-loading'),rr=$('recommendation-result');
- if(!rl||!rr){showMessage('提示','页面加载中，请稍后重试');console.groupEnd();return;}
 
- // 等待菜品数据加载完成（最多等5秒）
- if(!dishData.length){
-  for(let w=0;w<50;w++){
-   await new Promise(r=>setTimeout(r,100));
-   if(dishData.length)break;
-  }
-  if(!dishData.length){
-   showMessage('提示','菜品数据加载中，请稍后重试');
-   rl.classList.add('d-none');
-   console.groupEnd();return;
-  }
- }
-
- const prefs={'辣度':userProfile.spiciness,'咸淡':userProfile.saltiness,'甜酸':userProfile.sweetness,'价格区间':userProfile.price||'无','饮食_宗教':userProfile.religion==='无'?'无特殊要求':userProfile.religion,'allergies':userProfile.allergies||[],'calorie':userProfile.calorie||'无'};
- let blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u)blk=u.blacklist||[];}
-
- let dishes=dishData.filter(d=>{
-  if(d.is_active===false)return false;
-  if(prefs['价格区间']!=='无'&&prefs['价格区间']!=='不限'){
-   const p=parseFloat(d.price);if(!isNaN(p)){
-    if(prefs['价格区间']==='经济'&&p>=20)return false;
-    if(prefs['价格区间']==='适中'&&(p<20||p>50))return false;
-    if(prefs['价格区间']==='品质'&&p<=50)return false;
-  }}
-  // 饮食要求筛选
-  const r=prefs['饮食_宗教'];
-  if(r!=='无特殊要求'){if(r==='清真'&&!d.isHalal)return false;if(r==='素食'&&!d.isVegetarian)return false;}
-  if(recommendedIds.includes(d.id))return false;
-  if(blk.includes(d.id))return false;
-  const a=prefs['allergies']||[];
-  if(a.includes('海鲜')&&d.allergies?.seafood)return false;
-  if(a.includes('花生')&&d.allergies?.peanut)return false;
-  if(a.includes('鸡蛋')&&d.allergies?.egg)return false;
-  if(a.includes('大豆')&&d.allergies?.soy)return false;
-  if(a.includes('麸质')&&d.allergies?.gluten)return false;
-  return true;
- });
- if(dishes.length<5){showMessage('提示','没有更多菜品啦！');$('recommendation-loading').classList.add('d-none');console.groupEnd();return;}
-
- const processML=preds=>{
-  const mlScores=dishes.map(d=>{const p=preds.find(p2=>p2.id==d.id);return p?p.score:0;});
-  const mlMin=Math.min(...mlScores),mlMax=Math.max(...mlScores),mlR=mlMax-mlMin;
-  dishes.forEach(d=>{
-   const {matchDetails,totalMatch}=computeDishMatch(prefs,d);d.matchDetails=matchDetails;
-   const pred=preds.find(p=>p.id==d.id);const ml=pred?pred.score:0;
-   const rule=Math.min(totalMatch/8.5,1);
-   const mlNorm=mlR>0.01?(ml-mlMin)/mlR:(ml/5);
-   d.matchIndex=Math.round((rule*0.4+mlNorm*0.6)*100)/100;d.mlScore=ml;d.matchRate=rule*0.4+mlNorm*0.6;
-  });
-  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
-  top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
-  const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
-  currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';displayRecommendations();
- };
- const callAPI=dlist=>{
-  const TIMEOUT=60000,ft=(url,opt,ms)=>Promise.race([fetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
-  const od=dlist.slice(0,100).map(d=>({id:d.id,spiciness:d.spiciness,saltiness:d.saltiness,sweetness:d.sweetness,vegetable:'适量',rating:d.rating,price:d.price,isHalal:d.isHalal||false,isVegetarian:d.isVegetarian||false,allergies:d.allergies,religion:d.religion||'无特殊要求',calorie:d.calorie||'0',protein:d.protein||'0'}));
-  ft('/api/predict-rf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userPrefs:prefs,dishes:od})},TIMEOUT)
-  .then(r=>r.ok?r.json():Promise.reject(Error('HTTP'+r.status))).then(d=>{if(d.success)processML(d.predictions||[]);else fallback(prefs,blk,dishes);}).catch(()=>fallback(prefs,blk,dishes));
- };
- const mode=userProfile?.recommendationMode||'auto';
- if(mode==='local'){fallback(prefs,blk,dishes);return;}
- checkApiAvailability().then(a=>{if(a)callAPI(dishes);else if(mode==='api'){showMessage('提示','API不可用，请切换为自动或本地模式');displayRecommendations();}else fallback(prefs,blk,dishes);});
-}
 
 
 
 
 // ═══════════════ 推荐结果渲染 ═══════════════
-function displayRecommendations(){
- // 推荐完成，记录推荐次数
- fetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userType:currentUser==='guest'?'guest':currentUser?'user':'guest',userId:currentUser||'guest'})}).catch(()=>{});
- const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
- if(!loading||!result)return;
- const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
- result.innerHTML='<div style="background-color:#fdf2e9;border:2px solid #f5cba7;border-radius:8px;padding:15px;margin-bottom:20px;text-align:center"><p style="margin:0;color:#c0392b"><strong>当前使用：</strong>'+currentRecommendationMode+' '+desc+'</p></div><div class="mb-4"><h4 class="text-danger">为您推荐</h4><div class="list-group" id="dish-list"></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
- const old=result._delegateHandler;if(old)result.removeEventListener('click',old);
- const handler=e=>{const t=e.target.closest('button');if(!t)return;({'refresh-recommendations':()=>fetchRecommendations(true),'end-recommendation':()=>endRecommendation(),'end-logout-btn':()=>{resetRecommendation();showSection('home-section');}})[t.id]?.();};
- result.addEventListener('click',handler);result._delegateHandler=handler;
- let fav=[],blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u){fav=u.favorites||[];blk=u.blacklist||[];}}
- let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
- const dl=$('dish-list');if(!dl)return;dl.innerHTML='';
- currentRecommendations.forEach((d,i)=>{
-  const isFav=fav.includes(d.id),isBlk=blk.includes(d.id),isOrdered=ordered.includes(d.id);
-  const tags=d.tags?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
-  const tagBadges=d.tags&&d.tags.includes('招牌')?'<span class="badge bg-warning me-1">⭐招牌</span>':'';
-  const orderedBadge=isOrdered?'<span class="badge" style="background:#8b7a6a;color:#fff;font-size:0.7rem;">已点过</span> ':'';
-  const blindBoxClass=d.type==='盲盒尝鲜'?'blind-box-card':'';
-  dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">盲盒</span>':'')+esc(d.name)+'</h5><p class="mb-1">'+esc(d.category)+' · '+esc(d.spiciness)+' · '+esc(formatPrice(d.price))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(d.reason)+'</p>'+(d.matchIndex?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+营养'+(d.matchDetails?.nutrition||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'')+'<div class="dish-actions mt-2"><button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?'已收藏':'收藏')+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?'已拉黑':'拉黑')+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> 评分</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'&&d.blindMode==='random'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">试试手气</div>':'<div class="badge bg-danger rounded-pill mb-2">'+(d.matchRate*100).toFixed(1)+'%</div><div class="text-muted small">匹配度</div>')+'</div></div></div>';
- });
- if(loading)loading.classList.add('d-none');if(result)result.classList.remove('d-none');
-}
+
 
 
 // ═══════════════ 评分反馈 ═══════════════
@@ -484,8 +509,8 @@ function submitStarFeedback(){
  const $g=id=>{const el=document.getElementById(id);return el?el.value:'';};
  const prefs={spiciness:$g('spiciness'),saltiness:$g('saltiness'),sweetness:$g('sweetness'),price:$g('price'),allergies:[]};
  const uid=currentUser||'guest';
- fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:dish.id,score:starRatingValue,userPreferences:prefs,userId:uid})})
- .then(r=>r.json()).then(d=>{showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
+ safeFetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({dishId:dish.id,score:starRatingValue,userPreferences:prefs,userId:uid})})
+ .then(r=>r.json()).then(d=>{if(!d.success){showMessage('评价失败',d.error||'提交失败，请重试');return;}showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
 }
 function openStarFeedback(dish){
  starRatingDish=dish;starRatingValue=0;ratingReturnTo='recommendation-section';
@@ -501,36 +526,13 @@ function endRecommendation(){
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
  currentRecommendations.forEach(d=>{if(!ordered.includes(d.id))ordered.push(d.id);});
  try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
- // 创建订单（发送到服务器）
- const items=currentRecommendations.map(d=>{const p=parseFloat(d.price);return{id:d.id,name:d.name,price:isNaN(p)?0:p,type:d.type||'偏好推荐',matchRate:d.matchRate||0};});
- const total=items.reduce((s,i)=>s+i.price,0);
- const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})}).catch(()=>{showMessage('下单失败','网络错误，请稍后重试');});
- const $s=id=>{const el=document.getElementById(id);return el;};
- // 缓冲过渡
- const rl=$s('recommendation-loading'),rr=$s('recommendation-result');
- if(rl)rl.classList.remove('d-none');
- if(rr)rr.classList.add('d-none');
- if(rl)rl.innerHTML='<div class="text-center py-5"><div class="spinner-border text-danger" role="status"><span class="visually-hidden">加载中...</span></div><p class="mt-3" style="color:#8b7a6a;letter-spacing:2px;font-size:0.9rem;">正在生成推荐总结...</p><div class="mt-2" style="width:120px;height:3px;background:var(--gold-light);border-radius:2px;margin:0 auto;overflow:hidden;"><div style="width:40%;height:100%;background:var(--gold);border-radius:2px;animation:loadingBar 0.8s ease-in-out infinite alternate;"></div></div></div>';
- setTimeout(()=>{
-  showSection('end-section');
-  const cnt=currentRecommendations.length;
-  const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
-  const allRates=currentRecommendations.map(d=>d.matchRate||0);
-  const avgMatch=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
-  const topMatch=rates.length?Math.round(Math.max(...rates)*100):0;
-  const e=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  e('end-dish-count',cnt);
-  e('end-avg-match',avgMatch+'%');
-  e('end-top-match',topMatch+'%');
-  displayModelMetrics();
-  displayFeatureImportance();
- },1500);
+ // 选好了 = 跳购物车结算（购物车里是用户自己加购的菜，不自动添加推荐菜）
+ showCart();
 }
 function displayModelMetrics(){
  const el=document.getElementById('model-metrics');
  if(!el)return;
- fetch('/api/model-metrics').then(r=>r.json()).then(d=>{
+ safeFetch('/api/model-metrics').then(r=>r.json()).then(d=>{
   if(d.success&&d.metrics){
    const m=d.metrics;
    const items=[
@@ -541,8 +543,8 @@ function displayModelMetrics(){
    ];
    el.innerHTML=items.map(i=>
     '<div style="text-align:center;min-width:100px;flex:1;">'+
-    '<div style="font-size:1.5rem;font-weight:700;color:#2c1810;">'+i.value+'</div>'+
-    '<div style="font-size:0.8rem;color:#8b7a6a;margin-top:2px;">'+i.desc+'</div>'+
+    '<div style="font-size:1.5rem;font-weight:700;color:var(--text);">'+i.value+'</div>'+
+    '<div style="font-size:0.8rem;color:var(--text-light);margin-top:2px;">'+i.desc+'</div>'+
     '<div style="font-size:0.7rem;color:#c9a96e;">'+i.label+'</div>'+
     '</div>'
    ).join('');
@@ -562,12 +564,12 @@ function displayFeatureImportance(){
  if(parent&&!parent.querySelector('.loading-text')){
   const tip=document.createElement('p');
   tip.className='loading-text';
-  tip.style.cssText='color:#8b7a6a;font-size:0.85rem;text-align:center;padding:20px;';
+  tip.style.cssText='color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px;';
   tip.textContent='正在加载特征数据...';
   parent.appendChild(tip);
  }
  if(featureImportanceChart){featureImportanceChart.destroy();featureImportanceChart=null;}
- fetch('/api/feature-importance').then(r=>r.json()).then(d=>{
+ safeFetch('/api/feature-importance').then(r=>r.json()).then(d=>{
   if(d.success&&d.importance&&d.importance.length){
    const imp=d.importance.filter(x=>x.importance>0.005).slice(0,15);
    const labels=imp.map(x=>x.feature);
@@ -575,6 +577,9 @@ function displayFeatureImportance(){
    const colors=['#8b1a1a','#b83a2a','#c0392b','#d45a4a','#e8a090','#e8d5b0','#c9a96e','#a8884e','#7a6a4e','#5a4a3e','#3a2a2e','#c0885e','#d0986e','#a0704e','#805030'];
    if(typeof Chart!=='undefined'){
     try {
+     // 强制同步 canvas 尺寸（避免不可见时 clientWidth=0 导致 chart 不渲染）
+     const cw=el.clientWidth||el.parentElement.clientWidth||553,ch=el.clientHeight||280;
+     el.width=cw;el.height=ch;
      featureImportanceChart=new Chart(el.getContext('2d'),{
       type:'bar',
       data:{labels,datasets:[{label:'重要性',data,backgroundColor:colors.slice(0,labels.length),borderRadius:4}]},
@@ -600,21 +605,21 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
 function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
- if(token){fetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
- currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');showMessage('已退出',msg,function(){showSection('home-section');});}
+ if(token){safeFetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
- if(!currentUser||currentUser==='guest'){showMessage('错误','请先登录');return;}
+ if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
   const pu=document.getElementById('profile-username');if(pu)pu.textContent=user.username||currentUser;
  const pl=document.getElementById('profile-last-login');if(pl)pl.textContent=user.lastLogin||'从未登录';
  const $=id=>document.getElementById(id);
- const fl=$('favorites-list');if(fl)fl.innerHTML=user.favorites?.length?user.favorites.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有收藏的菜品</p>';
- const bl=$('blacklist-list');if(bl)bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+id)+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
- document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
+ const fl=$('favorites-list');if(fl)fl.innerHTML=user.favorites?.length?user.favorites.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+esc(String(id)))+'</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有收藏的菜品</p>';
+ const bl=$('blacklist-list');if(bl)bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+esc(String(id)))+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
+ document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
  document.querySelectorAll('.cancel-blacklist').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.blacklist){u.blacklist=u.blacklist.filter(x=>x!=id);updateUserData(currentUser,{blacklist:u.blacklist});showMessage('成功','已取消',showProfile);}}));
  // 加载推荐历史
  const rh=$('rec-history-list');if(rh)rh.innerHTML='<p class="text-muted" style="font-size:0.85rem;">加载中...</p>';
- fetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
+ safeFetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
   if(d.success&&d.orders&&d.orders.length){
             const items=d.orders.slice(0,10).map((o,oi)=>{
     const dishList=o.items||[];
@@ -660,42 +665,48 @@ function showProfile(){
 function cancelFavorite(){
  const u=getUserData(currentUser);
  if(!u?.favorites?.length){showMessage('提示','收藏列表为空');return;}
- if(!confirm('确定要取消所有收藏吗？'))return;
+ // 二次点击确认（沙箱 iframe 中原生 confirm 不可用）
+ const btn=document.getElementById('cancel-favorite-btn');
+ if(btn&&btn.dataset.armed!=='1'){btn.dataset.armed='1';const t=btn.textContent;btn.textContent='再次点击确认';btn.style.color='#c0392b';setTimeout(()=>{btn.dataset.armed='';btn.textContent=t;btn.style.color='';},3000);return;}
+ if(btn){btn.dataset.armed='';}
  u.favorites=[];
  updateUserData(currentUser,{favorites:[]});
- fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:[]})}).catch(()=>{});
+ safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:[]})}).catch(()=>{});
  showMessage('成功','已取消所有收藏');
  setTimeout(showProfile,1000);
 }
 function cancelBlacklist(){
  const u=getUserData(currentUser);
  if(!u?.blacklist?.length){showMessage('提示','列表为空');return;}
- if(!confirm('确定要清空黑名单吗？'))return;
+ const btn=document.getElementById('cancel-blacklist-btn');
+ if(btn&&btn.dataset.armed!=='1'){btn.dataset.armed='1';const t=btn.textContent;btn.textContent='再次点击确认';btn.style.color='#c0392b';setTimeout(()=>{btn.dataset.armed='';btn.textContent=t;btn.style.color='';},3000);return;}
+ if(btn){btn.dataset.armed='';}
  u.blacklist=[];
  updateUserData(currentUser,{blacklist:[]});
- fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:[]})}).catch(()=>{});
+ safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:[]})}).catch(()=>{});
  showMessage('成功','已清空黑名单');
  setTimeout(showProfile,1000);
 }
 function addToFavorites(dishId){if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
  if(!user.favorites)user.favorites=[];if(user.favorites.includes(dishId)){showMessage('提示','已收藏');return;}
+ if(user.blacklist?.includes(dishId)){user.blacklist=user.blacklist.filter(id=>id!==dishId);updateUserData(currentUser,{blacklist:user.blacklist});safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});}
  user.favorites.push(dishId);updateUserData(currentUser,{favorites:user.favorites});const dish=dishData.find(d=>d.id===dishId);showMessage('成功','已收藏'+(dish?dish.name:''));
- fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});
+ safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});
  displayRecommendations();}
 function addToBlacklist(dishId){if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
  if(!user.blacklist)user.blacklist=[];if(user.blacklist.includes(dishId)){showMessage('提示','已拉黑');return;}
- if(user.favorites?.includes(dishId)){user.favorites=user.favorites.filter(id=>id!==dishId);updateUserData(currentUser,{favorites:user.favorites});fetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});}
+ if(user.favorites?.includes(dishId)){user.favorites=user.favorites.filter(id=>id!==dishId);updateUserData(currentUser,{favorites:user.favorites});safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:user.favorites})}).catch(()=>{});}
  user.blacklist.push(dishId);updateUserData(currentUser,{blacklist:user.blacklist});const dish=dishData.find(d=>d.id===dishId);showMessage('成功','已拉黑'+(dish?dish.name:''));
- fetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});
+ safeFetch('/api/user-blacklist',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,blacklist:user.blacklist})}).catch(()=>{});
  displayRecommendations();}
 function deleteAccount(){
  const el=document.getElementById('message-modal'),cf=document.getElementById('modal-confirm-btn'),cb=document.getElementById('modal-close-btn');
  document.getElementById('modal-title').textContent='确认注销';document.getElementById('modal-body').textContent='确定要注销账号吗？此操作不可恢复！';
  const origCf=cf.onclick,origCb=cb.onclick;
  const cleanup=()=>{cf.onclick=origCf;cb.onclick=origCb;el.removeEventListener('hidden.bs.modal',cleanup);};
- cf.onclick=function(){const username=currentUser;fetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
+ cf.onclick=function(){const username=currentUser;safeFetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
  cb.onclick=function(){const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();};
  el.addEventListener('hidden.bs.modal',cleanup);
  el.inert=false;el.removeAttribute('aria-hidden');let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el,{focus:false});m.show();
@@ -708,9 +719,195 @@ function deleteAccount(){
 }
 
 // ═══════════════ 购物车功能 ═══════════════
+function renderRoundsHTML(rounds){
+ if(!rounds||!rounds.length)return '';
+ const lastIdx=rounds.length-1;
+ const normal=rounds.map((r,i)=>({r,i})).filter(o=>!o.r.giftTo);
+ const gifts=rounds.map((r,i)=>({r,i})).filter(o=>o.r.giftTo);
+ let html=normal.map(o=>{
+  const r=o.r,cur=o.i===lastIdx;
+  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||o.i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
+   +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +'</div>';
+ }).join('');
+ // 赠菜区（本桌付费，赠给别桌）：分割线分开 + 可折叠
+ if(gifts.length){
+  const merged=[];
+  gifts.forEach(o=>o.r.items.forEach(x=>{const ex=merged.find(m=>m.id===x.id&&String(m.giftTo)===String(o.r.giftTo));if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else merged.push({...x,giftTo:o.r.giftTo});}));
+  const tables=[...new Set(gifts.map(o=>String(o.r.giftTo)))].join('、');
+  const gTotal=gifts.reduce((s,o)=>s+(parseFloat(o.r.total)||0),0);
+  html+='<div data-gift="1" style="border-left:2px solid rgba(201,169,110,0.55);padding-left:10px;margin-bottom:12px;">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;gap:8px;" onclick="toggleGiftRounds(this)">'
+   +'<span style="font-size:0.8rem;font-weight:600;color:var(--gold);">🎁 赠给 '+tables+' 号桌 · 本桌付费 '+gTotal.toFixed(2)+' 元</span>'
+   +'<span style="display:flex;align-items:center;gap:10px;white-space:nowrap;"><span onclick="event.stopPropagation();showGiftReceipt(\''+esc(String(gifts[0].r.giftTo))+'\')" style="font-size:0.72rem;color:var(--primary-accent);text-decoration:underline;">被赠桌小票</span><span class="gift-toggle-txt" style="font-size:0.72rem;color:var(--text-light);">隐藏</span></span></div>'
+   +'<div class="gift-body" style="display:flex;flex-direction:column;margin-top:6px;">'
+   +merged.map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">→'+esc(String(x.giftTo))+'号桌</span></span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
+   +'</div></div>';
+ }
+ return html;
+}
+// ─── 桌号体系：两位格式（01-99）或「打包」───
+function normTableNo(v){
+ const s=String(v==null?'':v).trim();
+ if(!/^\d{1,2}$/.test(s))return null;
+ const n=parseInt(s,10);
+ if(n<1||n>99)return null;
+ return String(n).padStart(2,'0');
+}
+function tableLabel(t){return t==='打包'?'打包带走':(t?t+' 号桌':'');}
+function updateTableStatusCard(){
+ const t=ssGet('lockedTable')||'';
+ const txt=document.getElementById('table-status-text');
+ const btn=document.getElementById('table-change-btn');
+ if(txt)txt.textContent=t?tableLabel(t):'未选择桌号';
+ if(btn)btn.textContent=t?'更换':'选择桌号';
+ const ti=document.getElementById('cart-table-number');
+ if(ti){ti.value=t==='打包'?'打包':(t||'');ti.readOnly=!!t;ti.placeholder=t?'':'选择桌号';ti.style.background=t?'var(--cream-dark)':'';}
+ const pt=document.getElementById('pref-table-number');
+ if(pt){pt.value=t==='打包'?'打包':(t||'');pt.readOnly=!!t;pt.placeholder=t?'':'选择桌号';pt.style.background=t?'var(--cream-dark)':'';}
+}
+var _tablePickIntent=null;
+function openTablePicker(intent){
+ _tablePickIntent=intent||null;
+ const grid=document.getElementById('table-grid');
+ if(grid&&!grid.childElementCount){
+  let html='';
+  for(let i=1;i<=30;i++){const t=String(i).padStart(2,'0');html+='<button class="btn btn-sm table-grid-btn" data-t="'+t+'" style="background:transparent;color:var(--text);border:1px solid rgba(201,169,110,0.4);border-radius:8px;padding:6px 0;font-size:0.85rem;">'+t+'</button>';}
+  grid.innerHTML=html;
+  grid.addEventListener('click',e=>{const b=e.target.closest('.table-grid-btn');if(b)applyTableChoice(b.dataset.t);});
+ }
+ const inp=document.getElementById('table-input');if(inp)inp.value='';
+ const hint=document.getElementById('table-picker-hint');
+ if(hint){hint.textContent='桌号为 1-2 位数字：输入 1 或 01 均指 01 号桌';hint.style.color='';}
+ const m=document.getElementById('table-picker-modal');
+ if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
+}
+function closeTablePicker(){
+ const m=document.getElementById('table-picker-modal');if(!m)return;
+ const inst=bootstrap.Modal.getInstance(m);if(inst){try{inst.hide();}catch(e){}}
+ setTimeout(()=>{if(m.classList.contains('show')){const mm=bootstrap.Modal.getInstance(m);if(mm){mm._isTransitioning=false;try{mm.hide();}catch(e){}}}},400);
+}
+// 选定桌号：有进行中订单→挪桌(PATCH 改订单)；无订单→仅改锁定。订单已完成→清旧状态按新用餐
+async function applyTableChoice(t){
+ const cur=ssGet('lockedTable')||'';
+ if(t!==cur){
+  const oid=parseInt(ssGet('lastOrderId')||'0');
+  if(oid){
+   try{
+    const r=await safeFetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:t})});
+    const d=await r.json();
+    if(!d.success){
+     ['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');
+     resetRecommendation();
+    }
+   }catch(e){showMessage('提示','网络错误，桌号未更改');return;}
+  }
+  ssSet('lockedTable',t);ssSet('tableNumber',t);ssSet('lastOrderTable',t);
+  updateTableStatusCard();
+  const et=document.getElementById('end-order-table');if(et)et.textContent=t;
+  const ei=document.getElementById('settled-order-info');if(ei&&ei.textContent)ei.textContent=ei.textContent.replace(/桌号 \S+/,'桌号 '+t);
+  showMessage('已设置',t==='打包'?'已选择「打包带走」':'桌号已设为 '+t+' 号',null,2000);
+ }
+ closeTablePicker();
+ const intent=_tablePickIntent;_tablePickIntent=null;
+ if(intent==='menu')showDataset();
+ else if(intent==='ai')showSection('preference-section');
+ else if(intent==='checkout')checkoutCart();
+}
+// 本桌账单（免登录，凭签名桌码只读查看）
+function showTableBill(){
+ const t=ssGet('tableToken')||'';
+ if(!t){showMessage('提示','请扫描餐桌上的二维码');return;}
+ const box=document.getElementById('table-bill-body');
+ const title=document.getElementById('table-bill-title');
+ if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">加载中...</div>';
+ const m=document.getElementById('table-bill-modal');
+ if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
+ safeFetch('/api/table-view?t='+encodeURIComponent(t)).then(r=>r.json()).then(d=>{
+  if(!box)return;
+  if(!d.success){box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">'+esc(d.error||'读取失败')+'</div>';return;}
+  if(title)title.textContent=d.tableNumber+' 号桌 · 账单';
+  const orders=d.orders||[];
+  if(!orders.length){box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">本桌暂无订单</div>';return;}
+  let grand=0;
+  box.innerHTML=orders.map(o=>{
+   let sub=0;
+   const rows=(o.items||[]).map(x=>{
+    const qty=parseInt(x.qty||x.quantity)||1;
+    const p=x.giftFrom?0:(parseFloat(x.price)||0); // 赠菜恒按 0 计（防脏数据误计）
+    sub+=p*qty;
+    if(x.giftFrom){
+     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">🎁 '+esc(x.name)+' <span style="font-size:0.7rem;color:var(--gold);">×'+qty+'（'+esc(String(x.giftFrom))+'号桌赠）</span></span><span style="font-size:0.86rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.72rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span></div>';
+    }
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">'+esc(x.name)+' <span style="font-size:0.72rem;color:var(--text-light);">×'+qty+'</span></span><span style="font-size:0.86rem;color:var(--text-light);">'+(p*qty).toFixed(2)+'元</span></div>';
+   }).join('');
+   const st=(o.status==='completed'?'✅ 已完成':o.status==='confirmed'?'🔥 已确认':'📌 待处理');
+   grand+=sub;
+   const tm=o.created_at?new Date(o.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+   return '<div style="border-left:2px solid rgba(201,169,110,0.4);padding-left:10px;margin-bottom:14px;">'
+    +'<div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-light);padding-bottom:4px;"><span>订单 #'+esc(String(o.id))+' · '+esc(tm)+'</span><span>'+st+'</span></div>'
+    +rows
+    +'<div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(201,169,110,0.3);font-size:0.85rem;"><span style="color:var(--text-light);">小计</span><strong style="color:var(--text);">'+sub.toFixed(2)+'元</strong></div>'
+    +'</div>';
+  }).join('')
+  +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(201,169,110,0.12);border-radius:10px;margin-top:6px;"><span style="font-size:0.9rem;color:var(--text);">合计</span><strong style="color:var(--primary-accent);font-size:1.2rem;">'+grand.toFixed(2)+' 元</strong></div>'
+  +'<div style="font-size:0.72rem;color:var(--text-light);text-align:center;margin-top:8px;">账单仅供参考，以收银为准</div>';
+ }).catch(()=>{if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">网络错误</div>';});
+}
+function toggleGiftRounds(head){
+ const block=head.closest('[data-gift]');if(!block)return;
+ const body=block.querySelector('.gift-body');if(!body)return;
+ const hidden=body.style.display==='none';
+ body.style.display=hidden?'flex':'none';
+ const t=head.querySelector('.gift-toggle-txt');if(t)t.textContent=hidden?'隐藏':'显示';
+}
+// 被赠桌小票（只读）：赠菜 0 元 + 原价划线，合计不计费
+function showGiftReceipt(table){
+ const raw=ssGet('giftReceipt_'+table);
+ let data=null;try{data=raw?JSON.parse(raw):null}catch(e){}
+ const box=document.getElementById('gift-receipt-body');
+ const title=document.getElementById('gift-receipt-title');
+ if(!data||!box){showMessage('提示','未找到该桌的小票记录');return;}
+ if(title)title.textContent=data.table+' 号桌 · 赠菜单';
+ box.innerHTML='<div style="font-size:0.78rem;color:var(--text-light);margin-bottom:10px;">订单 #'+esc(String(data.id))+' · 来自 '+(data.from?esc(String(data.from))+' 号桌赠送':'赠送')+'</div>'
+  +(data.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--cream-dark);border-radius:8px;margin-bottom:6px;">'
+   +'<span style="font-size:0.9rem;">🎁 '+esc(x.name)+' <span style="font-size:0.75rem;color:var(--gold);">×'+(x.qty||1)+'</span></span>'
+   +'<span style="font-size:0.9rem;color:var(--text);font-weight:600;">0元 <span style="font-size:0.75rem;color:var(--text-light);font-weight:400;text-decoration:line-through;">原价'+(parseFloat(x.origPrice)||0)+'元</span></span>'
+   +'</div>').join('')
+  +'<div style="border-top:1px dashed rgba(201,169,110,0.35);margin:10px 0 0;padding-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:0.9rem;">'
+  +'<span style="color:var(--text-light);">合计（赠菜不计费）</span><strong style="color:var(--primary-accent);font-size:1.05rem;">0.00 元</strong></div>';
+ const m=document.getElementById('gift-receipt-modal');
+ if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
+}
 function showCart(){
+ // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
+ const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+ // 进行中订单提示条（跳走后回来的入口）
+ const ltB=ssGet('lockedTable')||'',loB=ssGet('lastOrderId')||'';
+ const banner=document.getElementById('cart-order-banner');
+ if(banner){
+  if(ltB&&loB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
+  else banner.style.display='none';
+ }
+ // 桌号展示（选桌后只读，点击可更换/挪桌）
+ updateTableStatusCard();
+ window._prevScrollY=window.scrollY;
  const cart=getCart();const empty=document.getElementById('cart-empty'),content=document.getElementById('cart-content');
  const tb=document.getElementById('cart-table-body');const ti=document.getElementById('cart-total-items');const tp=document.getElementById('cart-total-price');
+ // 已结算区（时间线：每轮独立，当前轮高亮）
+ const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
+ const sSec=document.getElementById('settled-section'),sDiv=document.getElementById('settled-divider');
+ if(rounds.length){
+  if(sSec)sSec.style.display='block';
+  if(sDiv)sDiv.classList.remove('d-none');
+  const si=document.getElementById('settled-order-info');
+  if(si)si.textContent='订单 #'+(ssGet('lastOrderId')||'-')+' · 桌号 '+(ssGet('lastOrderTable')||'-')+' · 共 '+rounds.reduce((s,r)=>s+r.items.reduce((a,x)=>a+(x.qty||1),0),0)+' 件 · '+rounds.reduce((s,r)=>s+(parseFloat(r.total)||0),0).toFixed(2)+' 元';
+  const sl=document.getElementById('settled-list');
+  if(sl)sl.innerHTML=renderRoundsHTML(rounds);
+ }else{
+  if(sSec)sSec.style.display='none';
+  if(sDiv)sDiv.classList.add('d-none');
+ }
  if(!cart.length){if(empty)empty.style.display='block';if(content)content.style.display='none';if(tb)tb.innerHTML='';}else{
   if(empty)empty.style.display='none';if(content)content.style.display='block';
   if(tb)tb.innerHTML=cart.map(x=>{
@@ -719,10 +916,10 @@ function showCart(){
    const name=dish?esc(dish.name):esc(x.name);
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
-   return '<tr><td>'+(dish&&dish.image_url?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'')+name+'</td>'
-    +'<td><div class="input-group input-group-sm" style="width:100px;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">−</button>'
-    +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:36px;height:28px;font-size:0.8rem;">'
-    +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;">+</button></div></td>'
+   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+'</td>'
+    +'<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>'
+    +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:38px;height:30px;font-size:0.82rem;font-weight:600;padding:0;border-radius:0;border-left:1px solid #dee2e6;border-right:1px solid #dee2e6;text-align:center;display:flex;align-items:center;justify-content:center;">'
+    +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div></td>'
     +'<td>'+price.toFixed(2)+'</td><td style="color:#c0392b;font-weight:600;">'+subtotal.toFixed(2)+'</td>'
     +'<td><button class="btn btn-sm btn-outline-danger cart-remove-btn" data-id="'+esc(String(x.id))+'" style="padding:2px 6px;font-size:0.7rem;"><i class="bi bi-x"></i></button></td></tr>';
   }).join('');
@@ -731,21 +928,154 @@ function showCart(){
  }
  showSection('cart-section');
 }
-function checkoutCart(){
+ function rebuildEndView(){
+  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  if(!rounds.length){showMessage('提示','当前没有进行中的订单');return;}
+  const allItems=[];
+  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
+  const cnt=allItems.reduce((s,x)=>s+(x.qty||1),0);
+  const tot=Math.round(allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0)*100)/100;
+  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ec('end-order-id',ssGet('lastOrderId')||'-');
+  ec('end-order-table',ssGet('lastOrderTable')||'-');
+  ec('end-cart-count',cnt);
+  ec('end-cart-total',tot);
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
+  const esl=document.getElementById('end-settled-list');
+  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
+  const ediv=document.getElementById('end-add-divider');if(ediv)ediv.classList.add('d-none');
+  const cl=document.getElementById('end-cart-list');if(cl)cl.innerHTML='';
+  // AI 属性读持久化状态（结算后推荐内存已归零，回看不能变「AI未启用」）
+  const isAI=ssGet('lastOrderAI')==='1';
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
+  const noAI3=document.getElementById('end-no-ai');if(noAI3)noAI3.style.display=isAI?'none':'block';
+  if(isAI){
+   const st=(()=>{try{return JSON.parse(ssGet('lastOrderStats')||'{}')}catch(e){return{}}})();
+   const es3=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+   es3('end-dish-count',st.count??'-');es3('end-avg-match',(st.avg??'-')+'%');es3('end-top-match',(st.top??'-')+'%');
+  }
+  if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
+  showSection('end-section');
+ }
+
+async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
  if(bEl)bEl.disabled=true;
- const items=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ // 桌号：恒用锁定桌号（选桌后即锁定，改桌请用「更换/挪桌」）
+ const tableNumber=ssGet('lockedTable')||'';
+ if(!tableNumber){if(bEl)bEl.disabled=false;openTablePicker('checkout');return;}
+ if(tableNumber!=='打包'&&!/^\d{2}$/.test(tableNumber)){showMessage('桌号格式不对','请重新选择桌号');if(bEl)bEl.disabled=false;return;}
+ // 判断是否加菜（同桌已有进行中订单 → 追加，否则新建）
+ let lastOrderId=parseInt(ssGet('lastOrderId')||'0');
+ let lastOrderTable=ssGet('lastOrderTable')||'';
+ let isAddMore=lastOrderId>0&&lastOrderTable===tableNumber;
+ // 赠菜双向记账：给别桌加菜时，被赠桌记 0 元（标原价+赠出桌），赠出桌正常计费（标赠给桌）
+ const isSideOrder=ssGet('sideOrder')==='1';
+ let myTableForGift='';
+ if(isSideOrder){try{myTableForGift=JSON.parse(ssGet('orderBackup')||'{}').lastOrderTable||''}catch(e){}}
+ const payItems=cart.map(x=>{const dish=dishData.find(d=>d.id===x.id);const p=parseFloat(x.price)||0;return{id:x.id,name:x.name,price:p,type:'购物车',matchRate:0.5,qty:x.qty||1};});
+ const items=isSideOrder?payItems.map(i=>({...i,price:0,origPrice:i.price,giftFrom:myTableForGift})):payItems;
  const total=items.reduce((s,i)=>s+i.price*(i.qty||1),0);
+ const payTotal=payItems.reduce((s,i)=>s+i.price*(i.qty||1),0);
  const uid=currentUser||'guest';
- fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total})})
+ const url=isAddMore?('/api/order/'+lastOrderId+'/add'):'/api/order';
+ // 点击后立即显示过渡动画（独立覆盖层，不破坏购物车 DOM 结构）
+ const clo=document.getElementById('cart-loading');
+ if(clo)clo.style.display='flex';
+ safeFetch(url,{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({userId:uid,items,totalPrice:total,tableNumber})})
  .then(r=>r.json()).then(d=>{
-  if(!d.success){showMessage('下单失败',d.error||'服务器错误');return;}
-  // 下单成功后再清理本地数据
+  if(!d.success){
+   // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
+   if((d.error||'').includes('不能加菜')){ssRemove('lastOrderId');ssRemove('lastOrderTable');ssRemove('lastOrderItems');ssRemove('lastOrderRounds');ssRemove('lockedTable');ssRemove('lastOrderAI');ssRemove('lastOrderStats');ssRemove('tableNumber');}
+   showMessage(isAddMore?'加菜失败':'下单失败',d.error||'服务器错误');showCart();return;
+  }
+  // 给别桌加菜：该桌订单提交成功 → 赠菜追加到本桌订单（本桌付钱）+ 恢复本桌状态
+  if(ssGet('sideOrder')==='1'){
+   const backup=(()=>{try{return JSON.parse(ssGet('orderBackup')||'null')}catch(e){return null}})();
+   ssRemove('sideOrder');ssRemove('orderBackup');
+   if(backup&&backup.lastOrderId){
+    const finishSide=()=>{
+     ssSet('lastOrderId',backup.lastOrderId);ssSet('lastOrderTable',backup.lastOrderTable);ssSet('lastOrderItems',backup.lastOrderItems);ssSet('lastOrderRounds',backup.lastOrderRounds);ssSet('lastOrderAI',backup.lastOrderAI);ssSet('lastOrderStats',backup.lastOrderStats);ssSet('lockedTable',backup.lockedTable);
+     const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
+     clearCart();
+     rebuildEndView();
+     showMessage('已提交','已为 '+tableNumber+' 号桌赠菜 '+payItems.length+' 道（订单 #'+d.orderId+'），费用计入本桌，已返回您的订单',null,3500);
+    };
+    // 本桌时间线记录赠菜轮次
+    const giftPayItems=payItems.map(x=>({...x,giftTo:tableNumber}));
+    let rounds=[];try{rounds=JSON.parse(backup.lastOrderRounds||'[]')}catch(e){}
+    const nD=new Date(),tm=String(nD.getHours()).padStart(2,'0')+':'+String(nD.getMinutes()).padStart(2,'0');
+    rounds.push({round:rounds.length+1,label:'赠给 '+tableNumber+' 号桌',time:tm,items:giftPayItems,total:Math.round(payTotal*100)/100,giftTo:tableNumber});
+    backup.lastOrderRounds=JSON.stringify(rounds);
+    // 保存被赠桌小票（本地只读视图：0元+原价）
+    ssSet('giftReceipt_'+tableNumber,JSON.stringify({id:d.orderId,table:tableNumber,from:myTableForGift,items:items}));
+    // 追加到本桌订单（本桌计费，标记 giftTo）
+    safeFetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems})})
+     .then(()=>{}).catch(()=>{showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
+     .finally(finishSide);
+    return;
+   }
+  }
+  // 新订单（首单/换桌）不继承上一单的时间线轮次
+  if(!isAddMore){ssRemove('lastOrderRounds');ssRemove('lastOrderItems');}
   let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){}
   cart.forEach(x=>{if(!ordered.includes(x.id))ordered.push(x.id);});
   try{localStorage.setItem('orderedDishes',JSON.stringify(ordered))}catch(e){};
+  ssSet('lastOrderId',d.orderId);
+  ssSet('lastOrderTable',tableNumber);
+  ssSet('lockedTable',tableNumber);
+  // 记录本轮（时间线轮次）
+  const rounds=(()=>{try{return JSON.parse(ssGet('lastOrderRounds')||'[]')}catch(e){return[]}})();
+  const now=new Date(),time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  rounds.push({round:rounds.length+1,label:(rounds.length===0?'第1轮点餐':'第'+(rounds.length+1)+'轮加菜'),time,items:cart.map(x=>({...x})),total});
+  try{ssSet('lastOrderRounds',JSON.stringify(rounds))}catch(e){};
+  const allItems=[];
+  rounds.forEach(r=>r.items.forEach(x=>{const ex=allItems.find(m=>m.id===x.id);if(ex)ex.qty=(ex.qty||1)+(x.qty||1);else allItems.push({...x});}));
+  const orderCount=allItems.reduce((s,x)=>s+(x.qty||1),0);
+  const orderTotal=allItems.reduce((s,x)=>s+(parseFloat(x.price)||0)*(x.qty||1),0);
+  const ec=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  ec('end-order-id',d.orderId);
+  ec('end-order-table',tableNumber);
+  ec('end-cart-count',orderCount);
+  ec('end-cart-total',Math.round(orderTotal*100)/100);
+  const tip=document.getElementById('end-order-tip');if(tip)tip.textContent=(rounds.length>1?'· 加菜已追加':'· 下单成功');
+  const esl=document.getElementById('end-settled-list');
+  if(esl)esl.innerHTML=renderRoundsHTML(rounds);
+  const ediv=document.getElementById('end-add-divider');
+  if(ediv)ediv.classList.add('d-none');
+  const cl=document.getElementById('end-cart-list');
+  if(cl)cl.innerHTML='';
+  const isAI=currentRecommendations&&currentRecommendations.length>0;
+  document.querySelectorAll('#end-section .ai-stat').forEach(el=>el.style.display=isAI?'':'none');
+  const noAI2=document.getElementById('end-no-ai');if(noAI2)noAI2.style.display=isAI?'none':'block';
+  // AI 模式：填充推荐统计（推荐菜品数/平均匹配度/最高匹配度）
+  if(isAI){
+   const cnt=currentRecommendations.length;
+   const rates=currentRecommendations.filter(d=>d.type!=='盲盒尝鲜').map(d=>d.matchRate||0);
+   const avg=rates.length?Math.round(rates.reduce((a,b)=>a+b,0)/rates.length*100):0;
+   const top=rates.length?Math.round(Math.max(...rates)*100):0;
+   const es=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+   es('end-dish-count',cnt);es('end-avg-match',avg+'%');es('end-top-match',top+'%');
+   // AI 属性与统计持久化（rebuildEndView 回看/刷新后保持一致）
+   ssSet('lastOrderAI','1');
+   ssSet('lastOrderStats',JSON.stringify({count:cnt,avg,top}));
+  }else{ssSet('lastOrderAI','0');ssRemove('lastOrderStats');}
   clearCart();
-  showMessage('下单成功','您的订单已提交，感谢用餐！',function(){showSection('home-section');});
- }).catch(()=>showMessage('下单失败','网络错误，请稍后重试')).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
+  // 结算完成，推荐状态归零（避免残留 recommendedIds/推荐统计影响后续菜单加购的结算与重新推荐）
+  resetRecommendation();
+  setTimeout(()=>{
+   const clo2=document.getElementById('cart-loading');if(clo2)clo2.style.display='none';
+   showSection('end-section');
+   if(isAI){setTimeout(()=>{displayModelMetrics();displayFeatureImportance();},150);}
+  },800);
+ }).catch(()=>{showMessage(isAddMore?'加菜失败':'下单失败','网络错误，请稍后重试');showCart();}).finally(()=>{const b=document.getElementById('cart-checkout-btn');if(b)b.disabled=false;});
 }
+
+// 桌号同步: 偏好页输入 → localStorage → 购物车自动填
+function syncTableNumber(from){
+  const val=from?.value?.trim()||'';
+  if(val)ssSet('tableNumber',val);
+  const cart=document.getElementById('cart-table-number');
+  if(cart&&val)cart.value=val;
+}
