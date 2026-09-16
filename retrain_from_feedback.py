@@ -107,7 +107,7 @@ def main():
         print(f'  现有模型: {model.n_estimators}棵树, {model.n_features_in_}维', file=sys.stderr)
     except FileNotFoundError:
         print('  未找到现有模型，创建新模型', file=sys.stderr)
-        model = RandomForestRegressor(n_estimators=200, max_depth=12, random_state=42)
+        model = RandomForestRegressor(n_estimators=200, max_depth=None, min_samples_leaf=1, random_state=42)  # 与 train_restaurant_model.py fit_model 对齐（2026-09-16 调参实验）
         model_data = {'model': model, 'ohe': None, 'le_dict': {}, 'scaler': None}
 
     # 加载真实反馈

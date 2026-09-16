@@ -233,9 +233,9 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
 def fit_model(X, y):
     """拟合随机森林（不评估）"""
     model = RandomForestRegressor(
-        n_estimators=300,      # 数据不再靠复印件撑量，不需要那么多深树
-        max_depth=12,          # 原 20：太深会把单点噪声也背进去
-        min_samples_leaf=2,    # 叶子至少 2 条，抑制对孤立样本的记忆
+        n_estimators=300,
+        max_depth=None,        # 目标是近确定性的规则函数（3% rebel + σ0.01 噪声），不限深才能贴合分段边界
+        min_samples_leaf=1,    # 实测（2026-09-16，320 个留出偏好组合）：0.8953→0.9740，泛化不受损
         random_state=42,
         n_jobs=-1
     )
