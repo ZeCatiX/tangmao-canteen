@@ -15,6 +15,10 @@
       "args": ["node_modules/@modelcontextprotocol/server-memory/dist/index.js"],
       "env": {}
     },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@1.9.0", "--headless", "--isolated", "--no-usage-statistics"]
+    },
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp"],
