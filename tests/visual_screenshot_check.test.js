@@ -64,8 +64,9 @@ describe('视觉排版与暗黑模式截图检查', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(1500);
     await page.screenshot({ path: path.join(OUT, '03_全部菜单.png'), fullPage: true });
-    const rows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body tr').length);
-    assert.ok(rows >= 60, '菜单应有60+行');
+    // 菜单已改为卡片网格布局（.dish-card），不再是 <tr> 表格行
+    const rows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body .dish-card').length);
+    assert.ok(rows >= 60, '菜单应有60+张卡片');
   });
 
   it('3.4 管理后台登录后截图', async () => {
