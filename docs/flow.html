@@ -94,11 +94,67 @@ flowchart LR
     E7 -.反馈回流.-> E1
 </div>
 
+<h2>四、系统架构与数据流</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph Client["浏览器(3 页面)"]
+        IDX["index.html 点餐<br/>script.js + styles.css"]
+        ADM["admin.html 后台"]
+        KIT["kitchen.html 厨房看板"]
+    end
+    subgraph Server["Express server.js :3000/:3443"]
+        API["API 路由<br/>softAuth 游客 / authMiddleware 登录"]
+        SEC["安全层<br/>helmet·rate-limit·JWT·TABLE_SECRET 桌码签名"]
+        STATIC["静态服务 express.static<br/>按启动目录实时读盘"]
+    end
+    subgraph Data["PostgreSQL tangmao :5432"]
+        DB1[("dishes 110道")]
+        DB2[("orders / feedback")]
+        DB3[("users / token_blacklist")]
+    end
+    subgraph ML["Python 侧"]
+        PW["predict_worker.py<br/>在线预测"]
+        RT["retrain_from_feedback.py<br/>反馈增量重训"]
+        PKL[("recommendation_model.pkl")]
+    end
+    IDX -->|"fetch /api/*"| API
+    ADM --> API
+    KIT --> API
+    API --> SEC
+    API --> DB1 & DB2 & DB3
+    API -->|"POST /predict-rf"| PW
+    PW --> PKL
+    RT -->|"读 feedback"| DB2
+    RT -->|"覆写"| PKL
+    STATIC --> IDX & ADM & KIT
+</div>
+
+<h2>五、开发协作流程（多 Agent，2026-09-16 起）</h2>
+<div class="mermaid">
+flowchart TD
+    Start(["agent 会话开始"]) --> Sync["开工必做<br/>git log master → git merge master"]
+    Sync --> Task{"任务类型"}
+    Task -- "改代码" --> Code["在 worktree 改<br/>dev"]
+    Task -- "查数据" --> DBQ["node scripts/db_query.js<br/>只读守卫"]
+    Task -- "重训模型" --> RT2["tangmao-retrain 技能<br/>source .env 灌 PG_PASSWORD"]
+    Code --> Verify{"验证"}
+    Verify -- "前端改动" --> Shot["刷新预览面板+截图<br/>视口 412×915 手机 / 1280×720 桌面"]
+    Verify -- "流程改动" --> E2E["浏览器冒烟走全流程<br/>或跑 tests/ 相关用例"]
+    Shot --> Commit
+    E2E --> Commit
+    DBQ --> Commit2["无需提交(只读)"]
+    RT2 --> Commit["git commit 中文一句话<br/>feature_importance.json 的 diff 一起提"]
+    Commit --> Merge["主目录 git merge 回 master<br/>小步高频,不攒批次"]
+    Merge --> Done(["同步完成,对方开工前会 merge master"])
+    Start -.-> Guard["禁令:不在主目录改代码 / 不 cp 复制 /<br/>起服务先探测 3000 / 禁 taskkill /IM node.exe"]
+</div>
+
 <div class="note">
-<b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」两个<b>首页按钮</b>会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完回购物车重试)。<br>
+<b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」两个<b>首页按钮</b>会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完自动续结算)。<br>
 <b>鉴权两档</b>:<code>softAuth</code> 游客可用(下单/推荐/评价);<code>authMiddleware</code> 需登录(收藏/黑名单/历史/偏好)。<br>
 <b>状态存储</b>:<code>sessionStorage</code> 桌号·订单轮次·给别桌中间态;<code>localStorage</code> 用户·收藏·购物车·深色模式。<br>
-<b>赠菜记账</b>:被赠桌 0 元(原价划线),本桌正常计费,两边账单独立。
+<b>赠菜记账</b>:被赠桌 0 元(原价划线),本桌正常计费,两边账单独立。<br>
+<b>服务与部署</b>:静态文件按服务启动目录实时读盘(改代码后页面没变=服务起的不是这份);启动需 .env 含 TABLE_SECRET(≥16 位,worktree 与主目录密钥必须一致);改 server.js 须重启服务,改前端刷新即可。
 </div>
 <div class="err" id="err">⚠ Mermaid 未加载,请检查 /mermaid.min.js 是否存在。</div>
 
