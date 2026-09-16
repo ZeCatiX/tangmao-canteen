@@ -149,6 +149,47 @@ flowchart TD
     Start -.-> Guard["禁令:不在主目录改代码 / 不 cp 复制 /<br/>起服务先探测 3000 / 禁 taskkill /IM node.exe"]
 </div>
 
+<h2>六、管理后台流程（admin.html）</h2>
+<div class="mermaid">
+flowchart TD
+    AL["admin.html 登录页"] --> ALQ{"POST /api/admin/login"}
+    ALQ -- 失败 --> AL
+    ALQ -- 成功 --> Panel["后台主面板 adminAuth 会话"]
+    Panel --> D1["数据看板<br/>stats · popular-dishes · worst-dishes<br/>feedback-summary · user-activity"]
+    Panel --> D2["菜品管理"]
+    D2 --> D2Q{"操作"}
+    D2Q -- 新建 --> E0["POST /api/admin/dish<br/>图片 upload-image"]
+    D2Q -- 编辑 --> E1["PUT /api/admin/dish/:id"]
+    D2Q -- 下架软删 --> E2["DELETE /api/admin/dish/:id"]
+    D2Q -- 彻底删除 --> E3["DELETE .../dish/:id/permanent"]
+    Panel --> D3["模型与推荐分析<br/>preference-stats · model-history<br/>recommendation-effect · settings"]
+    Panel --> D4["重训触发<br/>POST /api/admin/retrain"]
+    D4 --> D5["服务端执行增量重训<br/>覆写 recommendation_model.pkl"]
+    LO["退出登录 admin-logout"] --> Panel
+</div>
+
+<h2>七、厨房看板与订单状态机（kitchen.html）</h2>
+<div class="mermaid">
+flowchart LR
+    K["kitchen.html<br/>每 10 秒轮询 loadOrders"] --> P["pending 待处理<br/>📌 确认按钮"]
+    P -->|"确认"| C1["confirmed 已确认"]
+    C1 --> C2["preparing 制作中"]
+    C2 --> C3["completed 完成"]
+    P -.-> X["cancelled 取消"]
+    C1 -.-> X
+    C2 -.-> X
+    XN["约束<br/>状态推进 PUT /api/orders/:id/status 需登录<br/>加菜与挪桌仅限非 completed·cancelled 订单"]
+</div>
+
+<h2>八、运维与备份</h2>
+<div class="mermaid">
+flowchart LR
+    T["Windows 计划任务 TangMaoBackup<br/>每日 02:00 setup_backup.bat"] --> B["node backup_db.js<br/>pg_dump 自动探测路径<br/>backups/ 轮转保留 3 份"]
+    DEP["部署二选一"] --> DEP1["docker compose<br/>tangmao-db + tangmao-app"]
+    DEP --> DEP2["PM2 ecosystem.config.js<br/>或直接 node server.js"]
+    RES["恢复"] --> RES1["按 备份与恢复.md<br/>回滚 backups/ 快照"]
+</div>
+
 <div class="note">
 <b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」两个<b>首页按钮</b>会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完自动续结算)。<br>
 <b>鉴权两档</b>:<code>softAuth</code> 游客可用(下单/推荐/评价);<code>authMiddleware</code> 需登录(收藏/黑名单/历史/偏好)。<br>
