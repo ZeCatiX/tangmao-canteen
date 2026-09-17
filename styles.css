@@ -1075,3 +1075,9 @@ html.dark-mode #cart-loading { background: rgba(26,26,26,0.92) !important; }
    （长内容页开弹窗时 body 被加 padding-right 导致整页左移 5px，看起来像卡顿） */
 html { overflow-y: scroll !important; }
 body.modal-open { padding-right: 0 !important; }
+
+/* ── 窄屏购物车底部:结算按钮全宽,桌号输入弹性伸展(2026-09-17 拥挤修复) ── */
+@media (max-width: 575.98px){
+  #cart-checkout-btn{flex:1 1 100%;}
+  #cart-table-number{flex:1 1 auto;width:auto;}
+}
