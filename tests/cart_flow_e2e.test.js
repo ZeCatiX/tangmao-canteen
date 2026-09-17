@@ -48,8 +48,8 @@ describe('菜单加购与结算流程测试', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
     const info = await page.evaluate(() => {
-      const addBtns = document.querySelectorAll('#dataset-table-body tr .add-to-cart-btn').length;
-      const rows = document.querySelectorAll('#dataset-table-body tr').length;
+      const addBtns = document.querySelectorAll('#dataset-table-body .dish-card .add-to-cart-btn').length;
+      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
       return { addBtns, rows };
     });
     console.log('加购按钮:', info.addBtns, '/ 行数:', info.rows);
@@ -65,7 +65,7 @@ describe('菜单加购与结算流程测试', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
     // 点击第一行加购
-    await page.evaluate(() => document.querySelector('#dataset-table-body tr .add-to-cart-btn')?.click());
+    await page.evaluate(() => document.querySelector('#dataset-table-body .dish-card .add-to-cart-btn')?.click());
     await sleep(800);
     // 打开购物车
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
@@ -95,9 +95,14 @@ describe('菜单加购与结算流程测试', () => {
     await sleep(600);
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
-    await page.evaluate(() => document.querySelector('#dataset-table-body tr .add-to-cart-btn')?.click());
+    await page.evaluate(() => document.querySelector('#dataset-table-body .dish-card .add-to-cart-btn')?.click());
     await sleep(800);
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
+    // 2026-09-17: 结算需桌号,先选 28(无桌号点去结算会被拦截)
+    await page.evaluate(() => document.getElementById('table-change-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '28'); if (b) b.click(); });
+    await sleep(400);
     await sleep(600);
     // 点去结算
     await page.evaluate(() => {

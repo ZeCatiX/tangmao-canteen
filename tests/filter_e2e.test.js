@@ -41,7 +41,7 @@ describe('菜单筛选器测试', () => {
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
-      const rows = document.querySelectorAll('#dataset-table-body tr').length;
+      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
       const cats = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-info')].map(td => td.textContent))];
       return { count, rows, cats };
     });
@@ -60,7 +60,7 @@ describe('菜单筛选器测试', () => {
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
-      const rows = document.querySelectorAll('#dataset-table-body tr').length;
+      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
       const spices = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-reason')].map(td => td.textContent))];
       return { count, rows, spices };
     });
@@ -82,7 +82,7 @@ describe('菜单筛选器测试', () => {
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
-      const rows = document.querySelectorAll('#dataset-table-body tr').length;
+      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
       return { count, rows };
     });
     assert.ok(info.rows >= 60, '重置后应显示全部菜品(>=60): ' + info.rows);
