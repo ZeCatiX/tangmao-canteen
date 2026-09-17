@@ -145,7 +145,7 @@ describe('CSV导出功能深度检查', () => {
 describe('用户删除和账号注销流程', () => {
   // ===== 11. 注册用户后删除账号 =====
   it('11.1 注册→登录→删除账号完整流程', async () => {
-    const uniq = 'del_test_' + Date.now();
+    const uniq = 'del_tes' + Date.now();
     // 注册
     const reg = await api('/api/user/register', {
       method: 'POST',
@@ -193,7 +193,7 @@ describe('用户删除和账号注销流程', () => {
 
   // ===== 13. 用户退出后token被列入黑名单 =====
   it('13.1 用户退出后token失效', async () => {
-    const uniq = 'logout_test_' + Date.now();
+    const uniq = 'logout_' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'LogoutTest123!' }),

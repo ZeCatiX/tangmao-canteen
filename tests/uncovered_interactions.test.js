@@ -148,7 +148,7 @@ describe('未覆盖交互路径补充检查', () => {
   // ===== 5. 用户登录后continue按钮可见 =====
   it('5.1 登录用户continue按钮可见', async () => {
     resetErrors();
-    const uniq = 'continue_' + Date.now();
+    const uniq = 'continu' + Date.now();
     await registerAndLogin(page, uniq);
     // 检查continue按钮是否可见
     const continueVisible = await page.evaluate(() => {

@@ -265,7 +265,7 @@ describe('订单 API', () => {
 describe('用户偏好 API', () => {
   it('POST /api/user-preferences 保存偏好', async () => {
     // 先注册一个测试用户
-    const uname = 'pref_test_' + Date.now();
+    const uname = 'pref_te' + Date.now();
     await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uname, password: 'Test123!' }),
@@ -291,7 +291,7 @@ describe('用户偏好 API', () => {
 // 8. 收藏/黑名单 API
 // ─────────────────────────────────────────────
 describe('收藏/黑名单 API', () => {
-  const uname = 'fav_test_' + Date.now();
+  const uname = 'fav_tes' + Date.now();
   let token = '';
 
   it('POST /api/user-favorites 同步收藏', async () => {
@@ -545,7 +545,7 @@ describe('推荐日志 API', () => {
 // ─────────────────────────────────────────────
 describe('用户注销 API', () => {
   it('POST /api/user/delete 注销用户', async () => {
-    const uname = 'delete_test_' + Date.now();
+    const uname = 'delete_' + Date.now();
     const pass = 'Test123!';
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
     // 先登录获取token
@@ -995,7 +995,7 @@ describe('管理后台用户删除 API', () => {
   it('POST /api/admin/users/:id/toggle 删除用户', async () => {
     const adminToken = await getAdminToken();
     // 注册一个专用测试用户，避免误操作 admin
-    const testUser = 'toggle_test_' + Date.now();
+    const testUser = 'toggle_' + Date.now();
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: testUser, password: 'Test123!' }) });
     // 获取用户列表找到测试用户
     const users = await api('/api/admin/users', {

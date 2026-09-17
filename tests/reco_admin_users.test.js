@@ -107,7 +107,7 @@ describe('决策树本地推荐逻辑检查', () => {
         matchRate: match.matchRate,
         hasTaste: match.matchDetails.taste !== undefined,
         hasCuisine: match.matchDetails.cuisine !== undefined,
-        hasNutrition: match.matchDetails.nutrition !== undefined,
+        hasNutrition: match.matchDetails.calorie !== undefined,
         hasRating: match.matchDetails.rating !== undefined,
         matchRateFinite: isFinite(match.matchRate)
       };
@@ -115,7 +115,7 @@ describe('决策树本地推荐逻辑检查', () => {
     assert.ok(!result.error, '应有菜品数据');
     assert.ok(result.hasTaste, '应有taste匹配');
     assert.ok(result.hasCuisine, '应有cuisine匹配');
-    assert.ok(result.hasNutrition, '应有nutrition匹配');
+    assert.ok(result.hasNutrition, '应有calorie(营养)匹配');
     assert.ok(result.hasRating, '应有rating匹配');
     assert.ok(result.matchRateFinite, 'matchRate应为有限数');
     assert.ok(result.matchRate >= 0 && result.matchRate <= 1.1, `matchRate应在0-1.1之间: ${result.matchRate}`);
@@ -297,7 +297,7 @@ describe('管理后台用户管理深度E2E测试', () => {
   it('9.1 注册用户后在管理后台用户列表可见', async () => {
     resetErrors();
     // 通过API注册用户
-    const uniq = 'admin_visible_' + Date.now();
+    const uniq = 'admin_v' + Date.now();
     const regR = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'AdminVis123!' }),

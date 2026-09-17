@@ -160,7 +160,7 @@ describe('深度点击测试 - 全流程用户交互', () => {
     await sleep(300);
     await page.click('#register-btn');
     await sleep(400);
-    const uniq = 'testuser_' + Date.now();
+    const uniq = 'testuse' + Date.now();
     await page.type('#register-username', uniq, { delay: 30 });
     await page.type('#register-password', 'Test1234!', { delay: 30 });
     await page.type('#register-confirm', 'Test1234!', { delay: 30 });

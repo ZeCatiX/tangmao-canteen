@@ -38,7 +38,7 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     await sleep(1000);
     // 点击第一行的加购按钮
     const clicked = await page.evaluate(() => {
-      const row = document.querySelector('#dataset-table-body tr');
+      const row = document.querySelector('#dataset-table-body .dish-card');
       if (!row) return 'no-row';
       const btn = row.querySelector('.btn');
       if (!btn) return 'no-btn';
@@ -93,11 +93,12 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
   });
 
   it('2.5 游客下单完整流程', async () => {
-    // 重新加购一个商品
+    // 重新加购一个商品(卡片布局选择器)
     await page.evaluate(() => document.getElementById('nav-dataset').click());
     await sleep(800);
     await page.evaluate(() => {
-      const btn = document.querySelector('#dataset-table-body tr .btn');
+      const card = document.querySelector('#dataset-table-body .dish-card');
+      const btn = card ? card.querySelector('.add-to-cart-btn') : null;
       if (btn) btn.click();
     });
     await sleep(600);
@@ -105,6 +106,12 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     await page.evaluate(() => document.getElementById('nav-cart').click());
     await sleep(600);
     await page.evaluate(() => document.getElementById('cart-checkout-btn')?.click());
+    await sleep(800);
+    // 选桌层弹出:选 08,验证选完桌号自动续结算
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find(function(x) { return x.textContent.trim() === '08'; });
+      if (b) b.click();
+    });
     await sleep(4000);
     const state = await page.evaluate(() => {
       const modal = document.getElementById('modal-title');
@@ -113,12 +120,15 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
       return {
         modalTitle: modal ? modal.textContent : 'no-modal',
         modalBody: body ? body.textContent.slice(0, 30) : 'no-body',
-        homeActive: home ? home.classList.contains('active') : false
+        homeActive: home ? home.classList.contains('active') : false,
+        endActive: (document.getElementById('end-section') || {}).classList?.contains('active') || false,
+        orderId: sessionStorage.getItem('lastOrderId') || ''
       };
     });
     console.log('下单结果:', JSON.stringify(state));
     // 下单成功显示"下单成功"模态框，或跳转回首页
-    assert.ok(state.modalTitle === '下单成功' || state.homeActive, '下单成功应显示模态框或回到首页，实际:' + state.modalTitle);
+    // 成功形态:进入订单完成页(end-section)且订单已创建(2026-09-17 对齐现行 UX)
+    assert.ok(state.endActive && state.orderId, '下单成功应进入订单完成页,实际:' + JSON.stringify(state));
   });
 
   it('2.6 厨房看板可登录并加载', async () => {

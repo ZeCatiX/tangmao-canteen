@@ -267,7 +267,7 @@ describe('深层边界与特殊场景测试', () => {
   // ===== 9. 用户偏好保存后立即获取推荐 =====
   it('9.1 偏好保存后推荐使用新偏好', async () => {
     resetErrors();
-    const uniq = 'pref_rec_' + Date.now();
+    const uniq = 'pref_re' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'PrefRec123!' }),

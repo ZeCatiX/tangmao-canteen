@@ -24,7 +24,7 @@ describe('adminAuth 角色校验', () => {
 
   before(async () => {
     // 注册普通用户
-    const uname = 'auth_test_' + Date.now();
+    const uname = 'auth_te' + Date.now();
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!9' }) });
     const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!9' }) });
     userToken = login.body.token || '';

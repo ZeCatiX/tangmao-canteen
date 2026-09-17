@@ -624,7 +624,7 @@ describe('43. 前端 null 安全保护', () => {
 describe('44. 用户删除完整流程', () => {
   it('注册用户 -> 提交反馈 -> 删除用户 -> 确认反馈清理', async () => {
     const token = await getAdminToken();
-    const uname = 'cleanup_test_' + Date.now();
+    const uname = 'cleanup' + Date.now();
     // 注册用户
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
     // 提交反馈
@@ -747,7 +747,7 @@ describe('47. submitStarFeedback null 保护', () => {
 describe('48. 购物车结算流程', () => {
   it('POST /api/order 带认证头正常创建', async () => {
     // 注册用户
-    const uname = 'cart_test_' + Date.now();
+    const uname = 'cart_te' + Date.now();
     const reg = await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
     assert.equal(reg.status, 200);
     // 登录获取 token
@@ -770,7 +770,7 @@ describe('48. 购物车结算流程', () => {
 // ================================================================
 describe('49. 评分 API 带认证头', () => {
   it('POST /api/feedback 带认证头正常提交', async () => {
-    const uname = 'fb_auth_test_' + Date.now();
+    const uname = 'fb_auth' + Date.now();
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
     const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
     const token = login.body.token;
@@ -1035,7 +1035,7 @@ describe('61. 管理员查看所有订单', () => {
 
   it('管理员可查看所有订单（含非管理员创建的）', async () => {
     // 普通用户创建订单
-    const uname = 'orderview_' + Date.now();
+    const uname = 'ordervi' + Date.now();
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
     const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: uname, items: [{ id: 1, name: '查看测试', price: 10 }], totalPrice: 10 }) });
     assert.equal(order.status, 200);

@@ -119,7 +119,7 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = 'mismatch_' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) { el.value = 'mismatc' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-password');

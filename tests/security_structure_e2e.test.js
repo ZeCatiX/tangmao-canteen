@@ -19,7 +19,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 1. 注册用户密码不明文返回 =====
   it('1.1 注册响应不包含密码', async () => {
-    const uniq = 'pw_check_' + Date.now();
+    const uniq = 'pw_chec' + Date.now();
     const r = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'PwCheck123!' }),
@@ -40,7 +40,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 2. 登录响应不包含密码哈希 =====
   it('2.1 登录响应不含密码哈希', async () => {
-    const uniq = 'pw_login_' + Date.now();
+    const uniq = 'pw_logi' + Date.now();
     await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'PwLogin123!' }),
@@ -91,7 +91,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 4. 用户偏好数据结构 =====
   it('4.1 用户偏好保存返回数据结构正确', async () => {
-    const uniq = 'pref_struct_' + Date.now();
+    const uniq = 'pref_st' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'PrefStruct123!' }),
@@ -128,7 +128,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 6. 用户favorites/blacklist数据结构 =====
   it('6.1 收藏/拉黑列表数据类型正确', async () => {
-    const uniq = 'fav_struct_' + Date.now();
+    const uniq = 'fav_str' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'FavStruct123!' }),
@@ -168,7 +168,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 7. 订单数据结构 =====
   it('7.1 订单创建后数据结构正确', async () => {
-    const uniq = 'order_struct_' + Date.now();
+    const uniq = 'order_s' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'OrderStruct123!' }),
@@ -195,7 +195,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 8. 反馈数据结构 =====
   it('8.1 反馈提交数据结构正确', async () => {
-    const uniq = 'fb_struct_' + Date.now();
+    const uniq = 'fb_stru' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'FbStruct123!' }),
@@ -235,7 +235,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 10. 用户token包含role=user =====
   it('10.1 用户token含role=user', async () => {
-    const uniq = 'role_check_' + Date.now();
+    const uniq = 'role_ch' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'RoleCheck123!' }),

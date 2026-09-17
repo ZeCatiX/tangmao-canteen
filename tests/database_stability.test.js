@@ -73,7 +73,7 @@ describe('数据库连接与查询稳定性', () => {
 
   // ===== 3. 用户偏好保存后重新读取 =====
   it('3.1 用户偏好保存后重新登录可读取', async () => {
-    const uniq = 'pref_read_' + Date.now();
+    const uniq = 'pref_re' + Date.now();
     // 注册
     const reg = await api('/api/user/register', {
       method: 'POST',
@@ -105,7 +105,7 @@ describe('数据库连接与查询稳定性', () => {
 
   // ===== 4. 订单创建后在订单列表中可见 =====
   it('4.1 订单创建后在订单列表中可见', async () => {
-    const uniq = 'order_list_' + Date.now();
+    const uniq = 'order_l' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'OrderList123!' }),
@@ -138,7 +138,7 @@ describe('数据库连接与查询稳定性', () => {
 
   // ===== 5. 反馈提交后在反馈列表中可见 =====
   it('5.1 反馈提交后在管理后台反馈列表中可见', async () => {
-    const uniq = 'feedback_list_' + Date.now();
+    const uniq = 'feedbac' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'FeedbackList123!' }),
@@ -172,7 +172,7 @@ describe('数据库连接与查询稳定性', () => {
   it('6.1 并发注册5个不同用户全部成功', async () => {
     const promises = [];
     for (let i = 0; i < 5; i++) {
-      const uniq = 'concurrent_' + Date.now() + '_' + i;
+      const uniq = 'concurr' + Date.now() + '_' + i;
       promises.push(api('/api/user/register', {
         method: 'POST',
         body: JSON.stringify({ username: uniq, password: 'Concurrent123!' }),
@@ -186,7 +186,7 @@ describe('数据库连接与查询稳定性', () => {
     assert.equal(successCount, 5, '5个并发注册应全部成功');
     // 清理
     for (let i = 0; i < 5; i++) {
-      const uniq = 'concurrent_' + Date.now() + '_' + i;
+      const uniq = 'concurr' + Date.now() + '_' + i;
       const reg = results[i];
       if (reg.body.token) {
         await api('/api/user/delete', {

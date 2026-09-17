@@ -152,7 +152,7 @@ describe('HTTPS和Python Worker深度检查', () => {
 describe('用户存储和认证流程检查', () => {
   // ===== 8. 用户注册和token =====
   it('8.1 注册返回有效token', async () => {
-    const uniq = 'auth_test_' + Date.now();
+    const uniq = 'auth_te' + Date.now();
     const r = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'TestAuth123!' }),
@@ -165,7 +165,7 @@ describe('用户存储和认证流程检查', () => {
 
   // ===== 9. 登录返回有效token =====
   it('9.1 登录返回有效token和用户数据', async () => {
-    const uniq = 'login_test_' + Date.now();
+    const uniq = 'login_t' + Date.now();
     // 先注册
     await api('/api/user/register', {
       method: 'POST',
@@ -184,7 +184,7 @@ describe('用户存储和认证流程检查', () => {
 
   // ===== 10. token可用于认证 =====
   it('10.1 token可用于访问需要认证的端点', async () => {
-    const uniq = 'token_test_' + Date.now();
+    const uniq = 'token_t' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'TestToken123!' }),
@@ -207,7 +207,7 @@ describe('用户存储和认证流程检查', () => {
 
   // ===== 12. 用户偏好保存和读取 =====
   it('12.1 用户偏好可保存和读取', async () => {
-    const uniq = 'pref_test_' + Date.now();
+    const uniq = 'pref_te' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'TestPref123!' }),
@@ -227,7 +227,7 @@ describe('用户存储和认证流程检查', () => {
 
   // ===== 13. 反馈提交 =====
   it('13.1 用户反馈可提交', async () => {
-    const uniq = 'feedback_test_' + Date.now();
+    const uniq = 'feedbac' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'TestFeedback123!' }),
@@ -248,7 +248,7 @@ describe('用户存储和认证流程检查', () => {
 
   // ===== 14. 订单创建 =====
   it('14.1 订单可创建', async () => {
-    const uniq = 'order_test_' + Date.now();
+    const uniq = 'order_t' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'TestOrder123!' }),

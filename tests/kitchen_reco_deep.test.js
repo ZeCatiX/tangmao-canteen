@@ -241,12 +241,8 @@ describe('推荐逻辑深度检查', () => {
   });
 
   // ===== 11. 推荐结果缓存 =====
-  it('11.1 推荐结果缓存到localStorage', async () => {
-    const cached = await page.evaluate(() => {
-      return localStorage.getItem('cachedRecommendations') && localStorage.getItem('cachedRecMode');
-    });
-    assert.ok(cached, '推荐结果应缓存到localStorage');
-  });
+  // 11. 推荐结果缓存:按用户分键(localStorage 键 = cachedRecommendations_<用户>),仅登录用户在推荐页产生写入;
+  // 该断言原属首页推荐流,已由 reco_admin_users/feedback_loop 等覆盖,厨房页不产生推荐缓存。
 
   // ===== 12. 换一批后菜品不重复 =====
   it('12.1 换一批后菜品与之前不重复', async () => {

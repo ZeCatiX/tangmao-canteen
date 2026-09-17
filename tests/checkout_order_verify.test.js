@@ -149,7 +149,7 @@ describe('账单结算与订单状态验证', () => {
   it('5.1 创建订单后API查询返回订单', async () => {
     resetErrors();
     // 通过API创建一个订单
-    const uname = 'orderapi_' + Date.now();
+    const uname = 'orderap' + Date.now();
     const upass = 'Order123';
     // 注册用户
     const regRes = await fetch(BASE + '/api/user/register', {
@@ -219,7 +219,7 @@ describe('账单结算与订单状态验证', () => {
   it('7.1 购物车结算完整流程（加购→结算→下单）', async () => {
     resetErrors();
     // 注册用户
-    const uname = 'checkout_' + Date.now();
+    const uname = 'checkou' + Date.now();
     const upass = 'Check123';
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);

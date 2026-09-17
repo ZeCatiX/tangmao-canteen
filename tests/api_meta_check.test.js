@@ -37,7 +37,7 @@ describe('管理后台所有API端点响应正确性', () => {
     adminToken = await getAdminToken();
     assert.ok(adminToken, '应获取管理员token');
     // 注册测试用户
-    testUser = 'api_test_' + Date.now();
+    testUser = 'api_tes' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: testUser, password: 'ApiTest123!' }),

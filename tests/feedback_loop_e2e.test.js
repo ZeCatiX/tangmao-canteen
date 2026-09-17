@@ -102,7 +102,7 @@ describe('反馈环路与统计联动测试', () => {
   // ===== 2. 下单 → 厨房看板订单可见 =====
   it('2.1 用户下单后厨房看板订单可见', async () => {
     resetErrors();
-    const uniq = 'order_loop_' + Date.now();
+    const uniq = 'order_l' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'OrderLoop123!' }),
@@ -230,7 +230,7 @@ describe('反馈环路与统计联动测试', () => {
   // ===== 7. 用户删除 → 用户列表更新 =====
   it('7.1 用户删除后管理后台用户列表更新', async () => {
     resetErrors();
-    const uniq = 'del_loop_' + Date.now();
+    const uniq = 'del_loo' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'DelLoop123!' }),
