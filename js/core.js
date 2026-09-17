@@ -73,7 +73,7 @@ const CAL_ORDER={'低':0,'中':1,'高':2};
 // 辣度: 超出承受-2重罚; 精确+2; 差1级+1; 差2级+0
 function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;if(di>ui)return -2;const diff=ui-di;return diff===0?2:diff===1?1:-1;}
 // 咸淡/热量: 无超出概念, 精确+2; 差1级+1; 差2级以上-1(2026-09-17:不匹配应有代价)
-function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?0:-1;}
+function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?0:-2;}  // 2026-09-17: 差2级以上-2,与价格摆幅同级(用户决策:咸淡/热量升级为一等维度)
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=2;

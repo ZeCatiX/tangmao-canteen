@@ -2,48 +2,48 @@
   "success": true,
   "importance": [
     {
+      "feature": "用户辣度",
+      "importance": 0.2384
+    },
+    {
       "feature": "用户价格",
-      "importance": 0.2172
+      "importance": 0.1747
     },
     {
       "feature": "用户甜酸",
-      "importance": 0.1928
-    },
-    {
-      "feature": "用户辣度",
-      "importance": 0.1709
-    },
-    {
-      "feature": "价格",
       "importance": 0.1692
     },
     {
+      "feature": "价格",
+      "importance": 0.132
+    },
+    {
       "feature": "辣度",
-      "importance": 0.0717
+      "importance": 0.077
     },
     {
       "feature": "用户咸淡",
-      "importance": 0.0449
-    },
-    {
-      "feature": "甜酸",
-      "importance": 0.0443
+      "importance": 0.0533
     },
     {
       "feature": "用户热量",
-      "importance": 0.035
+      "importance": 0.0434
+    },
+    {
+      "feature": "甜酸",
+      "importance": 0.0406
     },
     {
       "feature": "热量",
-      "importance": 0.0267
+      "importance": 0.0363
     },
     {
       "feature": "咸淡",
-      "importance": 0.0242
+      "importance": 0.0322
     },
     {
       "feature": "招牌",
-      "importance": 0.0031
+      "importance": 0.0029
     },
     {
       "feature": "评分",
