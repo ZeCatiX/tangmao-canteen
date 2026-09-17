@@ -26,7 +26,8 @@ describe('暗黑模式切换功能测试', () => {
     await sleep(500);
     const btn = await page.evaluate(() => {
       const el = document.getElementById('dark-mode-toggle');
-      return el ? { exists: true, text: el.textContent } : { exists: false };
+      // 2026-09-17: 按钮为图标(<i>),检查 innerHTML 而非 textContent
+      return el ? { exists: true, text: el.innerHTML.trim() } : { exists: false };
     });
     assert.ok(btn.exists, '暗黑模式切换按钮应存在');
     assert.ok(btn.text, '按钮应有文字');

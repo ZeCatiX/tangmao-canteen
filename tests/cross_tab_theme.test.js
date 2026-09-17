@@ -94,7 +94,8 @@ describe('颜色主题和CSS变量一致性检查', () => {
   // ===== 4. 暗黑模式覆盖所有核心变量 =====
   it('4.1 暗黑模式覆盖所有核心变量', () => {
     const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
-    const darkIdx = css.indexOf('html.dark-mode');
+    // 2026-09-17: 首个 html.dark-mode 是组件规则(594行),变量块在 843 行——精确定位到带花括号的定义块
+    const darkIdx = css.indexOf('html.dark-mode {');
     assert.ok(darkIdx >= 0, '应有暗黑模式规则');
     const darkSection = css.substring(darkIdx, darkIdx + 1000);
     const requiredDarkVars = ['--cream', '--brown', '--primary', '--gold'];

@@ -120,9 +120,10 @@ describe('文件上传安全性检查', () => {
 
 describe('暗黑模式CSS检查', () => {
   // ===== 7. 暗黑模式CSS变量定义 =====
-  it('7.1 styles.css有暗黑模式媒体查询', () => {
+  it('7.1 styles.css有暗黑模式规则', () => {
     const css = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
-    assert.ok(css.includes('prefers-color-scheme: dark'), '应有暗黑模式媒体查询');
+    // 2026-09-17: 深色模式为 class 架构(html.dark-mode),系统偏好由 index.html 内联脚本检测并切换 class
+    assert.ok(css.includes('html.dark-mode'), '应有暗黑模式规则(html.dark-mode)');
   });
 
   // ===== 8. 暗黑模式变量覆盖 =====

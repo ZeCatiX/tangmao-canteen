@@ -101,10 +101,11 @@ describe('按钮可用性与显示检查', () => {
   });
 
   it('关键 DOM 操作有 null 保护防崩溃', () => {
-    const js = read('js/core.js');
+    const js = read('js/core.js') + read('js/recommendation.js');  // 2026-09-17: displayRecommendations 位于 recommendation.js
     const init = read('js/init.js');
     // dish-list 渲染有 null 保护
-    assert.ok(js.includes("if(!dl)return"), 'displayRecommendations 应有 dish-list null 保护');
+    // 2026-09-17: 实现为 if(!dl){...warn;return;}(块语句),不是 return 同行
+    assert.ok(js.includes('if(!dl)'), 'displayRecommendations 应有 dish-list null 保护');
     // profile 页面元素有 null 保护
     assert.ok(js.includes("if(pu)") || js.includes("if (pu)"), 'profile-username 应有 null 保护');
     assert.ok(js.includes("if(pl)") || js.includes("if (pl)"), 'profile-last-login 应有 null 保护');
@@ -115,8 +116,8 @@ describe('按钮可用性与显示检查', () => {
     assert.ok(init.includes("if(me)") || init.includes("if (me)"), 'message-modal 应有 null 保护');
     // allergy-none 有 null 保护
     assert.ok(js.includes("if($('allergy-none')&&") || js.includes("if ($('allergy-none') &&"), 'allergy-none 应有 null 保护');
-    // recommendation-loading 和 result 有 null 保护
-    assert.ok(js.includes("if(loading)") || js.includes("if (loading)"), 'loading 应有 null 保护');
-    assert.ok(js.includes("if(result)") || js.includes("if (result)"), 'result 应有 null 保护');
+    // recommendation-loading 和 result 有 null 保护(2026-09-17: 实现为 if(!loading||!result)return)
+    assert.ok(js.includes('if(!loading') || js.includes('if (!loading'), 'loading 应有 null 保护');
+    assert.ok(js.includes('!result') || js.includes('if(result)') || js.includes('if (result)'), 'result 应有 null 保护');
   });
 });

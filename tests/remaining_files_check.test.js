@@ -64,9 +64,9 @@ describe('剩余基础设施文件最终检查', () => {
     assert.ok(content.includes('node_modules') || content.includes('.env'), '应包含关键排除项');
   });
 
-  // ===== 9. optimize_images.js 存在 =====
-  it('9.1 optimize_images.js 存在且包含图片处理逻辑', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'optimize_images.js'), 'utf8');
+  // ===== 9. 图片处理脚本存在(2026-09-17: optimize_images.js 从未入库,项目实际脚本为 vision_pipeline.js)
+  it('9.1 图片处理脚本存在且包含处理逻辑', () => {
+    const content = fs.readFileSync(path.join(ROOT, 'vision_pipeline.js'), 'utf8');
     assert.ok(content.includes('sharp') || content.includes('fs'), '应使用sharp或fs');
     assert.ok(content.length > 100, '应有实质内容');
   });

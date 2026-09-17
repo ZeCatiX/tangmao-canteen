@@ -1,5 +1,15 @@
 // 唐猫庭院 - 数据库连接与查询稳定性测试
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert/strict');
 require('dotenv').config();
 
@@ -117,7 +127,7 @@ describe('数据库连接与查询稳定性', () => {
       headers: { 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
-        items: [{ id: 999, name: '测试订单菜品', price: 30, type: '偏好推荐', matchRate: 0.9 }],
+        items: [{ id: dishPool[0].id, name: '测试订单菜品', price: 30, type: '偏好推荐', matchRate: 0.9 }],
         totalPrice: 30
       }),
     });
@@ -172,7 +182,7 @@ describe('数据库连接与查询稳定性', () => {
   it('6.1 并发注册5个不同用户全部成功', async () => {
     const promises = [];
     for (let i = 0; i < 5; i++) {
-      const uniq = 'concurr' + Date.now() + '_' + i;
+      const uniq = 'conc' + Date.now() + '_' + i;
       promises.push(api('/api/user/register', {
         method: 'POST',
         body: JSON.stringify({ username: uniq, password: 'Concurrent123!' }),
@@ -186,7 +196,7 @@ describe('数据库连接与查询稳定性', () => {
     assert.equal(successCount, 5, '5个并发注册应全部成功');
     // 清理
     for (let i = 0; i < 5; i++) {
-      const uniq = 'concurr' + Date.now() + '_' + i;
+      const uniq = 'conc' + Date.now() + '_' + i;
       const reg = results[i];
       if (reg.body.token) {
         await api('/api/user/delete', {

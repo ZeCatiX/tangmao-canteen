@@ -95,8 +95,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  if(an.checked){ac.forEach(cb=>{cb.disabled=true;});}
  }
  submit('preference-form',submitPreference);
- // 2026-09-17: 过敏源联动——勾选「无」时禁用并清空其他过敏源,取消时恢复
- (function(){const an=$('allergy-none');if(!an)return;const others=['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'];const sync=()=>{const off=an.checked;others.forEach(id=>{const el=$(id);if(el){el.disabled=off;if(off)el.checked=false;}});};an.addEventListener('change',sync);sync();})();
+ // 2026-09-17: 过敏源联动——勾「无」清空并禁用其他;勾任一具体项自动取消「无」(互斥多选)
+ (function(){const an=$('allergy-none');if(!an)return;const others=['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'];const sync=()=>{const off=an.checked;others.forEach(id=>{const el=$(id);if(el){el.disabled=off;if(off)el.checked=false;}});};an.addEventListener('change',sync);others.forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(el.checked&&an.checked){an.checked=false;sync();}});});sync();})();
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));

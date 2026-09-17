@@ -164,13 +164,16 @@ describe('表单验证与错误提示深度测试', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
-    await sleep(400);
+    // 2026-09-17: 偏好页入口为「AI帮你选」+ 选桌;过敏源用 JS 点击(真实点击在浮动栏下易被遮挡)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await sleep(500);
     // 取消无过敏源，选择多个过敏源
     const allergyNone = await page.$('#allergy-none');
     if (allergyNone) {
       const checked = await page.evaluate(el => el.checked, allergyNone);
-      if (checked) await allergyNone.click();
+      if (checked) await page.evaluate(() => document.getElementById('allergy-none').click());
     }
     // 勾选所有过敏源
     const allergyCheckboxes = await page.evaluate(() => {

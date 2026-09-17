@@ -176,18 +176,29 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
-    await page.select('#spiciness', '微辣');
-    await page.select('#saltiness', '适中');
-    await page.select('#sweetness', '酸甜');
+    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
     const allergyNone = await page.$('#allergy-none');
     if (allergyNone) {
       const isChecked = await page.evaluate(el => el.checked, allergyNone);
       if (isChecked) await allergyNone.click();
     }
-    await page.click('#preference-form button[type="submit"]');
-    await sleep(4000);
+    await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
+    // 2026-09-17: ML(HistGB)冷启动 + 可能的接口超时回退,轮询至推荐可见(最多 25s)
+    for (let i = 0; i < 25; i++) {
+      await sleep(1000);
+      const vis = await page.evaluate(() => {
+        const el = document.getElementById('recommendation-result');
+        return el && !el.classList.contains('d-none');
+      });
+      if (vis) break;
+    }
     const content = await page.content();
     assert.ok(!content.includes('cannot read') && !content.toLowerCase().includes('undefined is not'), '页面不应崩溃');
     const recVisible = await page.evaluate(() => {
@@ -207,12 +218,15 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
-    await page.select('#spiciness', '中辣');
-    await page.select('#saltiness', '偏咸');
-    await page.select('#sweetness', '咸鲜');
-    await page.click('#preference-form button[type="submit"]');
+    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '中辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '偏咸'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '咸鲜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     const refreshBtn = await page.$('#refresh-recommendations');
     assert.ok(refreshBtn, '换一批按钮应存在');
@@ -230,12 +244,15 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
-    await page.select('#spiciness', '微辣');
-    await page.select('#saltiness', '适中');
-    await page.select('#sweetness', '酸甜');
-    await page.click('#preference-form button[type="submit"]');
+    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     const endRecBtn = await page.$('#end-recommendation');
     assert.ok(endRecBtn, '选好了按钮应存在');
@@ -258,12 +275,15 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
-    await page.select('#spiciness', '微辣');
-    await page.select('#saltiness', '适中');
-    await page.select('#sweetness', '酸甜');
-    await page.click('#preference-form button[type="submit"]');
+    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     await page.click('#nav-cart');
     await sleep(400);

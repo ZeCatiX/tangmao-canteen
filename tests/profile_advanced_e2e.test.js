@@ -1,6 +1,16 @@
 // 唐猫庭院 - 个人中心与高级交互 E2E 测试
 // 覆盖：登录用户收藏 → 查看收藏 → 退出登录 → 厨房完成订单 → 管理员上下架菜品
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
@@ -132,7 +142,7 @@ describe('个人中心与高级交互测试', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: 'guest',
-        items: [{ dish_id: 1, name: '锅子鱼', price: 88, quantity: 1 }],
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 1 }],
         totalPrice: 88,
       }),
     }).catch(e => { console.log('下单失败:', e.message); return null; });
@@ -159,7 +169,11 @@ describe('个人中心与高级交互测试', () => {
       for (const c of cards) {
         if (c.dataset.id === String(oid)) {
           const btn = c.querySelector('.btn-complete');
-          if (btn) { btn.click(); return true; }
+          if (btn) {
+            // 2026-09-17: 厨房已改为双击确认(不依赖原生 confirm,armed 态),同帧两次点击完成
+            btn.click(); btn.click();
+            return true;
+          }
         }
       }
       return false;

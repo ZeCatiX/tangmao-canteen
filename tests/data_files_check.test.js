@@ -163,8 +163,9 @@ describe('数据文件完整性检查', () => {
     const data = await getDishesData();
     const imageUrls = data.dishes.filter(d => d.image_url).map(d => d.image_url);
     for (const url of imageUrls) {
-      assert.ok(url.startsWith('/uploads/') || url.startsWith('data:'),
-        `图片URL应以/uploads/或data:开头: ${url}`);
+      // 2026-09-17: 部分菜品以 emoji 作 image_url(如五常大米饭 🍚),前端支持渲染
+      assert.ok(url.startsWith('/uploads/') || url.startsWith('data:') || url.length <= 4,
+        `图片URL应以/uploads/、data: 或 emoji 形式: ${url}`);
     }
   });
 
