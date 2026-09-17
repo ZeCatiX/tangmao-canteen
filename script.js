@@ -1240,7 +1240,7 @@ async function fetchRecommendations(isRefresh){
   top.forEach(d=>{d.reason=generateDishReason(prefs,d);d.type='偏好推荐';});
   const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
   currentRecommendations=top;top.forEach(d=>{if(!recommendedIds.includes(d.id))recommendedIds.push(d.id);});
-  currentRecommendationMode='随机森林';console.groupEnd();displayRecommendations();
+  currentRecommendationMode='机器学习(梯度提升)';console.groupEnd();displayRecommendations();
  };
  const callAPI=dlist=>{
   const TIMEOUT=15000,ft=(url,opt,ms)=>Promise.race([safeFetch(url,opt),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),ms))]);
@@ -1301,7 +1301,7 @@ function displayRecommendations(){
  try { if(currentUser&&currentUser!=='guest'){localStorage.setItem('cachedRecommendations_'+currentUser, JSON.stringify(currentRecommendations)); localStorage.setItem('cachedRecMode_'+currentUser, currentRecommendationMode);} } catch(e) {}
  const $=id=>document.getElementById(id),loading=$('recommendation-loading'),result=$('recommendation-result');
  if(!loading||!result)return;
- const desc=currentRecommendationMode==='随机森林'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
+ const desc=currentRecommendationMode==='机器学习'?'(基于ML)':currentRecommendationMode==='决策树模型'?'(基于决策树)':'';
  const _rice=dishData.find(d=>d.name==='五常大米饭');
  result.innerHTML='<div style="background-color:#fdf2e9;border:2px solid #f5cba7;border-radius:8px;padding:15px;margin-bottom:20px;text-align:center"><p style="margin:0;color:#c0392b"><strong>当前使用：</strong>'+currentRecommendationMode+' '+desc+'</p></div><div class="mb-4"><h4 class="text-danger">为您推荐</h4><div class="list-group" id="dish-list"></div></div><div class="mt-3 p-3 rounded-3" style="background:linear-gradient(135deg,#fdf6f0,#f5ebe0);border:1px solid rgba(201,169,110,0.2);"><div class="d-flex align-items-center justify-content-between"><div><span style="font-size:1.5rem;">🍚</span> <strong>五常大米饭</strong> <small style="color:var(--text-light);">3元/碗</small></div><button class="btn btn-sm btn-outline-success add-to-cart-btn" id="add-rice-btn" data-id="'+(_rice?_rice.id:'')+'"><i class="bi bi-plus-circle me-1"></i>加一碗米饭</button></div></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
  const old=result._delegateHandler;if(old)result.removeEventListener('click',old);

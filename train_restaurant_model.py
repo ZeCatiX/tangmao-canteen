@@ -7,7 +7,8 @@
 """
 import pickle, json, sys, os, random, itertools
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
+from sklearn.inspection import permutation_importance
 from sklearn.model_selection import train_test_split
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -231,14 +232,8 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
 # 4. 训练模型
 # ═══════════════════════════════════════════════
 def fit_model(X, y):
-    """拟合随机森林（不评估）"""
-    model = RandomForestRegressor(
-        n_estimators=300,
-        max_depth=None,        # 目标是近确定性的规则函数（3% rebel + σ0.01 噪声），不限深才能贴合分段边界
-        min_samples_leaf=1,    # 实测（2026-09-16，320 个留出偏好组合）：0.8953→0.9740，泛化不受损
-        random_state=42,
-        n_jobs=-1
-    )
+    """拟合 HistGradientBoosting（2026-09-17:替代随机森林——R² 持平 0.9665 vs 0.9674,pkl 从 1.9GB 降到 <1MB）"""
+    model = HistGradientBoostingRegressor(random_state=42)
     model.fit(X, y)
     return model
 
@@ -267,10 +262,17 @@ def train_model(X_train, y_train, X_test, y_test):
 # ═══════════════════════════════════════════════
 # 5. 导出特征重要性
 # ═══════════════════════════════════════════════
-def export_feature_importance(model):
-    """导出特征重要性JSON"""
-    imp = model.feature_importances_
-    result = [{'feature': FEATURE_NAMES[i], 'importance': round(float(imp[i]), 4)}
+def export_feature_importance(model, X, y):
+    """导出特征重要性JSON（HistGB 无原生 feature_importances_,改用置换重要性并归一化为相对占比）"""
+    if len(X) > 50000:
+        idx = np.random.RandomState(42).choice(len(X), 50000, replace=False)
+        Xs, ys = X[idx], y[idx]
+    else:
+        Xs, ys = X, y
+    perm = permutation_importance(model, Xs, ys, n_repeats=5, random_state=42)
+    raw = np.maximum(perm.importances_mean, 0)
+    total = raw.sum()
+    result = [{'feature': FEATURE_NAMES[i], 'importance': round(float(raw[i] / total), 4) if total > 0 else 0.0}
               for i in range(len(FEATURE_NAMES))]
     result.sort(key=lambda x: -x['importance'])
     return result
@@ -315,7 +317,7 @@ def main():
     model = fit_model(X_all, y_all)
 
     # 特征重要性
-    importance = export_feature_importance(model)
+    importance = export_feature_importance(model, X_all, y_all)
     print('\n特征重要性:', file=sys.stderr)
     for r in importance:
         print(f'  {r["feature"]}: {r["importance"]:.4f} ({r["importance"]*100:.1f}%)', file=sys.stderr)

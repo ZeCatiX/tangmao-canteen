@@ -5,7 +5,7 @@
 """
 import pickle, json, sys, os, random
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor
 sys.stdout.reconfigure(encoding='utf-8')
 
 ORD_MAPPINGS = {
@@ -104,10 +104,10 @@ def main():
         with open(MODEL_PATH, 'rb') as f:
             model_data = pickle.load(f)
         model = model_data['model']
-        print(f'  现有模型: {model.n_estimators}棵树, {model.n_features_in_}维', file=sys.stderr)
+        print(f'  现有模型: {type(model).__name__}, {model.n_features_in_}维', file=sys.stderr)
     except FileNotFoundError:
         print('  未找到现有模型，创建新模型', file=sys.stderr)
-        model = RandomForestRegressor(n_estimators=200, max_depth=None, min_samples_leaf=1, random_state=42)  # 与 train_restaurant_model.py fit_model 对齐（2026-09-16 调参实验）
+        model = HistGradientBoostingRegressor(random_state=42)  # 与 train_restaurant_model.py fit_model 对齐（2026-09-17 迁移 HistGB）
         model_data = {'model': model, 'ohe': None, 'le_dict': {}, 'scaler': None}
 
     # 加载真实反馈
