@@ -47,7 +47,7 @@ describe('用户流程与存储深度检查', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    const uname = 'autologin_' + Date.now();
+    const uname = 'auto_' + Date.now();  // 18字符,≤20上限(Date.now()13位;前缀过长会被maxlength=20拒绝)
     const upass = 'Autologin123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
@@ -118,7 +118,7 @@ describe('用户流程与存储深度检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
     // 注册新用户
-    const uname = 'prefsave_' + Date.now();
+    const uname = 'prefs_' + Date.now();  // 19字符,≤20上限
     const upass = 'Prefsave123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
