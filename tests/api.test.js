@@ -3,6 +3,20 @@
 
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单/预测载荷不能用重播种前的不存在 ID)
+var dishPool = [
+  { id: 1, name: '测试菜品', price: 18 },
+  { id: 2, name: '菜品B', price: 25 },
+  { id: 3, name: '菜品C', price: 32 },
+];
+before(async () => {
+  try {
+    const r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length >= 3) dishPool = list.slice(0, 3).map(function(d) { return { id: d.id, name: d.name, price: d.price }; });
+  } catch (e) {}
+});
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
@@ -241,7 +255,7 @@ describe('订单 API', () => {
       method: 'POST',
       body: JSON.stringify({
         userId: 'test_user',
-        items: [{ id: 1, name: '测试菜品', price: 18 }],
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }],
         totalPrice: 18,
       }),
     });
@@ -472,7 +486,7 @@ describe('订单状态管理 API', () => {
   before(async () => {
     const r = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'status_test', items: [{ id: 1, name: '测试', price: 10 }], totalPrice: 10 }),
+      body: JSON.stringify({ userId: 'status_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price }),
     });
     orderId = r.body.orderId || '';
     // 获取管理员token用于订单状态更新（需要认证）
@@ -760,7 +774,7 @@ describe('订单全流程测试', () => {
       method: 'POST',
       body: JSON.stringify({
         userId: 'flow_test',
-        items: [{ id: 1, name: '测试菜品', price: 25 }],
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }],
         totalPrice: 25,
         tableNumber: 3,
       }),
@@ -1263,7 +1277,7 @@ describe('分类过滤', () => {
   it('GET /api/dishes 返回的菜品分类应完整', async () => {
     const { body } = await api('/api/dishes');
     const categories = [...new Set(body.dishes.map(d => d.category))];
-    assert.ok(categories.includes('招牌'), '应包含招牌');
+    assert.ok(categories.includes('招牌与游西安必打卡'), '应包含招牌(全名)');
     assert.ok(categories.includes('传承陕菜'), '应包含传承陕菜');
     assert.ok(categories.includes('陕西小吃'), '应包含陕西小吃');
     assert.ok(categories.includes('特色凉菜'), '应包含特色凉菜');
@@ -1440,7 +1454,7 @@ describe('订单创建完整字段', () => {
       method: 'POST',
       body: JSON.stringify({
         userId: 'table_test',
-        items: [{ id: 1, name: '测试菜品', price: 28, quantity: 2 }],
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 2 }],
         totalPrice: 56,
         tableNumber: 5,
       }),
@@ -1456,9 +1470,9 @@ describe('订单创建完整字段', () => {
       body: JSON.stringify({
         userId: 'multi_test',
         items: [
-          { id: 1, name: '菜品A', price: 18 },
-          { id: 2, name: '菜品B', price: 25 },
-          { id: 3, name: '菜品C', price: 32 },
+          { id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price },
+          { id: dishPool[1].id, name: dishPool[1].name, price: dishPool[1].price },
+          { id: dishPool[2].id, name: dishPool[2].name, price: dishPool[2].price },
         ],
         totalPrice: 75,
       }),
@@ -1472,7 +1486,7 @@ describe('订单创建完整字段', () => {
       method: 'POST',
       body: JSON.stringify({
         userId: 'free_test',
-        items: [{ id: 1, name: '免费菜品', price: 0 }],
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: 0 }],
         totalPrice: 0,
       }),
     });
@@ -1515,7 +1529,7 @@ describe('订单状态筛选完整', () => {
   before(async () => {
     adminToken = await getAdminToken();
     const r = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'filter_test', items: [{ id: 1, name: '测试', price: 10 }], totalPrice: 10 }),
+      method: 'POST', body: JSON.stringify({ userId: 'filter_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price }),
     });
     orderId = r.body.orderId || '';
   });
