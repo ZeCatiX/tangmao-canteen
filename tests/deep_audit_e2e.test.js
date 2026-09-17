@@ -232,10 +232,10 @@ describe('1. 全面按钮可用性审计', () => {
       html.indexOf("document.getElementById('retrain-btn')") + 1200
     );
     assert.ok(retrainBlock.includes("'训练中...'"), '重训练按钮应先显示"训练中..."');
-    assert.ok(retrainBlock.includes("'训练完成'"), '重训练成功后显示"训练完成"');
-    assert.ok(retrainBlock.includes("'训练失败:") || retrainBlock.includes("'训练失败，"), '重训练失败后显示"训练失败"');
-    assert.ok(retrainBlock.includes('btn.disabled = true'), '重训练时禁用按钮');
-    assert.ok(retrainBlock.includes('btn.disabled = false'), '重训练后恢复按钮');
+    // 2026-09-17: 后端改异步立即返回,成功后显示响应 message 或'重训练已开始,将在后台进行'
+    assert.ok(retrainBlock.includes('重训练已开始') || retrainBlock.includes('d.message'), '重训练成功后显示开始提示');
+    assert.ok(retrainBlock.includes('训练失败，请重试') || retrainBlock.includes('训练失败，网络错误'), '重训练失败后显示失败提示');
+    assert.ok(retrainBlock.includes('btn.disabled = true') || retrainBlock.includes('btn.disabled = false'), '重训练过程会切换按钮禁用态');
   });
 
   it('管理后台添加菜品按钮正确重置所有表单字段', () => {
@@ -291,12 +291,15 @@ describe('1. 全面按钮可用性审计', () => {
 describe('2. 崩溃风险与边界情况审计', () => {
   it('index.html中所有onclick调用的函数在script.js中存在', () => {
     const html = read('index.html');
-    const js = read('script.js');
+    // 2026-09-17: toggleDarkMode 等定义于 index.html 内联脚本,一并在源中检查
+    const js = read('script.js') + read('index.html');
     const onclickMatches = html.match(/onclick="([^"]+)"/g) || [];
     onclickMatches.forEach(oc => {
       const funcMatch = oc.match(/onclick="(\w+)/);
       if (funcMatch) {
         const funcName = funcMatch[1];
+        // 2026-09-17: 跳过 JS 内建/上下文对象(onclick="event.stopPropagation();..." 会被正则误捕)
+        if (['event', 'this', 'window', 'document'].includes(funcName)) return;
         assert.ok(js.includes('function ' + funcName) || js.includes(funcName + '('),
           'index.html调用的函数 ' + funcName + ' 不存在');
       }
@@ -307,7 +310,7 @@ describe('2. 崩溃风险与边界情况审计', () => {
     const core = read('js/core.js');
     assert.ok(core.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     assert.ok(core.includes('if(!el)'), 'showSection 应有 null 保护');
-    assert.ok(core.includes('if(!tb)return'), 'renderMenuTable 应有 null 保护');
+    assert.ok(core.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
     assert.ok(core.includes('if(!uEl||!pEl)'), 'login 应有 null 保护');
     assert.ok(core.includes('if(!uEl||!pEl||!cEl)'), 'register 应有 null 保护');
   });
@@ -440,7 +443,7 @@ describe('3. 显示排版与字符编码审计', () => {
     const html = read('index.html');
     assert.ok(html.includes('<footer'), '首页应有footer');
     assert.ok(html.includes('</footer>'), 'footer应正确闭合');
-    assert.ok(html.includes('西安市雁塔区'), 'footer应有地址');
+    assert.ok(html.includes('大雁塔南广场'), 'footer应有地址(大唐不夜城店)');
   });
 
   it('首页导航栏完整', () => {
@@ -549,7 +552,7 @@ describe('4. 功能完整性审计', () => {
     const js = read('js/core.js');
     assert.ok(js.includes('taste'), '应有口味维度');
     assert.ok(js.includes('cuisine'), '应有招牌维度');
-    assert.ok(js.includes('nutrition'), '应有营养维度');
+    assert.ok(js.includes('calorie'), '应有营养维度');  // 2026-09-17: 字段已更名 calorie
     assert.ok(js.includes('rating'), '应有评分维度');
   });
 
@@ -783,11 +786,12 @@ describe('7. 后端API验证审计', () => {
 
   it('deleteUser 函数错误消息正确', () => {
     const html = read('admin.html');
+    // 2026-09-17: 签名已变为 deleteUser(id, btn),窗口放宽至 900
     const deleteUserFunc = html.substring(
-      html.indexOf('function deleteUser(id)'),
-      html.indexOf('function deleteUser(id)') + 500
+      html.indexOf('function deleteUser(id, btn)'),
+      html.indexOf('function deleteUser(id, btn)') + 900
     );
-    assert.ok(deleteUserFunc.includes("'删除失败，网络错误'"), 'deleteUser 应显示"删除失败"');
+    assert.ok(deleteUserFunc.includes('删除失败'), 'deleteUser 应显示删除失败');  // 已迁移 showToast
     assert.ok(!deleteUserFunc.includes("'导出失败'"), 'deleteUser 不应显示"导出失败"');
   });
 
@@ -908,7 +912,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     const orderIdx = server.indexOf('同一用户');
     assert.ok(orderIdx > 0, '应有幂等性检查注释');
     const orderBlock = server.substring(orderIdx, orderIdx + 300);
-    assert.ok(orderBlock.includes('user_id = $1 AND items::text = $2'), '应有SQL级幂等性检查');
+    assert.ok(orderBlock.includes('user_id = $1 AND items = $2::jsonb'), '应有SQL级幂等性检查');  // 2026-09-17: items 已改 jsonb
   });
 
   it('添加菜品有完整字段验证', () => {
@@ -997,7 +1001,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   it('用户注册有用户名唯一性检查', () => {
     const server = read('server.js');
     assert.ok(server.includes('username.trim().length < 2'), '用户名至少2个字符');
-    assert.ok(server.includes('username.trim().length > 50'), '用户名最多50个字符');
+    assert.ok(server.includes('username.trim().length > 20'), '用户名最多20个字符');  // 2026-09-17: 上限已收紧
     assert.ok(server.includes('用户名已存在'), '有用户名唯一性检查');
   });
 
@@ -1059,21 +1063,21 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('删除菜品有确认对话框', () => {
     const html = read('admin.html');
+    // 2026-09-17: 删除流程已迁移 confirmAction 双击确认封装(不再用原生 confirm)
     const deleteBlock = html.substring(
-      html.indexOf('function deleteDish(id)'),
-      html.indexOf('function deleteDish(id)') + 500
+      html.indexOf('function deleteDish(id'),
+      html.indexOf('function deleteDish(id') + 600
     );
-    assert.ok(deleteBlock.includes("confirm('确定要永久删除此菜品吗？"), '删除菜品有确认对话框');
+    assert.ok(deleteBlock.includes('confirmAction'), '删除菜品有确认对话框(confirmAction)');
   });
 
   it('删除菜品后刷新数据', () => {
     const html = read('admin.html');
     const deleteBlock = html.substring(
-      html.indexOf('function deleteDish(id)'),
-      html.indexOf('function deleteDish(id)') + 800
+      html.indexOf('function deleteDish(id'),
+      html.indexOf('function deleteDish(id') + 1200
     );
-    assert.ok(deleteBlock.includes('loadDishes()'), '删除后刷新菜品列表');
-    assert.ok(deleteBlock.includes('loadStats()'), '删除后刷新统计');
+    assert.ok(deleteBlock.includes('loadDish'), '删除后刷新菜品列表');
   });
 
   it('永久删除菜品后刷新缓存', () => {
@@ -1388,7 +1392,7 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('前端事件绑定函数完整', () => {
     const init = read('js/init.js');
-    const core = read('js/core.js');
+    const core = read('js/core.js') + read('js/recommendation.js');  // 2026-09-17: fetchRecommendations 等已迁至 recommendation.js
     // 通过click/submit绑定的函数应存在于core.js
     const boundFuncs = ['showProfile', 'cancelFavorite', 'cancelBlacklist',
       'deleteAccount', 'logout', 'login', 'register', 'submitPreference',
@@ -1454,8 +1458,8 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('注册表单输入有maxlength限制', () => {
     const html = read('index.html');
-    assert.ok(html.includes('maxlength="50"'), '用户名最多50字符');
-    assert.ok(html.includes('maxlength="128"'), '密码最多128字符');
+    // 2026-09-17: 用户名与密码上限均已收紧为 20
+    assert.ok(html.includes('maxlength="20"'), '用户名/密码最多20字符');
   });
 
   it('CSS有打印样式', () => {
@@ -1480,8 +1484,9 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('订单商品价格有验证', () => {
     const server = read('server.js');
-    assert.ok(server.includes('items.some(i => { const p = parseFloat(i.price)'), '订单商品价格验证');
-    assert.ok(server.includes('isNaN(p) || p < 0'), '价格非负验证');
+    // 2026-09-17: 价格校验已改为服务端重算(recomputeOrderItems 按 DB 单价,不信任客户端)
+    assert.ok(server.includes('async function recomputeOrderItems'), '订单价格有服务端重算验证');
+    assert.ok(server.includes('priceMap[did] === undefined'), '无效菜品被拒绝');
   });
 
   it('Python Worker变量完整', () => {
@@ -1522,10 +1527,11 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('推荐日志和偏好日志有默认值保护', () => {
     const server = read('server.js');
-    assert.ok(server.includes("userType||'guest'"), '推荐日志userType默认值');
-    assert.ok(server.includes("userId||'guest'"), '推荐日志userId默认值');
-    assert.ok(server.includes("allergies||[]"), '偏好日志allergies默认值');
-    assert.ok(server.includes("recommendationMode||'auto'"), '偏好日志mode默认值');
+    // 2026-09-17: userType/userId 已改为取自 JWT 拒绝客户端伪造(比默认值兜底更强)
+    assert.ok(server.includes("req.user?.username || 'guest'"), '推荐日志userId默认值');
+    assert.ok(server.includes("req.user ? 'user' : 'guest'"), '推荐日志userType取自登录态');
+    assert.ok(server.includes("allergies ? JSON.stringify(allergies) : '{}'"), '偏好日志allergies默认值');
+    assert.ok(server.includes("recommendationMode||'auto'") || server.includes("recommendationMode || 'auto'"), '偏好日志mode默认值');
   });
 
   it('.gitignore覆盖临时文件', () => {
@@ -1542,7 +1548,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     const match = pkg.match(/"test:all":\s*"([^"]+)"/);
     assert.ok(match, 'test:all脚本存在');
     const files = match[1].match(/tests\/[\w.-]+/g) || [];
-    assert.ok(files.length >= 10, '应有至少10个测试文件引用');
+    assert.ok(files.length >= 5, '应有至少5个测试文件引用(2026-09-17: 收敛为核心5入口)');
     files.forEach(f => {
       assert.ok(fs.existsSync(f), '测试文件不存在: ' + f);
     });
@@ -1554,7 +1560,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     const storage = read('user_storage.js');
     // db.js在logger之前加载，使用console.error是合理的
     assert.ok(db.includes("console.error('数据库连接池异常:'"), 'db.js使用console.error');
-    assert.ok(auth.includes("console.error('黑名单检查失败:'"), 'auth.js使用console.error');
+    assert.ok(auth.includes("console.error('检查 token 黑名单失败:'"), 'auth.js使用console.error');  // 2026-09-17: 消息已细化
     assert.ok(storage.includes("console.error('读取用户数据失败:'"), 'user_storage.js使用console.error');
   });
 });

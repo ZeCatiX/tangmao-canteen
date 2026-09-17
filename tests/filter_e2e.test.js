@@ -42,7 +42,7 @@ describe('菜单筛选器测试', () => {
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const rows = document.querySelectorAll('#dataset-table-body tr').length;
-      const cats = [...new Set([...document.querySelectorAll('#dataset-table-body tr td:nth-child(2)')].map(td => td.textContent))];
+      const cats = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-info')].map(td => td.textContent))];
       return { count, rows, cats };
     });
     assert.ok(info.rows <= 69, '筛选后行数应≤69: ' + info.rows);
@@ -61,7 +61,7 @@ describe('菜单筛选器测试', () => {
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const rows = document.querySelectorAll('#dataset-table-body tr').length;
-      const spices = [...new Set([...document.querySelectorAll('#dataset-table-body tr td:nth-child(4)')].map(td => td.textContent))];
+      const spices = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-reason')].map(td => td.textContent))];
       return { count, rows, spices };
     });
     assert.ok(info.rows >= 1, '筛选后应有结果: ' + info.rows);

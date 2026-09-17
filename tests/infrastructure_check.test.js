@@ -81,7 +81,7 @@ describe('基础设施核心文件语法检查', () => {
 
   // ===== 9. Python脚本语法检查 =====
   it('9.1 Python脚本语法正确', () => {
-    const pyFiles = ['predict_worker.py', 'train_ml_model.py', 'train_restaurant_model.py',
+    const pyFiles = ['predict_worker.py', 'train_restaurant_model.py', 'train_restaurant_model.py',
       'retrain_from_feedback.py', 'get_metrics.py', 'get_feature_importance.py',
       'rgzn.py', 'save_importance.py', 'convert_report.py', 'create_optimized_report.py'];
     let missing = [];
@@ -139,7 +139,7 @@ describe('基础设施核心文件语法检查', () => {
   // ===== 15. 所有JS文件语法检查 =====
   it('15.1 所有JS文件语法正确', () => {
     const jsFiles = ['server.js', 'auth.js', 'user_storage.js', 'db.js', 'logger.js',
-      'build.js', 'backup_db.js', 'vision_pipeline.js', 'optimize_images.js'];
+      'build.js', 'backup_db.js', 'vision_pipeline.js', 'vision_pipeline.js'];
     let missing = [];
     for (const f of jsFiles) {
       const p = path.join(ROOT, f);

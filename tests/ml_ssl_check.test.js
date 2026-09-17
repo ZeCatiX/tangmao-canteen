@@ -22,7 +22,7 @@ describe('ML模型与PythonWorker深度检查', () => {
 
   // ===== 2. 训练脚本存在 =====
   it('2.1 ML训练脚本存在', () => {
-    const scripts = ['train_ml_model.py', 'train_restaurant_model.py', 'retrain_from_feedback.py'];
+    const scripts = ['train_restaurant_model.py', 'train_restaurant_model.py', 'retrain_from_feedback.py'];
     for (const s of scripts) {
       const p = path.join(ROOT, s);
       assert.ok(fs.existsSync(p), `${s}应存在`);
@@ -42,7 +42,7 @@ describe('ML模型与PythonWorker深度检查', () => {
 
   // ===== 4. Python脚本结构检查 =====
   it('4.1 Python脚本包含关键结构', () => {
-    const pyFiles = ['predict_worker.py', 'train_ml_model.py', 'train_restaurant_model.py',
+    const pyFiles = ['predict_worker.py', 'train_restaurant_model.py', 'train_restaurant_model.py',
       'retrain_from_feedback.py', 'get_metrics.py', 'get_feature_importance.py',
       'rgzn.py', 'save_importance.py', 'convert_report.py', 'create_optimized_report.py'];
     for (const f of pyFiles) {

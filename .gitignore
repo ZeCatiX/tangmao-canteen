@@ -73,3 +73,12 @@ recommendation_effect.json
 /mermaid.min.js
 _restore_users.json
 _v*.png
+
+# 测试截图产物(每次全量回归自动重生成)
+screenshots/
+_shots/
+
+# 历史审查报告与临时诊断脚本(信息量大但已过时)
+审查报告_*.md
+tmp_*.js
+_final2.log
