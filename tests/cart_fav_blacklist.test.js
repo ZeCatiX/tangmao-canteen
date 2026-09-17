@@ -374,7 +374,7 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
   // ===== 13. 个人资料页显示收藏和拉黑列表 =====
   it('13.1 个人资料页显示收藏列表', async () => {
     resetErrors();
-    const uniq = 'profile_' + Date.now();
+    const uniq = 'profile' + Date.now();
     await registerAndLogin(page, uniq);
     await getRecommendations(page);
     // 收藏一个菜品

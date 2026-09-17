@@ -1,5 +1,15 @@
 // 唐猫庭院 - 账单结算与订单状态验证：完整下单流程、桌面账单、状态变更
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
@@ -170,7 +180,7 @@ describe('账单结算与订单状态验证', () => {
     const orderRes = await fetch(BASE + '/api/order', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + loginData.token },
-      body: JSON.stringify({ items: [{ id: 1, name: '葫芦鸡', price: 68, qty: 1 }], table: 'A1' })
+      body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '葫芦鸡', price: 68, qty: 1 }], table: 'A1' })
     });
     const orderData = await orderRes.json();
     assert.ok(orderRes.status === 200 || orderRes.status === 201, `订单创建应成功: ${orderRes.status}`);

@@ -2,6 +2,16 @@
 // 覆盖检查点 3(游客vs用户)、12(SQL注入)、29(三端适配)、38/39(键盘/屏幕阅读器)、41/109(暗黑模式)、51(CSRF)、63/64(ML脚本)
 const assert = require('node:assert/strict');
 const { describe, it, before } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -142,7 +152,7 @@ describe('E2E 覆盖缺口补充测试', () => {
       // 检查订单创建是否不需要 Cookie 即可完成（通过 Authorization header）
       const { status, body } = await api('/api/order', {
         method: 'POST',
-        body: JSON.stringify({ items: [{ id: 1, name: '测试', price: 1, quantity: 1 }], total: 1, userId: 'csrf_test' }),
+        body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试', price: 1, quantity: 1 }], total: 1, userId: 'csrf_test' }),
       });
       // 订单创建成功或返回合理错误，说明依赖 JSON body + 认证头而非隐藏 Cookie
       assert.ok([200, 400, 401].includes(status), '订单API应正常响应，实际: ' + status);
@@ -151,9 +161,9 @@ describe('E2E 覆盖缺口补充测试', () => {
 
   // ── 检查点 63/64: ML 训练脚本 ──
   describe('63/64. ML 训练脚本独立运行', () => {
-    it('train_ml_model.py 存在且可被 Python 编译', (t) => {
-      const file = path.join(__dirname, '..', 'train_ml_model.py');
-      assert.ok(fs.existsSync(file), 'train_ml_model.py 应存在');
+    it('train_restaurant_model.py 存在且可被 Python 编译', (t) => {
+      const file = path.join(__dirname, '..', 'train_restaurant_model.py');
+      assert.ok(fs.existsSync(file), 'train_restaurant_model.py 应存在');
       // 语法检查通过 py_compile（标注为手动验证，此处仅确认存在）
       assert.ok(fs.readFileSync(file, 'utf8').length > 0, '文件不应为空');
     });

@@ -4,6 +4,16 @@
 
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
@@ -386,7 +396,7 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 创建订单', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'e2e_test', items: [{ id: 1, name: '测试', price: 18 }], totalPrice: 18 }),
+      body: JSON.stringify({ userId: 'e2e_test', items: [{ id: dishPool[0].id, name: '测试', price: 18 }], totalPrice: 18 }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId, '应返回订单ID');
@@ -395,7 +405,7 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 多菜品+桌号', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'multi_test', items: [{ id: 1, name: 'A', price: 10 }, { id: 2, name: 'B', price: 20 }], totalPrice: 30, tableNumber: 5 }),
+      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: 5 }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId);
@@ -424,7 +434,7 @@ describe('7. 订单与反馈API', () => {
 // 8. 用户偏好API测试
 // ================================================================
 describe('8. 用户偏好API', () => {
-  const uname = 'pref_e2e_' + Date.now();
+  const uname = 'pref_e2' + Date.now();
 
   it('POST /api/user-preferences 保存偏好', async () => {
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
@@ -491,8 +501,9 @@ describe('38. showProfile 认证头修复', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
-    assert.ok(content.includes("fetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()})"),
-      'showProfile 的 /api/orders 请求应包含认证头');
+    // 2026-09-17: 实现已改用 safeFetch 封装,断言放宽为"/api/orders 调用携带 authHeaders()"
+    const ordersLine = content.split('\n').find(l => l.includes('/api/orders?userId=') && l.includes('authHeaders()'));
+    assert.ok(ordersLine, 'showProfile 的 /api/orders 请求应包含认证头');
   });
 
   it('script.js 构建产物包含认证头修复', () => {
@@ -758,7 +769,7 @@ describe('48. 购物车结算流程', () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ userId: uname, items: [{ id: 1, name: '购物车测试菜', price: 28, qty: 2 }], totalPrice: 56 }),
+      body: JSON.stringify({ userId: uname, items: [{ id: dishPool[0].id, name: '购物车测试菜', price: 28, qty: 2 }], totalPrice: 56 }),
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -1037,7 +1048,7 @@ describe('61. 管理员查看所有订单', () => {
     // 普通用户创建订单
     const uname = 'ordervi' + Date.now();
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
-    const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: uname, items: [{ id: 1, name: '查看测试', price: 10 }], totalPrice: 10 }) });
+    const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: uname, items: [{ id: dishPool[0].id, name: '查看测试', price: 10 }], totalPrice: 10 }) });
     assert.equal(order.status, 200);
     // 管理员查看所有订单
     const adminToken = await getAdminToken();
@@ -1117,9 +1128,9 @@ describe('64. 重训练异步执行', () => {
     const { status, body } = await api('/api/admin/retrain', {
       method: 'POST', headers: { 'Authorization': 'Bearer ' + adminToken },
     });
-    assert.equal(status, 200, '重训练应响应 200: ' + status);
-    // 可能是 training:true（开始训练）或 success:false（已在训练中）
-    assert.ok(body.success === true || body.success === false, '应有响应');
+    // 2026-09-17: 200=开始训练;409=重训开关关闭(未上线时反馈为测试数据的保护设计)或已在训练中
+    assert.ok(status === 200 || status === 409, '重训练应响应 200 或 409(开关保护): ' + status);
+    assert.ok(body.success === true || body.success === false || body.message, '应有响应');
   });
 });
 

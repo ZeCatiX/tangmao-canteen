@@ -1,5 +1,15 @@
 // 唐猫庭院 - HTTPS、Python Worker、用户存储深度检查
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert/strict');
 require('dotenv').config();
 
@@ -259,7 +269,7 @@ describe('用户存储和认证流程检查', () => {
       headers: { 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
-        items: [{ id: 1, name: '测试菜品', price: 20, type: '偏好推荐', matchRate: 0.8 }],
+        items: [{ id: dishPool[0].id, name: '测试菜品', price: 20, type: '偏好推荐', matchRate: 0.8 }],
         totalPrice: 20
       }),
     });

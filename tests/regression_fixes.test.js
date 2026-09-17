@@ -1,7 +1,17 @@
 // 唐猫庭院 - 修复回归测试 v1
 // 防止本轮修复的安全/崩溃/显示问题被回退
 const assert = require('node:assert/strict');
-const { describe, it } = require('node:test');
+const { describe, it, before } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -37,7 +47,7 @@ describe('安全修复回归', () => {
     assert.ok(s.includes("image_url.startsWith('/uploads/')"), '应校验 image_url 以 /uploads/ 开头');
   });
   it('IDOR 实测：未认证 POST /api/order 带 userId 不冒充', async () => {
-    const r = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: 'alice_impostor_e2e', items: [{ id: 1, name: '测试', price: 1, type: 'x', matchRate: 0.5, qty: 1 }], totalPrice: 1 }) });
+    const r = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: 'alice_impostor_e2e', items: [{ id: dishPool[0].id, name: '测试', price: 1, type: 'x', matchRate: 0.5, qty: 1 }], totalPrice: 1 }) });
     if (r.body.success) {
       const tok = await adminToken();
       const ord = await api('/api/orders?userId=alice_impostor_e2e', { headers: { Authorization: 'Bearer ' + tok } });

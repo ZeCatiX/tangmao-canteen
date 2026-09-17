@@ -119,7 +119,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 2. 登录后偏好设置→推荐 =====
   it('2.1 登录用户偏好设置→获取推荐', async () => {
     resetErrors();
-    const uniq = 'e2e_pref_' + Date.now();
+    const uniq = 'e2e_pre' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await getRecommendations(page);
     const recVisible = await page.evaluate(() => {
@@ -138,7 +138,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 3. 收藏菜品（验证CSP不阻止onclick） =====
   it('3.1 收藏推荐菜品（CSP inline event handler）', async () => {
     resetErrors();
-    const uniq = 'e2e_fav_' + Date.now();
+    const uniq = 'e2e_fav' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await getRecommendations(page);
     const favResult = await page.evaluate(() => {
@@ -159,7 +159,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 4. 拉黑菜品（验证CSP不阻止onclick） =====
   it('4.1 拉黑推荐菜品（CSP inline event handler）', async () => {
     resetErrors();
-    const uniq = 'e2e_blk_' + Date.now();
+    const uniq = 'e2e_blk' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await getRecommendations(page);
     const blkResult = await page.evaluate(() => {
@@ -178,7 +178,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 5. 评分反馈（验证openStarFeedback可执行） =====
   it('5.1 对推荐菜品进行星级评分', async () => {
     resetErrors();
-    const uniq = 'e2e_star_' + Date.now();
+    const uniq = 'e2e_sta' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await getRecommendations(page);
     const starResult = await page.evaluate(() => {
@@ -201,7 +201,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 6. 选好了→结束推荐流程 =====
   it('6.1 选好了→结束推荐流程', async () => {
     resetErrors();
-    const uniq = 'e2e_end_' + Date.now();
+    const uniq = 'e2e_end' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await getRecommendations(page);
     await page.evaluate(() => document.getElementById('end-recommendation')?.click());
@@ -234,7 +234,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 8. 个人资料页 =====
   it('8.1 登录后查看个人资料页', async () => {
     resetErrors();
-    const uniq = 'e2e_profile_' + Date.now();
+    const uniq = 'e2e_pro' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     const profileNavVisible = await page.evaluate(() => {
       const item = document.getElementById('nav-profile-item');
@@ -254,7 +254,7 @@ describe('用户全流程深度交互测试', () => {
   // ===== 9. 退出登录 =====
   it('9.1 退出登录返回首页', async () => {
     resetErrors();
-    const uniq = 'e2e_logout_' + Date.now();
+    const uniq = 'e2e_log' + Date.now();
     await registerAndLogin(page, uniq, 'TestPass123!');
     await page.evaluate(() => document.getElementById('nav-profile')?.click());
     await sleep(500);

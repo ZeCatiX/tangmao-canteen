@@ -46,7 +46,7 @@ describe('个人中心与高级交互测试', () => {
   it('1.1 用户登录后进入个人中心（我的收藏）', async () => {
     resetErrors();
     // 先注册一个用户
-    const uniq = 'profile_' + Date.now();
+    const uniq = 'profile' + Date.now();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => document.getElementById('nav-user')?.click());

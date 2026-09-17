@@ -181,7 +181,7 @@ describe('表单验证与认证深度检查', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    const uname = 'refresh_' + Date.now();
+    const uname = 'refresh' + Date.now();
     const upass = 'Refresh123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
@@ -258,7 +258,7 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = 'noagree_' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) { el.value = 'noagree' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-password');

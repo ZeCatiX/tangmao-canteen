@@ -3,6 +3,16 @@
 
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
@@ -182,7 +192,7 @@ describe('完整用户会话流程', () => {
       method: 'POST',
       body: JSON.stringify({
         userId: testUser,
-        items: [{ id: 1, name: 'E2E测试菜品', price: 18 }],
+        items: [{ id: dishPool[0].id, name: 'E2E测试菜品', price: 18 }],
         totalPrice: 18,
       }),
     });
@@ -223,7 +233,7 @@ describe('厨房看板 API 测试', () => {
     const order = await api('/api/order', {
       method: 'POST',
       body: JSON.stringify({
-        userId: 'kitchen_test', items: [{ id: 1, name: '厨房测试', price: 10 }], totalPrice: 10,
+        userId: 'kitchen_test', items: [{ id: dishPool[0].id, name: '厨房测试', price: 10 }], totalPrice: 10,
       }),
     });
     assert.equal(order.status, 200);

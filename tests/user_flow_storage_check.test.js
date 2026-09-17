@@ -252,7 +252,7 @@ describe('用户流程与存储深度检查', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    const uname = 'dupuser_' + Date.now();
+    const uname = 'dupuser' + Date.now();
     const upass = 'Dupuser123';
     // 第一次注册
     await page.evaluate(() => document.getElementById('register-btn')?.click());

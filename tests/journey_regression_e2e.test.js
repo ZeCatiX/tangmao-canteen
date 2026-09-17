@@ -85,7 +85,7 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
   // ===== 2. 注册 -> 登录 -> 偏好 -> 推荐 =====
   it('2.1 新用户注册完整流程', async () => {
     resetErrors();
-    const uniq = 'journey_' + Date.now();
+    const uniq = 'journey' + Date.now();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
     await sleep(400);
     // 点击导航登录，再切到注册（带滚动确保可见）

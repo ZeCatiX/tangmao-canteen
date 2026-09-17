@@ -2,6 +2,16 @@
 // 覆盖：admin.html 中文回归、管理后台数据加载、边界场景
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
@@ -342,7 +352,7 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/order 负价格返回 400', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: 1, name: '负价', price: -10 }], totalPrice: -10 }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '负价', price: -10 }], totalPrice: -10 }),
     });
     assert.equal(status, 400, '负价格应返回 400');
   });
@@ -350,7 +360,7 @@ describe('4. 边界与安全', () => {
   it('POST /api/order 非数字价格返回 400（NaN 绕过修复）', async () => {
     // 非数字价格应被拒绝，返回 400，不写入订单
     const { status, body } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: 1, name: '菜', price: 'abc' }] }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 'abc' }] }),
     });
     assert.equal(status, 400, `非数字价格应返回 400，实际 ${status}`);
     assert.ok(body.error, '应返回错误信息');
@@ -359,7 +369,7 @@ describe('4. 边界与安全', () => {
   it('POST /api/order 空字符串总价兜底为 0 不崩溃', async () => {
     // 空字符串 totalPrice 应被兜底为 0，订单可正常创建
     const { status, body } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: 1, name: '菜', price: 10 }], totalPrice: '' }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 10 }], totalPrice: '' }),
     });
     assert.equal(status, 200, `空字符串总价订单应创建成功，实际 ${status}`);
     assert.ok(body.orderId, '应返回订单ID');

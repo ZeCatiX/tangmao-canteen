@@ -1,5 +1,15 @@
 // 唐猫庭院 - 用户密码哈希与数据表结构深度E2E测试
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert/strict');
 require('dotenv').config();
 
@@ -63,7 +73,7 @@ describe('用户密码安全与数据表结构测试', () => {
 
   // ===== 3. 用户列表不暴露密码 =====
   it('3.1 管理后台用户列表不暴露密码', async () => {
-    const uniq = 'pw_list_' + Date.now();
+    const uniq = 'pw_list' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'PwList123!' }),
@@ -179,7 +189,7 @@ describe('用户密码安全与数据表结构测试', () => {
       headers: { 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
-        items: [{ id: 1, name: '测试菜', price: 20, type: '偏好推荐', matchRate: 0.9 }],
+        items: [{ id: dishPool[0].id, name: '测试菜', price: 20, type: '偏好推荐', matchRate: 0.9 }],
         totalPrice: 20
       }),
     });

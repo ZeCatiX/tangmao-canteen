@@ -2,6 +2,16 @@
 // 补充 8 个方向：并发争用、完整生命周期、数据边界、推荐深度、管理后台深度、购物车逻辑、安全扩展、厨房看板流转
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const { Pool } = require('pg');
 const crypto = require('crypto');
 require('dotenv').config();
@@ -59,7 +69,7 @@ describe('全面丰富 E2E 测试', () => {
       const results = await Promise.all(
         Array.from({ length: 20 }, (_, i) => api('/api/order', {
           method: 'POST',
-          body: JSON.stringify({ items: [{ id: 1, name: '测试' + i, price: 1, quantity: 1 }], total: 1, userId: 'rich_concurrent_' + i }),
+          body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试' + i, price: 1, quantity: 1 }], total: 1, userId: 'rich_concurrent_' + i }),
         }))
       );
       const okStatuses = results.filter(r => r.status === 200 || r.status === 400 || r.status === 429);
@@ -94,7 +104,7 @@ describe('全面丰富 E2E 测试', () => {
       const prefs = await api('/api/user-preferences', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ userId: uname, spiciness: '微辣', price: '20-40' }) });
       assert.equal(prefs.status, 200, '保存偏好应成功，实际: ' + prefs.status + ' ' + JSON.stringify(prefs.body));
       // 下单（带认证头）
-      const order = await api('/api/order', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ items: [{ id: 1, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: uname }) });
+      const order = await api('/api/order', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: uname }) });
       assert.equal(order.status, 200, '下单应成功，实际: ' + order.status);
       // 评价（带认证头）
       const feedback = await api('/api/feedback', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ dishId: 1, score: 5, userId: uname }) });
@@ -237,7 +247,7 @@ describe('全面丰富 E2E 测试', () => {
 
     it('订单状态可流转（创建→完成）', async () => {
       // 创建订单
-      const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ items: [{ id: 1, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: 'rich_kitchen_' + uid() }) });
+      const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: 'rich_kitchen_' + uid() }) });
       assert.equal(order.status, 200, '创建订单应成功');
       const orderId = order.body.orderId || order.body.id;
       assert.ok(orderId, '创建订单应返回 orderId');

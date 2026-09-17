@@ -43,7 +43,7 @@ describe('最后遗漏按钮与交互点验证', () => {
 
   // 辅助：注册并登录
   async function registerAndLogin() {
-    const uname = 'lastbtn_' + Date.now();
+    const uname = 'lastbtn' + Date.now();
     const upass = 'Lastbtn123';
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);

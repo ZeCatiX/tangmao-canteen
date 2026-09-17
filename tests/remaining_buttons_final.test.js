@@ -88,7 +88,7 @@ describe('剩余按钮最终点击测试', () => {
   it('3.1 个人资料页返回按钮可点击', async () => {
     resetErrors();
     // 注册并登录
-    const uname = 'backbtn_' + Date.now();
+    const uname = 'backbtn' + Date.now();
     const upass = 'Backbtn123';
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);

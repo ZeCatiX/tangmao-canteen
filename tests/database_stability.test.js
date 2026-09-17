@@ -49,7 +49,7 @@ describe('数据库连接与查询稳定性', () => {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + adminToken },
       body: JSON.stringify({
-        name: 'db_test_' + Date.now(),
+        name: 'db_test' + Date.now(),
         category: '测试',
         spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
         price: 10, rating: 4.5, calorie: 100, protein: 10,

@@ -84,7 +84,7 @@ describe('评价反馈与账户管理测试', () => {
 
   it('1.2 直接通过API提交评分（等价用户行为）', async () => {
     // 注册一个新用户并通过 API 提交反馈
-    const uniq = 'rateapi_' + Date.now();
+    const uniq = 'rateapi' + Date.now();
     const reg = await fetch(BASE + '/api/user/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -107,7 +107,7 @@ describe('评价反馈与账户管理测试', () => {
   // ===== 2. 删除账户 =====
   it('2.1 删除账户功能可用', async () => {
     resetErrors();
-    const uniq = 'delacct_' + Date.now();
+    const uniq = 'delacct' + Date.now();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => document.getElementById('nav-user')?.click());

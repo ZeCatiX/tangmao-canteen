@@ -189,7 +189,7 @@ describe('未覆盖交互路径补充检查', () => {
   // ===== 7. 个人资料页订单历史 =====
   it('7.1 个人资料页订单历史显示', async () => {
     resetErrors();
-    const uniq = 'history_' + Date.now();
+    const uniq = 'history' + Date.now();
     await registerAndLogin(page, uniq);
     await getRecommendations(page);
     // 下单

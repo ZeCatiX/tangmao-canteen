@@ -183,7 +183,7 @@ describe('深层边界与特殊场景测试', () => {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + adminToken },
       body: JSON.stringify({
-        name: 'batch_test_1_' + Date.now(), category: '测试',
+        name: 'batch_t' + Date.now(), category: '测试',
         spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
         price: 10, rating: 3.5, calorie: 100, protein: 5,
         isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
@@ -193,7 +193,7 @@ describe('深层边界与特殊场景测试', () => {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + adminToken },
       body: JSON.stringify({
-        name: 'batch_test_2_' + Date.now(), category: '测试',
+        name: 'batch_t' + Date.now(), category: '测试',
         spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜',
         price: 20, rating: 4.0, calorie: 200, protein: 10,
         isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'

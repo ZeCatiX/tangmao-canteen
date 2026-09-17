@@ -1,5 +1,15 @@
 // 唐猫庭院 - 反馈环路与统计联动E2E测试
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
+var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+before(async () => {
+  try {
+    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    var list = (r && (r.dishes || r)) || [];
+    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+  } catch (e) {}
+});
 const assert = require('node:assert/strict');
 const puppeteer = require('puppeteer');
 require('dotenv').config();
@@ -64,7 +74,7 @@ describe('反馈环路与统计联动测试', () => {
   it('1.1 用户反馈提交后管理后台可见', async () => {
     resetErrors();
     // 注册用户
-    const uniq = 'fb_loop_' + Date.now();
+    const uniq = 'fb_loop' + Date.now();
     const reg = await api('/api/user/register', {
       method: 'POST',
       body: JSON.stringify({ username: uniq, password: 'FbLoop123!' }),
@@ -114,7 +124,7 @@ describe('反馈环路与统计联动测试', () => {
       headers: { 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
-        items: [{ id: 1, name: '锅子鱼', price: 88, type: '偏好推荐', matchRate: 0.95 }],
+        items: [{ id: dishPool[0].id, name: '锅子鱼', price: 88, type: '偏好推荐', matchRate: 0.95 }],
         totalPrice: 88
       }),
     });

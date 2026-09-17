@@ -222,7 +222,7 @@ describe('高级交互验证', () => {
   it('6.1 登录后显示个人资料导航', async () => {
     resetErrors();
     // 注册新用户
-    const uname = 'navuser_' + Date.now();
+    const uname = 'navuser' + Date.now();
     const upass = 'Navuser123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);

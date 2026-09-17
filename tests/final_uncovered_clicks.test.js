@@ -72,7 +72,7 @@ describe('最终未覆盖交互点击测试', () => {
     // 跳转到注册页面
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
-    const uname = 'profile_' + Date.now();
+    const uname = 'profile' + Date.now();
     const upass = 'Profile123';
     // 使用evaluate填充注册表单（避免Puppeteer严格可见性检查）
     await page.evaluate((u) => {
