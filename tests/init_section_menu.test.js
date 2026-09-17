@@ -71,6 +71,8 @@ describe('init事件绑定完整性检查', () => {
     for (const id of btnIds) {
       // 动态生成的按钮通过事件委托绑定，不在init.js中直接绑定
       if (['refresh-recommendations', 'end-recommendation', 'end-logout-btn'].includes(id)) continue;
+      // 2026-09-17: Bootstrap data-bs-dismiss 按钮由框架处理关闭,无需 JS 绑定
+      if (['addon-close', 'table-picker-close'].includes(id)) continue;
       // 检查init.js中是否有click('id'或submit('id'或事件委托
       const inInit = init.includes(`'${id}'`) || init.includes(`"${id}"`);
       if (!inInit) unbound.push(id);
@@ -129,8 +131,8 @@ describe('init事件绑定完整性检查', () => {
     await page.evaluate(() => showDataset());
     await sleep(1500);
     const rowCount = await page.evaluate(() => {
-      const tbody = document.querySelector('#dataset-section tbody');
-      return tbody ? tbody.children.length : 0;
+      // 2026-09-17: 菜单已改卡片网格布局(.dish-card),不再是 tbody 表格行
+      return document.querySelectorAll('#dataset-section .dish-card').length;
     });
     assert.ok(rowCount > 0, '全部菜单应显示菜品行，实际: ' + rowCount);
     assert.equal(realErrors().length, 0, 'showDataset不应有错误');
@@ -169,8 +171,8 @@ describe('init事件绑定完整性检查', () => {
     });
     assert.equal(searchVal, '', '重置后搜索框应清空');
     const rowCount = await page.evaluate(() => {
-      const tbody = document.querySelector('#dataset-section tbody');
-      return tbody ? tbody.children.length : 0;
+      // 2026-09-17: 卡片网格布局(.dish-card)
+      return document.querySelectorAll('#dataset-section .dish-card').length;
     });
     assert.ok(rowCount > 0, '重置后应显示所有菜品');
     assert.equal(realErrors().length, 0, '重置筛选不应有错误');
@@ -234,13 +236,20 @@ describe('init事件绑定完整性检查', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
-    await sleep(400);
+    // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号会先弹选桌层(guest-btn 是进菜单)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08');
+      if (b) b.click();
+    });
+    await sleep(500);
     // 勾选"无过敏源"
     const allergyNone = await page.$('#allergy-none');
     if (allergyNone) {
       const checked = await page.evaluate(el => el.checked, allergyNone);
-      if (!checked) await allergyNone.click();
+      // 2026-09-17: 改用 JS 点击(与仓库测试惯例一致;真实鼠标点击在浮动栏/动画下易被遮挡)
+      if (!checked) await page.evaluate(() => document.getElementById('allergy-none').click());
       await sleep(200);
       // 其他过敏源应被禁用
       const disabled = await page.evaluate(() => {
@@ -249,7 +258,7 @@ describe('init事件绑定完整性检查', () => {
       });
       assert.ok(disabled, '勾选无过敏源后其他过敏源应被禁用');
       // 取消"无过敏源"
-      await allergyNone.click();
+      await page.evaluate(() => document.getElementById('allergy-none').click());
       await sleep(200);
       const enabled = await page.evaluate(() => {
         const boxes = document.querySelectorAll('input[name="allergy"]:not(#allergy-none)');

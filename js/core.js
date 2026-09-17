@@ -216,6 +216,8 @@ function showSection(sectionId,skipScroll){
    sel.addEventListener('change',updateModeDisplay);
   }
   const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
+  // 2026-09-17: 游客进偏好页同步过敏源联动态(勾"无"时其他项应为禁用,此前仅在重置表单时处理)
+  {const an=$('allergy-none');if(an&&an.checked&&currentUser==='guest'){['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'].forEach(id=>{if($(id))$(id).disabled=true;});}}
   // 桌号锁定：加菜流程中偏好页桌号同样锁定
   const lockedTable1=ssGet('lockedTable')||'';
   const ptb=document.getElementById('pref-table-number');

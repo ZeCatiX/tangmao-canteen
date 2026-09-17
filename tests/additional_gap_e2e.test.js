@@ -28,15 +28,15 @@ describe('点2 盲盒/换一批/选好了/退出按钮', () => {
     assert.ok(js.includes('退出'), '缺少退出文字');
   });
   it('换一批按钮调用 fetchRecommendations', () => {
-    const js = readFile('js/core.js');
-    assert.ok(js.includes("'refresh-recommendations':()=>fetchRecommendations"), '换一批按钮应绑定推荐刷新');
+    const js = readFile('js/recommendation.js');  // 2026-09-17: 按钮委托绑定已迁至 recommendation.js,且带参数
+    assert.ok(js.includes("'refresh-recommendations':()=>fetchRecommendations("), '换一批按钮应绑定推荐刷新');
   });
   it('选好了按钮调用 endRecommendation', () => {
-    const js = readFile('js/core.js');
-    assert.ok(js.includes("'end-recommendation':()=>endRecommendation"), '选好了按钮应绑定结束推荐');
+    const js = readFile('js/recommendation.js');
+    assert.ok(js.includes("'end-recommendation':()=>endRecommendation("), '选好了按钮应绑定结束推荐');
   });
   it('退出按钮调用 resetRecommendation', () => {
-    const js = readFile('js/core.js');
+    const js = readFile('js/recommendation.js');
     assert.ok(js.includes("'end-logout-btn':()=>{resetRecommendation();showSection('home-section')}") ||
               js.includes("'end-logout-btn':()=>{resetRecommendation()"), '退出按钮应绑定重置并返回首页');
   });
@@ -117,7 +117,8 @@ describe('点117 fix_error_leak修复检查', () => {
 describe('点41 暗黑模式', () => {
   it('CSS支持暗黑模式（prefers-color-scheme）', () => {
     const css = readFile('styles.css');
-    assert.ok(css.includes('prefers-color-scheme: dark'), 'CSS 应包含暗黑模式支持');
+    // 2026-09-17: 深色模式改为 class 架构(index.html 内联脚本检测系统偏好并切换 html.dark-mode)
+    assert.ok(css.includes('html.dark-mode'), 'CSS 应包含暗黑模式支持(html.dark-mode)');
     assert.ok(css.includes('background-color: #0f0f0f'), '暗黑模式应有深色背景');
   });
 });

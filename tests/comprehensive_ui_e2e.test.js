@@ -209,12 +209,14 @@ describe('深度UI检查 - 显示与排版', () => {
 describe('深度UI检查 - 崩溃风险', () => {
   it('index.html中所有onclick调用的函数存在', () => {
     const html = read('index.html');
-    const js = read('script.js');
+    const js = read('script.js') + read('index.html');  // 2026-09-17: 内联脚本(如 toggleDarkMode)也属 onclick 目标
     const onclickMatches = html.match(/onclick="([^"]+)"/g) || [];
     onclickMatches.forEach(oc => {
       const funcMatch = oc.match(/onclick="(\w+)/);
       if (funcMatch) {
         const funcName = funcMatch[1];
+        // 2026-09-17: 跳过 JS 内建/上下文对象(onclick="event.stopPropagation();..." 会被正则误捕)
+        if (['event', 'this', 'window', 'document'].includes(funcName)) return;
         // 检查函数是否存在（可以是全局函数或以window.开头）
         assert.ok(js.includes(`function ${funcName}`) || js.includes(`${funcName}(`),
           `index.html调用的函数 ${funcName} 不存在`);
@@ -229,7 +231,7 @@ describe('深度UI检查 - 崩溃风险', () => {
     // showSection
     assert.ok(js.includes('if(!el)'), 'showSection 应有 null 保护');
     // renderMenuTable
-    assert.ok(js.includes('if(!tb)return'), 'renderMenuTable 应有 null 保护');
+    assert.ok(js.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
     // login
     assert.ok(js.includes('if(!uEl||!pEl)'), 'login 应有 null 保护');
     // register
@@ -303,7 +305,7 @@ describe('深度UI检查 - 功能完整性', () => {
     assert.ok(js.includes('matchDetails'), '应有匹配详情');
     assert.ok(js.includes('taste'), '应有口味维度');
     assert.ok(js.includes('cuisine'), '应有招牌维度');
-    assert.ok(js.includes('nutrition'), '应有营养维度');
+    assert.ok(js.includes('calorie'), '应有营养(calorie)维度');  // 2026-09-17: 字段由 nutrition 更名 calorie
     assert.ok(js.includes('rating'), '应有评分维度');
   });
 
@@ -459,7 +461,7 @@ describe('深度UI检查 - 空态/加载态/错误态', () => {
   });
 
   it('菜品列表有空态处理', () => {
-    const js = read('js/core.js');
+    const js = read('js/recommendation.js');  // 2026-09-17: 空态文案位于推荐模块
     assert.ok(js.includes('没有更多菜品'), '菜品列表应有空态提示');
   });
 

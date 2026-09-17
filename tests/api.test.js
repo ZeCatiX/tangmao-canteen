@@ -1584,3 +1584,19 @@ describe('反馈完整信息', () => {
 });
 
 console.log('测试文件已加载，共 80+ 个测试用例（覆盖 50+ 端点）...');
+// 测试后清理:删除本文件产生的测试订单(精确 userId 列表,不触碰其他数据)
+after(async () => {
+  try {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      host: process.env.PG_HOST || 'localhost',
+      port: +(process.env.PG_PORT || 5432),
+      database: process.env.PG_DATABASE || 'tangmao',
+      user: process.env.PG_USER || 'postgres',
+      password: process.env.PG_PASSWORD,
+    });
+    const ids = ['test_user', 'status_test', 'flow_test', 'table_test', 'multi_test', 'free_test', 'filter_test', 'badqty_test', 'e2e_test'];
+    await pool.query('DELETE FROM orders WHERE user_id = ANY($1)', [ids]);
+    await pool.end();
+  } catch (e) { /* 清理失败不阻塞测试结果 */ }
+});
