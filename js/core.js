@@ -888,6 +888,9 @@ function showCart(){
  if(banner){
   if(ltB&&loB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
   else banner.style.display='none';
+  // 赠菜模式提示:给别桌加菜进行中,明确告知目标桌号(2026-09-17)
+  const gfb=document.getElementById('gift-mode-banner');
+  if(gfb){const sideOn=ssGet('sideOrder')==='1',pending=ssGet('sidePendingTable')||'';const target=pending||(sideOn?(ssGet('lockedTable')||ssGet('tableNumber')||''):'');if(sideOn&&target){gfb.style.display='flex';const gt=document.getElementById('gift-mode-table');if(gt)gt.textContent=target;}else gfb.style.display='none';}
  }
  // 桌号展示（选桌后只读，点击可更换/挪桌）
  updateTableStatusCard();

@@ -518,6 +518,7 @@
                 </div>
                 <div class="card-body p-4">
                     <!-- 进行中订单提示条（跳走后回来也能找到订单） -->
+                    <div id="gift-mode-banner" style="display:none;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:0 0 10px;padding:9px 14px;border-radius:10px;background:rgba(201,169,110,0.14);border:1px dashed rgba(201,169,110,0.55);font-size:0.88rem;color:var(--text);">🍱 赠菜模式:正在为 <strong id="gift-mode-table" style="color:var(--primary-accent);font-size:1rem;">-</strong> 号桌选菜,结算后计入你本桌账单</div>
                     <div id="cart-order-banner" class="mb-3" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 14px;background:rgba(201,169,110,0.1);border:1px solid rgba(201,169,110,0.3);border-radius:10px;">
                         <span style="font-size:0.85rem;color:var(--text);">正在为 <strong id="banner-table" style="color:var(--primary-accent);">-</strong> 号桌加菜 · 订单 <span id="banner-oid" style="color:var(--primary-accent);">#-</span></span>
                         <button class="btn btn-sm" id="banner-view-order" style="background:var(--gold);color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;">查看订单</button>
