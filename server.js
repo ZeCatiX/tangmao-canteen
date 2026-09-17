@@ -1093,11 +1093,15 @@ async function recomputeOrderItems(pool, items) {
   const validated = items.map(i => {
     const did = parseInt(i.id);
     if (isNaN(did) || priceMap[did] === undefined) return null;
+    // 数量必须为 1-999 的整数(2026-09-17 安全修复:负/零数量会与正单价相乘产生负价订单;缺省=1)
+    const rawQty = i.qty !== undefined ? parseInt(i.qty) : parseInt(i.quantity);
+    const qty = Number.isFinite(rawQty) ? rawQty : 1;
+    if (!Number.isInteger(qty) || qty < 1 || qty > 999) return null;
     const dbPrice = priceMap[did];
-    return i.giftFrom ? { ...i, price: 0, origPrice: dbPrice } : { ...i, price: dbPrice };
+    return i.giftFrom ? { ...i, qty, price: 0, origPrice: dbPrice } : { ...i, qty, price: dbPrice };
   });
   if (validated.some(i => i === null)) return null;
-  const sum = validated.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || parseInt(i.quantity) || 1), 0);
+  const sum = validated.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || 1), 0);
   return { validated, total: Math.round(sum * 100) / 100 };
 }
 

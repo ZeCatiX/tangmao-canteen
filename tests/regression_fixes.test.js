@@ -98,7 +98,8 @@ describe('显示修复回归', () => {
 describe('前端修复回归', () => {
   it('register 使用正斜杠路径（非反斜杠）', () => {
     const s = read('script.js');
-    assert.ok(s.includes("fetch('/api/user/register'"), 'register 应用正斜杠路径');
+    // 2026-09-17: 实现已改用 safeFetch 封装,断言放宽为"存在调用 /api/user/register 且用正斜杠"
+    assert.ok(s.includes("'/api/user/register'"), 'register 应用正斜杠路径');
     assert.ok(!s.includes("'\\api\\user\\register'"), '不应有反斜杠路径');
   });
   it('renderMenuTable tags 已转义防存储型 XSS', () => {
