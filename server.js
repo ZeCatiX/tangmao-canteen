@@ -767,7 +767,40 @@ app.get('/api/admin/preference-stats', async (req, res) => {
       const q = await pool.query(`SELECT ${field}, COUNT(*) FROM preference_log WHERE ${field} IS NOT NULL GROUP BY ${field} ORDER BY COUNT(*) DESC`);
       result[field] = q.rows.reduce((acc, r) => { acc[r[field] || '无'] = parseInt(r.count); return acc; }, {});
     }
-    res.json({ success: true, stats: result });
+    // 偏好完整度聚合：每字段"有效声明率"(非 NULL 且非"无")与每行声明维度数分布
+    const completeness = { total: 0, perField: {}, distribution: [] };
+    const declaredFields = ['spiciness','saltiness','sweetness','price','calorie'];
+    const totalRow = await pool.query('SELECT COUNT(*) AS n FROM preference_log');
+    completeness.total = parseInt(totalRow.rows[0]?.n || 0);
+    if (completeness.total > 0) {
+      // 每字段有效声明数(非 NULL 且非"无")
+      const decQ = await pool.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE spiciness IS NOT NULL AND spiciness <> '无') AS spiciness,
+          COUNT(*) FILTER (WHERE saltiness IS NOT NULL AND saltiness <> '无') AS saltiness,
+          COUNT(*) FILTER (WHERE sweetness IS NOT NULL AND sweetness <> '无') AS sweetness,
+          COUNT(*) FILTER (WHERE price    IS NOT NULL AND price    <> '无') AS price,
+          COUNT(*) FILTER (WHERE calorie  IS NOT NULL AND calorie  <> '无') AS calorie
+        FROM preference_log`);
+      const dr = decQ.rows[0] || {};
+      declaredFields.forEach(f => {
+        const n = parseInt(dr[f] || 0);
+        completeness.perField[f] = { declared: n, rate: Math.round(n / completeness.total * 100) };
+      });
+      // 每行声明维度数分布(0..5)
+      const distQ = await pool.query(`
+        SELECT declared_count, COUNT(*) AS n FROM (
+          SELECT
+            (CASE WHEN spiciness IS NOT NULL AND spiciness <> '无' THEN 1 ELSE 0 END +
+             CASE WHEN saltiness IS NOT NULL AND saltiness <> '无' THEN 1 ELSE 0 END +
+             CASE WHEN sweetness IS NOT NULL AND sweetness <> '无' THEN 1 ELSE 0 END +
+             CASE WHEN price    IS NOT NULL AND price    <> '无' THEN 1 ELSE 0 END +
+             CASE WHEN calorie  IS NOT NULL AND calorie  <> '无' THEN 1 ELSE 0 END) AS declared_count
+          FROM preference_log
+        ) t GROUP BY declared_count ORDER BY declared_count`);
+      completeness.distribution = distQ.rows.map(r => ({ count: parseInt(r.declared_count), n: parseInt(r.n) }));
+    }
+    res.json({ success: true, stats: result, completeness });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 

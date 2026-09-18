@@ -275,6 +275,18 @@
     <!-- 偏好分布页 -->
     <div class="page" id="page-preferences">
       <div class="page-title"><span>用户偏好分布</span></div>
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <div class="card" style="border:1px solid rgba(201,169,110,0.3);">
+            <div class="card-header" style="background:linear-gradient(135deg,#b83a2a,#c9a96e);color:#fff;">
+              <i class="bi bi-bullseye me-1"></i>偏好声明率（完整度引导效果）
+            </div>
+            <div class="card-body" style="padding:1rem;">
+              <div id="pref-completeness-board"><div style="color:#8b7a6a;font-size:0.85rem;padding:8px;">加载中...</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="row g-3">
         <div class="col-md-6">
           <div class="card">
@@ -1116,6 +1128,8 @@ function loadModelInfo() {
 function loadPreferenceStats() {
   fetch('/api/admin/preference-stats').then(r => r.json()).then(d => {
     if (!d.success) return;
+    // 声明率看板
+    renderPrefCompletenessBoard(d.completeness);
     const fields = ['spiciness','saltiness','sweetness','price','calorie','religion'];
     const labels = {'spiciness':'辣度','saltiness':'咸淡','sweetness':'甜酸','price':'价格','calorie':'热量','religion':'饮食宗教'};
     const colors = {'spiciness':'#b83a2a','saltiness':'#c9a96e','sweetness':'#27ae60','price':'#2d8a6e','calorie':'#e67e22','religion':'#8e44ad'};
@@ -1135,6 +1149,47 @@ function loadPreferenceStats() {
       ).join('');
     });
   }).catch(() => { console.warn('数据加载失败'); });
+}
+
+// 偏好声明率看板：每字段有效声明率(咸淡/热量高亮)+完整度分布
+function renderPrefCompletenessBoard(c) {
+  const el = document.getElementById('pref-completeness-board');
+  if (!el) return;
+  if (!c || !c.total) { el.innerHTML = '<div style="color:#8b7a6a;font-size:0.85rem;padding:8px;">暂无偏好记录</div>'; return; }
+  const labels = {spiciness:'辣度',saltiness:'咸淡',sweetness:'甜酸',price:'预算',calorie:'热量'};
+  const weak = {saltiness:true, calorie:true};
+  let html = '<div style="font-size:0.85rem;color:#8b7a6a;margin-bottom:10px;">共 ' + c.total + ' 条偏好记录 · 咸淡/热量为 ML 当前低权重维度（高亮）</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">';
+  Object.keys(labels).forEach(f => {
+    const pf = c.perField[f] || {declared:0, rate:0};
+    const hl = weak[f] ? 'border:1px solid #b83a2a;background:#fdf0ee;' : '';
+    const lblColor = weak[f] ? 'color:#b83a2a;font-weight:700;' : '';
+    html += '<div class="pref-row" style="' + hl + 'padding:6px 8px;border-radius:6px;">'
+      + '<span class="label" style="' + lblColor + '">' + labels[f] + '</span>'
+      + '<div class="track"><div class="fill" style="width:' + pf.rate + '%;background:' + (weak[f]?'#b83a2a':'#c9a96e') + '"></div></div>'
+      + '<span class="count">' + pf.declared + '/' + c.total + '</span>'
+      + '<span class="pct">' + pf.rate + '%</span></div>';
+  });
+  html += '</div>';
+  // 完整度分布(0..5 维)
+  if (c.distribution && c.distribution.length) {
+    const maxN = Math.max(...c.distribution.map(x => x.n)) || 1;
+    html += '<div style="margin-top:14px;font-size:0.85rem;color:#5a4a3a;font-weight:600;margin-bottom:6px;">每行声明维度数分布（0=全默认，5=全声明）</div>';
+    html += '<div style="display:flex;align-items:flex-end;gap:6px;height:70px;">';
+    for (let i = 0; i <= 5; i++) {
+      const bucket = c.distribution.find(x => x.count === i);
+      const n = bucket ? bucket.n : 0;
+      const h = Math.round(n / maxN * 60);
+      const full = i === 5;
+      html += '<div style="flex:1;text-align:center;">'
+        + '<div style="height:' + (h+4) + 'px;display:flex;align-items:flex-end;justify-content:center;">'
+        + '<div style="width:70%;height:' + (h||2) + 'px;border-radius:4px 4px 0 0;background:' + (full?'#27ae60':(i>=3?'#c9a96e':'#d8c8b0')) + ';"></div></div>'
+        + '<div style="font-size:0.7rem;margin-top:2px;">' + i + '维</div>'
+        + '<div style="font-size:0.7rem;color:#8b7a6a;">' + n + '</div></div>';
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
 }
 
 function loadDishes() {
