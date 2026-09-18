@@ -216,19 +216,16 @@ describe('页面交互细节深度检查', () => {
     await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(500);
     const labels = await page.evaluate(() => {
-      const inputs = document.querySelectorAll('#preference-section select, #preference-section input');
-      return Array.from(inputs).filter(input => {
-        const id = input.id;
+      var inputs = document.querySelectorAll('#preference-section select, #preference-section input');
+      // 2026-09-17: 只返回无 label 关联的 SELECT 元素 ID(修复原代码在 Node 上下文访问 document 的 bug)
+      return Array.from(inputs).filter(function(input) {
+        var id = input.id;
         if (!id) return false;
-        const label = document.querySelector(`label[for="${id}"]`);
-        return !label;
-      }).map(input => input.id);
+        var label = document.querySelector('label[for="' + id + '"]');
+        return !label && input.tagName === 'SELECT';
+      }).map(function(input) { return input.id; });
     });
-    // 允许部分无label（如复选框组），但select应有label
-    const selectsWithoutLabel = labels.filter(id => {
-      const el = document.getElementById(id);
-      return el && el.tagName === 'SELECT';
-    });
+    var selectsWithoutLabel = labels;
     assert.ok(selectsWithoutLabel.length === 0, 'select元素应有label关联: ' + selectsWithoutLabel.join(', '));
   });
 
