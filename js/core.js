@@ -227,12 +227,10 @@ function renderPrefCompleteness(){
   return '<span class="'+cls+'" data-pref-key="'+f.key+'" role="button" tabindex="0">'+dot+' '+f.label+tail+'</span>';
  }).join('');
  const badgeCls=pct===100?'bg-success':'bg-warning';
- const hint=pct===100?'口味偏好已完整，AI 推荐最精准':(c.weakUndeclared.length?'咸淡/热量未设置，推荐可能不够准 — 点上方未设置项去补全':'再补全几项，推荐更准');
  meter.innerHTML='<div class="pref-meter-row">'
   +'<div class="pref-meter-track"><div class="pref-meter-fill" style="width:'+pct+'%"></div></div>'
   +'<span class="badge '+badgeCls+' rounded-pill">'+c.declared+'/'+c.total+'</span>'
-  +'</div><div class="pref-meter-items">'+items+'</div>'
-  +'<div class="pref-meter-hint">'+hint+'</div>';
+  +'</div><div class="pref-meter-items">'+items+'</div>';
  meter.querySelectorAll('[data-pref-key]').forEach(el=>{
   el.addEventListener('click',()=>prefScrollAndHighlight(el.getAttribute('data-pref-key')));
   el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();prefScrollAndHighlight(el.getAttribute('data-pref-key'));}});
