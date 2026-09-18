@@ -48,7 +48,7 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
     await sleep(500);
     // 检查页面基础元素
     const info = await page.evaluate(() => {
-      const dishCount = document.querySelectorAll('#dataset-table-body tr').length;
+      const dishCount = document.querySelectorAll('#dataset-table-body .dish-card').length;
       const navBrand = document.querySelector('.navbar-brand')?.textContent || '';
       const hero = document.querySelector('#home-section h1, #home-section .hero-title')?.textContent || '';
       const menuCount = document.getElementById('menu-count')?.textContent || '';
@@ -58,7 +58,7 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
     // 点击"全部菜单"后应立即显示菜品（竞态修复验证）
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(600);
-    const rows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body tr').length);
+    const rows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body .dish-card').length);
     console.log('全部菜单行数:', rows, '计数:', info.menuCount);
     assert.ok(rows >= 60, '菜单应显示菜品(>=60): ' + rows);
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));

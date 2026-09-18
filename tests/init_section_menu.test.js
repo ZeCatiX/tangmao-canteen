@@ -191,7 +191,7 @@ describe('init事件绑定完整性检查', () => {
         await page.select('#menu-filter-cat', options[1]);
         await sleep(500);
         const rowCount = await page.evaluate(() => {
-          const tbody = document.querySelector('#dataset-section tbody');
+          const tbody = document.querySelector('#dataset-section');
           return tbody ? tbody.children.length : 0;
         });
         assert.ok(rowCount >= 0, '分类筛选后应显示菜品或空');

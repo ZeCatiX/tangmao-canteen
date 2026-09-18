@@ -1,6 +1,9 @@
 // 唐猫庭院 - 错误处理与边界情况彻查
 // 检查：空数据响应、网络错误处理、并发请求、表单验证
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17)
+var dishPool = [];
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
@@ -151,7 +154,9 @@ describe('错误处理与边界情况', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     // 不选择任何过敏源，直接提交
     await page.select('#spiciness', '微辣');
@@ -194,7 +199,9 @@ describe('错误处理与边界情况', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -231,7 +238,9 @@ describe('错误处理与边界情况', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');

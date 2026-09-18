@@ -134,7 +134,13 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
   it('4.1 "开始点餐"按钮跳转到偏好设置', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: AI入口+选桌(偏好页)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await sleep(500);
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(500);
     const prefForm = await page.$('#preference-form');
     assert.ok(prefForm, '偏好表单应存在');
@@ -145,7 +151,13 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
   it('4.2 偏好表单字段完整', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: AI入口+选桌(偏好页)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await sleep(500);
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(500);
     const fields = ['spiciness', 'saltiness', 'sweetness', 'price', 'calorie', 'religion'];
     for (const id of fields) {
@@ -159,7 +171,13 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
   it('4.3 提交偏好获取推荐结果', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
-    await page.click('#guest-btn');
+    // 2026-09-17: AI入口+选桌(偏好页)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await sleep(500);
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(500);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');

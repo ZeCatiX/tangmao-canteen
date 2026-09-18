@@ -1,5 +1,8 @@
 // 唐猫庭院 - 动态交互行为验证：实时搜索、加购联动、链接弹出、详情展示
 const { describe, it, before, after } = require('node:test');
+
+// 真实菜品 ID 池(2026-09-17)
+var dishPool = [];
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
@@ -98,7 +101,9 @@ describe('动态交互行为验证', () => {
     // 清除购物车
     await page.evaluate(() => localStorage.removeItem('cart'));
     // 开始推荐
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -181,22 +186,20 @@ describe('动态交互行为验证', () => {
       if (link) link.click();
     });
     await sleep(1000);
-    // 检查第一行的信息完整性
+    // 检查第一张菜品卡片的信息完整性(2026-09-17: 菜单已改卡片网格布局)
     const rowInfo = await page.evaluate(() => {
-      const tbody = document.getElementById('dataset-table-body');
-      if (!tbody || !tbody.children[0]) return null;
-      const firstRow = tbody.children[0];
-      const cells = firstRow.querySelectorAll('td');
-      const cellTexts = Array.from(cells).map(c => c.textContent.trim());
+      const first = document.querySelector('#dataset-table-body .dish-card');
+      if (!first) return null;
+      const text = (first.innerText || '').replace(/\s+/g, ' ');
       return {
-        cellCount: cells.length,
-        combinedText: cellTexts.join('|')
+        cardCount: document.querySelectorAll('#dataset-table-body .dish-card').length,
+        combinedText: text
       };
     });
     if (rowInfo) {
-      assert.ok(rowInfo.cellCount >= 3, `菜品行应有至少3列，实际: ${rowInfo.cellCount}`);
+      assert.ok(rowInfo.cardCount >= 3, `菜品卡片应有至少3张，实际: ${rowInfo.cardCount}`);
       // 包含菜品名、价格等关键信息
-      assert.ok(rowInfo.combinedText.length > 5, '菜品行应有实质内容');
+      assert.ok(rowInfo.combinedText.length > 5, '菜品卡片应有实质内容');
     }
     assert.equal(realErrors().length, 0, '菜品详情显示不应有错误');
   });
@@ -206,7 +209,9 @@ describe('动态交互行为验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     // 选择推荐模式
     await page.select('#recommendation-mode', 'balanced').catch(() => {});
@@ -297,7 +302,9 @@ describe('动态交互行为验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(400);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');

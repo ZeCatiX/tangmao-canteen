@@ -65,7 +65,7 @@ describe('评价反馈与账户管理测试', () => {
     await sleep(800);
     const ratingButtons = await page.evaluate(() => {
       // 表格行中的评分按钮
-      const rows = document.querySelectorAll('#dataset-table-body tr');
+      const rows = document.querySelectorAll('#dataset-table-body .dish-card');
       const btn = rows[0]?.querySelector('button');
       if (btn) { btn.click(); return { clicked: true, text: btn.textContent.trim() }; }
       return { clicked: false };
