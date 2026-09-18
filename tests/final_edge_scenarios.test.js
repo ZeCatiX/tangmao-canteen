@@ -85,12 +85,14 @@ describe('最后边界场景验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    // 2026-09-17: ML 可能冷启动,用 page.evaluate 轮询等待推荐结果(最多 25s)
     var dishCount = 0;
     for (var wi = 0; wi < 25; wi++) {
       await sleep(1000);
-      var list = document.getElementById('dish-list');
-      dishCount = list ? list.children.length : 0;
+      dishCount = await page.evaluate(() => {
+        const list = document.getElementById('dish-list');
+        return list ? list.children.length : 0;
+      });
       if (dishCount > 0) break;
     }
     assert.ok(dishCount > 0, 'auto模式应返回推荐菜品');
@@ -252,7 +254,8 @@ describe('最后边界场景验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+        for (var pi = 0; pi < 20; pi++) { await sleep(1000); var itemC = await page.evaluate(() => document.querySelectorAll('#dish-list .list-group-item').length); if (itemC > 0) break; }
+
     const spicyDishes = await page.evaluate(() => {
       const items = document.querySelectorAll('#dish-list .list-group-item');
       return Array.from(items).map(item => item.textContent.substring(0, 30));
