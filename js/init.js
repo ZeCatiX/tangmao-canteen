@@ -97,6 +97,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  submit('preference-form',submitPreference);
  // 2026-09-17: 过敏源联动——勾「无」清空并禁用其他;勾任一具体项自动取消「无」(互斥多选)
  (function(){const an=$('allergy-none');if(!an)return;const others=['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'];const sync=()=>{const off=an.checked;others.forEach(id=>{const el=$(id);if(el){el.disabled=off;if(off)el.checked=false;}});};an.addEventListener('change',sync);others.forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(el.checked&&an.checked){an.checked=false;sync();}});});sync();})();
+ // 2026-09-17: 偏好完整度仪表盘——5 维 select 变化时实时重算
+ (function(){['spiciness','saltiness','sweetness','price','calorie'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(typeof renderPrefCompleteness==='function')renderPrefCompleteness();});});})();
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));

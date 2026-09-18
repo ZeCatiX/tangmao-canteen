@@ -285,6 +285,81 @@ function resetPreferenceForm(){
  if($('recommendation-mode'))$('recommendation-mode').value='auto';
 }
 
+// ═══ 偏好完整度引导 ═══
+// 5 维口味声明率;咸淡/热量为"弱维度"(ML 当前低权重根因),重点提
+const PREF_FIELDS=[
+ {key:'spiciness',label:'辣度',weak:false},
+ {key:'saltiness',label:'咸淡',weak:true},
+ {key:'sweetness',label:'甜酸',weak:false},
+ {key:'price',label:'预算',weak:false},
+ {key:'calorie',label:'热量',weak:true}
+];
+function computePrefCompleteness(){
+ const $=id=>document.getElementById(id);
+ const fields=PREF_FIELDS.map(f=>{
+  const el=$(f.key);const v=el?el.value:'无';
+  const declared=v!=='无'&&v!=='无特殊要求'&&v!=='不限'&&v!=='';
+  return Object.assign({},f,{value:v,declared});
+ });
+ const declaredCount=fields.filter(f=>f.declared).length;
+ const weakUndeclared=fields.filter(f=>f.weak&&!f.declared);
+ return {fields,declared:declaredCount,total:fields.length,weakUndeclared};
+}
+function prefScrollAndHighlight(key){
+ const el=document.getElementById(key);
+ if(!el)return;
+ if(el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});
+ el.classList.remove('pref-highlight');void el.offsetWidth;el.classList.add('pref-highlight');
+ setTimeout(()=>el.classList.remove('pref-highlight'),2200);
+ try{el.focus({preventScroll:true});}catch(e){}
+}
+function renderPrefCompleteness(){
+ const meter=document.getElementById('pref-completeness-meter');
+ if(!meter)return;
+ const c=computePrefCompleteness();
+ const pct=Math.round(c.declared/c.total*100);
+ const items=c.fields.map(f=>{
+  const state=f.declared?'done':'todo';
+  const weakCls=f.weak?' weak':'';
+  const cls='pref-meter-item '+state+weakCls;
+  const dot=f.weak?'◆':'●';
+  const tail=f.declared?'':'<small class="pref-meter-todo">未设置</small>';
+  return '<span class="'+cls+'" data-pref-key="'+f.key+'" role="button" tabindex="0">'+dot+' '+f.label+tail+'</span>';
+ }).join('');
+ const badgeCls=pct===100?'bg-success':'bg-warning';
+ const hint=pct===100?'口味偏好已完整，AI 推荐最精准':(c.weakUndeclared.length?'咸淡/热量未设置，推荐可能不够准 — 点上方未设置项去补全':'再补全几项，推荐更准');
+ meter.innerHTML='<div class="pref-meter-row">'
+  +'<div class="pref-meter-track"><div class="pref-meter-fill" style="width:'+pct+'%"></div></div>'
+  +'<span class="badge '+badgeCls+' rounded-pill">'+c.declared+'/'+c.total+'</span>'
+  +'</div><div class="pref-meter-items">'+items+'</div>'
+  +'<div class="pref-meter-hint">'+hint+'</div>';
+ meter.querySelectorAll('[data-pref-key]').forEach(el=>{
+  el.addEventListener('click',()=>prefScrollAndHighlight(el.getAttribute('data-pref-key')));
+  el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();prefScrollAndHighlight(el.getAttribute('data-pref-key'));}});
+ });
+}
+function renderPrefCompletenessBanner(){
+ const banner=document.getElementById('pref-completeness-banner');
+ if(!banner)return;
+ const c=computePrefCompleteness();
+ const dismissed=localStorage.getItem('prefCompletenessDismissed')==='true';
+ if(dismissed||c.weakUndeclared.length===0){
+  banner.classList.add('d-none');
+  banner.innerHTML='';
+  banner.className='d-none';
+  return;
+ }
+ const labels=c.weakUndeclared.map(f=>f.label).join('、');
+ banner.className='alert alert-warning alert-dismissible fade show pref-completeness-banner';
+ banner.classList.remove('d-none');
+ banner.innerHTML='<i class="bi bi-info-circle me-2"></i><strong>'+labels+'</strong>偏好未设置，AI 推荐可能不够精准。'
+  +'<a href="#" class="alert-link ms-1" id="pref-completeness-goto">去补全 →</a>'
+  +'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>';
+ const goto=banner.querySelector('#pref-completeness-goto');
+ if(goto)goto.addEventListener('click',function(e){e.preventDefault();showSection('preference-section');const fw=c.weakUndeclared[0];if(fw)setTimeout(()=>prefScrollAndHighlight(fw.key),350);});
+ banner.addEventListener('closed.bs.alert',function(){localStorage.setItem('prefCompletenessDismissed','true');},{once:true});
+}
+
 const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院'};
 const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
 
@@ -326,6 +401,7 @@ function showSection(sectionId,skipScroll){
    else{ptb.disabled=false;ptb.style.background='';}
   }
   updateModeDisplay();
+  renderPrefCompleteness();
  }
  updateFloatBar();
  // 进入推荐页：刷新加购按钮与购物车同步（清空/修改后返回也能恢复）
@@ -333,6 +409,7 @@ function showSection(sectionId,skipScroll){
   const ids=[...document.querySelectorAll('#recommendation-result [data-recipe-cart]')].map(el=>parseInt(el.dataset.recipeCart));
   ids.forEach(id=>refreshRecipeCartBtn(id));
  }
+ if(sectionId==='recommendation-section')renderPrefCompletenessBanner();
 }
 
 function updateModeDisplay(){const el=document.getElementById('current-recommendation-mode'),sel=document.getElementById('recommendation-mode');if(!el||!sel)return;el.textContent=({auto:'自动选择（优先API）',api:'后端API推荐（更智能）',local:'本地推荐（更快速）'})[sel.value]||'自动选择（优先API）';}
@@ -708,7 +785,7 @@ function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
  if(token){safeFetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
- currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');localStorage.removeItem('prefCompletenessDismissed');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
@@ -1433,6 +1510,8 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  submit('preference-form',submitPreference);
  // 2026-09-17: 过敏源联动——勾「无」清空并禁用其他;勾任一具体项自动取消「无」(互斥多选)
  (function(){const an=$('allergy-none');if(!an)return;const others=['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'];const sync=()=>{const off=an.checked;others.forEach(id=>{const el=$(id);if(el){el.disabled=off;if(off)el.checked=false;}});};an.addEventListener('change',sync);others.forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(el.checked&&an.checked){an.checked=false;sync();}});});sync();})();
+ // 2026-09-17: 偏好完整度仪表盘——5 维 select 变化时实时重算
+ (function(){['spiciness','saltiness','sweetness','price','calorie'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(typeof renderPrefCompleteness==='function')renderPrefCompleteness();});});})();
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
