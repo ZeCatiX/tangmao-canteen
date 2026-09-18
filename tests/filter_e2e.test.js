@@ -37,16 +37,23 @@ describe('菜单筛选器测试', () => {
     await sleep(600);
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
-    await page.select('#menu-filter-cat', '招牌');
+    // 2026-09-17: 分类选项值为全名
+    await page.select('#menu-filter-cat', '招牌与游西安必打卡');
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
-      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
-      const cats = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-info')].map(td => td.textContent))];
-      return { count, rows, cats };
+      const cards = document.querySelectorAll('#dataset-table-body .dish-card');
+      const cats = [...new Set([...cards].map(c => {
+        var p = c.querySelector('.dish-card-body p');
+        if (!p) return '';
+        var t = p.textContent;
+        var li = t.lastIndexOf('·');
+        return li > 0 ? t.slice(0, li).trim() : t.trim();
+      }))];
+      return { count: count, rows: cards.length, cats: cats };
     });
-    assert.ok(info.rows <= 69, '筛选后行数应≤69: ' + info.rows);
-    assert.ok(info.cats.every(c => c === '招牌'), '所有行都应是招牌: ' + info.cats.join(','));
+    assert.ok(info.rows >= 1 && info.rows <= 69, '筛选后行数应1-69: ' + info.rows);
+    assert.ok(info.cats.every(function(c) { return c === '招牌与游西安必打卡'; }), '所有行都应是招牌: ' + info.cats.join(','));
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 
@@ -60,12 +67,18 @@ describe('菜单筛选器测试', () => {
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
-      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
-      const spices = [...new Set([...document.querySelectorAll('#dataset-table-body .dish-card .dish-reason')].map(td => td.textContent))];
-      return { count, rows, spices };
+      const cards = document.querySelectorAll('#dataset-table-body .dish-card');
+      const spices = [...new Set([...cards].map(function(c) {
+        var p = c.querySelector('.dish-card-body p');
+        if (!p) return '';
+        var t = p.textContent;
+        var li = t.lastIndexOf('·');
+        return li > 0 ? t.slice(li + 1).trim() : t.trim();
+      }))];
+      return { count: count, rows: cards.length, spices: spices };
     });
     assert.ok(info.rows >= 1, '筛选后应有结果: ' + info.rows);
-    assert.ok(info.spices.every(s => s === '不辣'), '所有行都是不辣: ' + info.spices.join(','));
+    assert.ok(info.spices.every(function(s) { return s === '不辣'; }), '所有行都是不辣: ' + info.spices.join(','));
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 
@@ -76,7 +89,7 @@ describe('菜单筛选器测试', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
     // 先筛选，再重置
-    await page.select('#menu-filter-cat', '招牌');
+    await page.select('#menu-filter-cat', '招牌与游西安必打卡');
     await sleep(400);
     await page.evaluate(() => document.getElementById('menu-reset-filter')?.click());
     await sleep(600);
