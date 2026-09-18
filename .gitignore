@@ -85,3 +85,6 @@ _final2.log
 
 # Logo 预览渲染图(从 preview.html 可再生)
 logo-preview-full.png
+
+# AI 客户端本地产物(plan/会话等)
+.ai/
