@@ -70,7 +70,9 @@ async function registerAndLogin(page, uniqUser, password) {
 }
 
 async function getRecommendations(page) {
-  await page.evaluate(() => document.getElementById('guest-btn')?.click());
+  await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
   await sleep(400);
   await page.select('#spiciness', '微辣');
   await page.select('#saltiness', '适中');
@@ -78,7 +80,8 @@ async function getRecommendations(page) {
   await page.evaluate(() => {
     document.getElementById('preference-form').querySelector('button[type="submit"]').click();
   });
-  await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
 }
 
 describe('用户全流程深度交互测试', () => {

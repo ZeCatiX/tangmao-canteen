@@ -112,7 +112,8 @@ describe('动态交互行为验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 查找加购按钮并点击
     const clicked = await page.evaluate(() => {
       const btn = document.querySelector('#dish-list .add-to-cart, #dish-list [onclick*="addToCart"], #dish-list [class*="add"]');
@@ -223,7 +224,8 @@ describe('动态交互行为验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 检查推荐结果区域显示
     const recoVisible = await page.evaluate(() => {
       const section = document.getElementById('recommendation-section');
@@ -313,7 +315,8 @@ describe('动态交互行为验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 找到评分星星区域（可能在推荐的菜品项中）
     const starClicked = await page.evaluate(() => {
       // 尝试找到评分入口

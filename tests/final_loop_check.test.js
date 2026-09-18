@@ -128,7 +128,9 @@ describe('最后一轮交互闭环验证', () => {
       if (link) link.click();
     });
     await sleep(300);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -137,7 +139,8 @@ describe('最后一轮交互闭环验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 尝试收藏第一个菜品
     const favClicked = await page.evaluate(() => {
       const btn = document.querySelector('#dish-list [onclick*="fav"], #dish-list [onclick*="收藏"], #dish-list [class*="fav"]');
@@ -200,7 +203,9 @@ describe('最后一轮交互闭环验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -209,7 +214,8 @@ describe('最后一轮交互闭环验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 点击第一个菜品卡片
     const clicked = await page.evaluate(() => {
       const item = document.querySelector('#dish-list .list-group-item');

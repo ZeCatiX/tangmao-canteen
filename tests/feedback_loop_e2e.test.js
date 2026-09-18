@@ -309,7 +309,8 @@ describe('反馈环路与统计联动测试', () => {
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => document.getElementById('preference-form').querySelector('button[type="submit"]').click());
-    await sleep(5000);
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
     // 推荐结果应显示
     const recVisible = await page.evaluate(() => {
       const el = document.getElementById('recommendation-result');
