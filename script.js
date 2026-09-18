@@ -341,20 +341,19 @@ function renderPrefCompletenessBanner(){
  if(!banner)return;
  const c=computePrefCompleteness();
  const dismissed=localStorage.getItem('prefCompletenessDismissed')==='true';
- if(dismissed||c.weakUndeclared.length===0){
+ if(dismissed||c.declared>=c.total){
   banner.classList.add('d-none');
   banner.innerHTML='';
   banner.className='d-none';
   return;
  }
- const labels=c.weakUndeclared.map(f=>f.label).join('、');
  banner.className='alert alert-warning alert-dismissible fade show pref-completeness-banner';
  banner.classList.remove('d-none');
- banner.innerHTML='<i class="bi bi-info-circle me-2"></i><strong>'+labels+'</strong>偏好未设置，AI 推荐可能不够精准。'
+ banner.innerHTML='<i class="bi bi-info-circle me-2"></i>还有 '+(c.total-c.declared)+' 项口味偏好未设置，补全后推荐更贴合你的口味。'
   +'<a href="#" class="alert-link ms-1" id="pref-completeness-goto">去补全 →</a>'
   +'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>';
  const goto=banner.querySelector('#pref-completeness-goto');
- if(goto)goto.addEventListener('click',function(e){e.preventDefault();showSection('preference-section');const fw=c.weakUndeclared[0];if(fw)setTimeout(()=>prefScrollAndHighlight(fw.key),350);});
+ if(goto)goto.addEventListener('click',function(e){e.preventDefault();showSection('preference-section');const fu=c.fields.find(f=>!f.declared);if(fu)setTimeout(()=>prefScrollAndHighlight(fu.key),350);});
  banner.addEventListener('closed.bs.alert',function(){localStorage.setItem('prefCompletenessDismissed','true');},{once:true});
 }
 
