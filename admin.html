@@ -1157,16 +1157,18 @@ function renderPrefCompletenessBoard(c) {
   if (!el) return;
   if (!c || !c.total) { el.innerHTML = '<div style="color:#8b7a6a;font-size:0.85rem;padding:8px;">暂无偏好记录</div>'; return; }
   const labels = {spiciness:'辣度',saltiness:'咸淡',sweetness:'甜酸',price:'预算',calorie:'热量'};
-  const weak = {saltiness:true, calorie:true};
-  let html = '<div style="font-size:0.85rem;color:#8b7a6a;margin-bottom:10px;">共 ' + c.total + ' 条偏好记录 · 咸淡/热量为 ML 当前低权重维度（高亮）</div>';
+  // 弱维度由数据驱动：声明率低于 50% 才高亮（避免硬编码与实际数据自相矛盾）
+  const WEAK_THRESHOLD = 50;
+  let html = '<div style="font-size:0.85rem;color:#8b7a6a;margin-bottom:10px;">共 ' + c.total + ' 条偏好记录 · 声明率低于 ' + WEAK_THRESHOLD + '% 的维度高亮（ML 信号弱）</div>';
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">';
   Object.keys(labels).forEach(f => {
     const pf = c.perField[f] || {declared:0, rate:0};
-    const hl = weak[f] ? 'border:1px solid #b83a2a;background:#fdf0ee;' : '';
-    const lblColor = weak[f] ? 'color:#b83a2a;font-weight:700;' : '';
+    const weak = pf.rate < WEAK_THRESHOLD;
+    const hl = weak ? 'border:1px solid #b83a2a;background:#fdf0ee;' : '';
+    const lblColor = weak ? 'color:#b83a2a;font-weight:700;' : '';
     html += '<div class="pref-row" style="' + hl + 'padding:6px 8px;border-radius:6px;">'
       + '<span class="label" style="' + lblColor + '">' + labels[f] + '</span>'
-      + '<div class="track"><div class="fill" style="width:' + pf.rate + '%;background:' + (weak[f]?'#b83a2a':'#c9a96e') + '"></div></div>'
+      + '<div class="track"><div class="fill" style="width:' + pf.rate + '%;background:' + (weak?'#b83a2a':'#c9a96e') + '"></div></div>'
       + '<span class="count">' + pf.declared + '/' + c.total + '</span>'
       + '<span class="pct">' + pf.rate + '%</span></div>';
   });
