@@ -210,8 +210,11 @@ describe('页面交互细节深度检查', () => {
   // ===== 12. 偏好设置页面表单标签关联 =====
   it('12.1 偏好设置表单字段有label关联', async () => {
     resetErrors();
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
-    await sleep(400);
+    // 2026-09-17: 偏好页入口为「AI帮你选」+ 选桌(guest-btn 现进菜单)
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await sleep(500);
     const labels = await page.evaluate(() => {
       const inputs = document.querySelectorAll('#preference-section select, #preference-section input');
       return Array.from(inputs).filter(input => {
