@@ -74,7 +74,10 @@ def load_dishes_from_db():
     cur.execute('''
         SELECT id, name, category, spiciness, saltiness, sweetness,
                price, rating, tags, is_halal, is_vegetarian, is_active, calorie
-        FROM dishes WHERE is_active = TRUE ORDER BY id
+        FROM dishes
+        WHERE is_active = TRUE
+          AND category NOT IN ('飲品与酒水','主食')
+        ORDER BY id
     ''')
     rows = cur.fetchall()
     conn.close()

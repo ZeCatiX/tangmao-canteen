@@ -37,6 +37,7 @@ def load_feedback_from_db():
         JOIN dishes d ON f.dish_id = d.id
         WHERE f.user_preferences IS NOT NULL
           AND f.user_preferences != '{}'::jsonb
+          AND d.category NOT IN ('飲品与酒水','主食')
         ORDER BY f.created_at DESC
     ''')
     rows = cur.fetchall()
@@ -141,7 +142,7 @@ def main():
         print(f'  当前模型在反馈数据上的平均误差: {np.mean(errors):.4f}', file=sys.stderr)
 
     # 合并训练：生成合成数据 + 真实反馈数据
-    from train_restaurant_model import generate_training_data, load_dishes_from_db, USER_PROFILES
+    from train_restaurant_model import generate_training_data, load_dishes_from_db, USER_PROFILES, export_feature_importance
 
     dishes = load_dishes_from_db()
     X_syn, y_syn = generate_training_data(dishes, USER_PROFILES, samples_per_dish=1)
@@ -191,11 +192,8 @@ def main():
     print(f'\n模型已更新: {MODEL_PATH}', file=sys.stderr)
     print(f'  真实反馈数: {len(feedbacks)}', file=sys.stderr)
 
-    # 输出特征重要性
-    imp = model.feature_importances_
-    importance = [{'feature': FEATURE_NAMES[i], 'importance': round(float(imp[i]), 4)}
-                  for i in range(len(FEATURE_NAMES))]
-    importance.sort(key=lambda x: -x['importance'])
+    # 输出特征重要性（HistGB 无原生 feature_importances_，改用置换重要性，与全量训练一致）
+    importance = export_feature_importance(model, X_combined, y_combined)
 
     # 用「另一批全新模拟用户」给模型打诚实的分，并同步 metrics/重要性文件
     # （反馈只有几条时，在反馈上算 R² 毫无意义；口径与 train_restaurant_model 一致。
