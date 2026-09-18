@@ -49,7 +49,7 @@ describe('最后边界场景验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
     // 选择balanced模式
     await page.select('#recommendation-mode', 'balanced').catch(() => {});
@@ -74,8 +74,9 @@ describe('最后边界场景验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
-    await sleep(400);
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(500);
+    await page.evaluate(() => { var b = [...document.querySelectorAll('#table-picker-modal button')].find(function(x) { return x.textContent.trim() === '08'; }); if (b) b.click(); });
     await page.select('#recommendation-mode', 'auto').catch(() => {});
     await page.select('#spiciness', '中辣');
     await page.select('#saltiness', '偏咸');
@@ -84,11 +85,14 @@ describe('最后边界场景验证', () => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
       if (btn) btn.click();
     });
-    await sleep(5000);
-    const dishCount = await page.evaluate(() => {
-      const list = document.getElementById('dish-list');
-      return list ? list.children.length : 0;
-    });
+    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+    var dishCount = 0;
+    for (var wi = 0; wi < 25; wi++) {
+      await sleep(1000);
+      var list = document.getElementById('dish-list');
+      dishCount = list ? list.children.length : 0;
+      if (dishCount > 0) break;
+    }
     assert.ok(dishCount > 0, 'auto模式应返回推荐菜品');
     assert.equal(realErrors().length, 0, 'auto推荐不应有错误');
   });
@@ -98,7 +102,7 @@ describe('最后边界场景验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
     // 遍历所有模式，检查显示
     const modes = await page.evaluate(() => {
@@ -141,7 +145,7 @@ describe('最后边界场景验证', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -239,7 +243,7 @@ describe('最后边界场景验证', () => {
     // 用"特辣"偏好获取推荐
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    await page.evaluate(() => document.getElementById('guest-btn')?.click());
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
     await page.select('#spiciness', '特辣');
     await page.select('#saltiness', '偏咸');

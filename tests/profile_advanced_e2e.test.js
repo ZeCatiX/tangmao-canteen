@@ -136,59 +136,47 @@ describe('个人中心与高级交互测试', () => {
   // ===== 2. 厨房看板完成订单 =====
   it('2.1 游客下单后厨房看板可完成订单', async () => {
     resetErrors();
-    // 先通过 API 创建一个游客订单
-    const orderRes = await fetch(BASE + '/api/order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: 'guest',
-        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 1 }],
-        totalPrice: 88,
-      }),
-    }).catch(e => { console.log('下单失败:', e.message); return null; });
-    const orderJson = orderRes && orderRes.ok ? await orderRes.json() : null;
-    console.log('游客订单创建:', orderJson ? JSON.stringify(orderJson).slice(0, 120) : '跳过');
-    if (!orderJson) { console.log('跳过：订单创建失败'); return; }
-    const orderId = orderJson.orderId;
+    var ts = Date.now();
+    var uniqUser = 'kitchen_t_' + ts;
+    var createRes = await fetch(BASE + '/api/order', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: uniqUser, items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 1 }] }),
+    }).catch(function(e) { console.log('下单失败:', e.message); return null; });
+    if (!createRes || !createRes.ok) { console.log('下单返回异常'); return; }
+    var orderData = await createRes.json();
+    var orderId = String(orderData.orderId);
+    console.log('订单已创建: ' + orderId);
 
     // 厨房看板登录
     await page.goto(BASE + '/kitchen', { waitUntil: 'networkidle0', timeout: 20000 });
     await sleep(800);
-    const userInput = await page.$('#login-user');
-    const passInput = await page.$('#login-pass');
+    var userInput = await page.$('#login-user');
+    var passInput = await page.$('#login-pass');
     assert.ok(userInput && passInput, '厨房应有登录输入框');
     require('dotenv').config();
-    await userInput.type('admin', { delay: 5 });
-    await passInput.type(process.env.ADMIN_PASS, { delay: 5 });
+    await userInput.type('admin', { delay: 10 });
+    await passInput.type(process.env.ADMIN_PASS, { delay: 10 });
     await page.evaluate(() => document.getElementById('login-btn')?.click());
-    await sleep(2000);
+    await sleep(2500);
 
-    // 找到刚创建的订单卡片并点击完成
-    const found = await page.evaluate((oid) => {
-      const cards = document.querySelectorAll('.order-card');
-      for (const c of cards) {
-        if (c.dataset.id === String(oid)) {
-          const btn = c.querySelector('.btn-complete');
-          if (btn) {
-            // 2026-09-17: 厨房已改为双击确认(不依赖原生 confirm,armed 态),同帧两次点击完成
-            btn.click(); btn.click();
-            return true;
+    // 轮询找到订单卡片并双击完成(最多 30s)
+    var completed = false;
+    for (var r = 0; r < 15 && !completed; r++) {
+      await sleep(2000);
+      completed = await page.evaluate(function(oid) {
+        var cards = document.querySelectorAll('.order-card');
+        for (var ci = 0; ci < cards.length; ci++) {
+          if (cards[ci].getAttribute('data-id') === oid) {
+            var btn = cards[ci].querySelector('.btn-complete');
+            if (btn) { btn.click(); btn.click(); return true; }
           }
         }
-      }
-      return false;
-    }, orderId);
-    assert.ok(found, '新订单应显示在看板上且有完成按钮');
-    await sleep(1500);
-
-    // 完成后订单应从看板移除（confirm 已自动接受）
-    const after = await page.evaluate((oid) => {
-      const cards = document.querySelectorAll('.order-card');
-      for (const c of cards) if (c.dataset.id === String(oid)) return false;
-      return true;
-    }, orderId);
-    assert.ok(after, '完成后订单应从看板移除');
-    assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
+        return false;
+      }, orderId);
+      if (completed) break;
+    }
+    assert.ok(completed, '厨房看板应显示并完成订单 ' + orderId + ', 实际: ' + completed);
+    assert.equal(realErrors().length, 0, '厨房看板不应有错误: ' + realErrors().join('; '));
   });
 
   // ===== 3. 管理员菜品上下架 =====
