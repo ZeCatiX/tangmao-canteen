@@ -1149,11 +1149,12 @@ app.post('/api/order', softAuth, async (req, res) => {
     const recomputed = await recomputeOrderItems(pool, items);
     if (!recomputed) return res.status(400).json({ success: false, error: '订单包含无效菜品' });
     const { validated: validatedItems, total: totalPrice } = recomputed;
-    // 幂等性检查：同一用户 10 秒内相同内容的订单视为重复
+    // 幂等性检查：同一用户 10 秒内相同内容且仍在进行中(pending/confirmed)的订单视为重复
+    // 已完成/取消的单不算重复——顾客上单送达后重下相同单应新建
     const itemsStr = JSON.stringify(validatedItems);
     const tenSecAgo = new Date(Date.now() - 10000).toISOString();
     const existing = await pool.query(
-      "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > $3 LIMIT 1",
+      "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > $3 AND status IN ('pending','confirmed') LIMIT 1",
       [effectiveUserId, itemsStr, tenSecAgo]
     );
     if (existing.rows.length > 0) {
