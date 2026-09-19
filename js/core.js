@@ -73,7 +73,7 @@ const CAL_ORDER={'低':0,'中':1,'高':2};
 // 辣度: 超出承受-2重罚; 精确+2; 差1级+1; 差2级+0
 function gradeScore(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;if(di>ui)return -2;const diff=ui-di;return diff===0?2:diff===1?1:-1;}
 // 咸淡/热量: 无超出概念, 精确+2; 差1级+1; 差2级以上-1(2026-09-17:不匹配应有代价)
-function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?2:diff===1?0:-2;}  // 2026-09-17: 差2级以上-2,与价格摆幅同级(用户决策:咸淡/热量升级为一等维度)
+function gradeScoreSoft(order,u,d){const ui=order[u],di=order[d];if(ui===undefined||di===undefined)return 0;const diff=Math.abs(ui-di);return diff===0?3:diff===1?1:-2;}  // 2026-09-19: exact +2→+3 适量加权咸淡/热量(收窄上线前权重差距);off-by-1 0→+1 对齐训练compute_score(修原train/serve偏差)
 function computeDishMatch(prefs,dish){
  const md={taste:0,cuisine:0,calorie:0,rating:0,price:0};
  if(prefs['辣度']!=='无')md.taste+=gradeScore(SPICE_ORDER,prefs['辣度'],dish.spiciness);else md.taste+=2;
@@ -90,7 +90,7 @@ function computeDishMatch(prefs,dish){
  }else md.price=1;
  const s=parseFloat(dish.rating);md.rating=!isNaN(s)?Math.round((s/5)*2.5*10)/10:2.0;
  const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
- return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/14};
+ return{matchDetails:md,totalMatch:Math.round(total*10)/10,matchRate:total/15};  // 2026-09-19: /14→/15 配合咸淡/热量 exact +3,保持 matchRate 上限
 }
 
 function generateDishReason(prefs,dish){

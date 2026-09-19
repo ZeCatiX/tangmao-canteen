@@ -142,12 +142,12 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     else:
         d = X[7] - X[0]
         taste += 2 if d == 0 else (1 if d == 1 else -2)
-    # 咸淡：精确→+2；差1级→+1；差2级以上→-2；无偏好→+2
+    # 咸淡：精确→+3；差1级→+1；差2级以上→-2；无偏好→+2 (2026-09-19: exact +2→+3 适量加权,收窄上线前权重差距)
     if X[8] == 0:
         taste += 2
     else:
         d = abs(X[1] - X[8])
-        taste += 2 if d == 0 else (1 if d == 1 else -2)
+        taste += 3 if d == 0 else (1 if d == 1 else -2)
     # 甜酸：精确→+2；不匹配→-1；无偏好→+2
     if X[9] == 0:
         taste += 2
@@ -161,12 +161,12 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     # 注意：改这里必须同步改 script.js 的 computeDishMatch / fallback，否则训练与线上脱节。
     cuisine = 1.0 if is_sig else 0.0
 
-    # ── 热量 calorie：精确→+2；差1级→+1；差2级以上→-2；无偏好→+1 ──
+    # ── 热量 calorie：精确→+3；差1级→+1；差2级以上→-2；无偏好→+1 (2026-09-19: exact +2→+3 适量加权) ──
     if X[11] == 0:       # 用户无热量偏好
         calorie = 1.0
     else:
         d = abs(X[3] - X[11])
-        calorie = 2.0 if d == 0 else (1.0 if d == 1 else -2.0)
+        calorie = 3.0 if d == 0 else (1.0 if d == 1 else -2.0)
 
     # ── 价格 price（三档制，与 computeDishMatch 一致）──
     if X[10] == 0:       # 无偏好
@@ -183,9 +183,9 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     # ── 菜品评分 rating ──
     rating = (rating_val / 5) * 2.5 if rating_val > 0 else 2.0
 
-    # ── 总分 → matchRate（与 computeDishMatch 的 total/14 同口径）──
+    # ── 总分 → matchRate（与 computeDishMatch 的 total/15 同口径;2026-09-19: /14→/15 配合咸淡/热量 exact+3）──
     total = taste + cuisine + calorie + price + rating
-    match_rate = total / 14.0
+    match_rate = total / 15.0
     return max(0.1, min(1.0, match_rate))
 
 
