@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded',function(){
 	 // 从API加载菜品数据
  Promise.race([safeFetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
   if(d.success&&d.dishes.length){
-    dishData=d.dishes;
+    // 顾客端只显示上架菜(is_active !== false)；下架菜不进菜单/推荐池/购物车
+    dishData=d.dishes.filter(x=>x.is_active!==false);
     renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
   }
 }).catch((e)=>{console.warn('菜品数据加载超时/失败',e);const tb=document.getElementById('dataset-table-body');if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#c0392b;">菜品数据加载失败，<a href="#" id="retry-load-dishes" style="color:#27ae60;font-weight:600;">点击重试</a></td></tr>';const rb=document.getElementById('retry-load-dishes');if(rb)rb.addEventListener('click',function(ev){ev.preventDefault();location.reload();});});
@@ -69,7 +70,7 @@ document.addEventListener('DOMContentLoaded',function(){
   ids.forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   // 如果菜品数据为空，重新加载
   if(!dishData||!dishData.length){
-   safeFetch('/api/dishes').then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length){dishData=d.dishes;renderMenuTable();showMessage('提示','筛选条件已重置');}}).catch(()=>showMessage('提示','数据加载失败，请刷新页面'));
+   safeFetch('/api/dishes').then(r=>r.json()).then(d=>{if(d.success&&d.dishes.length){dishData=d.dishes.filter(x=>x.is_active!==false);renderMenuTable();showMessage('提示','筛选条件已重置');}}).catch(()=>showMessage('提示','数据加载失败，请刷新页面'));
    return;
   }
   renderMenuTable();
