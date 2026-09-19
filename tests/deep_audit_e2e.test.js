@@ -911,7 +911,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     const server = read('server.js');
     const orderIdx = server.indexOf('同一用户');
     assert.ok(orderIdx > 0, '应有幂等性检查注释');
-    const orderBlock = server.substring(orderIdx, orderIdx + 300);
+    const orderBlock = server.substring(orderIdx, orderIdx + 450);  // 2026-09-19: 窗口300→450,容下幂等注释+SQL(含status条件)
     assert.ok(orderBlock.includes('user_id = $1 AND items = $2::jsonb'), '应有SQL级幂等性检查');  // 2026-09-17: items 已改 jsonb
   });
 
