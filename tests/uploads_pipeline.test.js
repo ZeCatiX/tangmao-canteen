@@ -58,7 +58,8 @@ describe('上传文件管理与图片处理流水线测试', () => {
   // ===== 3. 上传图片可被sharp读取 =====
   it('3.1 上传图片都可被sharp读取', async () => {
     const dir = path.join(ROOT, 'uploads');
-    const files = fs.readdirSync(dir).filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f));
+    // 2026-09-19: 只测真实大小的图(>100字节),过滤其他测试套件运行时塞的4字节假图(共享目录污染)
+    const files = fs.readdirSync(dir).filter(f => /\.(jpg|jpeg|png|gif|webp)$/i.test(f) && fs.statSync(path.join(dir, f)).size > 100);
     let readable = 0;
     for (const f of files.slice(0, 10)) {
       try {
@@ -71,6 +72,7 @@ describe('上传文件管理与图片处理流水线测试', () => {
         console.warn(`图片无法读取: ${f} - ${e.message}`);
       }
     }
+    assert.ok(files.length > 0, 'uploads 应有真实图片可测');
     assert.ok(readable >= files.slice(0, 10).length - 2, '至少大部分图片可读');
   });
 
