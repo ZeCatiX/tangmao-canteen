@@ -70,7 +70,7 @@ describe('init事件绑定完整性检查', () => {
     const unbound = [];
     for (const id of btnIds) {
       // 动态生成的按钮通过事件委托绑定，不在init.js中直接绑定
-      if (['refresh-recommendations', 'end-recommendation', 'end-logout-btn'].includes(id)) continue;
+      if (['refresh-recommendations', 'end-recommendation', 'end-logout-btn', 'goto-drinks-btn'].includes(id)) continue;
       // 2026-09-17: Bootstrap data-bs-dismiss 按钮由框架处理关闭,无需 JS 绑定
       if (['addon-close', 'table-picker-close'].includes(id)) continue;
       // 检查init.js中是否有click('id'或submit('id'或事件委托

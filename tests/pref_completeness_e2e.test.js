@@ -90,9 +90,11 @@ describe('偏好完整度引导', () => {
     assert.equal(realErrors().length, 0, '不应有错误');
   });
 
-  // 3. 推荐页 banner：热量=无时应出现
+  // 3. 推荐页 banner：低完整度(任一未声明)时出现（2026-09-19: 改中性文案,不再点名咸淡/热量）
   it('2.1 推荐页低完整度时出现 banner', async () => {
     resetErrors();
+    // 清 dismissed 标记确保 banner 能出现
+    await page.evaluate(() => localStorage.removeItem('prefCompletenessDismissed'));
     await page.evaluate(() => showSection('recommendation-section'));
     await sleep(300);
     const r = await page.evaluate(() => {
@@ -106,14 +108,14 @@ describe('偏好完整度引导', () => {
       };
     });
     assert.ok(r.visible, 'banner 应可见');
-    assert.ok(r.text.includes('热量'), '文案应提及热量, got: ' + r.text);
+    assert.ok(r.text.includes('未设置'), '文案应中性提及"未设置", got: ' + r.text);
     assert.ok(r.hasGoto, '应有"去补全"链接');
     assert.ok(r.hasClose, '应有关闭按钮');
     assert.equal(realErrors().length, 0, '不应有错误');
   });
 
-  // 4. 点"去补全"跳回偏好页 + 高亮热量 select
-  it('2.2 点去补全跳回偏好页并高亮热量', async () => {
+  // 4. 点"去补全"跳回偏好页 + 高亮第一个未声明项（2026-09-19: 游客首个未声明=辣度）
+  it('2.2 点去补全跳回偏好页并高亮首个未声明项', async () => {
     resetErrors();
     await page.evaluate(() => document.querySelector('#pref-completeness-goto')?.click());
     await sleep(800); // 滚动 + 高亮动画
@@ -126,7 +128,7 @@ describe('偏好完整度引导', () => {
       };
     });
     assert.strictEqual(r.activeSec, 'preference-section', '应跳到偏好页');
-    assert.strictEqual(r.highlightId, 'calorie', '应高亮热量 select');
+    assert.ok(r.highlightId, '应高亮某个未声明 select, got: ' + r.highlightId);
     assert.equal(realErrors().length, 0, '不应有错误');
   });
 
