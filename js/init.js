@@ -103,6 +103,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
  click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
+ // 注:#goto-drinks-btn 在 recommendation-result 内,由 displayRecommendations 事件委托处理(js/recommendation.js)
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
  click('new-recommendation',()=>{resetRecommendation();['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lockedTable','lastOrderAI','lastOrderStats','tableNumber','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');updateTableStatusCard();showSection('preference-section');});
