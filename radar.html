@@ -29,7 +29,17 @@
     <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,原序不变);第三幕,<b>重排猫头</b>(维度沿圆周滑到猫头位,双耳与圆脸现形);第四幕,<b>圆滑猫首显现</b>(数据多边形隐退,贝塞尔猫首淡入 — 品牌插画风);第五幕,<b>唐猫五官成形</b>(精致额纹、花钿、笑眼、腮红、ω 嘴、胡须),定格为治愈系唐猫。瓦当制式装饰全程不碰数据半径。</p>
     <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><g id="decor"></g><g id="rings"></g><g id="spokes"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→圆滑猫首→唐猫成形</text><g id="dataLayer"></g><g id="catLayer" opacity="0"></g><g id="labelLayer"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
     <div class="playbar"><button class="playbtn" id="replayBtn">▶ 重播动画</button></div>
-    <div class="footer">数据源 feature_importance.json · 模型 HistGradientBoosting · 训练 2026-09-19 · 留出 R²=0.9443</div>
+      <div class="card" style="margin-top:24px;">
+    <p class="desc" style="margin-bottom:16px;"><b>五幕静态对比</b>(每幕定格一帧,供逐幕核对):</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;">
+      <div><div style="text-align:center;font-size:12px;color:#756558;letter-spacing:1px;margin-bottom:6px;">幕1 · 原特征图</div><div id="f1" style="border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;"></div></div>
+      <div><div style="text-align:center;font-size:12px;color:#756558;letter-spacing:1px;margin-bottom:6px;">幕2 · 相对归一化</div><div id="f2" style="border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;"></div></div>
+      <div><div style="text-align:center;font-size:12px;color:#756558;letter-spacing:1px;margin-bottom:6px;">幕3 · 重排猫头</div><div id="f3" style="border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;"></div></div>
+      <div><div style="text-align:center;font-size:12px;color:#756558;letter-spacing:1px;margin-bottom:6px;">幕4 · 圆滑猫首</div><div id="f4" style="border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;"></div></div>
+      <div><div style="text-align:center;font-size:12px;color:#756558;letter-spacing:1px;margin-bottom:6px;">幕5 · 唐猫成形</div><div id="f5" style="border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;"></div></div>
+    </div>
+  </div>
+  <div class="footer">数据源 feature_importance.json · 模型 HistGradientBoosting · 训练 2026-09-19 · 留出 R²=0.9443</div>
   </div>
 </div>
 <script>
@@ -185,6 +195,58 @@ function play(){
 }
 window.addEventListener('load', function(){ setTimeout(play, 400); });
 document.getElementById('replayBtn').addEventListener('click', play);
+
+/* ── 五幕静态对比图(克隆定格) ── */
+(function(){
+  var frames = [
+    { id: 'f1', kr: 0,   ka: 0,   cat: 0 },
+    { id: 'f2', kr: 1,   ka: 0,   cat: 0 },
+    { id: 'f3', kr: 1,   ka: 1,   cat: 0 },
+    { id: 'f4', kr: 1,   ka: 1,   cat: 1, noFace: true },
+    { id: 'f5', kr: 1,   ka: 1,   cat: 1 }
+  ];
+  frames.forEach(function(cfg){
+    var host = document.getElementById(cfg.id);
+    if (!host) return;
+    var clone = document.getElementById('radarSvg').cloneNode(true);
+    clone.removeAttribute('id');
+    clone.setAttribute('style', 'width:100%;height:auto;display:block;');
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    /* 数据层定格 */
+    var poly = clone.querySelector('#dataPoly'); if (poly) poly.removeAttribute('id');
+    var ptsStr = '';
+    ORD.forEach(function(n,i){
+      var s = STATE[n];
+      var d = s.a1 - s.a0;
+      while (d > Math.PI) d -= 2*Math.PI;
+      while (d < -Math.PI) d += 2*Math.PI;
+      var a = s.a0 + d*cfg.ka;
+      var r = s.r0 + (s.r1 - s.r0)*cfg.kr;
+      var x = (CX + r*Math.cos(a)).toFixed(1), y = (CY + r*Math.sin(a)).toFixed(1);
+      ptsStr += x + ',' + y + ' ';
+      var sp = clone.querySelectorAll('.vspoke')[i]; if (sp) { sp.setAttribute('x2', x); sp.setAttribute('y2', y); }
+      var dt = clone.querySelectorAll('.vdot')[i]; if (dt) { dt.setAttribute('cx', x); dt.setAttribute('cy', y); }
+    });
+    if (poly) poly.setAttribute('points', ptsStr.trim());
+    /* 猫首层 */
+    var cat = clone.querySelector('#catAll'); if (cat) cat.setAttribute('opacity', cfg.cat);
+    /* 五官层(幕5才显示) */
+    var face = clone.querySelector('#catFaceLayer'); if (face) face.setAttribute('opacity', (cfg.id==='f5') ? 1 : 0);
+    /* 标签位置 */
+    clone.querySelectorAll('#labelLayer text').forEach(function(t, idx){
+      var n = ORD[idx]; var st = STATE[n];
+      var d = st.a1 - st.a0;
+      while (d > Math.PI) d -= 2*Math.PI;
+      while (d < -Math.PI) d += 2*Math.PI;
+      var a = st.a0 + d*cfg.ka;
+      var c = Math.cos(a), sn = Math.sin(a);
+      t.setAttribute('x', (CX + LABEL_R*c).toFixed(1));
+      t.setAttribute('y', (CY + LABEL_R*sn + (sn<-0.5?-2:(sn>0.5?12:5))).toFixed(1));
+      t.setAttribute('text-anchor', (c>0.3?'start':(c<-0.3?'end':'middle')));
+    });
+    host.appendChild(clone);
+  });
+})();
 </script>
 </body>
 </html>
