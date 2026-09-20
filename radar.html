@@ -143,21 +143,21 @@ el(cat, 'ellipse', {cx:50, cy:55, rx:31, ry:29, fill:'none', stroke:'#b83a2a', '
 el(cat, 'path', {d:'M 44 29 Q 50 25 56 29', fill:'none', stroke:'#c9a96e', 'stroke-width':1.6, 'stroke-linecap':'round'});
 el(cat, 'path', {d:'M 46 25 Q 50 21.5 54 25', fill:'none', stroke:'#c9a96e', 'stroke-width':1.2, 'stroke-linecap':'round', opacity:0.8});
 /* 花钿(朱红菱形+侧点) */
-el(cat, 'path', {d:'M 50 38 L 52.4 41.5 L 50 45 L 47.6 41.5 Z', fill:'#b83a2a'});
-el(cat, 'circle', {cx:46.6, cy:41, r:1, fill:'#b83a2a'});
-el(cat, 'circle', {cx:53.4, cy:41, r:1, fill:'#b83a2a'});
+el(cat, 'path', {class:'catFace', d:'M 50 38 L 52.4 41.5 L 50 45 L 47.6 41.5 Z', fill:'#b83a2a'});
+el(cat, 'circle', {class:'catFace', cx:46.6, cy:41, r:1, fill:'#b83a2a'});
+el(cat, 'circle', {class:'catFace', cx:53.4, cy:41, r:1, fill:'#b83a2a'});
 /* 笑眼弯弯 */
-el(cat, 'path', {d:'M 31 52 Q 37 43 43 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
-el(cat, 'path', {d:'M 57 52 Q 63 43 69 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
+el(cat, 'path', {class:'catFace', d:'M 31 52 Q 37 43 43 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
+el(cat, 'path', {class:'catFace', d:'M 57 52 Q 63 43 69 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
 /* 腮红 */
-el(cat, 'ellipse', {cx:29, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
-el(cat, 'ellipse', {cx:71, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
+el(cat, 'ellipse', {class:'catFace', cx:29, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
+el(cat, 'ellipse', {class:'catFace', cx:71, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
 /* 鼻+ω嘴 */
-el(cat, 'path', {d:'M 48 62 L 52 62 L 50 66 Z', fill:'#c9a96e'});
-el(cat, 'path', {d:'M 50 66 Q 50 69.5 46.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
-el(cat, 'path', {d:'M 50 66 Q 50 69.5 53.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
+el(cat, 'path', {class:'catFace', d:'M 48 62 L 52 62 L 50 66 Z', fill:'#c9a96e'});
+el(cat, 'path', {class:'catFace', d:'M 50 66 Q 50 69.5 46.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
+el(cat, 'path', {class:'catFace', d:'M 50 66 Q 50 69.5 53.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
 /* 胡须 */
-var whiskers = el(cat, 'g', {stroke:'#5a4a3a', 'stroke-width':1.1, 'stroke-linecap':'round', opacity:0.9});
+var whiskers = el(cat, 'g', {class:'catFace', stroke:'#5a4a3a', 'stroke-width':1.1, 'stroke-linecap':'round', opacity:0.9});
 [[21,55,1,50],[21,60,0,60],[21,65,1,70],[79,55,99,50],[79,60,100,60],[79,65,99,70]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
 /* 整组定位: 设计(50,55) → 画布(DCX,DCY), 缩放KS */
 cat.setAttribute('transform', 'translate(' + DCX + ' ' + DCY + ') scale(' + KS + ') translate(-50 -55)');
@@ -229,9 +229,9 @@ document.getElementById('replayBtn').addEventListener('click', play);
     });
     if (poly) poly.setAttribute('points', ptsStr.trim());
     /* 猫首层 */
-    var cat = clone.querySelector('#catAll'); if (cat) cat.setAttribute('opacity', cfg.cat);
+    var cat = clone.querySelector('#catLayer'); if (cat) cat.setAttribute('opacity', cfg.cat);
     /* 五官层(幕5才显示) */
-    var face = clone.querySelector('#catFaceLayer'); if (face) face.setAttribute('opacity', (cfg.id==='f5') ? 1 : 0);
+    var faceEls = clone.querySelectorAll('.catFace'); if (cfg.id === 'f4') { for (var fi2 = 0; fi2 < faceEls.length; fi2++) faceEls[fi2].setAttribute('opacity', 0); }
     /* 标签位置 */
     clone.querySelectorAll('#labelLayer text').forEach(function(t, idx){
       var n = ORD[idx]; var st = STATE[n];
