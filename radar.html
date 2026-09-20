@@ -199,10 +199,17 @@ el(gEar, 'path', {d:'M 319 190 L 371 224 L 318 248 Z', fill:'#f2b8ad', opacity:0
 el(gEar, 'path', {d:'M 581 190 L 529 224 L 582 248 Z', fill:'#f2b8ad', opacity:0.85, 'stroke-linejoin':'round'});
 function setEarPink(k){ gEar.setAttribute('opacity', (0.85*k).toFixed(2)); }
 var gP1 = el(face, 'g', {class:'faceP1', opacity:0});
-/* 花钿(红色三点小花钿,品牌式) */
-el(gP1, 'circle', {cx:443, cy:278, r:2.6, fill:'#b83a2a'});
-el(gP1, 'circle', {cx:457, cy:278, r:2.6, fill:'#b83a2a'});
-el(gP1, 'circle', {cx:450, cy:291, r:2.8, fill:'#b83a2a'});
+/* 花钿(五瓣小红花+金心+两侧垂珠,唐式) */
+(function(){
+  var hd = el(gP1, 'g', {});
+  for (var hi = 0; hi < 5; hi++) {
+    var ha = -Math.PI/2 + hi*2*Math.PI/5;
+    el(hd, 'circle', {cx:(450+6.5*Math.cos(ha)).toFixed(1), cy:(284+6.5*Math.sin(ha)).toFixed(1), r:3.4, fill:'#c0392b'});
+  }
+  el(hd, 'circle', {cx:450, cy:284, r:2.6, fill:'#c9a96e'});
+  el(hd, 'circle', {cx:431, cy:291, r:1.8, fill:'#b83a2a'});
+  el(hd, 'circle', {cx:469, cy:291, r:1.8, fill:'#b83a2a'});
+})();
 var gP2 = el(face, 'g', {class:'faceP2', opacity:0});
 /* 笑眼(下弯闭眼弧,品牌式) */
 el(gP2, 'path', {d:'M 306 390 Q 346 356 386 390', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
