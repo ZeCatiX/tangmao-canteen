@@ -232,6 +232,7 @@ function setFace(k1, k2){
 /* ═══ 五幕动画 ═══ */
 function easeIO(k){ return k<0.5 ? 2*k*k : 1 - Math.pow(-2*k+2,2)/2; }
 function frame(ms){
+  if (ms < 5800) setFace(0, 0);   /* 幕4起才上妆;重播时清掉上轮残留的表情 */
   if (ms < 500) { updateData(0, 0, 0); }
   else if (ms < 1700) { updateData(easeIO((ms-500)/1200), 0, 0); }
   else if (ms < 2000) { updateData(1, 0, 0); }
