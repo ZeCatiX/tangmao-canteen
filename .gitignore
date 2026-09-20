@@ -88,3 +88,6 @@ logo-preview-full.png
 
 # AI 客户端本地产物(plan/会话等)
 .ai/
+
+# AI box-agent 运行时任务注册目录
+2026-*box-agent*/
