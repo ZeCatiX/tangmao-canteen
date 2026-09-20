@@ -198,19 +198,19 @@ el(gP1, 'path', {d:'M 450 286 L 457 298 L 450 310 L 443 298 Z', fill:'#b83a2a'})
 el(gP1, 'circle', {cx:433, cy:296, r:2.4, fill:'#b83a2a'});
 el(gP1, 'circle', {cx:467, cy:296, r:2.4, fill:'#b83a2a'});
 var gP2 = el(face, 'g', {class:'faceP2', opacity:0});
-/* 笑眼弯弯 */
-el(gP2, 'path', {d:'M 322 378 Q 354 348 386 378', fill:'none', stroke:'#2c1810', 'stroke-width':4, 'stroke-linecap':'round'});
-el(gP2, 'path', {d:'M 514 378 Q 546 348 578 378', fill:'none', stroke:'#2c1810', 'stroke-width':4, 'stroke-linecap':'round'});
+/* 笑眼弯弯(贴脸颊最宽处,眼宽96) */
+el(gP2, 'path', {d:'M 298 400 Q 346 348 394 400', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
+el(gP2, 'path', {d:'M 502 400 Q 550 348 598 400', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
 /* 腮红 */
-el(gP2, 'ellipse', {cx:300, cy:421, rx:24, ry:14, fill:'#f2b8ad', opacity:0.9});
-el(gP2, 'ellipse', {cx:600, cy:421, rx:24, ry:14, fill:'#f2b8ad', opacity:0.9});
-/* 鼻+ω嘴 */
-el(gP2, 'path', {d:'M 443 424 L 457 424 L 450 434 Z', fill:'#c9a96e'});
-el(gP2, 'path', {d:'M 450 434 Q 450 446 438 447', fill:'none', stroke:'#2c1810', 'stroke-width':3, 'stroke-linecap':'round'});
-el(gP2, 'path', {d:'M 450 434 Q 450 446 462 447', fill:'none', stroke:'#2c1810', 'stroke-width':3, 'stroke-linecap':'round'});
+el(gP2, 'ellipse', {cx:292, cy:428, rx:26, ry:15, fill:'#f2b8ad', opacity:0.9});
+el(gP2, 'ellipse', {cx:608, cy:428, rx:26, ry:15, fill:'#f2b8ad', opacity:0.9});
+/* 鼻+ω嘴(下移贴近下巴方向,嘴展宽) */
+el(gP2, 'path', {d:'M 438 432 L 462 432 L 450 446 Z', fill:'#c9a96e'});
+el(gP2, 'path', {d:'M 450 446 Q 450 466 430 468', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round'});
+el(gP2, 'path', {d:'M 450 446 Q 450 466 470 468', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round'});
 /* 胡须 */
 var whiskers = el(gP2, 'g', {stroke:'#5a4a3a', 'stroke-width':2, 'stroke-linecap':'round', opacity:0.9});
-[[268,408,190,394],[268,421,180,421],[268,434,190,448],[632,408,710,394],[632,421,720,421],[632,434,710,448]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
+[[272,412,188,398],[272,428,178,428],[272,444,188,458],[628,412,712,398],[628,428,722,428],[628,444,712,458]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
 function setFace(k1, k2){
   gP1.setAttribute('opacity', k1.toFixed(2));
   gP2.setAttribute('opacity', k2.toFixed(2));
