@@ -27,7 +27,7 @@
   <div class="sub">瓦当制式 · 真实数据 · 唐猫庭院菜品推荐系统</div>
   <div class="card">
     <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,原序不变);第三幕,<b>重排猫头</b>(维度沿圆周滑到猫头位,双耳与圆脸现形);第四幕,<b>圆滑猫首显现</b>(数据多边形隐退,贝塞尔猫首淡入 — 品牌插画风);第五幕,<b>唐猫五官成形</b>(精致额纹、花钿、笑眼、腮红、ω 嘴、胡须),定格为治愈系唐猫。瓦当制式装饰全程不碰数据半径。</p>
-    <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><g id="decor"></g><g id="rings"></g><g id="spokes"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→圆滑猫首→唐猫成形</text><g id="dataLayer"></g><g id="catLayer" opacity="0"></g><g id="labelLayer"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
+    <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><g id="catFrame"></g><g id="decor"></g><g id="rings"></g><g id="spokes"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→圆滑猫首→唐猫成形</text><g id="dataLayer"></g><g id="catLayer" opacity="0"></g><g id="labelLayer"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
     <div class="playbar"><button class="playbtn" id="replayBtn">▶ 重播动画</button></div>
       <div class="card" style="margin-top:24px;">
     <p class="desc" style="margin-bottom:16px;"><b>五幕静态对比</b>(每幕定格一帧,供逐幕核对):</p>
@@ -71,6 +71,17 @@ var NS = 'http://www.w3.org/2000/svg';
 function el(parent, tag, attrs){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
 
 /* ═══ 静态装饰层(瓦当边轮/连珠/乳钉/当心 + 网格) ═─ */
+/* 猫头底框(双耳+圆脸轮廓,浅色,雷达画在猫脸上) */
+var cf = document.getElementById('catFrame');
+/* 左耳 */
+el(cf, 'path', {d:'M 258 218 Q 218 70 238 38 Q 258 16 310 58 Q 370 118 408 188 Z', fill:'#faf6f0', stroke:'#c9a96e', 'stroke-width':3, 'stroke-linejoin':'round'});
+/* 右耳 */
+el(cf, 'path', {d:'M 642 218 Q 682 70 662 38 Q 642 16 590 58 Q 530 118 492 188 Z', fill:'#faf6f0', stroke:'#c9a96e', 'stroke-width':3, 'stroke-linejoin':'round'});
+/* 粉内耳 */
+el(cf, 'path', {d:'M 282 182 Q 254 90 264 60 Q 302 88 356 156 Z', fill:'#f2b8ad', opacity:0.5});
+el(cf, 'path', {d:'M 618 182 Q 646 90 636 60 Q 598 88 544 156 Z', fill:'#f2b8ad', opacity:0.5});
+/* 圆脸(大圆,雷达画在脸上) */
+el(cf, 'circle', {cx:450, cy:360, r:275, fill:'#faf6f0', stroke:'#c9a96e', 'stroke-width':3});
 var deco = document.getElementById('decor');
 el(deco, 'circle', {cx:450, cy:348, r:256, fill:'none', stroke:'#c9a96e', 'stroke-width':5, opacity:0.9});
 el(deco, 'circle', {cx:450, cy:348, r:246, fill:'none', stroke:'#c9a96e', 'stroke-width':1.2, opacity:0.7});
