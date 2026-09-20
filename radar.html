@@ -226,18 +226,23 @@ document.getElementById('replayBtn').addEventListener('click', play);
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     /* 数据层定格 */
     var poly = clone.querySelector('#dataPoly'); if (poly) poly.removeAttribute('id');
-    var ptsStr = '';
+    var items = [];
     ORD.forEach(function(n,i){
-      var s = STATE[n];
-      var d = s.a1 - s.a0;
+      var st = STATE[n];
+      var d = st.a1 - st.a0;
       while (d > Math.PI) d -= 2*Math.PI;
       while (d < -Math.PI) d += 2*Math.PI;
-      var a = s.a0 + d*cfg.ka;
-      var r = s.r0 + (s.r1 - s.r0)*cfg.kr;
+      var a = st.a0 + d*cfg.ka;
+      var r = st.r0 + (st.r1 - st.r0)*cfg.kr;
       var x = (CX + r*Math.cos(a)).toFixed(1), y = (CY + r*Math.sin(a)).toFixed(1);
-      ptsStr += x + ',' + y + ' ';
-      var sp = clone.querySelectorAll('.vspoke')[i]; if (sp) { sp.setAttribute('x2', x); sp.setAttribute('y2', y); }
-      var dt = clone.querySelectorAll('.vdot')[i]; if (dt) { dt.setAttribute('cx', x); dt.setAttribute('cy', y); }
+      items.push({a: a, x: x, y: y, i: i});
+    });
+    items.sort(function(p,q){ return p.a - q.a; });
+    var ptsStr = '';
+    items.forEach(function(it){
+      ptsStr += it.x + ',' + it.y + ' ';
+      var sp = clone.querySelectorAll('.vspoke')[it.i]; if (sp) { sp.setAttribute('x2', it.x); sp.setAttribute('y2', it.y); }
+      var dt = clone.querySelectorAll('.vdot')[it.i]; if (dt) { dt.setAttribute('cx', it.x); dt.setAttribute('cy', it.y); }
     });
     if (poly) poly.setAttribute('points', ptsStr.trim());
     /* 猫首层 */
