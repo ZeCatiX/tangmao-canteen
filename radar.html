@@ -230,19 +230,31 @@ function setFace(k1, k2){
   gP2.setAttribute('opacity', k2.toFixed(2));
 }
 
-/* ═══ 五幕动画 ═══ */
-function easeIO(k){ return k<0.5 ? 2*k*k : 1 - Math.pow(-2*k+2,2)/2; }
+/* ═══ 三幕动画 ═══ */
+function smooth(t){ t = Math.max(0, Math.min(1, t)); return t*t*(3-2*t); }
 function frame(ms){
-  if (ms < 2900) setFace(0, 0);   /* 末幕才上妆;重播时清掉上轮残留的表情 */
+  /* 标签: 变形期间淡出(画面只留轮廓本身飞行),猫头定格后再淡回 */
+  var lv;
+  if (ms < 900) lv = 1;
+  else if (ms < 1400) lv = 1 - smooth((ms-900)/500);
+  else if (ms < 3400) lv = 0;
+  else if (ms < 4100) lv = smooth((ms-3400)/700);
+  else lv = 1;
+  labelEls.forEach(function(t){ t.setAttribute('opacity', lv.toFixed(2)); });
+
+  if (ms < 2800) setFace(0, 0);
   if (ms < 900) { updateData(0, 0, 0); }
-  else if (ms < 1600) { updateData(easeIO((ms-900)/700), 0, 0); }   /* 收拢归圆:顶点沿各自辐条滑到近圆,凹坑消失 */
-  else if (ms < 2900) { var k = easeIO((ms-1600)/1300); updateData(k, k, k); }   /* 长成猫头:角度滑到解剖位,轮廓变形,米白渐显 */
-  else if (ms < 3200) { updateData(1, 1, 1); }
-  else if (ms < 4300) { updateData(1, 1, 1); setFace(easeIO((ms-3200)/1100), easeIO((ms-3200)/1100)); }
-  else { updateData(1, 1, 1); setFace(1, 1); }
+  else if (ms < 3400) {
+    /* 单一连续变形: 收拢→转动→成形三相位以重叠平滑窗衔接,总速度无归零点 */
+    var p = (ms - 900) / 2500;
+    updateData(smooth(p/0.42), smooth((p-0.30)/0.50), smooth((p-0.55)/0.45));
+  }
+  else if (ms < 3700) { updateData(0, 1, 1); }
+  else if (ms < 4800) { updateData(0, 1, 1); setFace(smooth((ms-3700)/1000), smooth((ms-3700)/1000)); }
+  else { updateData(0, 1, 1); setFace(1, 1); }
 }
 function play(){
-  var t0 = performance.now(), DUR = 5000;
+  var t0 = performance.now(), DUR = 5400;
   var lastMs = -1;
   function raf(now){
     var ms = Math.min(DUR, now - t0);
