@@ -209,12 +209,15 @@ function setCatVis(op, scale){
 }
 function play(){
   var t0 = performance.now(), DUR = 5800;
-  function step(){
-    var ms = Math.min(DUR, performance.now() - t0);
-    try { frame(ms); } catch(e) { /* 单帧异常不终止动画 */ }
-    if (ms < DUR) setTimeout(step, 16);
+  var lastMs = -1;
+  function raf(now){
+    var ms = Math.min(DUR, now - t0);
+    if (ms === lastMs) { setTimeout(function(){ requestAnimationFrame(raf); }, 16); return; }
+    lastMs = ms;
+    try { frame(ms); } catch(e) { /* 单帧异常不终止 */ }
+    if (ms < DUR) requestAnimationFrame(raf);
   }
-  step();
+  requestAnimationFrame(raf);
 }
 window.addEventListener('load', function(){ setTimeout(play, 400); });
 document.getElementById('replayBtn').addEventListener('click', play);
