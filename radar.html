@@ -26,7 +26,7 @@
   <h1>推荐模型 · 12 特征重要性雷达</h1>
   <div class="sub">瓦当制式 · 真实数据 · 唐猫庭院菜品推荐系统</div>
   <div class="card">
-    <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,原序不变);第三幕,<b>重排猫头</b>(维度滑到猫头解剖位后,半径再循轮廓变形 —— 12 边形现出猫头原形:多边形圆脸、双耳竖起、下巴收尖;猫头轮廓为造型手法,数值以标签为准);第四幕,<b>初妆</b>(轮廓保持不变,额纹与花钿浮现);第五幕,<b>唐猫成形</b>(笑眼、腮红、ω 嘴、胡须浮现),定格为多边形唐猫 —— 12 个特征顶点自始至终就是这只猫。瓦当制式装饰全程不碰数据半径。</p>
+    <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,原序不变);第三幕,<b>重排猫头</b>(维度滑到猫头解剖位后,半径再循轮廓变形 —— 12 边形现出猫头原形:多边形圆脸、双耳竖起、下巴收尖;猫头轮廓为造型手法,数值以标签为准);第四幕,<b>初妆</b>(轮廓保持不变,额间花钿浮现);第五幕,<b>唐猫成形</b>(笑眼、腮红晕、ω 嘴、胡须浮现),定格为多边形唐猫 —— 12 个特征顶点自始至终就是这只猫。瓦当制式装饰全程不碰数据半径。</p>
     <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><g id="catFrame"></g><g id="decor"></g><g id="rings"></g><g id="spokes"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→初妆→唐猫成形</text><g id="dataLayer"></g><g id="faceLayer"></g><g id="labelLayer"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
     <div class="playbar"><button class="playbtn" id="replayBtn">▶ 重播动画</button></div>
       <div class="card" style="margin-top:24px;">
@@ -154,6 +154,7 @@ function updateData(kr, ka, kc){
   vspokes.forEach(function(l){ l.setAttribute('opacity', (0.5*(1-kc2)).toFixed(2)); });
   document.getElementById('rings').setAttribute('opacity', (1 - 0.65*kc2).toFixed(2));
   setStageVis(1 - 0.75*kc2, 1 - 0.4*kc2);
+  setEarPink(kc2);
   placeLabels(kr, ka, kc);
 }
 /* 舞台层透明度: 底框猫耳+圆脸(catFrame)与瓦当边轮(decor)在幕3成形时让位,幕4恢复 */
@@ -190,26 +191,29 @@ function placeLabels(kr, ka, kc){
   });
 }
 
-/* ═══ 多边形唐猫五官层(画布坐标,直接配位多边形脸: 脸心≈(450,390),脸宽≈474);幕4初妆/幕5成形分两组淡入 ═══ */
+/* ═══ 多边形唐猫五官层(画布坐标,直接配位多边形脸: 脸心≈(450,390),脸宽≈474);五官参考品牌插画(下弯笑眼/红花钿/粉晕腮红/ω嘴) ═══ */
 var face = document.getElementById('faceLayer');
+/* 耳内粉(局部填色,随轮廓成形渐显) */
+var gEar = el(face, 'g', {class:'earPink', opacity:0});
+el(gEar, 'path', {d:'M 319 190 L 371 224 L 318 248 Z', fill:'#f2b8ad', opacity:0.85, 'stroke-linejoin':'round'});
+el(gEar, 'path', {d:'M 581 190 L 529 224 L 582 248 Z', fill:'#f2b8ad', opacity:0.85, 'stroke-linejoin':'round'});
+function setEarPink(k){ gEar.setAttribute('opacity', (0.85*k).toFixed(2)); }
 var gP1 = el(face, 'g', {class:'faceP1', opacity:0});
-/* 额纹两道(金) */
-el(gP1, 'path', {d:'M 428 262 Q 450 248 472 262', fill:'none', stroke:'#c9a96e', 'stroke-width':3, 'stroke-linecap':'round'});
-el(gP1, 'path', {d:'M 436 244 Q 450 233 464 244', fill:'none', stroke:'#c9a96e', 'stroke-width':2.2, 'stroke-linecap':'round', opacity:0.85});
-/* 花钿(朱红菱形+侧点) */
-el(gP1, 'path', {d:'M 450 286 L 457 298 L 450 310 L 443 298 Z', fill:'#b83a2a'});
-el(gP1, 'circle', {cx:433, cy:296, r:2.4, fill:'#b83a2a'});
-el(gP1, 'circle', {cx:467, cy:296, r:2.4, fill:'#b83a2a'});
+/* 花钿(红色三点小花钿,品牌式) */
+el(gP1, 'circle', {cx:443, cy:278, r:2.6, fill:'#b83a2a'});
+el(gP1, 'circle', {cx:457, cy:278, r:2.6, fill:'#b83a2a'});
+el(gP1, 'circle', {cx:450, cy:291, r:2.8, fill:'#b83a2a'});
 var gP2 = el(face, 'g', {class:'faceP2', opacity:0});
-/* 笑眼(^ 折线,几何语言贴轮廓) */
-el(gP2, 'path', {d:'M 300 398 L 346 356 L 392 398', fill:'none', stroke:'#2c1810', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
-el(gP2, 'path', {d:'M 508 398 L 554 356 L 600 398', fill:'none', stroke:'#2c1810', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
-/* 腮红(菱形,呼应花钿) */
-el(gP2, 'path', {d:'M 292 412 L 318 428 L 292 444 L 266 428 Z', fill:'#f2b8ad', opacity:0.9, 'stroke-linejoin':'round'});
-el(gP2, 'path', {d:'M 608 412 L 634 428 L 608 444 L 582 428 Z', fill:'#f2b8ad', opacity:0.9, 'stroke-linejoin':'round'});
-/* 鼻+w嘴(折线,下颌方向) */
-el(gP2, 'path', {d:'M 438 432 L 462 432 L 450 446 Z', fill:'#c9a96e'});
-el(gP2, 'path', {d:'M 424 446 L 437 464 L 450 450 L 463 464 L 476 446', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
+/* 笑眼(下弯闭眼弧,品牌式) */
+el(gP2, 'path', {d:'M 306 390 Q 346 356 386 390', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
+el(gP2, 'path', {d:'M 514 390 Q 554 356 594 390', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
+/* 腮红(双层椭圆晕染) */
+el(gP2, 'ellipse', {cx:293, cy:416, rx:32, ry:19, fill:'#f5c6ba', opacity:0.5});
+el(gP2, 'ellipse', {cx:293, cy:416, rx:21, ry:12.5, fill:'#f2b8ad', opacity:0.55});
+el(gP2, 'ellipse', {cx:607, cy:416, rx:32, ry:19, fill:'#f5c6ba', opacity:0.5});
+el(gP2, 'ellipse', {cx:607, cy:416, rx:21, ry:12.5, fill:'#f2b8ad', opacity:0.55});
+/* ω嘴(平滑曲线,参考品牌) */
+el(gP2, 'path', {d:'M 426 448 Q 430 468 446 463 Q 450 461 450 454 Q 450 461 454 463 Q 470 468 474 448', fill:'none', stroke:'#2c1810', 'stroke-width':3.2, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
 /* 胡须 */
 var whiskers = el(gP2, 'g', {stroke:'#5a4a3a', 'stroke-width':2, 'stroke-linecap':'round', opacity:0.9});
 [[272,412,188,398],[272,428,178,428],[272,444,188,458],[628,412,712,398],[628,428,722,428],[628,444,712,458]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
@@ -301,9 +305,10 @@ document.getElementById('replayBtn').addEventListener('click', play);
       t.setAttribute('y', (CY + LABEL_R*sn + (sn<-0.5?-2:(sn>0.5?12:5))).toFixed(1));
       t.setAttribute('text-anchor', (c>0.3?'start':(c<-0.3?'end':'middle')));
     });
-    /* 成形后定格效果: 米白猫脸填充、辐条隐、环网格淡(与动画一致) */
+    /* 成形后定格效果: 米白猫脸填充、耳内粉、辐条隐、环网格淡(与动画一致) */
     if (cfg.kc) {
       if (poly) { poly.setAttribute('stroke-width', 5); poly.setAttribute('fill', '#faf6f0'); poly.setAttribute('fill-opacity', 1); }
+      var ep2 = clone.querySelector('.earPink'); if (ep2) ep2.setAttribute('opacity', 0.85);
       var sp2 = clone.querySelectorAll('.vspoke');
       for (var si = 0; si < sp2.length; si++) sp2[si].setAttribute('opacity', 0);
       var dt2 = clone.querySelectorAll('.vdot');
