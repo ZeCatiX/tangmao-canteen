@@ -48,7 +48,7 @@
 var W = {'辣度':8.0,'咸淡':6.2,'甜酸':4.1,'热量':7.6,'价格':10.4,'招牌':0.4,'评分':0,'用户辣度':17.7,'用户咸淡':9.4,'用户甜酸':12.0,'用户价格':14.9,'用户热量':9.3};
 var MAX = 17.7;
 var ORD = ['辣度','咸淡','甜酸','热量','价格','招牌','评分','用户辣度','用户咸淡','用户甜酸','用户价格','用户热量'];
-var CAT = ['评分','用户辣度','招牌','热量','咸淡','甜酸','用户热量','用户咸淡','价格','用户甜酸','辣度','用户价格'];
+var CAT = ['评分','用户辣度','招牌','热量','辣度','甜酸','用户热量','用户咸淡','价格','用户甜酸','用户价格','咸淡'];
 var CX = 450, CY = 348, UNIT = 11.6, KS = 4.6, LABEL_R = 276;
 var DCX = 450, DCY = 372;   /* 设计(50,55)在画布上的落点 */
 
@@ -95,14 +95,26 @@ ORD.forEach(function(n,i){
 dataPoly = el(dl, 'polygon', {id:'dataPoly', points:vdots.map(function(d){ return d.getAttribute('cx')+','+d.getAttribute('cy'); }).join(' '), fill:'#b83a2a', opacity:0.30, stroke:'#b83a2a', 'stroke-width':2.5, 'stroke-linejoin':'round'});
 dl.insertBefore(dataPoly, vdots[0]);
 function updateData(kr, ka){
-  var ptsStr = '';
+  var items = [];
   ORD.forEach(function(n,i){
-    var p = posAt(n, kr, ka), f = [p[0].toFixed(1), p[1].toFixed(1)];
-    vspokes[i].setAttribute('x2', f[0]); vspokes[i].setAttribute('y2', f[1]);
-    vdots[i].setAttribute('cx', f[0]); vdots[i].setAttribute('cy', f[1]);
-    ptsStr += f[0] + ',' + f[1] + ' ';
+    var st = STATE[n];
+    var d = st.a1 - st.a0;
+    while (d > Math.PI) d -= 2*Math.PI;
+    while (d < -Math.PI) d += 2*Math.PI;
+    var a = st.a0 + d*ka;
+    var r = st.r0 + (st.r1 - st.r0)*kr;
+    var x = CX + r*Math.cos(a), y = CY + r*Math.sin(a);
+    items.push({a: a, x: x, y: y, i: i});
   });
-  dataPoly.setAttribute('points', ptsStr.trim());
+  items.sort(function(p,q){ return p.a - q.a; });
+  var ptsStr = "";
+  items.forEach(function(it){
+    var f = [it.x.toFixed(1), it.y.toFixed(1)];
+    vspokes[it.i].setAttribute("x2", f[0]); vspokes[it.i].setAttribute("y2", f[1]);
+    vdots[it.i].setAttribute("cx", f[0]); vdots[it.i].setAttribute("cy", f[1]);
+    ptsStr += f[0] + "," + f[1] + " ";
+  });
+  dataPoly.setAttribute("points", ptsStr.trim());
   placeLabels(kr, ka);
 }
 /* ═══ 标签层(跟随动画位置) ═══ */
