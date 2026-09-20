@@ -143,10 +143,13 @@ function updateData(kr, ka, kc){
     ptsStr += f[0] + "," + f[1] + " ";
   });
   dataPoly.setAttribute("points", ptsStr.trim());
-  /* 成形阶段(kc>0): 隐辐条、淡环网格、剪影化描边填充、淡化底框与瓦当装饰——多边形猫头独占舞台(同造型稿观感) */
+  /* 成形阶段(kc>0): 填充从数据粉渐变为米白猫脸、描边加粗、隐辐条淡环网格、底框让位——多边形猫头独占舞台 */
   var kc2 = kc || 0;
+  var c0 = [184,58,42], c1 = [250,246,240];
+  var cr = [Math.round(c0[0]+(c1[0]-c0[0])*kc2), Math.round(c0[1]+(c1[1]-c0[1])*kc2), Math.round(c0[2]+(c1[2]-c0[2])*kc2)];
+  dataPoly.setAttribute('fill', 'rgb(' + cr.join(',') + ')');
+  dataPoly.setAttribute('fill-opacity', (0.30 + 0.70*kc2).toFixed(2));
   dataPoly.setAttribute('stroke-width', (2.5 + 2.5*kc2).toFixed(2));
-  dataPoly.setAttribute('fill-opacity', (0.30 + 0.15*kc2).toFixed(2));
   vdots.forEach(function(d){ d.setAttribute('r', (3.5 + 2*kc2).toFixed(2)); });
   vspokes.forEach(function(l){ l.setAttribute('opacity', (0.5*(1-kc2)).toFixed(2)); });
   document.getElementById('rings').setAttribute('opacity', (1 - 0.65*kc2).toFixed(2));
@@ -198,16 +201,15 @@ el(gP1, 'path', {d:'M 450 286 L 457 298 L 450 310 L 443 298 Z', fill:'#b83a2a'})
 el(gP1, 'circle', {cx:433, cy:296, r:2.4, fill:'#b83a2a'});
 el(gP1, 'circle', {cx:467, cy:296, r:2.4, fill:'#b83a2a'});
 var gP2 = el(face, 'g', {class:'faceP2', opacity:0});
-/* 笑眼弯弯(贴脸颊最宽处,眼宽96) */
-el(gP2, 'path', {d:'M 298 400 Q 346 348 394 400', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
-el(gP2, 'path', {d:'M 502 400 Q 550 348 598 400', fill:'none', stroke:'#2c1810', 'stroke-width':4.5, 'stroke-linecap':'round'});
-/* 腮红 */
-el(gP2, 'ellipse', {cx:292, cy:428, rx:26, ry:15, fill:'#f2b8ad', opacity:0.9});
-el(gP2, 'ellipse', {cx:608, cy:428, rx:26, ry:15, fill:'#f2b8ad', opacity:0.9});
-/* 鼻+ω嘴(下移贴近下巴方向,嘴展宽) */
+/* 笑眼(^ 折线,几何语言贴轮廓) */
+el(gP2, 'path', {d:'M 300 398 L 346 356 L 392 398', fill:'none', stroke:'#2c1810', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
+el(gP2, 'path', {d:'M 508 398 L 554 356 L 600 398', fill:'none', stroke:'#2c1810', 'stroke-width':5, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
+/* 腮红(菱形,呼应花钿) */
+el(gP2, 'path', {d:'M 292 412 L 318 428 L 292 444 L 266 428 Z', fill:'#f2b8ad', opacity:0.9, 'stroke-linejoin':'round'});
+el(gP2, 'path', {d:'M 608 412 L 634 428 L 608 444 L 582 428 Z', fill:'#f2b8ad', opacity:0.9, 'stroke-linejoin':'round'});
+/* 鼻+w嘴(折线,下颌方向) */
 el(gP2, 'path', {d:'M 438 432 L 462 432 L 450 446 Z', fill:'#c9a96e'});
-el(gP2, 'path', {d:'M 450 446 Q 450 466 430 468', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round'});
-el(gP2, 'path', {d:'M 450 446 Q 450 466 470 468', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round'});
+el(gP2, 'path', {d:'M 424 446 L 437 464 L 450 450 L 463 464 L 476 446', fill:'none', stroke:'#2c1810', 'stroke-width':3.4, 'stroke-linecap':'round', 'stroke-linejoin':'round'});
 /* 胡须 */
 var whiskers = el(gP2, 'g', {stroke:'#5a4a3a', 'stroke-width':2, 'stroke-linecap':'round', opacity:0.9});
 [[272,412,188,398],[272,428,178,428],[272,444,188,458],[628,412,712,398],[628,428,722,428],[628,444,712,458]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
@@ -299,9 +301,9 @@ document.getElementById('replayBtn').addEventListener('click', play);
       t.setAttribute('y', (CY + LABEL_R*sn + (sn<-0.5?-2:(sn>0.5?12:5))).toFixed(1));
       t.setAttribute('text-anchor', (c>0.3?'start':(c<-0.3?'end':'middle')));
     });
-    /* 成形后定格效果: 辐条隐、环网格淡、剪影化描边填充(与动画一致) */
+    /* 成形后定格效果: 米白猫脸填充、辐条隐、环网格淡(与动画一致) */
     if (cfg.kc) {
-      if (poly) { poly.setAttribute('stroke-width', 5); poly.setAttribute('fill-opacity', 0.45); }
+      if (poly) { poly.setAttribute('stroke-width', 5); poly.setAttribute('fill', '#faf6f0'); poly.setAttribute('fill-opacity', 1); }
       var sp2 = clone.querySelectorAll('.vspoke');
       for (var si = 0; si < sp2.length; si++) sp2[si].setAttribute('opacity', 0);
       var dt2 = clone.querySelectorAll('.vdot');
