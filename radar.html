@@ -26,28 +26,26 @@
   <h1>推荐模型 · 12 特征重要性雷达</h1>
   <div class="sub">瓦当制式 · 真实数据 · 唐猫庭院菜品推荐系统</div>
   <div class="card">
-    <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,维度原序不变);第三幕,<b>重排猫头</b>(维度沿圆周滑到猫头位,轮廓现出双耳与圆脸);第四幕,<b>圆滑猫首显现</b>(数据多边形隐退,贝塞尔猫首淡入);第五幕,<b>唐猫五官成形</b>(笑眼弯弯、腮红、花钿、精致额纹、金鼻 ω 嘴、六胡须 — 参考唐猫庭院品牌插画与🐱)。瓦当制式装饰全程不碰数据半径。</p>
-    <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><circle cx="450" cy="348" r="256" fill="none" stroke="#c9a96e" stroke-width="5" opacity="0.9"/><circle cx="450" cy="348" r="246" fill="none" stroke="#c9a96e" stroke-width="1.2" opacity="0.7"/><g id="beads"></g><g id="studs"></g><circle cx="450" cy="348" r="11" fill="none" stroke="#c9a96e" stroke-width="3" opacity="0.95"/><g id="ringsG"></g><g id="spokesG"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→圆滑猫首→唐猫成形</text><g id="dataLayer"></g><g id="catHeadLayer" opacity="0"></g><g id="decoLayer"></g><g id="labelLayer"></g><g id="catFaceLayer" opacity="0"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
+    <p class="desc"><b>五幕动画 — 数据长成唐猫:</b> 第一幕,<b>原特征图</b>(数据原序,0 起严格占比,真实本色);第二幕,<b>相对归一化</b>(半径相对归一化带底值压缩,原序不变);第三幕,<b>重排猫头</b>(维度沿圆周滑到猫头位,双耳与圆脸现形);第四幕,<b>圆滑猫首显现</b>(数据多边形隐退,贝塞尔猫首淡入 — 品牌插画风);第五幕,<b>唐猫五官成形</b>(精致额纹、花钿、笑眼、腮红、ω 嘴、胡须),定格为治愈系唐猫。瓦当制式装饰全程不碰数据半径。</p>
+    <svg id="radarSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 680" style="width:100%;max-width:980px;height:auto;display:block;margin:0 auto;" font-family="'Noto Serif SC','STSong',serif"><rect x="0" y="0" width="900" height="680" fill="#faf6f0"/><g id="decor"></g><g id="rings"></g><g id="spokes"></g><text x="450" y="42" text-anchor="middle" font-size="19" font-weight="700" fill="#2c1810" letter-spacing="2">推荐模型 · 12 特征重要性雷达(瓦当制式)</text><text x="450" y="66" text-anchor="middle" font-size="12" fill="#756558">feature_importance.json · 2026-09-19 加权重训 · HistGB · R²=0.9443 · 五幕动画:原特征图→归一化→重排猫头→圆滑猫首→唐猫成形</text><g id="dataLayer"></g><g id="catLayer" opacity="0"></g><g id="labelLayer"></g><text x="450" y="658" text-anchor="middle" font-size="11" fill="#a08b6a">红色标签 = 用户口味维度 · 墨色标签 = 菜品属性维度 · 瓦当元素均为装饰</text></svg>
     <div class="playbar"><button class="playbtn" id="replayBtn">▶ 重播动画</button></div>
     <div class="footer">数据源 feature_importance.json · 模型 HistGradientBoosting · 训练 2026-09-19 · 留出 R²=0.9443</div>
   </div>
 </div>
 <script>
-/* ── 数据 ── */
+'use strict';
+/* ═══ 数据(唯一事实源) ═══ */
 var W = {'辣度':8.0,'咸淡':6.2,'甜酸':4.1,'热量':7.6,'价格':10.4,'招牌':0.4,'评分':0,'用户辣度':17.7,'用户咸淡':9.4,'用户甜酸':12.0,'用户价格':14.9,'用户热量':9.3};
 var MAX = 17.7;
-var CX = 450, CY = 348, UNIT = 11.6, LABEL_R = 276, KS = 4.8;
-/* 原特征图: 数据原序(FEATURE_NAMES), 每维 -90°起每30° */
 var ORD = ['辣度','咸淡','甜酸','热量','价格','招牌','评分','用户辣度','用户咸淡','用户甜酸','用户价格','用户热量'];
-/* 猫头排布: 只调位置 */
 var CAT = ['评分','用户辣度','招牌','热量','咸淡','甜酸','用户热量','用户咸淡','价格','用户甜酸','辣度','用户价格'];
-function ang(i){ return (i*30-90)*Math.PI/180; }
-function normR(v){ return 144 + (v/MAX)*76; }
-/* 每维的两态: 原序位(角度+0起半径) → 猫头位(角度+归一化半径) */
+var CX = 450, CY = 348, UNIT = 11.6, KS = 4.6, LABEL_R = 276;
+var DCX = 450, DCY = 372;   /* 设计(50,55)在画布上的落点 */
+
+/* ═══ 双态: 原序位 ↔ 猫头位(弧度制,最短路径) ═══ */
 var STATE = {};
-ORD.forEach(function(n,i){ STATE[n] = { a0: ang(i), r0: W[n]*UNIT }; });
-CAT.forEach(function(n,i){ if (STATE[n]) { STATE[n].a1 = ang(i); STATE[n].r1 = normR(W[n]); } });
-function fmt(p){ return [p[0].toFixed(1), p[1].toFixed(1)]; }
+ORD.forEach(function(n,i){ STATE[n] = { a0: (i*30-90)*Math.PI/180, r0: W[n]*UNIT }; });
+CAT.forEach(function(n,i){ STATE[n].a1 = (i*30-90)*Math.PI/180, STATE[n].r1 = 144 + (W[n]/MAX)*76; });
 function posAt(n, k){
   var s = STATE[n];
   var d = s.a1 - s.a0;
@@ -57,126 +55,129 @@ function posAt(n, k){
   var r = s.r0 + (s.r1 - s.r0)*k;
   return [CX + r*Math.cos(a), CY + r*Math.sin(a)];
 }
-function ptsStr(list){ return list.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' '); }
 
-/* ── 静态层构建(瓦当/网格/标签随动画位) ── */
+/* ═══ SVG 工具 ═══ */
 var NS = 'http://www.w3.org/2000/svg';
-function el(tag, attrs){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
-var bg = document.getElementById('beads');
-for (var i = 0; i < 24; i++){ var a0 = i*15*Math.PI/180; bg.appendChild(el('circle', {cx:(CX+238*Math.cos(a0)).toFixed(1), cy:(CY+238*Math.sin(a0)).toFixed(1), r:3, fill:'#c9a96e', opacity:0.85})); }
-var st = document.getElementById('studs');
-[45,135,225,315].forEach(function(a){ var r = a*Math.PI/180; st.appendChild(el('circle', {cx:(CX+243*Math.cos(r)).toFixed(1), cy:(CY+243*Math.sin(r)).toFixed(1), r:6.5, fill:'#c9a96e', stroke:'#a08b6a', 'stroke-width':1})); });
-var rg = document.getElementById('ringsG');
-[14,21,28,35].forEach(function(r){ rg.appendChild(el('circle', {cx:CX, cy:CY, r:(r*1.9).toFixed(0), fill:'none', stroke:'#c9a96e', 'stroke-width':0.8, opacity:0.5})); });
-[14,28].forEach(function(r){ rg.appendChild(el('circle', {cx:CX, cy:CY, r:(r*1.9).toFixed(0), fill:'#f0e6d0', opacity:0.35})); });
-rg.appendChild(el('circle', {cx:CX, cy:CY, r:(42.5*1.9).toFixed(0), fill:'none', stroke:'#c9a96e', 'stroke-width':1, opacity:0.7}));
-[5,10,15,20].forEach(function(p){ var t = el('text', {x:CX+6, y:CY-p*UNIT+4, 'font-size':11, fill:'#a08b6a'}); t.textContent = p+'%'; rg.appendChild(t); });
-var sp = document.getElementById('spokesG');
-[[450,116],[566,147],[651,232],[682,348],[651,464],[566,549],[450,580],[334,549],[249,464],[218,348],[249,232],[334,147]].forEach(function(p){ sp.appendChild(el('line', {x1:450, y1:348, x2:p[0], y2:p[1], stroke:'#c9a96e', 'stroke-width':0.7, opacity:0.4})); });
-/* 维度标签(位置跟随动画态) */
+function el(parent, tag, attrs){ var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+
+/* ═══ 静态装饰层(瓦当边轮/连珠/乳钉/当心 + 网格) ═─ */
+var deco = document.getElementById('decor');
+el(deco, 'circle', {cx:450, cy:348, r:256, fill:'none', stroke:'#c9a96e', 'stroke-width':5, opacity:0.9});
+el(deco, 'circle', {cx:450, cy:348, r:246, fill:'none', stroke:'#c9a96e', 'stroke-width':1.2, opacity:0.7});
+for (var i = 0; i < 24; i++){ var a = i*15*Math.PI/180; el(deco, 'circle', {cx:(450+238*Math.cos(a)).toFixed(1), cy:(348+238*Math.sin(a)).toFixed(1), r:3, fill:'#c9a96e', opacity:0.85}); }
+[45,135,225,315].forEach(function(a){ var r = a*Math.PI/180; el(deco, 'circle', {cx:(450+243*Math.cos(r)).toFixed(1), cy:(348+243*Math.sin(r)).toFixed(1), r:6.5, fill:'#c9a96e', stroke:'#a08b6a', 'stroke-width':1}); });
+el(deco, 'circle', {cx:450, cy:348, r:11, fill:'none', stroke:'#c9a96e', 'stroke-width':3, opacity:0.95});
+var ringsG = document.getElementById('rings');
+[14,21,28,35].forEach(function(r){ el(ringsG, 'circle', {cx:450, cy:348, r:(r*1.9).toFixed(0), fill:'none', stroke:'#c9a96e', 'stroke-width':0.8, opacity:0.5}); });
+[14,28].forEach(function(r){ el(ringsG, 'circle', {cx:450, cy:348, r:(r*1.9).toFixed(0), fill:'#f0e6d0', opacity:0.35}); });
+el(ringsG, 'circle', {cx:450, cy:348, r:(42.5*1.9).toFixed(0), fill:'none', stroke:'#c9a96e', 'stroke-width':1, opacity:0.7});
+[5,10,15,20].forEach(function(p){ var t = el(ringsG, 'text', {x:456, y:(348-p*UNIT+4).toFixed(1), 'font-size':11, fill:'#a08b6a'}); t.textContent = p+'%'; });
+[[450,116],[566,147],[651,232],[682,348],[651,464],[566,549],[450,580],[334,549],[249,464],[218,348],[249,232],[334,147]].forEach(function(p){ el(document.getElementById('spokes'), 'line', {x1:450, y1:348, x2:p[0], y2:p[1], stroke:'#c9a96e', 'stroke-width':0.7, opacity:0.4}); });
+
+/* ═══ 数据层(动态) ═══ */
+var dl = document.getElementById('dataLayer');
+var vspokes = [], vdots = [], dataPoly;
+ORD.forEach(function(n,i){
+  var p = posAt(n, 0), f = [p[0].toFixed(1), p[1].toFixed(1)];
+  vspokes.push(el(dl, 'line', {class:'vspoke', x1:450, y1:348, x2:f[0], y2:f[1], stroke:'#c9a96e', 'stroke-width':0.8, opacity:0.5}));
+  vdots.push(el(dl, 'circle', {class:'vdot', cx:f[0], cy:f[1], r:3.5, fill:'#c9a96e', stroke:'#b83a2a', 'stroke-width':1}));
+});
+dataPoly = el(dl, 'polygon', {id:'dataPoly', points:vdots.map(function(d){ return d.getAttribute('cx')+','+d.getAttribute('cy'); }).join(' '), fill:'#b83a2a', opacity:0.30, stroke:'#b83a2a', 'stroke-width':2.5, 'stroke-linejoin':'round'});
+dl.insertBefore(dataPoly, vdots[0]);
+function updateData(k){
+  var ptsStr = '';
+  ORD.forEach(function(n,i){
+    var p = posAt(n, k), f = [p[0].toFixed(1), p[1].toFixed(1)];
+    vspokes[i].setAttribute('x2', f[0]); vspokes[i].setAttribute('y2', f[1]);
+    vdots[i].setAttribute('cx', f[0]); vdots[i].setAttribute('cy', f[1]);
+    ptsStr += f[0] + ',' + f[1] + ' ';
+  });
+  dataPoly.setAttribute('points', ptsStr.trim());
+}
+/* ═══ 标签层(跟随动画位置) ═══ */
 var ll = document.getElementById('labelLayer');
-var labelEls = {};
-ORD.forEach(function(n){ var v = W[n];
-  var t = el('text', {'font-size':(n.indexOf('用户')===0?15:14), 'font-weight':(n.indexOf('用户')===0?700:400), fill:(n.indexOf('用户')===0?'#b83a2a':'#2c1810')});
-  t.textContent = n + ' ' + v.toFixed(1) + '%';
-  ll.appendChild(t); labelEls[n] = t;
+var labelEls = [];
+ORD.forEach(function(n,i){
+  var p = posAt(n, 0), a = STATE[n].a0, c = Math.cos(a), s = Math.sin(a);
+  var isUser = (n.indexOf('用户') === 0);
+  var t = el(ll, 'text', {x:p[0].toFixed(1), y:(p[1] + (s<-0.5?-2:(s>0.5?12:5))).toFixed(1), 'font-size':(isUser?15:14), 'font-weight':(isUser?700:400), fill:(isUser?'#b83a2a':'#2c1810'), 'text-anchor':(c>0.3?'start':(c<-0.3?'end':'middle'))});
+  t.textContent = n + ' ' + W[n].toFixed(1) + '%';
+  labelEls.push(t);
 });
 function placeLabels(k){
-  ORD.forEach(function(n,i){ var st = STATE[n]; var d = ((st.a1 - st.a0 + 540) % 360) - 180; var a = (st.a0 + d*k) * Math.PI/180; var c = Math.cos(a), s = Math.sin(a);
-    var t = labelEls[n]; if(!t) return;
-    t.setAttribute('x', (CX+LABEL_R*c).toFixed(1));
-    t.setAttribute('y', (CY+LABEL_R*s + (s<-0.5?-2:(s>0.5?12:5))).toFixed(1));
+  ORD.forEach(function(n,i){
+    var p = posAt(n, k), a = STATE[n].a0 + (STATE[n].a1 - STATE[n].a0)*k, c = Math.cos(a), s = Math.sin(a);
+    var t = labelEls[i]; if (!t) return;
+    t.setAttribute('x', p[0].toFixed(1));
+    t.setAttribute('y', (p[1] + (s<-0.5?-2:(s>0.5?12:5))).toFixed(1));
     t.setAttribute('text-anchor', (c>0.3?'start':(c<-0.3?'end':'middle')));
   });
 }
-/* 数据层 */
-var dl = document.getElementById('dataLayer');
-var vspokes = [], vdots = [];
-ORD.forEach(function(n){ var p = posAt(n, 0); var f = fmt(p);
-  var l1 = el('line', {class:'vspoke', x1:CX, y1:CY, x2:f[0], y2:f[1], stroke:'#c9a96e', 'stroke-width':0.8, opacity:0.5});
-  var d1 = el('circle', {class:'vdot', cx:f[0], cy:f[1], r:3.5, fill:'#c9a96e', stroke:'#b83a2a', 'stroke-width':1});
-  vspokes.push(l1); vdots.push(d1); dl.appendChild(l1); dl.appendChild(d1);
-});
-var dataPoly = el('polygon', {id:'dataPoly', points:vdots.map(function(d){return d.getAttribute('cx')+','+d.getAttribute('cy');}).join(' '), fill:'#b83a2a', opacity:0.30, stroke:'#b83a2a', 'stroke-width':2.5, 'stroke-linejoin':'round'});
-dl.insertBefore(dataPoly, vdots[0]);
-function updateData(k){
-  ORD.forEach(function(n,i){
-    var p = fmt(posAt(n, k));
-    vspokes[i].setAttribute('x2', p[0]); vspokes[i].setAttribute('y2', p[1]);
-    vdots[i].setAttribute('cx', p[0]); vdots[i].setAttribute('cy', p[1]);
-  });
-  var poly = ORD.map(function(n){ var p = fmt(posAt(n, k)); return p[0]+','+p[1]; }).join(' ');
-  dataPoly.setAttribute('points', poly);
-  placeLabels();
-}
 
-/* ── 圆滑猫首层(贝塞尔,幕4淡入;参考🐱与唐猫品牌插画) ── */
-var ch = document.getElementById('catHeadLayer');
-/* 左耳(有机曲线) */
-ch.appendChild(el('path', {d:'M336 292 Q318 160 322 138 Q326 122 344 132 Q402 168 442 214 Q400 268 336 292 Z', fill:'#faf6f0', stroke:'#b83a2a', 'stroke-width':4, 'stroke-linejoin':'round'}));
-/* 右耳(镜像) */
-ch.appendChild(el('path', {d:'M564 292 Q582 160 578 138 Q574 122 556 132 Q498 168 458 214 Q500 268 564 292 Z', fill:'#faf6f0', stroke:'#b83a2a', 'stroke-width':4, 'stroke-linejoin':'round'}));
+/* ═══ 圆滑猫首层(设计坐标 100×100, 中心(50,55); 整组统一 transform) ═══ */
+var cat = document.getElementById('catLayer');
+/* 双耳(有机曲线) */
+el(cat, 'path', {d:'M 25 41 Q 17 17 21.8 9 Q 33 15 39 33 Z', fill:'#faf6f0'});
+el(cat, 'path', {d:'M 75 41 Q 83 17 78.2 9 Q 67 15 61 33 Z', fill:'#faf6f0'});
 /* 粉内耳 */
-ch.appendChild(el('path', {d:'M352 262 Q344 186 342 160 Q386 190 416 218 Q384 246 352 262 Z', fill:'#f2b8ad', opacity:0.8}));
-ch.appendChild(el('path', {d:'M548 262 Q556 186 558 160 Q514 190 484 218 Q516 246 548 262 Z', fill:'#f2b8ad', opacity:0.8}));
-/* 圆脸 */
-ch.appendChild(el('ellipse', {cx:450, cy:378, rx:152, ry:138, fill:'#faf6f0', stroke:'#b83a2a', 'stroke-width':4}));
-
-/* ── 唐猫五官层(幕5淡入;笑眼/腮红/花钿/精致额纹/金鼻/ω嘴/胡须) ── */
-var fc = document.getElementById('catFaceLayer');
-/* 精致额纹(三道对称短弧,🐱额纹风) */
-fc.appendChild(el('path', {d:'M432 292 Q450 280 468 292', fill:'none', stroke:'#c9a96e', 'stroke-width':3, 'stroke-linecap':'round'}));
-fc.appendChild(el('path', {d:'M436 282 Q450 272 464 282', fill:'none', stroke:'#c9a96e', 'stroke-width':2.5, 'stroke-linecap':'round', opacity:0.8}));
-fc.appendChild(el('path', {d:'M441 273 Q450 266 459 273', fill:'none', stroke:'#c9a96e', 'stroke-width':2, 'stroke-linecap':'round', opacity:0.6}));
-/* 笑眼弯弯(∩形,墨色粗弧) */
-fc.appendChild(el('path', {d:'M378 356 Q402 336 426 356', fill:'none', stroke:'#2c1810', 'stroke-width':3.5, 'stroke-linecap':'round'}));
-fc.appendChild(el('path', {d:'M474 356 Q498 336 522 356', fill:'none', stroke:'#2c1810', 'stroke-width':3.5, 'stroke-linecap':'round'}));
+el(cat, 'path', {d:'M 26 33 Q 24 19 24.6 13 Q 34 19 36 31 Z', fill:'#f2b8ad', opacity:0.85});
+el(cat, 'path', {d:'M 74 33 Q 76 19 75.4 13 Q 66 19 64 31 Z', fill:'#f2b8ad', opacity:0.85});
+/* 圆脸(盖耳底) */
+el(cat, 'ellipse', {cx:50, cy:55, rx:31, ry:29, fill:'#faf6f0'});
+/* 描边层(耳+脸统一朱红轮廓,后置保证盖住接缝) */
+el(cat, 'path', {d:'M 25 41 Q 17 17 21.8 9 Q 33 15 39 33', fill:'none', stroke:'#b83a2a', 'stroke-width':1.4, 'stroke-linejoin':'round'});
+el(cat, 'path', {d:'M 61 33 Q 67 15 78.2 9 Q 83 17 75 41', fill:'none', stroke:'#b83a2a', 'stroke-width':1.4});
+el(cat, 'ellipse', {cx:50, cy:55, rx:31, ry:29, fill:'none', stroke:'#b83a2a', 'stroke-width':1.4});
+/* 额纹三道(金) */
+el(cat, 'path', {d:'M 44 29 Q 50 25 56 29', fill:'none', stroke:'#c9a96e', 'stroke-width':1.6, 'stroke-linecap':'round'});
+el(cat, 'path', {d:'M 46 25 Q 50 21.5 54 25', fill:'none', stroke:'#c9a96e', 'stroke-width':1.2, 'stroke-linecap':'round', opacity:0.8});
+/* 花钿(朱红菱形+侧点) */
+el(cat, 'path', {d:'M 50 38 L 52.4 41.5 L 50 45 L 47.6 41.5 Z', fill:'#b83a2a'});
+el(cat, 'circle', {cx:46.6, cy:41, r:1, fill:'#b83a2a'});
+el(cat, 'circle', {cx:53.4, cy:41, r:1, fill:'#b83a2a'});
+/* 笑眼弯弯 */
+el(cat, 'path', {d:'M 31 52 Q 37 43 43 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
+el(cat, 'path', {d:'M 57 52 Q 63 43 69 52', fill:'none', stroke:'#2c1810', 'stroke-width':2.4, 'stroke-linecap':'round'});
 /* 腮红 */
-fc.appendChild(el('ellipse', {cx:382, cy:392, rx:16, ry:10, fill:'#f2b8ad', opacity:0.8}));
-fc.appendChild(el('ellipse', {cx:518, cy:392, rx:16, ry:10, fill:'#f2b8ad', opacity:0.8}));
-/* 额头花钿(朱红菱形+两侧点) */
-fc.appendChild(el('path', {d:'M450 310 L456 320 L450 330 L444 320 Z', fill:'#b83a2a'}));
-fc.appendChild(el('circle', {cx:440, cy:318, r:2.2, fill:'#b83a2a'}));
-fc.appendChild(el('circle', {cx:460, cy:318, r:2.2, fill:'#b83a2a'}));
-/* 小鼻(金) */
-fc.appendChild(el('path', {d:'M443 400 L457 400 L450 409 Z', fill:'#c9a96e'}));
-/* ω猫嘴 */
-fc.appendChild(el('path', {d:'M450 409 Q450 416 443 416.5', fill:'none', stroke:'#2c1810', 'stroke-width':1.8, 'stroke-linecap':'round'}));
-fc.appendChild(el('path', {d:'M450 409 Q450 416 457 416.5', fill:'none', stroke:'#2c1810', 'stroke-width':1.8, 'stroke-linecap':'round'}));
-/* 六胡须 */
-var whiskers = el('g', {stroke:'#5a4a3a', 'stroke-width':1.4, 'stroke-linecap':'round', opacity:0.85});
-[[430,404,368,392],[430,410,364,410],[430,416,368,428],[470,404,532,392],[470,410,536,410],[470,416,532,428]].forEach(function(l){ whiskers.appendChild(el('line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]})); });
-fc.appendChild(whiskers);
+el(cat, 'ellipse', {cx:29, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
+el(cat, 'ellipse', {cx:71, cy:61, rx:7, ry:4.5, fill:'#f2b8ad', opacity:0.85});
+/* 鼻+ω嘴 */
+el(cat, 'path', {d:'M 48 62 L 52 62 L 50 66 Z', fill:'#c9a96e'});
+el(cat, 'path', {d:'M 50 66 Q 50 69.5 46.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
+el(cat, 'path', {d:'M 50 66 Q 50 69.5 53.5 70', fill:'none', stroke:'#2c1810', 'stroke-width':1.4, 'stroke-linecap':'round'});
+/* 胡须 */
+var whiskers = el(cat, 'g', {stroke:'#5a4a3a', 'stroke-width':1.1, 'stroke-linecap':'round', opacity:0.9});
+[[21,55,1,50],[21,60,0,60],[21,65,1,70],[79,55,99,50],[79,60,100,60],[79,65,99,70]].forEach(function(l){ el(whiskers, 'line', {x1:l[0], y1:l[1], x2:l[2], y2:l[3]}); });
+/* 整组定位: 设计(50,55) → 画布(DCX,DCY), 缩放KS */
+cat.setAttribute('transform', 'translate(' + DCX + ' ' + DCY + ') scale(' + KS + ') translate(-50 -55)');
 
-/* ── 五幕动画 ── */
-function lerp(a,b,k){ return a + (b-a)*k; }
+/* ═══ 五幕动画 ═══ */
 function easeIO(k){ return k<0.5 ? 2*k*k : 1 - Math.pow(-2*k+2,2)/2; }
 function frame(ms){
-  /* 时间轴(秒): 0~0.5 原图 → 0.5~1.7 归一化 → 1.7~2.0 停 → 2.0~3.2 重排猫头 → 3.2~3.6 停 → 3.6~4.8 猫首+额纹 → 4.8~5.6 五官 */
-  if (ms < 500) { updateData(0); }
-  else if (ms < 1700) { var k = easeIO((ms-500)/1200); updateData(k); }
-  else if (ms < 2000) { updateData(1); }
-  else if (ms < 3200) { var k2 = easeIO((ms-2000)/1200); updateData(k2); }
-  else if (ms < 3600) { updateData(1); }
-  else if (ms < 4800) { var k3 = easeIO((ms-3600)/1200);
-    dataPoly.setAttribute('opacity', (0.30*(1-k3)).toFixed(2));
-    ch.setAttribute('opacity', k3.toFixed(2));
-    ch.setAttribute('transform', 'translate(450 384) scale(' + (0.92 + 0.08*k3).toFixed(3) + ') translate(-50 -55)');
-    vspokes.forEach(function(l){ l.setAttribute('opacity', (0.5*(1-k3)).toFixed(2)); });
-    vdots.forEach(function(d){ d.setAttribute('opacity', (1-k3).toFixed(2)); });
-    fc.setAttribute('opacity', 0); }
-  else { dataPoly.setAttribute('opacity', 0);
-    ch.setAttribute('opacity', 1);
-    ch.setAttribute('transform', 'translate(450 384) scale(1) translate(-50 -55)');
-    vspokes.forEach(function(l){ l.setAttribute('opacity', 0); });
-    vdots.forEach(function(d){ d.setAttribute('opacity', 0); });
-    fc.setAttribute('opacity', Math.min(1, (ms-4800)/800).toFixed(2)); }
+  if (ms < 500) { updateData(0); setCatVis(0, 1); }
+  else if (ms < 1700) { updateData(easeIO((ms-500)/1200)); setCatVis(0, 1); }
+  else if (ms < 2000) { updateData(1); setCatVis(0, 1); }
+  else if (ms < 3200) { updateData(easeIO((ms-2000)/1200)); setCatVis(0, 1); }
+  else if (ms < 3600) { updateData(1); setCatVis(0, 1); }
+  else if (ms < 4800) { var k = easeIO((ms-3600)/1200); fadeData(1-k); setCatVis(k, 1-0.08*k); }
+  else { fadeData(0); setCatVis(1, 1); }
+}
+function fadeData(vis){ /* vis: 0~1 数据可见度 */
+  dataPoly.setAttribute('opacity', (0.30*vis).toFixed(2));
+  dataPoly.setAttribute('stroke-opacity', vis.toFixed(2));
+  vspokes.forEach(function(l){ l.setAttribute('opacity', (0.5*vis).toFixed(2)); });
+  vdots.forEach(function(d){ d.setAttribute('opacity', vis.toFixed(2)); });
+  labelEls.forEach(function(t){ t.setAttribute('opacity', vis.toFixed(2)); });
+}
+function setCatVis(op, scale){
+  cat.setAttribute('opacity', op.toFixed(2));
+  cat.setAttribute('transform', 'translate(' + DCX + ' ' + DCY + ') scale(' + (KS*scale).toFixed(3) + ') translate(-50 -55)');
 }
 function play(){
-  var t0 = performance.now(), DUR = 5600;
+  var t0 = performance.now(), DUR = 5800;
   function step(){
     var ms = Math.min(DUR, performance.now() - t0);
-    frame(ms);
+    try { frame(ms); } catch(e) { /* 单帧异常不终止动画 */ }
     if (ms < DUR) setTimeout(step, 16);
   }
   step();
