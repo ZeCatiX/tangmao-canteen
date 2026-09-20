@@ -50,8 +50,10 @@ CAT.forEach(function(n,i){ if (STATE[n]) { STATE[n].a1 = ang(i); STATE[n].r1 = n
 function fmt(p){ return [p[0].toFixed(1), p[1].toFixed(1)]; }
 function posAt(n, k){
   var s = STATE[n];
-  var d = ((s.a1 - s.a0 + 540) % 360) - 180;   /* 最短路径角差 */
-  var a = (s.a0 + d*k) * Math.PI/180;
+  var d = s.a1 - s.a0;
+  while (d > Math.PI) d -= 2*Math.PI;
+  while (d < -Math.PI) d += 2*Math.PI;
+  var a = s.a0 + d*k;
   var r = s.r0 + (s.r1 - s.r0)*k;
   return [CX + r*Math.cos(a), CY + r*Math.sin(a)];
 }
@@ -79,8 +81,8 @@ ORD.forEach(function(n){ var v = W[n];
   t.textContent = n + ' ' + v.toFixed(1) + '%';
   ll.appendChild(t); labelEls[n] = t;
 });
-function placeLabels(){
-  CAT.forEach(function(n,i){ var a = ang(i); var c = Math.cos(a), s = Math.sin(a);
+function placeLabels(k){
+  ORD.forEach(function(n,i){ var st = STATE[n]; var d = ((st.a1 - st.a0 + 540) % 360) - 180; var a = (st.a0 + d*k) * Math.PI/180; var c = Math.cos(a), s = Math.sin(a);
     var t = labelEls[n]; if(!t) return;
     t.setAttribute('x', (CX+LABEL_R*c).toFixed(1));
     t.setAttribute('y', (CY+LABEL_R*s + (s<-0.5?-2:(s>0.5?12:5))).toFixed(1));
@@ -159,25 +161,25 @@ function frame(ms){
   else if (ms < 4800) { var k3 = easeIO((ms-3600)/1200);
     dataPoly.setAttribute('opacity', (0.30*(1-k3)).toFixed(2));
     ch.setAttribute('opacity', k3.toFixed(2));
-    ch.setAttribute('transform', 'translate(450 378) scale(' + (0.92 + 0.08*k3).toFixed(3) + ') translate(-450 -378)');
+    ch.setAttribute('transform', 'translate(450 384) scale(' + (0.92 + 0.08*k3).toFixed(3) + ') translate(-50 -55)');
     vspokes.forEach(function(l){ l.setAttribute('opacity', (0.5*(1-k3)).toFixed(2)); });
     vdots.forEach(function(d){ d.setAttribute('opacity', (1-k3).toFixed(2)); });
     fc.setAttribute('opacity', 0); }
   else { dataPoly.setAttribute('opacity', 0);
     ch.setAttribute('opacity', 1);
-    ch.setAttribute('transform', 'translate(450 378) scale(1) translate(-450 -378)');
+    ch.setAttribute('transform', 'translate(450 384) scale(1) translate(-50 -55)');
     vspokes.forEach(function(l){ l.setAttribute('opacity', 0); });
     vdots.forEach(function(d){ d.setAttribute('opacity', 0); });
     fc.setAttribute('opacity', Math.min(1, (ms-4800)/800).toFixed(2)); }
 }
 function play(){
   var t0 = performance.now(), DUR = 5600;
-  function step(now){
-    var ms = Math.min(DUR, now - t0);
+  function step(){
+    var ms = Math.min(DUR, performance.now() - t0);
     frame(ms);
-    if (ms < DUR) requestAnimationFrame(step);
+    if (ms < DUR) setTimeout(step, 16);
   }
-  requestAnimationFrame(step);
+  step();
 }
 window.addEventListener('load', function(){ setTimeout(play, 400); });
 document.getElementById('replayBtn').addEventListener('click', play);
