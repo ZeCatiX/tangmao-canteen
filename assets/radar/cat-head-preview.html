@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>幕3 · 12 顶点多边形猫头 · 造型稿 · 唐猫庭院</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{--primary:#b83a2a;--gold:#c9a96e;--cream:#faf6f0;--ink:#2c1810;--muted:#756558;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:#efe9dc;color:var(--ink);font-family:'Noto Serif SC','STSong','SimSun',serif;padding:40px 24px 72px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+  h1{font-size:22px;letter-spacing:5px;margin:0 0 6px;font-weight:900;text-align:center;}
+  .sub{font-size:12px;letter-spacing:2px;color:var(--muted);text-align:center;margin-bottom:26px;}
+  .card{background:var(--cream);border:1px solid #ddd2bc;border-radius:14px;box-shadow:0 2px 10px rgba(60,30,10,.08);padding:26px 24px;}
+  .hero{display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap;}
+  .hero .cat{width:460px;max-width:100%;}
+  .hero .info{max-width:380px;font-size:13px;color:var(--muted);line-height:2;}
+  .hero .info b{color:var(--ink);}
+  .hero h2,.gridcap{font-size:15px;letter-spacing:3px;margin:0 0 4px;font-weight:700;}
+  .gridcap{margin:26px 0 14px;text-align:center;color:var(--muted);font-size:13px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+  .cell{border:1px solid #e3d7bd;border-radius:10px;background:#faf6f0;overflow:hidden;}
+  .cell .cap{text-align:center;font-size:12px;color:#756558;letter-spacing:1px;padding:8px 6px 2px;}
+  .cell .note{text-align:center;font-size:11px;color:#a08b6a;padding:0 8px 10px;line-height:1.7;}
+  .footer{font-size:11px;color:#a08b6a;text-align:center;margin-top:22px;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>幕3 · 12 顶点多边形猫头 · 造型稿</h1>
+  <div class="sub">单独推敲猫头轮廓 · 每案严格 12 个顶点 · 虚线为可用半径(120) · 极坐标锚位可直接回填 radar.html CATPOS</div>
+  <div class="card">
+    <div class="hero">
+      <div class="cat" id="catPrimary"></div>
+      <div class="info">
+        <h2>主案 · 圆脸立耳（品牌唐猫构型）</h2>
+        <p><b>结构:</b> 额左/额心/额右三顶点撑起平缓额顶，双耳三角立在额顶两侧（耳外基=颊骨，耳内基=额左/额右），腮部最宽，双颌收向下巴。</p>
+        <p><b>比例:</b> 耳尖距额顶约一头高的 1/4，脸廓近圆弧，整体略宽于高 —— 与幕4 贝塞尔圆脸、底框大圆脸同构。</p>
+        <p><b>顶点编号:</b> ①~⑫ 即 12 个特征维度的落位，红色为用户口味维度（见标签）。</p>
+      </div>
+    </div>
+    <div class="gridcap">备选案（同一 12 顶点约束下的不同取舍）</div>
+    <div class="grid" id="alts"></div>
+  </div>
+  <div class="footer">造型专用稿 · 定案后按极坐标回填 radar.html CATPOS 表</div>
+</div>
+<script>
+'use strict';
+var NS='http://www.w3.org/2000/svg';
+function el(p,t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;}
+
+/* 每案: name/note + c[中心x,y] + pts = 12 × [极角°(-90=正上), 极半径] */
+var PRIMARY={
+  name:'主案 · 圆脸立耳', c:[150,144],
+  pts:[[232,115],[-52,115],[250,62],[-70,62],[-90,58],[206,80],[-26,80],[174,114],[6,114],[132,100],[48,100],[90,92]],
+  dims:{'232':'用户辣度','250':'招牌','-90':'甜酸','-70':'评分','-52':'用户价格','-26':'用户热量','6':'热量','48':'用户咸淡','90':'辣度','132':'咸淡','174':'价格','206':'用户甜酸'}
+};
+var ALTS=[
+  {name:'A · 圆脸大耳', note:'比主案耳更长、额顶更低——耳朵存在感拉满', c:[150,142],
+   pts:[[232,120],[-52,120],[251,58],[-71,58],[-90,54],[207,82],[-27,82],[175,96],[5,96],[131,102],[49,102],[90,106]]},
+  {name:'B · 经典宽脸', note:'宽脸浅下巴，经典猫头图标比例(宽>高)', c:[150,146],
+   pts:[[233,120],[-53,120],[252,60],[-72,60],[-90,55],[208,82],[-28,82],[176,112],[4,112],[132,94],[48,94],[90,86]]},
+  {name:'C · 折纸竖长', note:'窄高脸、棱角腮线、尖下巴,折纸风', c:[150,146],
+   pts:[[235,120],[-55,120],[253,52],[-73,52],[-90,46],[210,84],[-30,84],[175,92],[5,92],[135,98],[45,98],[90,110]]},
+  {name:'D · 幼态小耳', note:'圆 bun 脸 + 小短耳,幼猫比例', c:[150,148],
+   pts:[[238,106],[-58,106],[254,76],[-74,76],[-90,72],[214,94],[-34,94],[172,112],[8,112],[128,110],[52,110],[90,102]]},
+  {name:'E · 腮边毛穗', note:'颊骨→腮→颌 外-内-外折线,腮边出毛穗', c:[150,146],
+   pts:[[232,118],[-52,118],[250,60],[-70,60],[-90,56],[210,92],[-30,92],[177,118],[3,118],[138,90],[42,90],[90,86]]},
+  {name:'F · 方圆脸', note:'面颊近方、耳位靠外,憨厚款', c:[150,146],
+   pts:[[236,115],[-56,115],[252,70],[-72,70],[-90,66],[212,98],[-32,98],[182,112],[-2,112],[136,108],[44,108],[90,104]]},
+  {name:'G · 现行幕3', note:'当前 radar.html 在用形状(对照)', c:[150,140],
+   pts:[[229.7,120],[-49.7,120],[247.2,69.5],[-67.2,69.5],[-90,68.5],[207,78.2],[-27,78.2],[178.3,92.2],[1.7,92.2],[130.7,100.4],[49.3,100.4],[90,106.6]]}
+];
+
+function drawCat(host,v,big){
+  var svg=el(host,'svg',{viewBox:'0 0 300 300',xmlns:NS});
+  svg.style.width='100%';svg.style.height='auto';svg.style.display='block';
+  var c=v.c;
+  el(svg,'circle',{cx:c[0],cy:c[1],r:120,fill:'none',stroke:'#d8c9a8','stroke-width':1,'stroke-dasharray':'4 4',opacity:0.8});
+  el(svg,'circle',{cx:c[0],cy:c[1],r:2.5,fill:'#c9a96e'});
+  var pts=v.pts.map(function(p){
+    var a=p[0]*Math.PI/180;
+    return {x:c[0]+p[1]*Math.cos(a), y:c[1]+p[1]*Math.sin(a), a:p[0], r:p[1]};
+  }).sort(function(p,q){return p.a-q.a;});
+  el(svg,'polygon',{points:pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' '),
+    fill:'#b83a2a','fill-opacity':0.22,stroke:'#b83a2a','stroke-width':big?2.6:2,'stroke-linejoin':'round'});
+  pts.forEach(function(p,i){
+    var ux=Math.cos(p.a*Math.PI/180), uy=Math.sin(p.a*Math.PI/180);
+    el(svg,'circle',{cx:p.x.toFixed(1),cy:p.y.toFixed(1),r:big?3.6:3,fill:'#c9a96e',stroke:'#b83a2a','stroke-width':1});
+    var n=el(svg,'text',{x:(p.x+ux*13).toFixed(1),y:(p.y+uy*13+3).toFixed(1),'font-size':big?10:8.5,fill:'#a08b6a','text-anchor':'middle','font-weight':700});
+    n.textContent=i+1;
+    if(v.dims){
+      var d=v.dims[String(p.a)];
+      if(d){
+        var t=el(svg,'text',{x:(p.x+ux*24).toFixed(1),y:(p.y+uy*24+3.5).toFixed(1),'font-size':big?11:0,'text-anchor':'middle',fill:(d.indexOf('用户')===0?'#b83a2a':'#2c1810'),'font-weight':(d.indexOf('用户')===0?700:400)});
+        t.textContent=d;
+      }
+    }
+  });
+}
+var ph=document.getElementById('catPrimary');
+drawCat(ph,PRIMARY,true);
+var cap=document.createElement('div');cap.className='cap';cap.style.textAlign='center';cap.style.fontSize='12px';cap.style.color='#756558';cap.style.paddingTop='6px';
+cap.textContent='主案 · 12 顶点 · 维度落位示意';ph.appendChild(cap);
+var alts=document.getElementById('alts');
+ALTS.forEach(function(v){
+  var cell=document.createElement('div');cell.className='cell';
+  var box=document.createElement('div');drawCat(box,v,false);
+  var c1=document.createElement('div');c1.className='cap';c1.textContent=v.name+' · 12 顶点';
+  var c2=document.createElement('div');c2.className='note';c2.textContent=v.note;
+  cell.appendChild(box);cell.appendChild(c1);cell.appendChild(c2);
+  alts.appendChild(cell);
+});
+</script>
+</body>
+</html>
