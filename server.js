@@ -543,7 +543,7 @@ app.get('/api/admin/feedback-summary', async (req, res) => {
 // 菜品管理 API
 app.post('/api/admin/dish', async (req, res) => {
   try {
-    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description } = req.body;
+    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description, is_active } = req.body;
     if (!name || name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
     if (name.trim().length > 100) return res.status(400).json({ success: false, error: '菜名不能超过100个字符' });
     if (description && description.length > 500) return res.status(400).json({ success: false, error: '描述不能超过500个字符' });
@@ -551,10 +551,12 @@ app.post('/api/admin/dish', async (req, res) => {
     if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ success: false, error: '价格不能为负数' });
     const ratingNum = parseFloat(rating);
     if (isNaN(ratingNum) || ratingNum < 0 || ratingNum > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' });
+    // 新增时尊重前端的上下架勾选；未传则默认上架（兼容旧行为）
+    const activeFlag = is_active === undefined ? true : (is_active === true || is_active === 'true');
     const pool = db;
     const result = await pool.query(
-      `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,TRUE,$12) RETURNING id`,
-      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, description||null]
+      `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, activeFlag, description||null]
     );
     res.json({ success: true, message: '添加成功', id: result.rows[0].id });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
