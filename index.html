@@ -819,21 +819,21 @@
                         <!-- 搜索和筛选 -->
                         <div class="row g-2 mb-4">
                             <div class="col-md-4">
-                                <input class="form-control" id="menu-search" placeholder="🔍 搜索菜品名称..." style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+                                <input class="form-control" id="menu-search" aria-label="搜索菜品名称" placeholder="🔍 搜索菜品名称..." style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="menu-filter-cat" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+                                <select class="form-select" id="menu-filter-cat" aria-label="按分类筛选" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                                     <option value="">全部分类</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="menu-filter-spice" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+                                <select class="form-select" id="menu-filter-spice" aria-label="按辣度筛选" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                                     <option value="">全部辣度</option>
                                     <option>不辣</option><option>微辣</option><option>中辣</option><option>重辣</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="menu-filter-price" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+                                <select class="form-select" id="menu-filter-price" aria-label="按价格筛选" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                                     <option value="">全部价格</option>
                                     <option value="0-20">20元以下</option>
                                     <option value="20-40">20-40元</option>
@@ -842,7 +842,7 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="menu-sort" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+                                <select class="form-select" id="menu-sort" aria-label="菜单排序方式" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
                                     <option value="">默认排序</option>
                                     <option value="popular">按人气</option>
                                     <option value="rating">按评分</option>
@@ -973,7 +973,7 @@
                     <!-- 给别桌加菜 -->
                     <div id="addon-view-other" style="display:none;">
                         <p class="mb-2" style="color:var(--text);">给几号桌点菜？<small style="color:var(--text-light);">（将创建新订单）</small></p>
-                        <input type="text" id="addon-other-input" class="form-control text-center mb-3" placeholder="别桌桌号" style="max-width:160px;margin:0 auto;" inputmode="numeric">
+                        <input type="text" id="addon-other-input" class="form-control text-center mb-3" aria-label="别桌桌号" placeholder="别桌桌号" style="max-width:160px;margin:0 auto;" inputmode="numeric">
                         <button class="btn btn-sm px-4" id="addon-other-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;letter-spacing:2px;">开始点菜</button>
                         <button class="btn btn-link btn-sm" id="addon-back-2" style="color:var(--text-light);">返回</button>
                     </div>
@@ -1032,7 +1032,7 @@
                 <div class="modal-body">
                     <div id="table-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;"></div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <input type="text" id="table-input" class="form-control text-center" placeholder="桌号" maxlength="2" inputmode="numeric" style="max-width:110px;">
+                        <input type="text" id="table-input" class="form-control text-center" aria-label="桌号" placeholder="桌号" maxlength="2" inputmode="numeric" style="max-width:110px;">
                         <button class="btn" id="table-input-confirm" style="background:var(--primary-accent);color:#fff;border:none;border-radius:8px;padding:6px 18px;letter-spacing:1px;">确认</button>
                         <button class="btn ms-auto" id="table-takeaway" style="background:transparent;color:var(--text);border:1.5px solid rgba(201,169,110,0.5);border-radius:8px;padding:6px 14px;">🥡 打包带走</button>
                     </div>
