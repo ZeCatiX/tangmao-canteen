@@ -91,3 +91,6 @@ logo-preview-full.png
 
 # AI box-agent 运行时任务注册目录
 2026-*/
+
+# AI 生图产物(sensenova-image skill 输出,可随时重新生成)
+gen_images/
