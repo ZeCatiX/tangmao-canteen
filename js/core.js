@@ -435,7 +435,7 @@ function renderMenuTable(){
   }
   const ci=cart.find(c=>c.id===d.id);
   const qty=ci?(ci.qty||1):0;
-  const defaultImg='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
+  const defaultImg='/assets/illustrations/missing-dish-cat.webp';
   const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
   const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">招牌</span> ':'';
   html+='<div class="dish-card">'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;">'+star+esc(d.name)+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(d.category)+' · '+esc(d.spiciness)+'</p><div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">'+esc(formatPrice(d.price))+'</strong>'+(qty>0?'<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>')+'</div></div></div>';
@@ -444,8 +444,8 @@ function renderMenuTable(){
   // 空态: 搜索/筛选无结果时给出明确反馈与引导
   const kw=q?esc(q):'';
   const hint=q?'唐猫找了一圈，没有找到「'+kw+'」':'当前筛选条件下没有菜品';
-  container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--text-light);">'
-   +'<div style="font-size:3rem;margin-bottom:8px;">🐱</div>'
+  container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--text-light);">'
+   +'<img src="/assets/illustrations/search-empty-cat.webp" alt="唐猫拿着放大镜在菜单里寻找" style="width:240px;display:block;margin:0 auto 10px;border-radius:12px;">'
    +'<p style="font-size:1.05rem;color:var(--ink);margin:0 0 6px;">'+hint+'</p>'
    +'<p style="font-size:0.85rem;margin:0;">换个关键词，或清除筛选条件再试试</p>'
    +'</div>';
@@ -1169,4 +1169,4 @@ function syncTableNumber(from){
   if(val)ssSet('tableNumber',val);
   const cart=document.getElementById('cart-table-number');
   if(cart&&val)cart.value=val;
-}
+}
