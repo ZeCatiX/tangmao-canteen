@@ -7,7 +7,10 @@ module.exports = {
     instances: 1,
     exec_mode: 'fork',
     env: {
-      NODE_ENV: 'production',
+      // 注意：本机/开发机保持 development（宽松限流供测试）。
+      // 真实部署时改 'production'，且必须先按 .env.production.example
+      // 配好 ★ 密钥与生产限流值——server.js 会校验，不合规直接拒绝启动。
+      NODE_ENV: 'development',
       PORT: 3000,
     },
     // 自动重启
