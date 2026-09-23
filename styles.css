@@ -1114,3 +1114,7 @@ body.modal-open { padding-right: 0 !important; }
   #cart-checkout-btn{flex:1 1 100%;}
   #cart-table-number{flex:1 1 auto;width:auto;}
 }
+
+/* 一桌菜总价数字：亮色用唐红；暗色卡头被全局红渐变覆盖，改亮金保证对比（styles.css:932） */
+.table-total { color: var(--primary-accent); }
+html.dark-mode .table-total { color: var(--gold-light); }

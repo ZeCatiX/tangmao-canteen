@@ -1540,7 +1540,7 @@ function renderTableSets(){
   return '<div class="card mb-3 shadow-sm rounded-4" style="border:1px solid rgba(201,169,110,0.25);background:var(--cream);">'
    +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:rgba(201,169,110,0.1);border:none;border-radius:16px 16px 0 0;">'
     +'<div><span class="badge rounded-pill" style="background:'+color+';font-size:0.85rem;letter-spacing:1px;">'+esc(s.style)+'</span>'+overTag+banquetNote
-     +'<span class="ms-2" style="font-size:0.88rem;">共 '+s.dishes.length+' 道 · 总价 <strong style="color:var(--primary-accent);">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
+     +'<span class="ms-2" style="font-size:0.88rem;">共 '+s.dishes.length+' 道 · 总价 <strong class="table-total">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
     +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:1px;"><i class="bi bi-image me-1"></i>分享图</button>'
     +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
    +'</div>'
