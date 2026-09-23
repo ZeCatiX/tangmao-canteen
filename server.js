@@ -1968,6 +1968,7 @@ app.get('/api/admin/notifications', async (req, res) => {
 
 // 404 兜底（对 /api/ 路径返回 JSON，其他路径返回友好页面）
 app.use((req, res) => {
+  res.set('Cache-Control', 'no-store');   // 404 页不缓存: 避免浏览器缓存旧版页面/图片加载失败
   if (req.path.startsWith('/api/')) {
     res.status(404).json({ success: false, error: '请求的接口不存在' });
   } else {
