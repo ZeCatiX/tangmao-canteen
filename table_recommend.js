@@ -98,8 +98,10 @@ function sortValue(d, prefer) {
 // state: { total, spiceCount, ingSeen, usedIds } 跨池共享——辣度分散与主料不重复是全桌约束，
 // usedIds 保证同一道菜（招牌池与分类池可能同时收录）在整套里只出现一次。
 // 第一遍在软预算内选且尽量避开已连选 2 次的辣度/已选主料（有替代时才让位）；
-// 第二遍保配额，允许超预算（打 overBudget 标）。
-function pickFromPool(queue, quota, softCap, state) {
+// opts.allowOver（默认 true）允许第二遍无视预算保配额并打 overBudget 标；
+// 组合主流程用 allowOver:false 的单道轮转模式，预算不够宁可缩配额也不超支。
+function pickFromPool(queue, quota, softCap, state, opts = {}) {
+  const allowOver = opts.allowOver !== false;
   const taken = [];
   let overBudget = false;
   const take = (d) => {
@@ -122,6 +124,7 @@ function pickFromPool(queue, quota, softCap, state) {
     take(d);
     queue.splice(i, 1);
   }
+  if (!allowOver) return { taken, overBudget };
   while (queue.length && taken.length < quota) {
     const d = queue.shift();
     if (state.usedIds.has(d.id)) continue;
@@ -165,21 +168,23 @@ function buildTableSets({ pools, partySize, budgetPerPerson }) {
     const quotas = quotasFor(partySize, pools, variant);
     const softCap = budgetPerPerson * partySize * variant.budgetFactor * 1.15;
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
-    // 消费顺序：招牌必保 → 热菜 → 凉菜 → 主食，让贵的先吃预算
-    const order = [
-      ['signature', quotas.signature],
-      ['hot', quotas.hot],
-      ['cold', quotas.cold],
-      ['staple', quotas.staple],
-    ];
+    // 轮转选取：每轮按 招牌→热菜→凉菜→主食 各选一道。若按池一口气吃满配额，
+    // 高价热菜会把预算吃光、凉菜主食被挤到超支兜底；轮转保证席面结构均衡。
+    // 预算不足时宁可该轮缺一道（allowOver:false），也不整体超支。
+    const poolOrder = ['signature', 'hot', 'cold', 'staple'];
+    const queues = {};
+    for (const k of poolOrder) {
+      queues[k] = pools[k].slice().sort((a, b) => sortValue(b, variant.prefer) - sortValue(a, variant.prefer));
+    }
     const picked = [];
     let overBudget = false;
-    for (const [poolKey, quota] of order) {
-      if (quota <= 0) continue;
-      const queue = pools[poolKey].slice().sort((a, b) => sortValue(b, variant.prefer) - sortValue(a, variant.prefer));
-      const r = pickFromPool(queue, quota, softCap, state);
-      r.taken.forEach(d => picked.push({ dish: d, pool: poolKey }));
-      if (r.overBudget) overBudget = true;
+    const maxRounds = Math.max(quotas.signature, quotas.hot, quotas.cold, quotas.staple);
+    for (let round = 0; round < maxRounds; round++) {
+      for (const k of poolOrder) {
+        if (round >= quotas[k] || !queues[k].length) continue;
+        const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false });
+        r.taken.forEach(d => picked.push({ dish: d, pool: k }));
+      }
     }
     // 全套里 ML 分最高的一道带上匹配度话术
     let best = null;
@@ -210,7 +215,8 @@ function fallbackScore(dish, prefs) {
   prefs = prefs || {};
   let s = 3.5;
   const price = Number(dish.price) || 0;
-  const band = price <= 50 ? '经济' : price <= 100 ? '适中' : '品质';
+  // 菜价档与前端偏好表单口径一致：经济<20 / 适中20-50 / 品质>50
+  const band = price < 20 ? '经济' : price <= 50 ? '适中' : '品质';
   if (prefs['价格区间'] && prefs['价格区间'] === band) s += 0.4;
   if (prefs['辣度'] && prefs['辣度'] !== '无') s += (dish.spiciness === prefs['辣度'] ? 0.5 : -0.15);
   if (Array.isArray(dish.tags) && dish.tags.includes('招牌')) s += 0.5;

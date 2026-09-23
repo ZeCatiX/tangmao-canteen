@@ -4,6 +4,9 @@
 const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
 
+// 服务地址（可用 TEST_BASE_URL 指向其他端口实例，默认本地 3000）
+const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
+
 // 真实菜品 ID 池(2026-09-17:订单/预测载荷不能用重播种前的不存在 ID)
 var dishPool = [
   { id: 1, name: '测试菜品', price: 18 },
@@ -12,14 +15,13 @@ var dishPool = [
 ];
 before(async () => {
   try {
-    const r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
+    const r = await fetch(BASE + '/api/dishes').then(function(x) { return x.json(); });
     var list = (r && (r.dishes || r)) || [];
     if (list.length >= 3) dishPool = list.slice(0, 3).map(function(d) { return { id: d.id, name: d.name, price: d.price }; });
   } catch (e) {}
 });
 require('dotenv').config();
 
-const BASE = 'http://localhost:3000';
 
 // 管理后台凭据（支持通过环境变量覆盖）
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
