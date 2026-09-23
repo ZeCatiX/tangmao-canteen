@@ -6,6 +6,8 @@ var currentRecommendationMode='本地计算'; var featureImportanceChart=null;
 var decisionTreeModel=null,decisionTreeLoaded=false,decisionTreeLoading=false;
 var apiAvailabilityCache=null,apiCacheTimestamp=0;
 var dishData=[];  // 菜品数据，从API加载
+// 客户端菜品准入：下架的与名称含「测试」的脏数据一律不进 dishData（防测试菜露出到菜单/推荐/盲盒）
+function filterVisibleDishes(list){return (list||[]).filter(x=>x.is_active!==false&&!(x.name||'').includes('测试'));}
 var starRatingDish=null,starRatingValue=0,ratingReturnTo='recommendation-section';  // 全局评分状态
 var _initialized=false;
 // 页面初始查询串（showSection 的 pushState 会抹掉它，桌码解析需要提前捕获）
