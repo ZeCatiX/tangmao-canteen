@@ -106,6 +106,11 @@ function sortValue(d, prefer, prevPenalty) {
 function pickFromPool(queue, quota, softCap, state, opts = {}) {
   const allowOver = opts.allowOver !== false;
   const priceCap = opts.priceCap;
+  // priceStrict：超均价的候选一律让位（哪怕池里没有更低价也不破例）。
+  // 热/冷/主食池用严格模式——否则价格断层（如 28 与 32 元之间无菜）时，
+  // 天价/偏贵菜会以"找不到更便宜"破例入选，一口吃掉后续槽位的预算。
+  // 招牌池走非严格（必点项，池浅价高，无更低价时允许入选）。
+  const priceStrict = opts.priceStrict === true;
   const taken = [];
   let overBudget = false;
   const take = (d) => {
@@ -124,9 +129,8 @@ function pickFromPool(queue, quota, softCap, state, opts = {}) {
     const d = queue[i];
     if (!fits(d)) { i++; continue; }
     if (priceCap !== undefined && (Number(d.price) || 0) > priceCap) {
-      // 预算感知：池里还有更便宜的可用候选就先让位，防止一道贵菜吃光预算挤掉后续配额
       const hasCheaper = queue.some((x, j) => j > i && fits(x) && (Number(x.price) || 0) <= priceCap);
-      if (hasCheaper) { i++; continue; }
+      if (priceStrict || hasCheaper) { i++; continue; }
     }
     const rest = queue.slice(i + 1);
     if ((state.spiceCount[d.spiciness] || 0) >= 2 && rest.some(x => (state.spiceCount[x.spiciness] || 0) < 2)) { i++; continue; }
@@ -215,9 +219,21 @@ function buildTableSets({ pools, partySize, budgetPerPerson }) {
         const avgCap = (softCap - state.total) / remainingSlots;
         const reservedCap = softCap - state.total - minPrice * Math.max(0, remainingSlots - 1);
         const priceCap = Math.max(0, Math.min(avgCap, reservedCap));
-        const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap });
+        // 招牌是必点项走非严格（无更低价可破例）；其余池严格限价防价格断层破例
+        const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap, priceStrict: k !== 'signature' });
         r.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; progressed = true; });
       }
+    }
+    // 补齐放宽：主循环可能因"辣度分散/主料不重复让位 + 限价"叠加而卡死（有预算、有候选、但互相让位）。
+    // 此时放下限价与回避约束，仅按得分 + softCap 兜底补满未达配额的槽位——宁可结构满，不追求完美分散。
+    while (picked.length < totalQuota && safetyRounds++ < 80) {
+      const r = { any: false };
+      for (const k of poolOrder) {
+        if (pickedCount[k] >= quotas[k] || !queues[k].length) continue;
+        const pr = pickFromPool(queues[k], 1, softCap, state, { allowOver: false });
+        pr.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; r.any = true; });
+      }
+      if (!r.any) break;
     }
     // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜
     for (const p of picked) prevPenalty.set(p.dish.id, (prevPenalty.get(p.dish.id) || 0) + 1);
