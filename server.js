@@ -1462,10 +1462,12 @@ function startPythonWorker() {
             // 使用 Map 的迭代器获取第一个待处理请求，保证 FIFO 顺序
             const firstEntry = pendingRequests.entries().next();
             if (!firstEntry.done) {
-              const [reqId, { req, res, timeoutId }] = firstEntry.value;
+              const [reqId, entry] = firstEntry.value;
               pendingRequests.delete(reqId);
-              if (timeoutId) clearTimeout(timeoutId);
-              if (!res.headersSent) res.json(result);
+              if (entry.timeoutId) clearTimeout(entry.timeoutId);
+              // 两种消费者：HTTP 请求（res 直写）与内部 Promise（/api/recommend/table 打分）
+              if (entry.onResult) entry.onResult(result);
+              else if (!entry.res.headersSent) entry.res.json(result);
             }
           }
         } catch(e) { logger.info('Python日志: ' + line); }
@@ -1482,9 +1484,9 @@ function startPythonWorker() {
     pythonWorker = null; workerReady = false;
     for (const [reqId, pr] of pendingRequests.entries()) {
       if (!pr) continue;
-      const { req, res, timeoutId } = pr;
-      if (timeoutId) clearTimeout(timeoutId);
-      if (res && !res.headersSent) res.status(503).json({ success: false, error: '服务不可用，请重试' });
+      if (pr.timeoutId) clearTimeout(pr.timeoutId);
+      if (pr.onError) pr.onError(503, '服务不可用，请重试');
+      else if (pr.res && !pr.res.headersSent) pr.res.status(503).json({ success: false, error: '服务不可用，请重试' });
     }
     if (restartAttempts < MAX_RESTART_ATTEMPTS) {
       restartAttempts++;
@@ -1494,6 +1496,41 @@ function startPythonWorker() {
   });
   pythonWorker.on('error', (err) => { logger.error('启动Python worker失败: ' + err.message); pythonWorker = null; workerReady = false; });
   logger.info('[信息] Python Worker启动中...');
+}
+
+// 统一的 worker 请求分发：/api/predict-rf 与 /api/recommend/table 共用同一条 FIFO 队列，
+// worker 单行进单行出，谁先入队谁先拿到响应。
+// handlers: { onResult(result), onError(status, message) }，二者只会被调用一次。
+function dispatchToWorker(inputData, handlers) {
+  let settled = false;
+  const settleResult = (r) => { if (!settled) { settled = true; handlers.onResult(r); } };
+  const settleError = (status, msg) => { if (!settled) { settled = true; handlers.onError(status, msg); } };
+  const requestId = ++pendingRequestIdCounter;
+  const timeoutId = setTimeout(() => {
+    pendingRequests.delete(requestId);
+    settleError(504, '请求超时，请重试');
+  }, 50000);
+  const addPendingRequest = () => {
+    if (pendingRequests.size >= 100) { clearTimeout(timeoutId); settleError(503, '服务器繁忙，请稍后重试'); return; }
+    pendingRequests.set(requestId, { timeoutId, onResult: settleResult, onError: settleError });
+    pythonWorker.stdin.write(inputData + '\n');
+  };
+  if (!pythonWorker) {
+    startPythonWorker();
+    setTimeout(() => {
+      if (workerReady && pythonWorker && pythonWorker.stdin.writable) addPendingRequest();
+      else { clearTimeout(timeoutId); settleError(503, 'Worker未就绪，请重试'); }
+    }, 3000);
+  } else if (!workerReady) {
+    let checkCount = 0;
+    const checkReady = setInterval(() => {
+      checkCount++;
+      if (workerReady && pythonWorker && pythonWorker.stdin.writable) { clearInterval(checkReady); addPendingRequest(); }
+      else if (checkCount >= 10 || !pythonWorker) { clearInterval(checkReady); clearTimeout(timeoutId); settleError(503, 'Worker未就绪，请重试'); }
+    }, 500);
+  } else if (pythonWorker.stdin.writable) { addPendingRequest(); }
+  else { clearTimeout(timeoutId); settleError(500, 'Worker不可用'); }
+  return { abort: () => { clearTimeout(timeoutId); pendingRequests.delete(requestId); } };
 }
 
 app.get('/api/worker-health', (req, res) => {
@@ -1542,38 +1579,156 @@ app.post('/api/predict-rf', (req, res) => {
   const inputData = JSON.stringify({ userPrefs: processedPrefs, dishes: processedDishes });
   let responseSent = false;
   const sendResponse = (status, data) => { if (!responseSent && !res.headersSent) { responseSent = true; res.status(status).json(data); } };
-  const requestId = ++pendingRequestIdCounter;
-  const requestTimeout = setTimeout(() => {
-    pendingRequests.delete(requestId);
-    sendResponse(504, { success: false, error: '请求超时，请重试' });
-  }, 50000);
-  req.on('aborted', () => {
-    clearTimeout(requestTimeout);
-    pendingRequests.delete(requestId);
+  const dispatch = dispatchToWorker(inputData, {
+    onResult: (result) => sendResponse(200, result),
+    onError: (status, msg) => sendResponse(status, { success: false, error: msg }),
   });
-  const addPendingRequest = () => { 
-    if (pendingRequests.size >= 100) {
-      clearTimeout(requestTimeout);
-      sendResponse(503, { success: false, error: '服务器繁忙，请稍后重试' });
-      return;
+  req.on('aborted', () => dispatch.abort());
+});
+
+// ═══════════════════════════════════════════════
+// 一桌菜组合推荐（路线图 8.4 · MVP）：规则引擎组合 + worker 批量打分
+// ═══════════════════════════════════════════════
+const tableRecommend = require('./table_recommend');
+
+// 组合推荐要过一遍 worker 批量打分，比普通查询贵，单独限流（env 可覆盖）
+const TABLE_RATE_LIMIT_RAW = parseInt(process.env.TABLE_RATE_LIMIT_MAX || '30');
+const TABLE_RATE_LIMIT_MAX = (Number.isFinite(TABLE_RATE_LIMIT_RAW) && TABLE_RATE_LIMIT_RAW >= 1) ? TABLE_RATE_LIMIT_RAW : 30;
+const tableLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: TABLE_RATE_LIMIT_MAX,
+  message: { success: false, error: '一桌菜生成过于频繁，请稍后再试' },
+});
+
+const TABLE_SPICY_LEVELS = ['无', '不辣', '微辣', '中辣', '重辣'];
+const TABLE_POOL_KEYS = ['cold', 'hot', 'signature', 'staple'];
+
+function parseTableParams(body) {
+  const partySize = parseInt(body.partySize, 10);
+  if (!Number.isFinite(partySize) || partySize < 1 || partySize > 20) {
+    return { error: 'partySize 必须为 1-20 的整数' };
+  }
+  let budget = 80;
+  if (body.budgetPerPerson !== undefined && body.budgetPerPerson !== null && body.budgetPerPerson !== '') {
+    budget = Number(body.budgetPerPerson);
+    if (!Number.isFinite(budget) || budget < 10 || budget > 1000) {
+      return { error: 'budgetPerPerson 必须为 10-1000 的数字' };
     }
-    pendingRequests.set(requestId, { req, res, timeoutId: requestTimeout }); pythonWorker.stdin.write(inputData + '\n'); 
+  }
+  const spiciness = TABLE_SPICY_LEVELS.includes(body.spiciness) ? body.spiciness : '无';
+  const religion = ['无特殊要求', '素食', '清真'].includes(body.religion) ? body.religion : '无特殊要求';
+  return { partySize, budgetPerPerson: budget, spiciness, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies) };
+}
+
+// 登录用户把档案里的忌口并进来（草案：忌口/过敏登录用户从档案带出）
+async function mergedAllergyKeys(req, clientKeys) {
+  const keys = new Set(clientKeys);
+  if (req.user && req.user.id) {
+    try {
+      const r = await db.query('SELECT preferences FROM users WHERE id = $1', [req.user.id]);
+      const prefs = r.rows[0] && r.rows[0].preferences;
+      if (prefs && Array.isArray(prefs.allergies)) {
+        tableRecommend.normalizeAllergies(prefs.allergies).forEach(k => keys.add(k));
+      }
+    } catch (e) { logger.error('读取用户忌口档案失败: ' + e.message); }
+  }
+  return [...keys];
+}
+
+// 组装 12 维模型的中文偏好键；人均预算映射单菜价格档（人均 ≤30 偏经济 / ≤80 适中 / 以上品质）
+function buildTableUserPrefs(p) {
+  const band = p.budgetPerPerson <= 30 ? '经济' : p.budgetPerPerson <= 80 ? '适中' : '品质';
+  return { '辣度': p.spiciness, '咸淡': '无', '甜酸': '无', '价格区间': band, '饮食_宗教': p.religion, '热量': '无' };
+}
+
+// 批量打分：worker 可用走 ML，不可用降级本地规则分（接口不 5xx）
+async function scoreTableCandidates(userPrefs, dishes) {
+  try {
+    const preds = await new Promise((resolve, reject) => {
+      dispatchToWorker(JSON.stringify({ userPrefs, dishes }), {
+        onResult: (result) => {
+          if (result && result.success && Array.isArray(result.predictions)) resolve(result.predictions);
+          else reject(new Error((result && result.error) || 'worker 返回异常'));
+        },
+        onError: (status, msg) => { const err = new Error(msg); err.status = status; reject(err); },
+      });
+    });
+    const byId = new Map(preds.map(p => [p.id, Number(p.score) || 0]));
+    dishes.forEach(d => { d._score = byId.has(d.id) ? byId.get(d.id) : tableRecommend.fallbackScore(d, userPrefs); });
+    return 'worker';
+  } catch (e) {
+    logger.info('一桌菜 worker 打分不可用，本地规则分兜底: ' + e.message);
+    dishes.forEach(d => { d._score = tableRecommend.fallbackScore(d, userPrefs); });
+    return 'fallback';
+  }
+}
+
+function dishToResult(d, pool) {
+  return {
+    id: d.id, name: d.name, category: d.category, spiciness: d.spiciness,
+    price: Math.round((Number(d.price) || 0) * 100) / 100,
+    image_url: d.image_url || '', qty: 1, pool,
+    matchPct: Math.min(100, Math.max(0, Math.round((d._score || 0) / 5 * 100))),
   };
-  if (!pythonWorker) {
-    startPythonWorker();
-    setTimeout(() => {
-      if (workerReady && pythonWorker && pythonWorker.stdin.writable) addPendingRequest();
-      else { clearTimeout(requestTimeout); sendResponse(503, { success: false, error: 'Worker未就绪，请重试' }); }
-    }, 3000);
-  } else if (!workerReady) {
-    let checkCount = 0;
-    const checkReady = setInterval(() => {
-      checkCount++;
-      if (workerReady && pythonWorker && pythonWorker.stdin.writable) { clearInterval(checkReady); addPendingRequest(); }
-      else if (checkCount >= 10 || !pythonWorker) { clearInterval(checkReady); clearTimeout(requestTimeout); sendResponse(503, { success: false, error: 'Worker未就绪，请重试' }); }
-    }, 500);
-  } else if (pythonWorker.stdin.writable) { addPendingRequest(); }
-  else { clearTimeout(requestTimeout); sendResponse(500, { success: false, error: 'Worker不可用' }); }
+}
+
+app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
+  const params = parseTableParams(req.body || {});
+  if (params.error) return res.status(400).json({ success: false, error: params.error });
+  try {
+    const allergyKeys = await mergedAllergyKeys(req, params.allergyKeys);
+    const { pools, excluded } = tableRecommend.buildPools(dishData || [], allergyKeys);
+    // 跨池按 id 去重后浅克隆打分（不污染共享缓存 dishData）
+    const union = [];
+    const seen = new Set();
+    for (const key of TABLE_POOL_KEYS) {
+      for (const d of pools[key]) if (!seen.has(d.id)) { seen.add(d.id); union.push({ ...d }); }
+    }
+    if (!union.length) return res.status(503).json({ success: false, error: '当前没有可推荐的菜品，请稍后再试' });
+    const source = await scoreTableCandidates(buildTableUserPrefs(params), union);
+    const byId = new Map(union.map(d => [d.id, d]));
+    for (const key of TABLE_POOL_KEYS) pools[key] = pools[key].map(d => byId.get(d.id)).filter(Boolean);
+    const sets = tableRecommend.buildTableSets({
+      pools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson,
+    }).map(s => ({
+      key: s.key, style: s.style,
+      dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
+      totalPrice: s.totalPrice, perPerson: s.perPerson, overBudget: s.overBudget,
+    }));
+    logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded}`);
+    res.json({ success: true, sets, excludedAllergy: excluded });
+  } catch (e) {
+    logger.error('一桌菜推荐API错误: ' + e.message);
+    res.status(500).json({ success: false, error: '服务器内部错误' });
+  }
+});
+
+// 单道更换：同池重新打分，排除桌上已有的菜，返回最高分的替代
+app.post('/api/recommend/table/swap', tableLimiter, softAuth, async (req, res) => {
+  const params = parseTableParams(req.body || {});
+  if (params.error) return res.status(400).json({ success: false, error: params.error });
+  const poolKey = req.body.pool;
+  if (!TABLE_POOL_KEYS.includes(poolKey)) {
+    return res.status(400).json({ success: false, error: 'pool 必须为 cold/hot/signature/staple' });
+  }
+  const excludeIds = new Set((Array.isArray(req.body.excludeIds) ? req.body.excludeIds : [])
+    .map(n => parseInt(n, 10)).filter(Number.isFinite));
+  try {
+    const allergyKeys = await mergedAllergyKeys(req, params.allergyKeys);
+    const { pools } = tableRecommend.buildPools(dishData || [], allergyKeys);
+    const candidates = pools[poolKey].filter(d => !excludeIds.has(d.id)).map(d => ({ ...d }));
+    if (!candidates.length) return res.status(404).json({ success: false, error: '这个位置已经没有可换的菜了' });
+    await scoreTableCandidates(buildTableUserPrefs(params), candidates);
+    candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
+    const top = candidates[0];
+    const styleKey = ['home', 'banquet', 'checkin'].includes(req.body.style) ? req.body.style : 'home';
+    const variant = tableRecommend.VARIANTS.find(v => v.key === styleKey);
+    logger.info(`一桌菜换菜: 池=${poolKey} 排除${excludeIds.size}道`);
+    res.json({ success: true, dish: { ...dishToResult(top, poolKey), reason: tableRecommend.reasonFor(top, poolKey, variant, params.partySize) } });
+  } catch (e) {
+    logger.error('一桌菜换菜API错误: ' + e.message);
+    res.status(500).json({ success: false, error: '服务器内部错误' });
+  }
 });
 
 // ═══════════════════════════════════════════════
