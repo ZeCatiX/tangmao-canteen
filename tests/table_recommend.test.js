@@ -26,7 +26,6 @@ function deepPools() {
     signature: [mkDish(301, '招牌甲', '招牌与游西安必打卡', 58, '不辣', { tags: ['招牌'] }),
                 mkDish(302, '招牌乙', '招牌与游西安必打卡', 59, '不辣', { tags: ['招牌'] })],
     staple: [mkDish(401, '油泼面', '陕西小吃', 16, '微辣'),
-             mkDish(402, '米饭', '主食', 3, '不辣'),
              mkDish(403, '肉夹馍', '陕西小吃', 6, '不辣')],
   };
 }
@@ -47,13 +46,15 @@ test('buildPools: 忌口硬过滤 + 测试脏数据排除 + 池归属', () => {
     mkDish(4, '葫芦鸡', '传承陕菜', 98, '不辣', { tags: ['招牌'] }),
     mkDish(5, '油泼面', '陕西小吃', 16, '微辣'),
     mkDish(6, '酸梅汤', '飲品与酒水', 8, '不辣'),
+    mkDish(7, '五常大米饭', '主食', 3, '不辣'),
   ];
   const { pools, excluded } = tr.buildPools(dishes, ['seafood']);
   assert.equal(excluded, 2); // 鲈鱼(忌口) + 测试菜(脏数据)
   assert.deepEqual(pools.cold, []);
   assert.equal(pools.hot.length, 1);       // 葫芦鸡（鲈鱼被忌口滤掉）
   assert.equal(pools.signature.length, 1); // 葫芦鸡
-  assert.equal(pools.staple.length, 2);    // 凉皮 + 油泼面（面点关键词），酸梅汤饮品不入池
+  assert.equal(pools.staple.length, 2);    // 凉皮 + 油泼面（面点关键词）
+  assert.ok(!pools.staple.some(x => x.name.includes('米饭')), '米饭(主食分类)不进推荐池，由 withAutoRice 按人数配');
 });
 
 test('buildTableSets: 4人三套结构 = 凉菜2+热菜4+招牌1-2+主食2，全套菜品唯一', () => {
@@ -373,4 +374,102 @@ test('API: 一桌菜埋点写入 mode，看板出现 table_mode_count', async ()
   const today = d.data[d.data.length - 1];
   assert.ok('table_mode_count' in today, '返回应含 table_mode_count 列');
   assert.ok(Number(today.table_mode_count) >= 1, '刚写的埋点应计入 table_mode_count');
+});
+
+// ═══════════ 六项修复：差异化 / 预算感知 / 米饭自动配 / 文案 ═══════════
+
+test('pickFromPool: priceCap 预算感知——贵菜让位给便宜候选', () => {
+  const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
+  const queue = [
+    mkDish(1, '硬菜', '传承陕菜', 88, '不辣'),
+    mkDish(2, '平价甲', '传承陕菜', 30, '不辣'),
+    mkDish(3, '平价乙', '传承陕菜', 28, '不辣'),
+  ];
+  [4.5, 4.0, 3.9].forEach((v, i) => { queue[i]._score = v; });
+  const r = tr.pickFromPool(queue, 1, 999, state, { allowOver: false, priceCap: 40 });
+  assert.equal(r.taken.length, 1);
+  assert.equal(r.taken[0].name, '平价甲', '88 元超均价应让位，选 30 元平价菜');
+});
+
+test('buildTableSets: 跨套差异化——深池下三套不再雷同', () => {
+  const pools = {
+    cold: Array.from({ length: 8 }, (_, i) => mkDish(100 + i, `凉菜${i}`, '特色凉菜', 30, i % 2 ? '微辣' : '不辣')),
+    hot: Array.from({ length: 16 }, (_, i) => mkDish(200 + i, `热菜${i}`, '传承陕菜', 50, i % 3 ? '不辣' : '微辣')),
+    signature: [mkDish(301, '招牌甲', '招牌与游西安必打卡', 58, '不辣', { tags: ['招牌'] }),
+                mkDish(302, '招牌乙', '招牌与游西安必打卡', 59, '不辣', { tags: ['招牌'] }),
+                mkDish(303, '招牌丙', '招牌与游西安必打卡', 78, '微辣', { tags: ['招牌'] }),
+                mkDish(304, '招牌丁', '招牌与游西安必打卡', 98, '不辣', { tags: ['招牌'] })],
+    staple: Array.from({ length: 6 }, (_, i) => mkDish(400 + i, `面点${i}`, '陕西小吃', 15, '不辣')),
+  };
+  for (const key of Object.keys(pools)) pools[key].forEach(d => { d._score = 4.0; });
+  const sets = tr.buildTableSets({ pools, partySize: 4, budgetPerPerson: 80 });
+  const hotIdSets = sets.map(s => new Set(s.dishes.filter(x => x.pool === 'hot').map(x => x.dish.id)));
+  const inter = (a, b) => [...hotIdSets[b]].filter(id => hotIdSets[a].has(id)).length;
+  assert.ok(inter(0, 1) <= 1, `宴请版与家常版热菜重叠应≤1，实际 ${inter(0, 1)}`);
+  assert.ok(inter(0, 2) <= 1, `打卡版与家常版热菜重叠应≤1，实际 ${inter(0, 2)}`);
+  const idSets = sets.map(s => new Set(s.dishes.map(x => x.dish.id)));
+  assert.ok(idSets[0].size !== idSets[1].size || [...idSets[0]].filter(id => idSets[1].has(id)).length < 4, '家常版与宴请版不得高度雷同');
+});
+
+test('buildTableSets: 预算感知保结构——天价硬菜不挤垮热菜配额', () => {
+  const pools = {
+    cold: [mkDish(1, '凉菜A', '特色凉菜', 28, '不辣'), mkDish(2, '凉菜B', '特色凉菜', 25, '微辣')],
+    hot: [mkDish(3, '天价硬菜', '江湖海鲜', 188, '重辣', { order_count: 30 }),
+          mkDish(4, '热菜B', '传承陕菜', 68, '中辣'),
+          mkDish(5, '热菜C', '热销菜品', 49, '微辣'),
+          mkDish(6, '热菜D', '热销菜品', 45, '不辣'),
+          mkDish(7, '热菜E', '传承陕菜', 40, '微辣'),
+          mkDish(8, '热菜F', '热销菜品', 36, '不辣')],
+    signature: [mkDish(9, '招牌甲', '招牌与游西安必打卡', 78, '微辣', { tags: ['招牌'] })],
+    staple: [mkDish(10, '油泼面', '陕西小吃', 16, '微辣'), mkDish(11, '肉夹馍', '陕西小吃', 6, '不辣')],
+  };
+  for (const key of Object.keys(pools)) pools[key].forEach(d => { d._score = 4.0; });
+  pools.hot[0]._score = 4.5;
+  const sets = tr.buildTableSets({ pools, partySize: 4, budgetPerPerson: 80 });
+  for (const s of sets) {
+    const hotCount = s.dishes.filter(x => x.pool === 'hot').length;
+    assert.ok(hotCount >= 3, `${s.style} 热菜配额不得被贵菜挤垮(期望≥3)，实际 ${hotCount}`);
+  }
+});
+
+test('withAutoRice: 米饭按人数配且计入总价，缺失时优雅跳过', () => {
+  const sets = [{ key: 'home', style: '家常版', dishes: [], totalPrice: 100, perPerson: 25, overBudget: false }];
+  const rice = mkDish(999, '五常大米饭', '主食', 3, '不辣');
+  const [withRice] = tr.withAutoRice(sets, rice, 4);
+  assert.deepEqual(withRice.autoItems, [{ id: 999, name: '五常大米饭', image_url: '', price: 3, qty: 4 }]);
+  assert.equal(withRice.totalPrice, 112);
+  assert.equal(withRice.perPerson, 28);
+  const [noRice] = tr.withAutoRice(sets, null, 4);
+  assert.deepEqual(noRice.autoItems, []);
+  assert.equal(noRice.totalPrice, 100, '无米饭时总价不变');
+});
+
+test('reasonFor: 陕菜话术修正——家常热菜与甜品主食', () => {
+  const v = tr.VARIANTS[0];
+  const plainHot = mkDish(1, '炒时蔬', '热销菜品', 36, '不辣');
+  assert.ok(tr.reasonFor(plainHot, 'hot', v, 4).includes('家常热菜'), '不再使用"本帮"话术');
+  const cake = mkDish(2, '玫瑰凉糕', '陕西小吃', 18, '不辣');
+  assert.match(tr.reasonFor(cake, 'staple', v, 4), /甜/);
+  assert.doesNotMatch(tr.reasonFor(cake, 'staple', v, 4), /管饱/);
+  const noodle = mkDish(3, '油泼面', '陕西小吃', 16, '微辣');
+  assert.match(tr.reasonFor(noodle, 'staple', v, 4), /主食/);
+});
+
+test('API: 米饭按人数自动配——autoItems 计入总价', async () => {
+  const r = await fetch(BASE + '/api/recommend/table', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4 }),
+  });
+  const d = await r.json();
+  assert.equal(d.success, true);
+  for (const s of d.sets) {
+    assert.ok(Array.isArray(s.autoItems), '每套应含 autoItems');
+    if (s.autoItems.length) {
+      const rice = s.autoItems[0];
+      assert.ok(rice.name.includes('米饭'), '自动搭配应为米饭');
+      assert.equal(rice.qty, 4, '按人数配份数');
+      const dishSum = s.dishes.reduce((sum, x) => sum + x.price, 0);
+      assert.equal(s.totalPrice, Math.round((dishSum + rice.price * rice.qty) * 100) / 100, '总价应含米饭');
+    }
+  }
 });

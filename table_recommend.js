@@ -9,7 +9,8 @@ const POOL_CATEGORIES = {
   cold: ['特色凉菜'],
   hot: ['传承陕菜', '热销菜品', '江湖海鲜', '田园时蔬·汤羹'],
 };
-// 主食池：主食分类 + 陕西小吃里的面点（按菜名关键词识别，菜单变动自动适应）
+// 主食池：主食分类（米饭类配饭）按业务规则不参与推荐菜池，由 withAutoRice 按人数自动配；
+// 席面的主食槽位由陕西小吃里的面点（按菜名关键词识别，菜单变动自动适应）担当
 const STAPLE_NAME_RE = /(面|饭|馍|包|糕|皮|粥|饼)/;
 
 // 忌口中文名（前端/用户档案口径）→ dishes.allergies JSONB 键
@@ -71,7 +72,7 @@ function buildPools(dishes, allergyKeys) {
     if (tags.includes('招牌') || d.category === '招牌与游西安必打卡') pools.signature.push(d);
     if (POOL_CATEGORIES.cold.includes(d.category)) pools.cold.push(d);
     if (POOL_CATEGORIES.hot.includes(d.category)) pools.hot.push(d);
-    if (d.category === '主食' || (d.category === '陕西小吃' && STAPLE_NAME_RE.test(d.name))) pools.staple.push(d);
+    if (d.category === '陕西小吃' && STAPLE_NAME_RE.test(d.name)) pools.staple.push(d);
   }
   return { pools, excluded };
 }
@@ -86,11 +87,13 @@ function quotasFor(partySize, pools, variant) {
   };
 }
 
-// 变体排序分：balanced 纯 ML 分；premium 同分偏好贵一点；popular 偏好点单多的
-function sortValue(d, prefer) {
+// 变体排序分：balanced 纯 ML 分；premium 同分偏好贵一点（宴请硬菜）；popular 偏好点单多的。
+// prevPenalty：跨套差异化——前几套已选过的菜按次数降权（降权不排除，保留少量重叠）。
+function sortValue(d, prefer, prevPenalty) {
   let v = d._score || 0;
-  if (prefer === 'premium') v += Math.min(Number(d.price) || 0, 200) / 400;
+  if (prefer === 'premium') v += Math.min(Number(d.price) || 0, 200) / 250;
   if (prefer === 'popular') v += Math.min(Number(d.order_count) || 0, 60) / 150;
+  if (prevPenalty) v -= (prevPenalty.get(d.id) || 0) * 0.6;
   return v;
 }
 
@@ -102,6 +105,7 @@ function sortValue(d, prefer) {
 // 组合主流程用 allowOver:false 的单道轮转模式，预算不够宁可缩配额也不超支。
 function pickFromPool(queue, quota, softCap, state, opts = {}) {
   const allowOver = opts.allowOver !== false;
+  const priceCap = opts.priceCap;
   const taken = [];
   let overBudget = false;
   const take = (d) => {
@@ -112,11 +116,18 @@ function pickFromPool(queue, quota, softCap, state, opts = {}) {
     const ing = ingredientOf(d.name);
     if (ing) state.ingSeen.add(ing);
   };
+  const fits = (d) => {
+    if (state.usedIds.has(d.id)) return false;
+    return state.total + (Number(d.price) || 0) <= softCap;
+  };
   for (let i = 0; i < queue.length && taken.length < quota;) {
     const d = queue[i];
-    if (state.usedIds.has(d.id)) { i++; continue; }
-    const price = Number(d.price) || 0;
-    if (state.total + price > softCap) { i++; continue; }
+    if (!fits(d)) { i++; continue; }
+    if (priceCap !== undefined && (Number(d.price) || 0) > priceCap) {
+      // 预算感知：池里还有更便宜的可用候选就先让位，防止一道贵菜吃光预算挤掉后续配额
+      const hasCheaper = queue.some((x, j) => j > i && fits(x) && (Number(x.price) || 0) <= priceCap);
+      if (hasCheaper) { i++; continue; }
+    }
     const rest = queue.slice(i + 1);
     if ((state.spiceCount[d.spiciness] || 0) >= 2 && rest.some(x => (state.spiceCount[x.spiciness] || 0) < 2)) { i++; continue; }
     const ing = ingredientOf(d.name);
@@ -145,6 +156,8 @@ function reasonFor(dish, pool, variant, partySize) {
       : '门店招牌，撑得住场面的看家菜';
   }
   if (pool === 'staple') {
+    // 甜品类主食换话术，别拿"管饱"糊弄一份凉糕
+    if (/糕|甜/.test(dish.name || '')) return '餐后甜口，席面收得漂亮';
     return partySize > 3 ? '主食收口，管饱又实惠' : '主食收口，分量正合适';
   }
   if (dish.category === '田园时蔬·汤羹') return '时蔬汤羹，一桌荤素平衡全靠它';
@@ -157,13 +170,15 @@ function reasonFor(dish, pool, variant, partySize) {
   }
   if ((Number(dish.order_count) || 0) >= 20) return '桌桌必点的热门菜，闭眼点不踩雷';
   if (isSpicy) return `风味热菜，${spicy}过瘾下饭`;
-  return 'AI 依你的口味挑的本帮热菜';
+  return 'AI 依你的口味挑的家常热菜';
 }
 
 // 组合主入口：输入已打分（_score）的四个池，输出三套套餐。
 // 每套 dishes 元素形如 { dish, pool, reason }，总价/人均由跨池共享的 state 累计。
 function buildTableSets({ pools, partySize, budgetPerPerson }) {
   const sets = [];
+  // 跨套差异化：前一套选过的菜在后一套降权（降权不排除），让家常/宴请/打卡真正拉开差距
+  const prevPenalty = new Map();
   for (const variant of VARIANTS) {
     const quotas = quotasFor(partySize, pools, variant);
     const softCap = budgetPerPerson * partySize * variant.budgetFactor * 1.15;
@@ -174,18 +189,24 @@ function buildTableSets({ pools, partySize, budgetPerPerson }) {
     const poolOrder = ['signature', 'hot', 'cold', 'staple'];
     const queues = {};
     for (const k of poolOrder) {
-      queues[k] = pools[k].slice().sort((a, b) => sortValue(b, variant.prefer) - sortValue(a, variant.prefer));
+      queues[k] = pools[k].slice().sort((a, b) => sortValue(b, variant.prefer, prevPenalty) - sortValue(a, variant.prefer, prevPenalty));
     }
     const picked = [];
     let overBudget = false;
+    const totalQuota = quotas.signature + quotas.hot + quotas.cold + quotas.staple;
     const maxRounds = Math.max(quotas.signature, quotas.hot, quotas.cold, quotas.staple);
     for (let round = 0; round < maxRounds; round++) {
       for (const k of poolOrder) {
         if (round >= quotas[k] || !queues[k].length) continue;
-        const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false });
+        // 预算感知：剩余预算摊到剩余配额得到本轮单菜均价，超均价的候选给低价的让位
+        const remainingQuota = Math.max(1, totalQuota - picked.length);
+        const priceCap = Math.max(0, softCap - state.total) / remainingQuota;
+        const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap });
         r.taken.forEach(d => picked.push({ dish: d, pool: k }));
       }
     }
+    // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜
+    for (const p of picked) prevPenalty.set(p.dish.id, (prevPenalty.get(p.dish.id) || 0) + 1);
     // 全套里 ML 分最高的一道带上匹配度话术
     let best = null;
     for (const p of picked) {
@@ -258,6 +279,25 @@ function buildTableUserPrefs(params, profile) {
   };
 }
 
+// 按人数自动配米饭（用户方案：米饭作为配饭不参与推荐，直接按人数配好个数）。
+// riceDish 从主食分类里找；缺失/下架则优雅跳过。米饭计入总价与人均，但不占推荐菜位、
+// 没有换/加操作（前端按 autoItems 渲染固定搭配行）。
+function withAutoRice(sets, riceDish, partySize) {
+  if (!riceDish || !Array.isArray(sets)) {
+    return (sets || []).map(s => ({ ...s, autoItems: [] }));
+  }
+  const unit = Math.round((Number(riceDish.price) || 0) * 100) / 100;
+  return sets.map(s => {
+    const autoItems = [{
+      id: riceDish.id, name: riceDish.name, image_url: riceDish.image_url || '',
+      price: unit, qty: partySize,
+    }];
+    const totalPrice = Math.round((s.totalPrice + unit * partySize) * 100) / 100;
+    const perPerson = partySize ? Math.round(totalPrice / partySize * 100) / 100 : 0;
+    return { ...s, autoItems, totalPrice, perPerson };
+  });
+}
+
 module.exports = {
   POOL_CATEGORIES,
   ALLERGY_KEY_MAP,
@@ -272,4 +312,5 @@ module.exports = {
   buildTableSets,
   fallbackScore,
   buildTableUserPrefs,
+  withAutoRice,
 };

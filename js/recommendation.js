@@ -244,14 +244,26 @@ function renderTableSets(){
    +'</div>';
   }).join('');
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
+  var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':'';
+  var autoRows=(s.autoItems||[]).map(function(d){
+   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
+    +dishImg(d.image_url,52,d.name)
+    +'<div class="flex-grow-1" style="min-width:0;">'
+     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">按人数配</span></div>'
+     +'<div style="font-size:0.8rem;color:var(--text-light);">配饭不参与推荐，按人数自动配齐，已计入总价</div>'
+    +'</div>'
+    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+d.qty+'</div>'
+    +'<div class="text-center text-nowrap" style="width:126px;font-size:0.75rem;color:var(--text-light);">自动配齐</div>'
+   +'</div>';
+  }).join('');
   return '<div class="card mb-3 shadow-sm rounded-4" style="border:1px solid rgba(201,169,110,0.25);background:var(--cream);">'
    +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:rgba(201,169,110,0.1);border:none;border-radius:16px 16px 0 0;">'
-    +'<div><span class="badge rounded-pill" style="background:'+color+';font-size:0.85rem;letter-spacing:1px;">'+esc(s.style)+'</span>'+overTag
+    +'<div><span class="badge rounded-pill" style="background:'+color+';font-size:0.85rem;letter-spacing:1px;">'+esc(s.style)+'</span>'+overTag+banquetNote
      +'<span class="ms-2" style="font-size:0.88rem;">共 '+s.dishes.length+' 道 · 总价 <strong style="color:var(--primary-accent);">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
     +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:1px;"><i class="bi bi-image me-1"></i>分享图</button>'
     +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
    +'</div>'
-   +'<div class="card-body py-2">'+rows+'</div>'
+   +'<div class="card-body py-2">'+rows+autoRows+'</div>'
    +'</div>';
  }).join('');
 }
@@ -291,15 +303,21 @@ function addTableDishToCart(si,dishId){
 }
 function addTableSetToCart(si){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
- // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次
+ // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
  var cart=getCart();
  s.dishes.forEach(function(d){
   var i=cart.findIndex(function(x){return x.id===d.id;});
   if(i>=0)cart[i].qty=(cart[i].qty||1)+1;
   else cart.push({id:d.id,name:d.name,price:d.price,qty:1,image:d.image_url||''});
  });
+ (s.autoItems||[]).forEach(function(d){
+  var i=cart.findIndex(function(x){return x.id===d.id;});
+  if(i>=0)cart[i].qty=(cart[i].qty||1)+d.qty;
+  else cart.push({id:d.id,name:d.name,price:d.price,qty:d.qty,image:d.image_url||''});
+ });
  saveCart(cart);updateCartBadge();
- showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜已加购，可去购物车结算',null,2500);
+ var riceNote=(s.autoItems&&s.autoItems.length)?'（含按人数配的米饭）':'';
+ showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+'已加购，可去购物车结算',null,2500);
 }
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src){
@@ -322,7 +340,10 @@ function shareTableSetImage(si,btn){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
  if(btn)btn.disabled=true;
  var W=750,pad=44,rowH=100,headerH=170,totalsH=140,footerH=96;
- var H=headerH+s.dishes.length*rowH+totalsH+footerH;
+ // 行列表 = 推荐菜 + 自动搭配（米饭按人数），分享图完整反映一桌
+ var rows=s.dishes.map(function(d){return {name:d.name,sub:(d.category||'')+' · '+(d.spiciness||'')+'，'+(d.reason||''),price:d.price,img:d.image_url,__imgEl:null};})
+  .concat((s.autoItems||[]).map(function(d){return {name:d.name+' × '+d.qty,sub:'按人数自动配齐（配饭，已计入总价）',price:d.price*d.qty,img:d.image_url,__imgEl:null};}));
+ var H=headerH+rows.length*rowH+totalsH+footerH;
  var c=document.createElement('canvas');c.width=W;c.height=H;
  var ctx=c.getContext('2d');
  var ps=(lastTableParams&&lastTableParams.partySize)||4;
@@ -344,23 +365,23 @@ function shareTableSetImage(si,btn){
   ctx.fillText('「'+s.style+'」席面 · '+ps+' 人 · 共 '+s.dishes.length+' 道',W/2,headerH-40);
   // 菜品行
   var textW=W-pad*2-84-90;
-  s.dishes.forEach(function(d,i){
+  rows.forEach(function(d,i){
    var ry=headerH+i*rowH;
    if(i%2===0){ctx.fillStyle='rgba(201,169,110,0.10)';ctx.fillRect(pad-16,ry,W-2*(pad-16),rowH);}
    var x=pad;
    if(d.__imgEl)canvasDishImg(ctx,d.__imgEl,x,ry+18,64);
-   else if(d.image_url&&!/^(https?:|\/)/.test(d.image_url)){ctx.font='40px serif';ctx.textAlign='center';ctx.fillText(d.image_url,x+32,ry+50);ctx.textAlign='left';}
+   else if(d.img&&!/^(https?:|\/)/.test(d.img)){ctx.font='40px serif';ctx.textAlign='center';ctx.fillText(d.img,x+32,ry+50);ctx.textAlign='left';}
    ctx.textAlign='left';ctx.textBaseline='alphabetic';
    ctx.fillStyle='#3a2a20';ctx.font='bold 26px "Noto Serif SC",serif';
    ctx.fillText(canvasClipText(ctx,d.name,textW),x+84,ry+44);
    ctx.fillStyle='#8a7a6a';ctx.font='19px "Noto Serif SC",serif';
-   ctx.fillText(canvasClipText(ctx,(d.category||'')+' · '+(d.spiciness||'')+'，'+(d.reason||''),textW),x+84,ry+76);
+   ctx.fillText(canvasClipText(ctx,d.sub,textW),x+84,ry+76);
    ctx.textAlign='right';ctx.fillStyle='#b83a2a';ctx.font='bold 28px "Noto Serif SC",serif';ctx.textBaseline='middle';
-   ctx.fillText('¥'+(d.price||0),W-pad,ry+rowH/2);
+   ctx.fillText('¥'+d.price,W-pad,ry+rowH/2);
    ctx.textAlign='left';ctx.textBaseline='alphabetic';
   });
   // 汇总卡
-  var ty=headerH+s.dishes.length*rowH+16;
+  var ty=headerH+rows.length*rowH+16;
   ctx.fillStyle='#fff';canvasRoundRect(ctx,pad-10,ty,W-2*(pad-10),totalsH-40,14);ctx.fill();
   ctx.strokeStyle='#c9a96e';ctx.lineWidth=1.5;ctx.stroke();
   ctx.textAlign='left';ctx.fillStyle='#3a2a20';ctx.font='bold 30px "Noto Serif SC",serif';
@@ -378,9 +399,9 @@ function shareTableSetImage(si,btn){
  // 预载图片：品牌猫图 + 同源菜品图（emoji/外链图直接跳过用文字兜底）
  var jobs=[];
  var brandJob=loadCanvasImg('/assets/brand/tangcat-official.png').catch(function(){return null;});
- s.dishes.forEach(function(d){
-  if(d.image_url&&d.image_url.indexOf('/')===0&&d.image_url.indexOf('//')!==0){
-   jobs.push(loadCanvasImg(d.image_url).then(function(im){d.__imgEl=im;}).catch(function(){}));
+ rows.forEach(function(d){
+  if(d.img&&d.img.indexOf('/')===0&&d.img.indexOf('//')!==0){
+   jobs.push(loadCanvasImg(d.img).then(function(im){d.__imgEl=im;}).catch(function(){}));
   }
  });
  var timeout=new Promise(function(res){setTimeout(res,4000);});

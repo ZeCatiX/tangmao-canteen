@@ -1758,9 +1758,13 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
       dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
       totalPrice: s.totalPrice, perPerson: s.perPerson, overBudget: s.overBudget,
     }));
+    // 米饭按人数自动配（主食分类不参与推荐菜池，配饭直接配好个数）
+    const riceDish = (dishData || []).find(d => d && d.is_active !== false && d.category === '主食'
+      && typeof d.name === 'string' && d.name.includes('米饭'));
+    const finalSets = tableRecommend.withAutoRice(sets, riceDish, params.partySize);
     logRecommendationMode(req, '一桌菜组合');
     logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded} 已点排除=${excludedOrdered}`);
-    res.json({ success: true, sets, excludedAllergy: excluded, excludedOrdered, usedProfile: !!profile });
+    res.json({ success: true, sets: finalSets, excludedAllergy: excluded, excludedOrdered, usedProfile: !!profile });
   } catch (e) {
     logger.error('一桌菜推荐API错误: ' + e.message);
     res.status(500).json({ success: false, error: '服务器内部错误' });
