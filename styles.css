@@ -1121,7 +1121,7 @@ html.dark-mode .table-total { color: var(--gold-light); }
 
 /* ═══ 一桌菜 · 唐风典雅 ═══ */
 .tang-num { font-family: 'Noto Serif SC', serif; color: var(--gold); margin-right: 6px; font-size: 1.05em; }
-.tang-tag { font-family: 'Noto Serif SC', serif; letter-spacing: 3px; padding-left: 15px !important; padding-right: 17px !important; border: 1px solid rgba(255,255,255,0.45); text-shadow: 0 1px 2px rgba(0,0,0,0.22); }
+.tang-tag { font-family: 'Noto Serif SC', serif; letter-spacing: 3px; padding-left: 20px !important; padding-right: 17px !important; border: 1px solid rgba(255,255,255,0.45); text-shadow: 0 1px 2px rgba(0,0,0,0.22); }
 .tang-orn { color: var(--gold); font-size: 0.85em; margin: 0 6px; }
 .table-set-card { position: relative; overflow: hidden; }
 .table-set-card::before, .table-set-card::after {
@@ -1130,3 +1130,5 @@ html.dark-mode .table-total { color: var(--gold-light); }
 .table-set-card::before { top: 7px; left: 7px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
 .table-set-card::after { bottom: 7px; right: 7px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
 .dish-name-serif { font-family: 'Noto Serif SC', serif; font-size: 0.98rem; letter-spacing: 0.5px; }
+/* 套卡头是 space-between 布局，全局 ◇◇ 装饰会成为隐形 flex 项把徽标推向中间——禁用 */
+.table-set-card .card-header::before, .table-set-card .card-header::after { content: none !important; }
