@@ -194,15 +194,29 @@ function buildTableSets({ pools, partySize, budgetPerPerson }) {
     const picked = [];
     let overBudget = false;
     const totalQuota = quotas.signature + quotas.hot + quotas.cold + quotas.staple;
-    const maxRounds = Math.max(quotas.signature, quotas.hot, quotas.cold, quotas.staple);
-    for (let round = 0; round < maxRounds; round++) {
+    // 全场最低菜价：用于给未填槽位留保底预算（reservation）
+    let minPrice = Infinity;
+    for (const k of poolOrder) for (const x of pools[k]) { const p = Number(x.price) || 0; if (p > 0 && p < minPrice) minPrice = p; }
+    if (!Number.isFinite(minPrice)) minPrice = 0;
+    // 进度循环补选：每个未满配额的池在每轮都获得重试机会——
+    // 早期因预算跳过的槽位，后续轮次预算判断变化后仍能补上，槽位不会永久死亡。
+    // 循环终止：配额全满 / 无任何池能再选（预算或池子耗尽）。40 轮保险丝防意外死循环。
+    const pickedCount = { signature: 0, hot: 0, cold: 0, staple: 0 };
+    let progressed = true;
+    let safetyRounds = 0;
+    while (picked.length < totalQuota && progressed && safetyRounds++ < 40) {
+      progressed = false;
       for (const k of poolOrder) {
-        if (round >= quotas[k] || !queues[k].length) continue;
-        // 预算感知：剩余预算摊到剩余配额得到本轮单菜均价，超均价的候选给低价的让位
-        const remainingQuota = Math.max(1, totalQuota - picked.length);
-        const priceCap = Math.max(0, softCap - state.total) / remainingQuota;
+        if (pickedCount[k] >= quotas[k] || !queues[k].length) continue;
+        // 预算感知双约束取紧：
+        //   均价制（剩余预算÷剩余配额）防早期冒进——贵菜把预算吃光、后期全靠捡漏；
+        //   保底金制（剩余预算−其余槽位×最低菜价）防尾轮天价菜开"全款口子"饿死结构槽位。
+        const remainingSlots = totalQuota - picked.length;
+        const avgCap = (softCap - state.total) / remainingSlots;
+        const reservedCap = softCap - state.total - minPrice * Math.max(0, remainingSlots - 1);
+        const priceCap = Math.max(0, Math.min(avgCap, reservedCap));
         const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap });
-        r.taken.forEach(d => picked.push({ dish: d, pool: k }));
+        r.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; progressed = true; });
       }
     }
     // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜
