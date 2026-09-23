@@ -1523,14 +1523,19 @@ function renderTableSets(){
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
   var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':'';
   var autoRows=(s.autoItems||[]).map(function(d){
+   var qty=d.qty,ps=(lastTableParams&&lastTableParams.partySize)||qty;
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
-     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">按人数配</span></div>'
-     +'<div style="font-size:0.8rem;color:var(--text-light);">配饭不参与推荐，按人数自动配齐，已计入总价</div>'
+     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">按人数配 · 可调整</span></div>'
+     +'<div style="font-size:0.8rem;color:var(--text-light);">配饭不参与推荐，'+(qty===0?'本套不加米饭':'已计入总价')+'，加购后仍可在购物车增减</div>'
     +'</div>'
-    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+d.qty+'</div>'
-    +'<div class="text-center text-nowrap" style="width:126px;font-size:0.75rem;color:var(--text-light);">自动配齐</div>'
+    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+qty+'</div>'
+    +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:126px;">'
+     +'<button class="btn btn-sm table-rice-minus" data-set="'+si+'"'+(qty<=0?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:1rem;">−</button>'
+     +'<span style="min-width:26px;text-align:center;font-size:0.95rem;">'+qty+'</span>'
+     +'<button class="btn btn-sm table-rice-plus" data-set="'+si+'"'+(qty>=ps?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;color:#fff;font-size:1rem;">＋</button>'
+    +'</div>'
    +'</div>';
   }).join('');
   return '<div class="card mb-3 shadow-sm rounded-4" style="border:1px solid rgba(201,169,110,0.25);background:var(--cream);">'
@@ -1573,6 +1578,17 @@ async function swapTableDish(si,dishId,pool,btn){
   if(btn){btn.disabled=false;btn.innerHTML='<i class="bi bi-arrow-repeat"></i> 换';}
  }
 }
+function setTableRiceQty(si,qty){
+ // 米饭步进（0~人数）：0=本套不加；总价/人均按 菜品合计+米饭 重算（换单道的价差已含在菜品价里）
+ var s=tableSets[si];if(!s||!s.autoItems||!s.autoItems.length)return;
+ var rice=s.autoItems[0];
+ var ps=(lastTableParams&&lastTableParams.partySize)||rice.qty;
+ rice.qty=Math.max(0,Math.min(qty,ps));
+ var dishSum=s.dishes.reduce(function(sum,x){return sum+(x.price||0);},0);
+ s.totalPrice=Math.round((dishSum+rice.price*rice.qty)*100)/100;
+ s.perPerson=ps?Math.round(s.totalPrice/ps*100)/100:0;
+ renderTableSets();
+}
 function addTableDishToCart(si,dishId){
  var s=tableSets[si];if(!s)return;
  var d=s.dishes.find(function(x){return x.id===dishId;});
@@ -1588,12 +1604,14 @@ function addTableSetToCart(si){
   else cart.push({id:d.id,name:d.name,price:d.price,qty:1,image:d.image_url||''});
  });
  (s.autoItems||[]).forEach(function(d){
+  if(d.qty<=0)return;
   var i=cart.findIndex(function(x){return x.id===d.id;});
   if(i>=0)cart[i].qty=(cart[i].qty||1)+d.qty;
   else cart.push({id:d.id,name:d.name,price:d.price,qty:d.qty,image:d.image_url||''});
  });
  saveCart(cart);updateCartBadge();
- var riceNote=(s.autoItems&&s.autoItems.length)?'（含按人数配的米饭）':'';
+ var riceQty=(s.autoItems&&s.autoItems[0]&&s.autoItems[0].qty)||0;
+ var riceNote=riceQty>0?'（含米饭×'+riceQty+'）':'（未加米饭）';
  showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+'已加购，可去购物车结算',null,2500);
 }
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
@@ -1619,7 +1637,7 @@ function shareTableSetImage(si,btn){
  var W=750,pad=44,rowH=100,headerH=170,totalsH=140,footerH=96;
  // 行列表 = 推荐菜 + 自动搭配（米饭按人数），分享图完整反映一桌
  var rows=s.dishes.map(function(d){return {name:d.name,sub:(d.category||'')+' · '+(d.spiciness||'')+'，'+(d.reason||''),price:d.price,img:d.image_url,__imgEl:null};})
-  .concat((s.autoItems||[]).map(function(d){return {name:d.name+' × '+d.qty,sub:'按人数自动配齐（配饭，已计入总价）',price:d.price*d.qty,img:d.image_url,__imgEl:null};}));
+  .concat((s.autoItems||[]).filter(function(d){return d.qty>0;}).map(function(d){return {name:d.name+' × '+d.qty,sub:'按人数自动配齐（配饭，已计入总价）',price:d.price*d.qty,img:d.image_url,__imgEl:null};}));
  var H=headerH+rows.length*rowH+totalsH+footerH;
  var c=document.createElement('canvas');c.width=W;c.height=H;
  var ctx=c.getContext('2d');
@@ -1790,6 +1808,10 @@ document.addEventListener('DOMContentLoaded',function(){
   if(addone){addTableDishToCart(parseInt(addone.dataset.set),parseInt(addone.dataset.id));return;}
   const addall=e.target.closest('.table-addall-btn');
   if(addall){addTableSetToCart(parseInt(addall.dataset.set));return;}
+  const riceMinus=e.target.closest('.table-rice-minus');
+  if(riceMinus){const si=parseInt(riceMinus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty-1);return;}
+  const ricePlus=e.target.closest('.table-rice-plus');
+  if(ricePlus){const si=parseInt(ricePlus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty+1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
  });

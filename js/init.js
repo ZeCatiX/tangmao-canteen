@@ -95,6 +95,10 @@ document.addEventListener('DOMContentLoaded',function(){
   if(addone){addTableDishToCart(parseInt(addone.dataset.set),parseInt(addone.dataset.id));return;}
   const addall=e.target.closest('.table-addall-btn');
   if(addall){addTableSetToCart(parseInt(addall.dataset.set));return;}
+  const riceMinus=e.target.closest('.table-rice-minus');
+  if(riceMinus){const si=parseInt(riceMinus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty-1);return;}
+  const ricePlus=e.target.closest('.table-rice-plus');
+  if(ricePlus){const si=parseInt(ricePlus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty+1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
  });
