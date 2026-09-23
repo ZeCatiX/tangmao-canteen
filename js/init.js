@@ -94,7 +94,9 @@ document.addEventListener('DOMContentLoaded',function(){
   const addone=e.target.closest('.table-addone-btn');
   if(addone){addTableDishToCart(parseInt(addone.dataset.set),parseInt(addone.dataset.id));return;}
   const addall=e.target.closest('.table-addall-btn');
-  if(addall){addTableSetToCart(parseInt(addall.dataset.set));}
+  if(addall){addTableSetToCart(parseInt(addall.dataset.set));return;}
+  const share=e.target.closest('.table-share-btn');
+  if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
  });
  // 一桌菜忌口"无"与其他项互斥（同偏好表单联动规则）
  const tanone=$('table-allergy-none'),taboxes=document.querySelectorAll('input[name="table-allergy"]');

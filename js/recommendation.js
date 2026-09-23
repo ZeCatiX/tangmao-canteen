@@ -149,6 +149,7 @@ function displayRecommendations(){
 // ═══════════════ AI 配一桌（组合推荐，路线图 8.4） ═══════════════
 var tableSets=[];          // 当前三套方案
 var lastTableParams=null;  // 生成时的入参，换单道时复用
+var lastTableMeta=null;    // 服务端返回的元信息（已点排除数/是否用了口味档案）
 function prefillTableBuilder(){
  // 登录用户从口味档案带出辣度/忌口
  var prefs=null;
@@ -163,13 +164,32 @@ function prefillTableBuilder(){
   none.checked=!has;
   boxes.forEach(function(cb){cb.disabled=none.checked;});
  }
+ // 近期避开（会所版防重复）仅登录用户可见
+ var wrap=$('table-avoid-recent-wrap');
+ if(wrap)wrap.style.display=(currentUser&&currentUser!=='guest')?'':'none';
+}
+function collectTableExclusions(){
+ // 本会话已点（各轮）+ 购物车里的菜 id，生成与换单道都要带上
+ var ids=[];
+ try{
+  JSON.parse(sessionStorage.getItem('lastOrderRounds')||'[]').forEach(function(r){(r.items||[]).forEach(function(it){if(it&&it.id)ids.push(it.id);});});
+ }catch(e){}
+ getCart().forEach(function(c){ids.push(c.id);});
+ return ids;
 }
 function collectTableParams(){
  var ps=parseInt($('table-party-size')?$('table-party-size').value:'4',10);
  var budget=parseFloat($('table-budget')?$('table-budget').value:'80');
  var allergies=[];
  document.querySelectorAll('input[name="table-allergy"]:checked').forEach(function(cb){allergies.push(cb.value);});
- return {partySize:ps,budgetPerPerson:isNaN(budget)?80:budget,spiciness:$('table-spicy')?$('table-spicy').value:'无',allergies:allergies};
+ var params={partySize:ps,budgetPerPerson:isNaN(budget)?80:budget,spiciness:$('table-spicy')?$('table-spicy').value:'无',allergies:allergies};
+ var lt=ssGet('lockedTable');
+ if(lt)params.tableNumber=lt;
+ var excl=collectTableExclusions();
+ if(excl.length)params.excludeIds=excl;
+ var avoid=$('table-avoid-recent');
+ if(avoid&&avoid.checked&&currentUser&&currentUser!=='guest')params.avoidRecentDays=7;
+ return params;
 }
 async function submitTableBuilder(){
  if(!currentUser)currentUser='guest';
@@ -184,6 +204,7 @@ async function submitTableBuilder(){
   var d=await r.json();
   if(d.success&&Array.isArray(d.sets)&&d.sets.length){
    tableSets=d.sets;
+   lastTableMeta={excludedOrdered:d.excludedOrdered||0,usedProfile:!!d.usedProfile};
    renderTableSets();
    showSection('table-result-section');
   }else{
@@ -200,8 +221,15 @@ async function submitTableBuilder(){
 function renderTableSets(){
  var box=$('table-result-container');if(!box)return;
  if(!tableSets.length){box.innerHTML='<p class="py-4 text-center" style="color:var(--text-light);">还没有生成方案，先去配置一下吧。</p>';return;}
+ var notesHtml='';
+ if(lastTableMeta){
+  var notes=[];
+  if(lastTableMeta.excludedOrdered>0)notes.push('已自动避开本桌已点/购物车中的 '+lastTableMeta.excludedOrdered+' 道菜');
+  if(lastTableMeta.usedProfile)notes.push('已结合你的口味档案');
+  if(notes.length)notesHtml='<div class="mb-2" style="font-size:0.85rem;color:var(--text-light);"><i class="bi bi-info-circle me-1"></i>'+esc(notes.join('；'))+'</div>';
+ }
  var styleColors={'家常版':'var(--gold)','宴请版':'var(--primary-accent)','打卡版':'#8e44ad'};
- box.innerHTML=tableSets.map(function(s,si){
+ box.innerHTML=notesHtml+tableSets.map(function(s,si){
   var color=styleColors[s.style]||'var(--gold)';
   var rows=s.dishes.map(function(d){
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
@@ -220,6 +248,7 @@ function renderTableSets(){
    +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:rgba(201,169,110,0.1);border:none;border-radius:16px 16px 0 0;">'
     +'<div><span class="badge rounded-pill" style="background:'+color+';font-size:0.85rem;letter-spacing:1px;">'+esc(s.style)+'</span>'+overTag
      +'<span class="ms-2" style="font-size:0.88rem;">共 '+s.dishes.length+' 道 · 总价 <strong style="color:var(--primary-accent);">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
+    +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:1px;"><i class="bi bi-image me-1"></i>分享图</button>'
     +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
    +'</div>'
    +'<div class="card-body py-2">'+rows+'</div>'
@@ -228,7 +257,9 @@ function renderTableSets(){
 }
 async function swapTableDish(si,dishId,pool,btn){
  var s=tableSets[si];if(!s)return;
- var params=Object.assign({},lastTableParams||collectTableParams(),{pool:pool,excludeIds:s.dishes.map(function(d){return d.id;}),style:s.key});
+ // 排除集=桌上现有菜+本会话已点/购物车（tableNumber 由 lastTableParams 带给服务端再查进行中订单）
+ var excl=s.dishes.map(function(d){return d.id;}).concat(collectTableExclusions());
+ var params=Object.assign({},lastTableParams||collectTableParams(),{pool:pool,excludeIds:excl,style:s.key});
  if(btn){btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i>';}
  try{
   var r=await safeFetch('/api/recommend/table/swap',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(params)});
@@ -269,5 +300,97 @@ function addTableSetToCart(si){
  });
  saveCart(cart);updateCartBadge();
  showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜已加购，可去购物车结算',null,2500);
+}
+// ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
+function loadCanvasImg(src){
+ return new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im);};im.onerror=rej;im.src=src;});
+}
+function canvasRoundRect(ctx,x,y,w,h,r){
+ ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+function canvasClipText(ctx,text,maxW){
+ if(text===undefined||text===null)return'';text=String(text);
+ if(ctx.measureText(text).width<=maxW)return text;
+ while(text.length>1&&ctx.measureText(text+'…').width>maxW)text=text.slice(0,-1);
+ return text+'…';
+}
+function canvasDishImg(ctx,img,x,y,d){
+ ctx.save();ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.clip();ctx.drawImage(img,x,y,d,d);ctx.restore();
+ ctx.strokeStyle='#c9a96e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.stroke();
+}
+function shareTableSetImage(si,btn){
+ var s=tableSets[si];if(!s||!s.dishes.length)return;
+ if(btn)btn.disabled=true;
+ var W=750,pad=44,rowH=100,headerH=170,totalsH=140,footerH=96;
+ var H=headerH+s.dishes.length*rowH+totalsH+footerH;
+ var c=document.createElement('canvas');c.width=W;c.height=H;
+ var ctx=c.getContext('2d');
+ var ps=(lastTableParams&&lastTableParams.partySize)||4;
+ function draw(brandImg){
+  // 底色与品牌头
+  ctx.fillStyle='#fdf6f0';ctx.fillRect(0,0,W,H);
+  var grad=ctx.createLinearGradient(0,0,W,120);
+  grad.addColorStop(0,'#8f2a1e');grad.addColorStop(1,'#b83a2a');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,120);
+  ctx.fillStyle='#c9a96e';ctx.fillRect(0,120,W,4);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#fff';ctx.font='bold 42px "Noto Serif SC",serif';
+  ctx.fillText('唐猫庭院 · AI 配一桌',W/2-30,48);
+  ctx.fillStyle='#f3e3c3';ctx.font='22px "Noto Serif SC",serif';
+  ctx.fillText('千年陕菜 · 唐风雅韵',W/2-30,90);
+  if(brandImg)canvasDishImg(ctx,brandImg,W-72,32,80);
+  // 套名行
+  ctx.fillStyle='#8f2a1e';ctx.font='bold 34px "Noto Serif SC",serif';
+  ctx.fillText('「'+s.style+'」席面 · '+ps+' 人 · 共 '+s.dishes.length+' 道',W/2,headerH-40);
+  // 菜品行
+  var textW=W-pad*2-84-90;
+  s.dishes.forEach(function(d,i){
+   var ry=headerH+i*rowH;
+   if(i%2===0){ctx.fillStyle='rgba(201,169,110,0.10)';ctx.fillRect(pad-16,ry,W-2*(pad-16),rowH);}
+   var x=pad;
+   if(d.__imgEl)canvasDishImg(ctx,d.__imgEl,x,ry+18,64);
+   else if(d.image_url&&!/^(https?:|\/)/.test(d.image_url)){ctx.font='40px serif';ctx.textAlign='center';ctx.fillText(d.image_url,x+32,ry+50);ctx.textAlign='left';}
+   ctx.textAlign='left';ctx.textBaseline='alphabetic';
+   ctx.fillStyle='#3a2a20';ctx.font='bold 26px "Noto Serif SC",serif';
+   ctx.fillText(canvasClipText(ctx,d.name,textW),x+84,ry+44);
+   ctx.fillStyle='#8a7a6a';ctx.font='19px "Noto Serif SC",serif';
+   ctx.fillText(canvasClipText(ctx,(d.category||'')+' · '+(d.spiciness||'')+'，'+(d.reason||''),textW),x+84,ry+76);
+   ctx.textAlign='right';ctx.fillStyle='#b83a2a';ctx.font='bold 28px "Noto Serif SC",serif';ctx.textBaseline='middle';
+   ctx.fillText('¥'+(d.price||0),W-pad,ry+rowH/2);
+   ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  });
+  // 汇总卡
+  var ty=headerH+s.dishes.length*rowH+16;
+  ctx.fillStyle='#fff';canvasRoundRect(ctx,pad-10,ty,W-2*(pad-10),totalsH-40,14);ctx.fill();
+  ctx.strokeStyle='#c9a96e';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.textAlign='left';ctx.fillStyle='#3a2a20';ctx.font='bold 30px "Noto Serif SC",serif';
+  ctx.fillText('桌总价',pad+22,ty+48);
+  ctx.textAlign='right';ctx.fillStyle='#b83a2a';ctx.font='bold 36px "Noto Serif SC",serif';
+  ctx.fillText('¥'+s.totalPrice,W-pad-22,ty+48);
+  ctx.textAlign='left';ctx.fillStyle='#8a7a6a';ctx.font='22px "Noto Serif SC",serif';
+  ctx.fillText('人均 ¥'+s.perPerson+(s.overBudget?' · 为保席面结构略超预算':''),pad+22,ty+84);
+  // 页脚
+  ctx.textAlign='center';ctx.fillStyle='#b83a2a';ctx.font='bold 22px "Noto Serif SC",serif';
+  ctx.fillText('唐猫庭院 · 千年陕菜',W/2,H-56);
+  ctx.fillStyle='#8a7a6a';ctx.font='17px serif';
+  ctx.fillText(new Date().toLocaleDateString('zh-CN'),W/2,H-26);
+ }
+ // 预载图片：品牌猫图 + 同源菜品图（emoji/外链图直接跳过用文字兜底）
+ var jobs=[];
+ var brandJob=loadCanvasImg('/assets/brand/tangcat-official.png').catch(function(){return null;});
+ s.dishes.forEach(function(d){
+  if(d.image_url&&d.image_url.indexOf('/')===0&&d.image_url.indexOf('//')!==0){
+   jobs.push(loadCanvasImg(d.image_url).then(function(im){d.__imgEl=im;}).catch(function(){}));
+  }
+ });
+ var timeout=new Promise(function(res){setTimeout(res,4000);});
+ Promise.race([Promise.all(jobs).then(function(){return brandJob;}),timeout]).then(function(r){
+  try{draw(r||null);var url=c.toDataURL('image/png');
+   var a=document.createElement('a');a.href=url;a.download='唐猫庭院一桌菜-'+s.style+'.png';
+   document.body.appendChild(a);a.click();a.remove();
+   showMessage('分享图已生成','图片已开始下载，可以发给同桌的人',null,2500);
+  }catch(e){showMessage('生成失败','分享图生成失败，请重试');}
+  if(btn)btn.disabled=false;
+ });
 }
 
