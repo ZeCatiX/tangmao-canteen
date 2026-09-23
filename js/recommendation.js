@@ -218,27 +218,27 @@ async function submitTableBuilder(){
   if(btn)btn.disabled=false;
  }
 }
-function renderTableSets(){
+ function renderTableSets(){
  var box=$('table-result-container');if(!box)return;
- if(!tableSets.length){box.innerHTML='<p class="py-4 text-center" style="color:var(--text-light);">还没有生成方案，先去配置一下吧。</p>';return;}
+ if(!tableSets.length){box.innerHTML='<p class="py-4 text-center" style="color:var(--text-light);letter-spacing:2px;">尚未设席，先去配置一下吧。</p>';return;}
  var notesHtml='';
  if(lastTableMeta){
   var notes=[];
   if(lastTableMeta.excludedOrdered>0)notes.push('已自动避开本桌已点/购物车中的 '+lastTableMeta.excludedOrdered+' 道菜');
   if(lastTableMeta.usedProfile)notes.push('已结合你的口味档案');
-  if(notes.length)notesHtml='<div class="mb-2" style="font-size:0.85rem;color:var(--text-light);"><i class="bi bi-info-circle me-1"></i>'+esc(notes.join('；'))+'</div>';
+  if(notes.length)notesHtml='<div class="mb-2 text-center" style="font-size:0.82rem;color:var(--text-light);letter-spacing:1px;"><span class="tang-orn">◈</span>'+esc(notes.join(' · '))+'<span class="tang-orn">◈</span></div>';
  }
  var styleColors={'家常版':'var(--gold)','宴请版':'var(--primary-accent)','打卡版':'#8e44ad'};
  box.innerHTML=notesHtml+tableSets.map(function(s,si){
   var color=styleColors[s.style]||'var(--gold)';
   var rows=s.dishes.map(function(d){
-   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
+   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
-     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.75rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+'</span></div>'
-     +'<div style="font-size:0.8rem;color:var(--text-light);">'+esc(d.reason)+'</div>'
+     +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+'</span></div>'
+     +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+esc(d.reason)+'</div>'
     +'</div>'
-    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'</div>'
+    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'</div>'
     +'<button class="btn btn-sm table-swap-btn" data-set="'+si+'" data-id="'+d.id+'" data-pool="'+esc(d.pool)+'" title="换一道" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-arrow-repeat"></i> 换</button>'
     +'<button class="btn btn-sm table-addone-btn" data-set="'+si+'" data-id="'+d.id+'" title="单点加购" style="background:transparent;border:1px solid rgba(201,169,110,0.5);color:var(--text);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-plus-lg"></i> 加</button>'
    +'</div>';
@@ -246,13 +246,13 @@ function renderTableSets(){
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
   var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':'';
   var autoRows=(s.autoItems||[]).map(function(d){
-   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
+   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
-     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">默认按人数 · 可自由加减</span></div>'
-     +'<div style="font-size:0.8rem;color:var(--text-light);">'+(d.qty===0?'本套不加米饭':'配饭不参与推荐，已计入总价')+'，加购后仍可在购物车增减</div>'
+     +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">默认按人数 · 可自由加减</span></div>'
+     +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+(d.qty===0?'本套不加米饭':'配饭不参与推荐，已计入总价')+'，加购后仍可在购物车增减</div>'
     +'</div>'
-    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+d.qty+'</div>'
+    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+d.qty+'</div>'
     +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:126px;">'
      +'<button class="btn btn-sm table-rice-minus" data-set="'+si+'"'+(d.qty<=0?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:1rem;">−</button>'
      +'<span style="min-width:26px;text-align:center;font-size:0.95rem;">'+d.qty+'</span>'
@@ -260,12 +260,15 @@ function renderTableSets(){
     +'</div>'
    +'</div>';
   }).join('');
-  return '<div class="card mb-3 shadow-sm rounded-4" style="border:1px solid rgba(201,169,110,0.25);background:var(--cream);">'
-   +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background:rgba(201,169,110,0.1);border:none;border-radius:16px 16px 0 0;">'
-    +'<div><span class="badge rounded-pill" style="background:'+color+';font-size:0.85rem;letter-spacing:1px;">'+esc(s.style)+'</span>'+overTag+banquetNote
-     +'<span class="ms-2" style="font-size:0.88rem;">共 '+s.dishes.length+' 道 · 总价 <strong class="table-total">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
-    +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:1px;"><i class="bi bi-image me-1"></i>分享图</button>'
-    +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
+  return '<div class="card mb-4 shadow-sm table-set-card" style="border:1px solid rgba(201,169,110,0.35);background:var(--cream);">'
+   +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="border:none;">'
+    +'<div class="d-flex align-items-center flex-wrap gap-2">'
+     +'<span class="badge tang-tag" style="background:'+color+';font-size:0.85rem;">'+esc(s.style)+'</span>'+overTag+banquetNote
+     +'<span style="font-size:0.85rem;letter-spacing:0.5px;">共 '+s.dishes.length+' 道 · 席面总计 <strong class="table-total">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
+    +'<div class="d-flex gap-2">'
+     +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:2px;"><i class="bi bi-image me-1"></i>分享图</button>'
+     +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:1px solid rgba(201,169,110,0.55);border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:2px;font-family:\'Noto Serif SC\',serif;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
+    +'</div>'
    +'</div>'
    +'<div class="card-body py-2">'+rows+autoRows+'</div>'
    +'</div>';

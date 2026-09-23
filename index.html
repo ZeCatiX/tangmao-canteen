@@ -376,16 +376,22 @@
 
             <!-- AI 配一桌 · 配置（路线图 8.4） -->
             <section id="table-builder-section" class="section">
-                <div class="card shadow-lg rounded-4 border-0" style="border:1px solid rgba(201,169,110,0.2)!important;">
-                    <div class="card-header text-white" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary))!important;border:none;">
-                        <h2 class="mb-0"><i class="bi bi-basket me-2"></i>AI 配一桌</h2>
+                <div class="card shadow-lg rounded-4 border-0" style="border:1px solid rgba(201,169,110,0.3)!important;">
+                    <div class="card-header text-center text-white" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary))!important;border:none;">
+                        <div style="font-size:0.66rem;letter-spacing:7px;color:var(--gold-light);opacity:0.9;margin-bottom:5px;">◇ 大 唐 食 光 ◇</div>
+                        <h2 class="mb-0" style="font-family:'Noto Serif SC',serif;font-weight:700;letter-spacing:12px;text-indent:12px;">AI 配一桌</h2>
+                        <div style="font-size:0.76rem;color:rgba(240,213,176,0.85);margin-top:5px;letter-spacing:3px;">凉热荤素 · 按席面规制 · 一键成席</div>
                     </div>
-                    <div class="card-body p-5">
-                        <p style="color:var(--text-light);font-size:0.9rem;margin-bottom:1.5rem;">告诉 AI 几个人吃、大概预算，AI 按凉菜·热菜·招牌·主食的席面规矩配出三套菜单，可整体加购或单道更换。</p>
+                    <div class="card-body p-4 p-md-5">
+                        <p class="text-center" style="color:var(--text-light);font-size:0.88rem;letter-spacing:0.5px;margin-bottom:1.6rem;">
+                            <span style="color:var(--gold);">◈</span>
+                            围炉设席，最忌众口难调——报上人数与预算，AI 为您配好三套席面
+                            <span style="color:var(--gold);">◈</span>
+                        </p>
                         <form id="table-builder-form">
                             <div class="row">
                                 <div class="col-6 col-md-4 mb-3">
-                                    <label class="form-label" for="table-party-size">用餐人数</label>
+                                    <label class="form-label" for="table-party-size" style="letter-spacing:1px;"><span class="tang-num">壹</span>用餐人数</label>
                                     <select class="form-select" id="table-party-size">
                                         <option value="1">1 人</option>
                                         <option value="2">2 人</option>
@@ -410,11 +416,11 @@
                                     </select>
                                 </div>
                                 <div class="col-6 col-md-4 mb-3">
-                                    <label class="form-label" for="table-budget">人均预算（元）</label>
+                                    <label class="form-label" for="table-budget" style="letter-spacing:1px;"><span class="tang-num">贰</span>人均预算（元）</label>
                                     <input type="number" class="form-control" id="table-budget" value="80" min="10" max="1000" step="1" inputmode="numeric" placeholder="80">
                                 </div>
                                 <div class="col-12 col-md-4 mb-3">
-                                    <label class="form-label" for="table-spicy">辣度偏好</label>
+                                    <label class="form-label" for="table-spicy" style="letter-spacing:1px;"><span class="tang-num">叁</span>辣度偏好</label>
                                     <select class="form-select" id="table-spicy">
                                         <option value="无" selected>无所谓</option>
                                         <option value="不辣">不辣</option>
@@ -424,8 +430,8 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="mb-4">
-                                <label class="form-label">忌口（过敏源）</label>
+                            <div class="mb-3">
+                                <label class="form-label" style="letter-spacing:1px;"><span class="tang-num">肆</span>忌口（过敏源）</label>
                                 <div class="d-flex flex-wrap gap-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="table-allergy-none" checked>
@@ -458,15 +464,15 @@
                                 <label class="form-check-label" for="table-avoid-recent" style="font-size:0.9rem;">避开最近吃过的菜（7 天内点过的不再推荐）</label>
                             </div>
                             <div class="d-grid gap-2">
-                                <button type="submit" id="table-generate-btn" class="btn btn-primary py-3" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;border-radius:50px;letter-spacing:2px;">
-                                    <i class="bi bi-magic me-2"></i>生成三套一桌菜单
+                                <button type="submit" id="table-generate-btn" class="btn btn-primary py-3" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:1px solid rgba(201,169,110,0.55);border-radius:50px;font-family:'Noto Serif SC',serif;font-size:1.05rem;letter-spacing:6px;text-indent:6px;">
+                                    <i class="bi bi-magic me-2"></i>生成席面 · 三套方案
                                 </button>
-                                <button type="button" id="table-builder-back-btn" class="btn btn-outline-secondary py-2">返回首页</button>
+                                <button type="button" id="table-builder-back-btn" class="btn btn-outline-secondary py-2" style="letter-spacing:3px;">返回首页</button>
                             </div>
                         </form>
                         <div id="table-builder-loading" class="text-center py-4" style="display:none;">
                             <div class="spinner-border" style="color:var(--primary-accent);" role="status"><span class="visually-hidden">加载中</span></div>
-                            <p class="mt-2 mb-0" style="color:var(--text-light);">AI 正在按席面规矩配菜…</p>
+                            <p class="mt-2 mb-0" style="color:var(--text-light);letter-spacing:3px;">AI 正在为您设席 · 凉热荤素配平中</p>
                         </div>
                     </div>
                 </div>
@@ -474,11 +480,12 @@
 
             <!-- AI 配一桌 · 结果 -->
             <section id="table-result-section" class="section">
+                <div class="text-center mb-2" style="font-size:0.66rem;letter-spacing:7px;color:var(--gold);">◇ 设 席 已 成 ◇</div>
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h2 class="mb-0"><i class="bi bi-basket me-2"></i>一桌菜 · 三套方案</h2>
+                    <h2 class="mb-0" style="font-family:'Noto Serif SC',serif;font-weight:700;letter-spacing:4px;">一桌菜 · 三套方案</h2>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-sm" id="table-restart-btn" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 16px;font-size:0.85rem;">重新配置</button>
-                        <button class="btn btn-sm" id="table-result-home-btn" style="background:transparent;border:1px solid rgba(201,169,110,0.4);color:var(--text-light);border-radius:20px;padding:4px 16px;font-size:0.85rem;">返回首页</button>
+                        <button class="btn btn-sm" id="table-restart-btn" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 16px;font-size:0.85rem;letter-spacing:1px;">重新配置</button>
+                        <button class="btn btn-sm" id="table-result-home-btn" style="background:transparent;border:1px solid rgba(201,169,110,0.4);color:var(--text-light);border-radius:20px;padding:4px 16px;font-size:0.85rem;letter-spacing:1px;">返回首页</button>
                     </div>
                 </div>
                 <div id="table-result-container"></div>
@@ -1175,7 +1182,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20260923d"></script>
+    <script src="script.js?v=20260923e"></script>
     <script src="js/password-toggle.js?v=20260910"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
