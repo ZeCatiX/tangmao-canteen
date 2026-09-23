@@ -257,7 +257,7 @@ function renderPrefCompletenessBanner(){
  banner.addEventListener('closed.bs.alert',function(){localStorage.setItem('prefCompletenessDismissed','true');},{once:true});
 }
 
-const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院'};
+const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院','table-builder-section':'AI 配一桌 - 唐猫庭院','table-result-section':'一桌菜方案 - 唐猫庭院'};
 const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
 
 function showSection(sectionId,skipScroll){
@@ -900,6 +900,7 @@ async function applyTableChoice(t){
  const intent=_tablePickIntent;_tablePickIntent=null;
  if(intent==='menu')showDataset();
  else if(intent==='ai')showSection('preference-section');
+ else if(intent==='table'){prefillTableBuilder();showSection('table-builder-section');}
  else if(intent==='checkout')checkoutCart();
 }
 // 本桌账单（免登录，凭签名桌码只读查看）

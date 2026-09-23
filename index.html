@@ -122,6 +122,9 @@
                         <button class="btn btn-lg px-5 py-3" id="ai-recommend-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);">
                             <i class="bi bi-magic me-2"></i>不知道吃什么？AI 帮你选
                         </button>
+                        <button class="btn btn-lg px-5 py-3" id="ai-table-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);">
+                            <i class="bi bi-basket me-2"></i>人多点啥？AI 配一桌
+                        </button>
                     </div>
                     <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-arrow-repeat me-2"></i>继续上次推荐
@@ -369,6 +372,112 @@
                         </form>
                     </div>
                 </div>
+            </section>
+
+            <!-- AI 配一桌 · 配置（路线图 8.4） -->
+            <section id="table-builder-section" class="section">
+                <div class="card shadow-lg rounded-4 border-0" style="border:1px solid rgba(201,169,110,0.2)!important;">
+                    <div class="card-header text-white" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary))!important;border:none;">
+                        <h2 class="mb-0"><i class="bi bi-basket me-2"></i>AI 配一桌</h2>
+                    </div>
+                    <div class="card-body p-5">
+                        <p style="color:var(--text-light);font-size:0.9rem;margin-bottom:1.5rem;">告诉 AI 几个人吃、大概预算，AI 按凉菜·热菜·招牌·主食的席面规矩配出三套菜单，可整体加购或单道更换。</p>
+                        <form id="table-builder-form">
+                            <div class="row">
+                                <div class="col-6 col-md-4 mb-3">
+                                    <label class="form-label" for="table-party-size">用餐人数</label>
+                                    <select class="form-select" id="table-party-size">
+                                        <option value="1">1 人</option>
+                                        <option value="2">2 人</option>
+                                        <option value="3">3 人</option>
+                                        <option value="4" selected>4 人</option>
+                                        <option value="5">5 人</option>
+                                        <option value="6">6 人</option>
+                                        <option value="7">7 人</option>
+                                        <option value="8">8 人</option>
+                                        <option value="9">9 人</option>
+                                        <option value="10">10 人</option>
+                                        <option value="11">11 人</option>
+                                        <option value="12">12 人</option>
+                                        <option value="13">13 人</option>
+                                        <option value="14">14 人</option>
+                                        <option value="15">15 人</option>
+                                        <option value="16">16 人</option>
+                                        <option value="17">17 人</option>
+                                        <option value="18">18 人</option>
+                                        <option value="19">19 人</option>
+                                        <option value="20">20 人</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-4 mb-3">
+                                    <label class="form-label" for="table-budget">人均预算（元）</label>
+                                    <input type="number" class="form-control" id="table-budget" value="80" min="10" max="1000" step="1" inputmode="numeric" placeholder="80">
+                                </div>
+                                <div class="col-12 col-md-4 mb-3">
+                                    <label class="form-label" for="table-spicy">辣度偏好</label>
+                                    <select class="form-select" id="table-spicy">
+                                        <option value="无" selected>无所谓</option>
+                                        <option value="不辣">不辣</option>
+                                        <option value="微辣">微辣</option>
+                                        <option value="中辣">中辣</option>
+                                        <option value="重辣">重辣</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">忌口（过敏源）</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="table-allergy-none" checked>
+                                        <label class="form-check-label" for="table-allergy-none">无</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="table-allergy" value="海鲜" id="table-allergy-seafood">
+                                        <label class="form-check-label" for="table-allergy-seafood">海鲜</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="table-allergy" value="花生" id="table-allergy-peanut">
+                                        <label class="form-check-label" for="table-allergy-peanut">花生</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="table-allergy" value="鸡蛋" id="table-allergy-egg">
+                                        <label class="form-check-label" for="table-allergy-egg">鸡蛋</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="table-allergy" value="大豆" id="table-allergy-soy">
+                                        <label class="form-check-label" for="table-allergy-soy">大豆</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="table-allergy" value="麸质" id="table-allergy-gluten">
+                                        <label class="form-check-label" for="table-allergy-gluten">麸质</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" id="table-generate-btn" class="btn btn-primary py-3" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;border-radius:50px;letter-spacing:2px;">
+                                    <i class="bi bi-magic me-2"></i>生成三套一桌菜单
+                                </button>
+                                <button type="button" id="table-builder-back-btn" class="btn btn-outline-secondary py-2">返回首页</button>
+                            </div>
+                        </form>
+                        <div id="table-builder-loading" class="text-center py-4" style="display:none;">
+                            <div class="spinner-border" style="color:var(--primary-accent);" role="status"><span class="visually-hidden">加载中</span></div>
+                            <p class="mt-2 mb-0" style="color:var(--text-light);">AI 正在按席面规矩配菜…</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI 配一桌 · 结果 -->
+            <section id="table-result-section" class="section">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <h2 class="mb-0"><i class="bi bi-basket me-2"></i>一桌菜 · 三套方案</h2>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm" id="table-restart-btn" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 16px;font-size:0.85rem;">重新配置</button>
+                        <button class="btn btn-sm" id="table-result-home-btn" style="background:transparent;border:1px solid rgba(201,169,110,0.4);color:var(--text-light);border-radius:20px;padding:4px 16px;font-size:0.85rem;">返回首页</button>
+                    </div>
+                </div>
+                <div id="table-result-container"></div>
             </section>
 
             <!-- 个人信息 -->

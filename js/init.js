@@ -82,6 +82,23 @@ document.addEventListener('DOMContentLoaded',function(){
  click('register-btn',()=>showSection('register-section'));
  click('guest-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('menu');return;}showDataset();});
  click('ai-recommend-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('ai');return;}showSection('preference-section');});
+ click('ai-table-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('table');return;}prefillTableBuilder();showSection('table-builder-section');});
+ submit('table-builder-form',submitTableBuilder);
+ click('table-builder-back-btn',()=>showSection('home-section'));
+ click('table-restart-btn',()=>{prefillTableBuilder();showSection('table-builder-section');});
+ click('table-result-home-btn',()=>showSection('home-section'));
+ // 一桌菜结果页按钮（事件委托，卡片由 renderTableSets 动态生成）
+ document.addEventListener('click',function(e){
+  const swap=e.target.closest('.table-swap-btn');
+  if(swap){swapTableDish(parseInt(swap.dataset.set),parseInt(swap.dataset.id),swap.dataset.pool,swap);return;}
+  const addone=e.target.closest('.table-addone-btn');
+  if(addone){addTableDishToCart(parseInt(addone.dataset.set),parseInt(addone.dataset.id));return;}
+  const addall=e.target.closest('.table-addall-btn');
+  if(addall){addTableSetToCart(parseInt(addall.dataset.set));}
+ });
+ // 一桌菜忌口"无"与其他项互斥（同偏好表单联动规则）
+ const tanone=$('table-allergy-none'),taboxes=document.querySelectorAll('input[name="table-allergy"]');
+ if(tanone){tanone.addEventListener('change',function(){taboxes.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)taboxes.forEach(cb=>cb.disabled=false);});taboxes.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){tanone.checked=false;tanone.disabled=false;}}));}
  click('continue-btn',()=>{if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u&&u.preferences)loadUserPreferences(u.preferences);}showSection('preference-section');});
  click('back-to-home',()=>showSection('home-section'));
  click('back-to-home-from-register',()=>showSection('home-section'));
