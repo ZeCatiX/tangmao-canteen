@@ -1623,6 +1623,10 @@ function parseTableParams(body) {
   }
   const spiciness = TABLE_SPICY_LEVELS.includes(body.spiciness) ? body.spiciness : '无';
   const religion = ['无特殊要求', '素食', '清真'].includes(body.religion) ? body.religion : '无特殊要求';
+  const V = tableRecommend.PREF_VOCABS;
+  const saltiness = V.saltiness.includes(body.saltiness) ? body.saltiness : '无';
+  const sweetness = V.sweetness.includes(body.sweetness) ? body.sweetness : '无';
+  const calorie = V.calorie.includes(body.calorie) ? body.calorie : '无';
   // 已点菜排除入参：excludeIds 是客户端补充（本会话各轮+购物车），tableNumber 由服务端查本桌进行中订单
   const excludeIds = (Array.isArray(body.excludeIds) ? body.excludeIds : [])
     .map(n => parseInt(n, 10)).filter(Number.isFinite).slice(0, 500);
@@ -1639,7 +1643,7 @@ function parseTableParams(body) {
       return { error: 'avoidRecentDays 必须为 1-30 的整数' };
     }
   }
-  return { partySize, budgetPerPerson: budget, spiciness, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies), excludeIds, tableNumber, avoidRecentDays };
+  return { partySize, budgetPerPerson: budget, spiciness, saltiness, sweetness, calorie, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies), excludeIds, tableNumber, avoidRecentDays };
 }
 
 // 登录用户口味档案（路线图 8.4 二期：忌口/口味从档案带出；档案只作默认值，请求显式选择优先）

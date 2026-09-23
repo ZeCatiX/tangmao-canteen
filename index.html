@@ -390,7 +390,7 @@
                         </p>
                         <form id="table-builder-form">
                             <div class="row">
-                                <div class="col-6 col-md-4 mb-3">
+                                <div class="col-6 col-md-3 mb-3">
                                     <label class="form-label" for="table-party-size" style="letter-spacing:1px;"><span class="tang-num">壹</span>用餐人数</label>
                                     <select class="form-select" id="table-party-size">
                                         <option value="1">1 人</option>
@@ -415,7 +415,7 @@
                                         <option value="20">20 人</option>
                                     </select>
                                 </div>
-                                <div class="col-6 col-md-4 mb-3">
+                                <div class="col-6 col-md-3 mb-3">
                                     <label class="form-label" for="table-budget" style="letter-spacing:1px;"><span class="tang-num">贰</span>人均预算</label>
                                     <select class="form-select" id="table-budget">
                                         <option value="20">20-29 元</option>
@@ -434,7 +434,7 @@
                                         <option value="150">150 元以上</option>
                                     </select>
                                 </div>
-                                <div class="col-12 col-md-4 mb-3">
+                                <div class="col-6 col-md-3 mb-3">
                                     <label class="form-label" for="table-spicy" style="letter-spacing:1px;"><span class="tang-num">叁</span>辣度偏好</label>
                                     <select class="form-select" id="table-spicy">
                                         <option value="无" selected>无所谓</option>
@@ -444,9 +444,45 @@
                                         <option value="重辣">重辣</option>
                                     </select>
                                 </div>
+                                <div class="col-6 col-md-3 mb-3">
+                                    <label class="form-label" for="table-saltiness" style="letter-spacing:1px;"><span class="tang-num">肆</span>咸淡偏好</label>
+                                    <select class="form-select" id="table-saltiness">
+                                        <option value="无" selected>无所谓</option>
+                                        <option value="清淡">清淡</option>
+                                        <option value="适中">适中</option>
+                                        <option value="偏咸">偏咸</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3 mb-3">
+                                    <label class="form-label" for="table-sweetness" style="letter-spacing:1px;"><span class="tang-num">伍</span>甜酸偏好</label>
+                                    <select class="form-select" id="table-sweetness">
+                                        <option value="无" selected>无所谓</option>
+                                        <option value="无味">无味</option>
+                                        <option value="甜味">甜味</option>
+                                        <option value="酸味">酸味</option>
+                                        <option value="酸甜">酸甜</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3 mb-3">
+                                    <label class="form-label" for="table-calorie" style="letter-spacing:1px;"><span class="tang-num">陆</span>热量偏好</label>
+                                    <select class="form-select" id="table-calorie">
+                                        <option value="无" selected>不限</option>
+                                        <option value="低卡">低卡</option>
+                                        <option value="适中">适中</option>
+                                        <option value="高能量">高能量</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 col-md-3 mb-3">
+                                    <label class="form-label" for="table-religion" style="letter-spacing:1px;"><span class="tang-num">柒</span>饮食要求</label>
+                                    <select class="form-select" id="table-religion">
+                                        <option value="无特殊要求" selected>无特殊要求</option>
+                                        <option value="素食">素食</option>
+                                        <option value="清真">清真</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label" style="letter-spacing:1px;"><span class="tang-num">肆</span>忌口（过敏源）</label>
+                                <label class="form-label" style="letter-spacing:1px;"><span class="tang-num">捌</span>忌口（过敏源）</label>
                                 <div class="d-flex flex-wrap gap-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="table-allergy-none" checked>
@@ -1197,7 +1233,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20260923e"></script>
+    <script src="script.js?v=20260923f"></script>
     <script src="js/password-toggle.js?v=20260910"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>

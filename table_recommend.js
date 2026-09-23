@@ -255,27 +255,25 @@ const PREF_VOCABS = {
   religion: ['无特殊要求', '素食', '清真'],
 };
 
-// params: { budgetPerPerson, spiciness, religion }（parseTableParams 已归一）
+// params: { budgetPerPerson, spiciness, saltiness, sweetness, calorie, religion }（parseTableParams 已归一）
 // profile: 登录用户 users.preferences（可为 null）——档案只作默认值，请求显式选择优先
 // 价格区间永远由人均预算映射（预算是组合的硬约束，评分档位与之一致，不用档案价格档）
 function buildTableUserPrefs(params, profile) {
   params = params || {};
   profile = (profile && typeof profile === 'object' && !Array.isArray(profile)) ? profile : {};
   const pick = (val, vocab, fallback) => (vocab.includes(val) ? val : fallback);
-  const spicy = (params.spiciness && params.spiciness !== '无')
-    ? params.spiciness
-    : pick(profile.spiciness, PREF_VOCABS.spiciness, '无');
+  // 请求显式选择（非中性值且在词表内）> 档案默认 > 中性兜底
+  const explicit = (val, vocab, neutrals) => (val && !(neutrals || ['无']).includes(val) && vocab.includes(val)) ? val : null;
+  const spicy = explicit(params.spiciness, PREF_VOCABS.spiciness) || pick(profile.spiciness, PREF_VOCABS.spiciness, '无');
   const budget = Number(params.budgetPerPerson) || 80;
   const band = budget <= 30 ? '经济' : budget <= 80 ? '适中' : '品质';
   return {
     '辣度': spicy,
-    '咸淡': pick(profile.saltiness, PREF_VOCABS.saltiness, '无'),
-    '甜酸': pick(profile.sweetness, PREF_VOCABS.sweetness, '无'),
+    '咸淡': explicit(params.saltiness, PREF_VOCABS.saltiness) || pick(profile.saltiness, PREF_VOCABS.saltiness, '无'),
+    '甜酸': explicit(params.sweetness, PREF_VOCABS.sweetness) || pick(profile.sweetness, PREF_VOCABS.sweetness, '无'),
     '价格区间': band,
-    '饮食_宗教': (params.religion && params.religion !== '无特殊要求')
-      ? params.religion
-      : pick(profile.religion, PREF_VOCABS.religion, '无特殊要求'),
-    '热量': pick(profile.calorie, PREF_VOCABS.calorie, '无'),
+    '饮食_宗教': explicit(params.religion, PREF_VOCABS.religion, ['无', '无特殊要求']) || pick(profile.religion, PREF_VOCABS.religion, '无特殊要求'),
+    '热量': explicit(params.calorie, PREF_VOCABS.calorie) || pick(profile.calorie, PREF_VOCABS.calorie, '无'),
   };
 }
 

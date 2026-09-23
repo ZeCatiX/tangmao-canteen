@@ -156,6 +156,11 @@ function prefillTableBuilder(){
  if(currentUser&&currentUser!=='guest'){var u=getUserData(currentUser);if(u&&u.preferences)prefs=u.preferences;}
  var spicy=$('table-spicy');
  if(spicy)spicy.value=(prefs&&['不辣','微辣','中辣','重辣'].includes(prefs.spiciness))?prefs.spiciness:'无';
+ // 咸淡/甜酸/热量/饮食要求同样从档案带出（值不在选项里则保持默认）
+ [['table-saltiness','saltiness'],['table-sweetness','sweetness'],['table-calorie','calorie'],['table-religion','religion']].forEach(function(pair){
+  var el=$(pair[0]);if(!el||!prefs)return;
+  for(var i=0;i<el.options.length;i++){if(el.options[i].value===prefs[pair[1]]){el.value=prefs[pair[1]];break;}}
+ });
  var none=$('table-allergy-none');
  var boxes=document.querySelectorAll('input[name="table-allergy"]');
  var has=false;
@@ -182,7 +187,13 @@ function collectTableParams(){
  var budget=parseFloat($('table-budget')?$('table-budget').value:'80');
  var allergies=[];
  document.querySelectorAll('input[name="table-allergy"]:checked').forEach(function(cb){allergies.push(cb.value);});
- var params={partySize:ps,budgetPerPerson:isNaN(budget)?80:budget,spiciness:$('table-spicy')?$('table-spicy').value:'无',allergies:allergies};
+ var params={partySize:ps,budgetPerPerson:isNaN(budget)?80:budget,
+  spiciness:$('table-spicy')?$('table-spicy').value:'无',
+  saltiness:$('table-saltiness')?$('table-saltiness').value:'无',
+  sweetness:$('table-sweetness')?$('table-sweetness').value:'无',
+  calorie:$('table-calorie')?$('table-calorie').value:'无',
+  religion:$('table-religion')?$('table-religion').value:'无特殊要求',
+  allergies:allergies};
  var lt=ssGet('lockedTable');
  if(lt)params.tableNumber=lt;
  var excl=collectTableExclusions();
