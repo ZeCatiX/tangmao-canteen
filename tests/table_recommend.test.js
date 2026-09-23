@@ -4,6 +4,7 @@
 'use strict';
 const { test, before } = require('node:test');
 const assert = require('node:assert/strict');
+require('dotenv').config();
 const tr = require('../table_recommend');
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
@@ -144,6 +145,18 @@ before(async () => {
   } catch (e) { /* API 组用例会因连不上而失败，错误信息已足够定位 */ }
 });
 
+var adminTokenCache = null;
+async function getAdminToken() {
+  if (adminTokenCache) return adminTokenCache;
+  const r = await fetch(BASE + '/api/admin/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: process.env.ADMIN_USER || 'admin', password: process.env.ADMIN_PASS }),
+  });
+  const d = await r.json();
+  adminTokenCache = d.token || '';
+  return adminTokenCache;
+}
+
 test('API: 4人默认预算返回三套完整结构', async () => {
   const r = await fetch(BASE + '/api/recommend/table', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -230,4 +243,134 @@ test('API: 打卡版含双招牌（招牌池充足前提下）', async () => {
   const checkin = d.sets.find(s => s.style === '打卡版');
   assert.ok(checkin, '必须有打卡版');
   assert.equal(checkin.dishes.filter(x => x.pool === 'signature').length, 2, '打卡版应含2道招牌');
+});
+
+// ═══════════ 完善包：口味档案 / 已点避开 / 埋点 ═══════════
+
+test('buildTableUserPrefs: 档案带出——请求未选的维度用档案默认值', () => {
+  const prefs = tr.buildTableUserPrefs(
+    { budgetPerPerson: 80, spiciness: '无', religion: '无特殊要求' },
+    { spiciness: '中辣', saltiness: '清淡', sweetness: '酸甜', calorie: '低卡', religion: '清真' }
+  );
+  assert.equal(prefs['辣度'], '中辣');
+  assert.equal(prefs['咸淡'], '清淡');
+  assert.equal(prefs['甜酸'], '酸甜');
+  assert.equal(prefs['热量'], '低卡');
+  assert.equal(prefs['饮食_宗教'], '清真');
+});
+
+test('buildTableUserPrefs: 请求显式选择优先于档案', () => {
+  const prefs = tr.buildTableUserPrefs(
+    { budgetPerPerson: 120, spiciness: '不辣', religion: '素食' },
+    { spiciness: '中辣', religion: '清真', saltiness: '偏咸' }
+  );
+  assert.equal(prefs['辣度'], '不辣');
+  assert.equal(prefs['饮食_宗教'], '素食');
+  assert.equal(prefs['咸淡'], '偏咸', '请求没选的维度仍带档案');
+  assert.equal(prefs['价格区间'], '品质', '预算硬约束映射档位，不用档案价格档');
+});
+
+test('buildTableUserPrefs: 档案脏值安全兜底', () => {
+  const prefs = tr.buildTableUserPrefs(
+    { budgetPerPerson: 80, spiciness: '微辣', religion: '无特殊要求' },
+    { saltiness: '不存在的值', sweetness: 42, religion: ['坏数据'], allergies: '不是数组' }
+  );
+  assert.equal(prefs['辣度'], '微辣');
+  assert.equal(prefs['咸淡'], '无');
+  assert.equal(prefs['甜酸'], '无');
+  assert.equal(prefs['饮食_宗教'], '无特殊要求');
+});
+
+test('API: excludeIds 排除生效', async () => {
+  const r1 = await fetch(BASE + '/api/recommend/table', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4 }),
+  });
+  const d1 = await r1.json();
+  assert.equal(d1.success, true);
+  const excludeIds = d1.sets[0].dishes.map(x => x.id);
+  const r2 = await fetch(BASE + '/api/recommend/table', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4, excludeIds }),
+  });
+  const d2 = await r2.json();
+  assert.equal(d2.success, true);
+  const allIds = d2.sets.flatMap(s => s.dishes.map(x => x.id));
+  const leaked = excludeIds.filter(id => allIds.includes(id));
+  assert.deepEqual(leaked, [], 'excludeIds 里的菜不得再出现，泄漏者: ' + leaked.join(','));
+});
+
+test('API: tableNumber 排除本桌进行中订单的菜', async () => {
+  // 先拿一道保证在池子里的菜
+  const r0 = await fetch(BASE + '/api/recommend/table', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4 }),
+  });
+  const d0 = await r0.json();
+  const dish = d0.sets[0].dishes[0];
+  assert.ok(dish, '基线推荐应返回菜品');
+  // 下单到 98 桌（用测试专用桌号，避免干扰其他数据）
+  const rOrder = await fetch(BASE + '/api/order', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: 'guest',
+      items: [{ id: dish.id, name: dish.name, price: dish.price, qty: 1 }],
+      totalPrice: dish.price,
+      tableNumber: '98',
+    }),
+  });
+  const dOrder = await rOrder.json();
+  assert.equal(dOrder.success, true, '下单应成功');
+  const orderId = dOrder.orderId;
+  try {
+    const r = await fetch(BASE + '/api/recommend/table', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partySize: 4, tableNumber: '98' }),
+    });
+    const d = await r.json();
+    assert.equal(d.success, true);
+    assert.ok(d.excludedOrdered >= 1, '应上报已点排除数');
+    const allIds = d.sets.flatMap(s => s.dishes.map(x => x.id));
+    assert.ok(!allIds.includes(dish.id), '本桌进行中订单的菜不得再被推荐');
+  } finally {
+    // 清理：取消测试订单
+    const token = await getAdminToken();
+    if (token && orderId) {
+      await fetch(BASE + '/api/orders/' + orderId + '/status', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ status: 'cancelled' }),
+      }).catch(() => {});
+    }
+  }
+});
+
+test('API: avoidRecentDays 越界返回400', async () => {
+  for (const bad of [0, 31, -3, 'abc']) {
+    const r = await fetch(BASE + '/api/recommend/table', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partySize: 4, avoidRecentDays: bad }),
+    });
+    assert.equal(r.status, 400, 'avoidRecentDays=' + bad + ' 应返回400');
+  }
+});
+
+test('API: 一桌菜埋点写入 mode，看板出现 table_mode_count', async () => {
+  const rLog = await fetch(BASE + '/api/recommendation-log', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: '一桌菜组合' }),
+  });
+  assert.equal(rLog.status, 200);
+  const dLog = await rLog.json();
+  assert.equal(dLog.success, true);
+  const token = await getAdminToken();
+  assert.ok(token, '管理员登录应成功');
+  const r = await fetch(BASE + '/api/admin/daily-recommendations', {
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  const d = await r.json();
+  assert.equal(d.success, true);
+  assert.ok(Array.isArray(d.data) && d.data.length > 0, '看板应有数据');
+  const today = d.data[d.data.length - 1];
+  assert.ok('table_mode_count' in today, '返回应含 table_mode_count 列');
+  assert.ok(Number(today.table_mode_count) >= 1, '刚写的埋点应计入 table_mode_count');
 });
