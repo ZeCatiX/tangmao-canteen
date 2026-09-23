@@ -1523,18 +1523,17 @@ function renderTableSets(){
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
   var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':'';
   var autoRows=(s.autoItems||[]).map(function(d){
-   var qty=d.qty,ps=(lastTableParams&&lastTableParams.partySize)||qty;
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px dashed rgba(201,169,110,0.4);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
-     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">按人数配 · 可调整</span></div>'
-     +'<div style="font-size:0.8rem;color:var(--text-light);">配饭不参与推荐，'+(qty===0?'本套不加米饭':'已计入总价')+'，加购后仍可在购物车增减</div>'
+     +'<div style="font-size:0.95rem;">'+esc(d.name)+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">默认按人数 · 可自由加减</span></div>'
+     +'<div style="font-size:0.8rem;color:var(--text-light);">'+(d.qty===0?'本套不加米饭':'配饭不参与推荐，已计入总价')+'，加购后仍可在购物车增减</div>'
     +'</div>'
-    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+qty+'</div>'
+    +'<div class="text-nowrap" style="font-size:0.92rem;color:var(--primary-accent);">'+esc(formatPrice(d.price))+'×'+d.qty+'</div>'
     +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:126px;">'
-     +'<button class="btn btn-sm table-rice-minus" data-set="'+si+'"'+(qty<=0?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:1rem;">−</button>'
-     +'<span style="min-width:26px;text-align:center;font-size:0.95rem;">'+qty+'</span>'
-     +'<button class="btn btn-sm table-rice-plus" data-set="'+si+'"'+(qty>=ps?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;color:#fff;font-size:1rem;">＋</button>'
+     +'<button class="btn btn-sm table-rice-minus" data-set="'+si+'"'+(d.qty<=0?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:1rem;">−</button>'
+     +'<span style="min-width:26px;text-align:center;font-size:0.95rem;">'+d.qty+'</span>'
+     +'<button class="btn btn-sm table-rice-plus" data-set="'+si+'" style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;color:#fff;font-size:1rem;">＋</button>'
     +'</div>'
    +'</div>';
   }).join('');
@@ -1579,11 +1578,12 @@ async function swapTableDish(si,dishId,pool,btn){
  }
 }
 function setTableRiceQty(si,qty){
- // 米饭步进（0~人数）：0=本套不加；总价/人均按 菜品合计+米饭 重算（换单道的价差已含在菜品价里）
+ // 米饭步进：人数只是默认值，加减自由；下限 0（不加），上限 30 仅防误触。
+ // 总价/人均按 菜品合计+米饭 重算（换单道的价差已含在菜品价里），人均仍按人数均摊。
  var s=tableSets[si];if(!s||!s.autoItems||!s.autoItems.length)return;
  var rice=s.autoItems[0];
  var ps=(lastTableParams&&lastTableParams.partySize)||rice.qty;
- rice.qty=Math.max(0,Math.min(qty,ps));
+ rice.qty=Math.max(0,Math.min(qty,30));
  var dishSum=s.dishes.reduce(function(sum,x){return sum+(x.price||0);},0);
  s.totalPrice=Math.round((dishSum+rice.price*rice.qty)*100)/100;
  s.perPerson=ps?Math.round(s.totalPrice/ps*100)/100:0;
