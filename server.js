@@ -751,8 +751,13 @@ app.post('/api/recommendation-log', softAuth, async (req, res) => {
     // userType / userId 取自 JWT，拒绝客户端伪造
     const effectiveUserId = req.user?.username || 'guest';
     const effectiveUserType = req.user ? 'user' : 'guest';
+    // mode 区分推荐形态（单菜推荐/一桌菜组合/一桌菜换菜），截断防脏数据
+    let mode = '单菜推荐';
+    if (req.body && typeof req.body.mode === 'string' && req.body.mode.trim()) {
+      mode = req.body.mode.trim().slice(0, 30);
+    }
     const pool = db;
-    await pool.query('INSERT INTO recommendation_log (user_type, user_id) VALUES ($1,$2)', [effectiveUserType, effectiveUserId]);
+    await pool.query('INSERT INTO recommendation_log (user_type, user_id, mode) VALUES ($1,$2,$3)', [effectiveUserType, effectiveUserId, mode]);
     res.json({ success: true });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
@@ -817,7 +822,8 @@ app.get('/api/admin/daily-recommendations', async (req, res) => {
     const q = await pool.query(`
       SELECT DATE(created_at) as day, COUNT(*) as total,
              COUNT(*) FILTER (WHERE user_type='guest') as guest_count,
-             COUNT(*) FILTER (WHERE user_type='user') as user_count
+             COUNT(*) FILTER (WHERE user_type='user') as user_count,
+             COUNT(*) FILTER (WHERE mode LIKE '一桌菜%') as table_mode_count
       FROM recommendation_log
       WHERE created_at > NOW() - INTERVAL '30 days'
       GROUP BY day ORDER BY day
@@ -1617,28 +1623,71 @@ function parseTableParams(body) {
   }
   const spiciness = TABLE_SPICY_LEVELS.includes(body.spiciness) ? body.spiciness : '无';
   const religion = ['无特殊要求', '素食', '清真'].includes(body.religion) ? body.religion : '无特殊要求';
-  return { partySize, budgetPerPerson: budget, spiciness, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies) };
-}
-
-// 登录用户把档案里的忌口并进来（草案：忌口/过敏登录用户从档案带出）
-async function mergedAllergyKeys(req, clientKeys) {
-  const keys = new Set(clientKeys);
-  if (req.user && req.user.id) {
-    try {
-      const r = await db.query('SELECT preferences FROM users WHERE id = $1', [req.user.id]);
-      const prefs = r.rows[0] && r.rows[0].preferences;
-      if (prefs && Array.isArray(prefs.allergies)) {
-        tableRecommend.normalizeAllergies(prefs.allergies).forEach(k => keys.add(k));
-      }
-    } catch (e) { logger.error('读取用户忌口档案失败: ' + e.message); }
+  // 已点菜排除入参：excludeIds 是客户端补充（本会话各轮+购物车），tableNumber 由服务端查本桌进行中订单
+  const excludeIds = (Array.isArray(body.excludeIds) ? body.excludeIds : [])
+    .map(n => parseInt(n, 10)).filter(Number.isFinite).slice(0, 500);
+  let tableNumber = null;
+  if (body.tableNumber !== undefined && body.tableNumber !== null && body.tableNumber !== '') {
+    const t = String(body.tableNumber);
+    if (!/^\d{1,2}$/.test(t) && t !== '打包') return { error: 'tableNumber 格式不正确' };
+    tableNumber = t;
   }
-  return [...keys];
+  let avoidRecentDays = 0;
+  if (body.avoidRecentDays !== undefined && body.avoidRecentDays !== null && body.avoidRecentDays !== '') {
+    avoidRecentDays = parseInt(body.avoidRecentDays, 10);
+    if (!Number.isFinite(avoidRecentDays) || avoidRecentDays < 1 || avoidRecentDays > 30) {
+      return { error: 'avoidRecentDays 必须为 1-30 的整数' };
+    }
+  }
+  return { partySize, budgetPerPerson: budget, spiciness, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies), excludeIds, tableNumber, avoidRecentDays };
 }
 
-// 组装 12 维模型的中文偏好键；人均预算映射单菜价格档（人均 ≤30 偏经济 / ≤80 适中 / 以上品质）
-function buildTableUserPrefs(p) {
-  const band = p.budgetPerPerson <= 30 ? '经济' : p.budgetPerPerson <= 80 ? '适中' : '品质';
-  return { '辣度': p.spiciness, '咸淡': '无', '甜酸': '无', '价格区间': band, '饮食_宗教': p.religion, '热量': '无' };
+// 登录用户口味档案（路线图 8.4 二期：忌口/口味从档案带出；档案只作默认值，请求显式选择优先）
+async function getProfilePrefs(req) {
+  if (!req.user || !req.user.id) return { allergyKeys: [], profile: null };
+  try {
+    const r = await db.query('SELECT preferences FROM users WHERE id = $1', [req.user.id]);
+    const prefs = r.rows[0] && r.rows[0].preferences;
+    const profile = (prefs && typeof prefs === 'object' && !Array.isArray(prefs)) ? prefs : null;
+    return { allergyKeys: tableRecommend.normalizeAllergies(profile && profile.allergies), profile };
+  } catch (e) {
+    logger.error('读取用户口味档案失败: ' + e.message);
+    return { allergyKeys: [], profile: null };
+  }
+}
+
+// 已点菜排除：本桌进行中订单必避（消灭加菜轮重复推荐）；登录用户可选避开近 N 天吃过的（会所版防重复）
+async function collectOrderedDishIds({ tableNumber, avoidRecentDays, req }) {
+  const ids = new Set();
+  if (tableNumber) {
+    try {
+      const r = await db.query(
+        `SELECT (e->>'id')::int AS dish_id FROM orders o, jsonb_array_elements(o.items) e
+         WHERE o.table_number = $1 AND o.status IN ('pending','confirmed')`,
+        [tableNumber]
+      );
+      r.rows.forEach(row => { if (Number.isFinite(row.dish_id)) ids.add(row.dish_id); });
+    } catch (e) { logger.error('查询本桌已点菜品失败: ' + e.message); }
+  }
+  if (avoidRecentDays > 0 && req.user && req.user.username) {
+    try {
+      const r = await db.query(
+        `SELECT (e->>'id')::int AS dish_id FROM orders o, jsonb_array_elements(o.items) e
+         WHERE o.user_id = $1 AND o.status <> 'cancelled' AND o.created_at > NOW() - make_interval(days => $2::int)`,
+        [req.user.username, avoidRecentDays]
+      );
+      r.rows.forEach(row => { if (Number.isFinite(row.dish_id)) ids.add(row.dish_id); });
+    } catch (e) { logger.error('查询近期吃过菜品失败: ' + e.message); }
+  }
+  return ids;
+}
+
+// 埋点：一次推荐动作=一行（mode 列由启动迁移保证；写入失败仅记日志，不影响主流程）
+function logRecommendationMode(req, mode) {
+  const userId = (req.user && req.user.username) || 'guest';
+  const userType = req.user ? 'user' : 'guest';
+  db.query('INSERT INTO recommendation_log (user_type, user_id, mode) VALUES ($1, $2, $3)', [userType, userId, mode])
+    .catch(e => logger.error('推荐埋点写入失败: ' + e.message));
 }
 
 // 批量打分：worker 可用走 ML，不可用降级本地规则分（接口不 5xx）
@@ -1676,18 +1725,32 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
   const params = parseTableParams(req.body || {});
   if (params.error) return res.status(400).json({ success: false, error: params.error });
   try {
-    const allergyKeys = await mergedAllergyKeys(req, params.allergyKeys);
-    const { pools, excluded } = tableRecommend.buildPools(dishData || [], allergyKeys);
+    const { allergyKeys: profileAllergyKeys, profile } = await getProfilePrefs(req);
+    const allAllergyKeys = new Set(params.allergyKeys);
+    profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
+    const { pools, excluded } = tableRecommend.buildPools(dishData || [], [...allAllergyKeys]);
+    // 已点菜排除：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
+    const orderedIds = new Set(params.excludeIds);
+    (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
+      .forEach(id => orderedIds.add(id));
     // 跨池按 id 去重后浅克隆打分（不污染共享缓存 dishData）
     const union = [];
     const seen = new Set();
     for (const key of TABLE_POOL_KEYS) {
       for (const d of pools[key]) if (!seen.has(d.id)) { seen.add(d.id); union.push({ ...d }); }
     }
-    if (!union.length) return res.status(503).json({ success: false, error: '当前没有可推荐的菜品，请稍后再试' });
-    const source = await scoreTableCandidates(buildTableUserPrefs(params), union);
-    const byId = new Map(union.map(d => [d.id, d]));
-    for (const key of TABLE_POOL_KEYS) pools[key] = pools[key].map(d => byId.get(d.id)).filter(Boolean);
+    let excludedOrdered = 0;
+    const candidates = union.filter(d => {
+      if (orderedIds.has(d.id)) { excludedOrdered++; return false; }
+      return true;
+    });
+    if (!candidates.length) {
+      const msg = excludedOrdered > 0 ? '候选菜品都被忌口或已点排除，请调整条件后重试' : '当前没有可推荐的菜品，请稍后再试';
+      return res.status(503).json({ success: false, error: msg });
+    }
+    const source = await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
+    const byId = new Map(candidates.map(d => [d.id, d]));
+    for (const key of TABLE_POOL_KEYS) pools[key] = pools[key].filter(d => byId.has(d.id)).map(d => byId.get(d.id));
     const sets = tableRecommend.buildTableSets({
       pools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson,
     }).map(s => ({
@@ -1695,8 +1758,9 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
       dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
       totalPrice: s.totalPrice, perPerson: s.perPerson, overBudget: s.overBudget,
     }));
-    logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded}`);
-    res.json({ success: true, sets, excludedAllergy: excluded });
+    logRecommendationMode(req, '一桌菜组合');
+    logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded} 已点排除=${excludedOrdered}`);
+    res.json({ success: true, sets, excludedAllergy: excluded, excludedOrdered, usedProfile: !!profile });
   } catch (e) {
     logger.error('一桌菜推荐API错误: ' + e.message);
     res.status(500).json({ success: false, error: '服务器内部错误' });
@@ -1711,19 +1775,23 @@ app.post('/api/recommend/table/swap', tableLimiter, softAuth, async (req, res) =
   if (!TABLE_POOL_KEYS.includes(poolKey)) {
     return res.status(400).json({ success: false, error: 'pool 必须为 cold/hot/signature/staple' });
   }
-  const excludeIds = new Set((Array.isArray(req.body.excludeIds) ? req.body.excludeIds : [])
-    .map(n => parseInt(n, 10)).filter(Number.isFinite));
   try {
-    const allergyKeys = await mergedAllergyKeys(req, params.allergyKeys);
-    const { pools } = tableRecommend.buildPools(dishData || [], allergyKeys);
-    const candidates = pools[poolKey].filter(d => !excludeIds.has(d.id)).map(d => ({ ...d }));
+    const { allergyKeys: profileAllergyKeys, profile } = await getProfilePrefs(req);
+    const allAllergyKeys = new Set(params.allergyKeys);
+    profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
+    const { pools } = tableRecommend.buildPools(dishData || [], [...allAllergyKeys]);
+    const orderedIds = new Set(params.excludeIds);
+    (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
+      .forEach(id => orderedIds.add(id));
+    const candidates = pools[poolKey].filter(d => !orderedIds.has(d.id)).map(d => ({ ...d }));
     if (!candidates.length) return res.status(404).json({ success: false, error: '这个位置已经没有可换的菜了' });
-    await scoreTableCandidates(buildTableUserPrefs(params), candidates);
+    await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
     candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
     const top = candidates[0];
     const styleKey = ['home', 'banquet', 'checkin'].includes(req.body.style) ? req.body.style : 'home';
     const variant = tableRecommend.VARIANTS.find(v => v.key === styleKey);
-    logger.info(`一桌菜换菜: 池=${poolKey} 排除${excludeIds.size}道`);
+    logRecommendationMode(req, '一桌菜换菜');
+    logger.info(`一桌菜换菜: 池=${poolKey} 排除${orderedIds.size}道`);
     res.json({ success: true, dish: { ...dishToResult(top, poolKey), reason: tableRecommend.reasonFor(top, poolKey, variant, params.partySize) } });
   } catch (e) {
     logger.error('一桌菜换菜API错误: ' + e.message);
@@ -2182,6 +2250,12 @@ httpServer.listen(PORT, () => {
   setInterval(checkErrorLog, 600000);
   setInterval(cleanupOldData, 86400000); // 每 24 小时清理旧数据
 });
+
+// 幂等迁移：recommendation_log 补 mode 列（一桌菜埋点用）。失败仅记日志不阻塞启动，
+// 埋点写入自身有 catch 兜底，列缺失的那几秒只是丢埋点不丢功能。
+db.query(`ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(50) DEFAULT '单菜推荐'`)
+  .then(() => logger.info('recommendation_log.mode 列就绪'))
+  .catch(e => logger.error('recommendation_log.mode 迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';

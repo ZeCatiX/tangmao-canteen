@@ -224,10 +224,45 @@ function fallbackScore(dish, prefs) {
   return Math.round(s * 100) / 100;
 }
 
+// ── 用户评分偏好组装（12 维模型的中文键）──
+// 词表与前端偏好表单一致（口径统一才不丢值）
+const PREF_VOCABS = {
+  spiciness: ['无', '不辣', '微辣', '中辣', '重辣'],
+  saltiness: ['无', '清淡', '适中', '偏咸'],
+  sweetness: ['无', '无味', '甜味', '酸味', '酸甜'],
+  calorie: ['无', '低卡', '适中', '高能量'],
+  religion: ['无特殊要求', '素食', '清真'],
+};
+
+// params: { budgetPerPerson, spiciness, religion }（parseTableParams 已归一）
+// profile: 登录用户 users.preferences（可为 null）——档案只作默认值，请求显式选择优先
+// 价格区间永远由人均预算映射（预算是组合的硬约束，评分档位与之一致，不用档案价格档）
+function buildTableUserPrefs(params, profile) {
+  params = params || {};
+  profile = (profile && typeof profile === 'object' && !Array.isArray(profile)) ? profile : {};
+  const pick = (val, vocab, fallback) => (vocab.includes(val) ? val : fallback);
+  const spicy = (params.spiciness && params.spiciness !== '无')
+    ? params.spiciness
+    : pick(profile.spiciness, PREF_VOCABS.spiciness, '无');
+  const budget = Number(params.budgetPerPerson) || 80;
+  const band = budget <= 30 ? '经济' : budget <= 80 ? '适中' : '品质';
+  return {
+    '辣度': spicy,
+    '咸淡': pick(profile.saltiness, PREF_VOCABS.saltiness, '无'),
+    '甜酸': pick(profile.sweetness, PREF_VOCABS.sweetness, '无'),
+    '价格区间': band,
+    '饮食_宗教': (params.religion && params.religion !== '无特殊要求')
+      ? params.religion
+      : pick(profile.religion, PREF_VOCABS.religion, '无特殊要求'),
+    '热量': pick(profile.calorie, PREF_VOCABS.calorie, '无'),
+  };
+}
+
 module.exports = {
   POOL_CATEGORIES,
   ALLERGY_KEY_MAP,
   VARIANTS,
+  PREF_VOCABS,
   ingredientOf,
   normalizeAllergies,
   buildPools,
@@ -236,4 +271,5 @@ module.exports = {
   reasonFor,
   buildTableSets,
   fallbackScore,
+  buildTableUserPrefs,
 };
