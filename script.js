@@ -1532,7 +1532,7 @@ async function submitTableBuilder(){
    +'</div>';
   }).join('');
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
-  var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':'';
+  var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':(s.style==='打卡版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（人气优先 · 约1.1倍）</span>':'');
   var autoRows=(s.autoItems||[]).map(function(d){
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
