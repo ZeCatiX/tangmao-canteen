@@ -1135,6 +1135,6 @@ html.dark-mode .table-total { color: var(--gold-light); }
 
 /* 矮视口（≤860px 高的桌面窗口）：压缩首页 hero 与间距，保证关键按钮在首屏 */
 @media (max-height: 860px) {
-  #home-section img[src*="hero-tangcat"] { max-height: 230px; object-fit: cover; }
+  #home-section img[src*="hero-tangcat"] { max-height: 190px; object-fit: cover; }
   #home-section .card-body { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
 }
