@@ -213,10 +213,10 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     // 单双人简餐结构（用户拍板）：一人食/两人餐本无"席面"，不套四池规制——
     // 热菜×N + 小吃1 + 冷菜1（仅双人），招牌不设配额，由预算余额升级补位自然入选。
     if (partySize <= 2) {
-      quotas.hot = Math.min(partySize, pools.hot.length);
+      quotas.hot = partySize + 1; // 荤热菜×N + 时蔬汤羹×1（热菜池荤素拆分后自动各半）
       quotas.cold = partySize === 2 ? Math.min(1, pools.cold.length) : 0;
       quotas.staple = Math.min(1, pools.staple.length);
-      quotas.signature = 0;
+      quotas.signature = 0; // 招牌不设配额，预算余额升级补位自然入选
     }
     // 用户拍板（十元档）：家常取前五元、宴请/打卡取后五元。目标取各自半区顶部，
     // 贪心贴上限的落点即回到所选半区——家常人均落在档位前五，宴请/打卡落在后五。
@@ -317,9 +317,10 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         picked.push({ dish: e.dish, pool: e.pool });
       }
     }
-    // 家常=吃饱兜底：配额满后若总分还没到档位下沿（人均档位下沿×人数），
+    // 家常=吃饱兜底（仅 N≥3）：配额满后若总分还没到档位下沿，
     // 继续用最便宜的可点菜加到下沿——保证"吃饱"且人均不低于所选档位。
-    if (variant.key === 'home') {
+    // N≤2 简餐结构不跑：最便宜兜底会拼出小吃拼盘，单人餐宁精勿凑。
+    if (variant.key === 'home' && partySize >= 3) {
       const bandFloor = (budgetPerPerson - 9) * partySize; // 档位下沿（上沿-9）
       const restMap = new Map();
       for (const k of poolOrder) {
