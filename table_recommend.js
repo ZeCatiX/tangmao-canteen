@@ -20,9 +20,9 @@ const ALLERGY_KEYS = Object.values(ALLERGY_KEY_MAP);
 // 三套风格变体：预算完全相同（用户拍板：不应调整预算，只有侧重点不同），
 // 差异化仅来自排序偏好——宴请偏爱贵菜硬菜、打卡偏爱人气菜、家常纯看匹配分。
 const VARIANTS = [
-  { key: 'home', label: '家常版', budgetFactor: 1.0, signatureQuota: 1, prefer: 'balanced' },
-  { key: 'banquet', label: '宴请版', budgetFactor: 1.0, signatureQuota: 2, prefer: 'premium' },
-  { key: 'checkin', label: '打卡版', budgetFactor: 1.0, signatureQuota: 2, prefer: 'popular' },
+  { key: 'home', label: '家常版', signatureQuota: 1, prefer: 'balanced' },
+  { key: 'banquet', label: '宴请版', signatureQuota: 2, prefer: 'premium' },
+  { key: 'checkin', label: '打卡版', signatureQuota: 2, prefer: 'popular' },
 ];
 
 // 食材关键词（菜名启发式，用于"主料不重复"）；长词在前防误配（如"鱼香茄子"归茄子不归鱼）
@@ -187,9 +187,12 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
   const prevPenalty = new Map();
   for (const variant of VARIANTS) {
     const quotas = quotasFor(partySize, pools, variant);
-    // 预算硬上限 = 人均 × 人数 × 场景系数 − 预留项（米饭）。无上浮：用户选 80-89，人均就落在 80 出头。
+    // 用户拍板（十元档）：家常取前五元、宴请/打卡取后五元。目标取各自半区顶部，
+    // 贪心贴上限的落点即回到所选半区——家常人均落在档位前五，宴请/打卡落在后五。
+    const BAND_WIDTH = 10;
+    const targetPerPerson = variant.key === 'home' ? budgetPerPerson - 5 : budgetPerPerson - 1;
     const extras = Number(reservedExtras) || 0;
-    const softCap = Math.max(0, budgetPerPerson * partySize * variant.budgetFactor - extras);
+    const softCap = Math.max(0, targetPerPerson * partySize - extras);
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
     // 轮转选取：每轮按 招牌→热菜→凉菜→主食 各选一道。若按池一口气吃满配额，
     // 高价热菜会把预算吃光、凉菜主食被挤到超支兜底；轮转保证席面结构均衡。
