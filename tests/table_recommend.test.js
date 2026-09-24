@@ -65,7 +65,7 @@ test('buildTableSets: 4人三套同预算不同侧重，结构达标（热菜预
     assert.equal(new Set(ids).size, ids.length, '同一套内同一道菜不得出现两次');
     const cnt = {};
     s.dishes.forEach(x => { cnt[x.pool] = (cnt[x.pool] || 0) + 1; });
-    assert.equal(cnt.cold, 2);
+    assert.ok(cnt.cold >= 2, '凉菜配额加二后至少2道');
     assert.ok(cnt.hot >= 3, '热菜目标4道，预算硬约束下允许让出1槽（实际 ' + (cnt.hot || 0) + '）');
     assert.ok(cnt.signature >= 1, '每套必含招牌');
     assert.ok(cnt.staple >= 1);

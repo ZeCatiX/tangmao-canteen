@@ -18,11 +18,12 @@ const ALLERGY_KEY_MAP = { '海鲜': 'seafood', '花生': 'peanut', '鸡蛋': 'eg
 const ALLERGY_KEYS = Object.values(ALLERGY_KEY_MAP);
 
 // 三套风格变体：预算完全相同（用户拍板：不应调整预算，只有侧重点不同），
-// 差异化仅来自排序偏好——宴请偏爱贵菜硬菜、打卡偏爱人气菜、家常纯看匹配分。
+// 差异化来自选菜哲学——家常=吃饱（平价优先，同样预算吃更多道）、
+// 宴请=吃好（偏爱贵菜硬菜，撑得起排场）、打卡=吃特色（招牌/传承/海鲜优先，人气作弱参考）。
 const VARIANTS = [
-  { key: 'home', label: '家常版', signatureQuota: 1, prefer: 'balanced' },
+  { key: 'home', label: '家常版', signatureQuota: 1, prefer: 'value' },
   { key: 'banquet', label: '宴请版', signatureQuota: 2, prefer: 'premium' },
-  { key: 'checkin', label: '打卡版', signatureQuota: 2, prefer: 'popular' },
+  { key: 'checkin', label: '打卡版', signatureQuota: 2, prefer: 'special' },
 ];
 
 // 食材关键词（菜名启发式，用于"主料不重复"）；长词在前防误配（如"鱼香茄子"归茄子不归鱼）
@@ -88,12 +89,19 @@ function quotasFor(partySize, pools, variant) {
   };
 }
 
-// 变体排序分：balanced 纯 ML 分；premium 同分偏好贵一点（宴请硬菜）；popular 偏好点单多的。
+// 变体排序分（三套哲学）：家常=吃饱（平价优先，同预算吃更多道）；
+// 宴请=吃好（贵菜硬菜往前，撑得起排场）；打卡=吃特色（招牌/传承陕菜/江湖海鲜优先，人气仅弱参考）。
 // prevPenalty：跨套差异化——前几套已选过的菜按次数降权（降权不排除，保留少量重叠）。
 function sortValue(d, prefer, prevPenalty) {
+  const price = Number(d.price) || 0;
   let v = d._score || 0;
-  if (prefer === 'premium') v += Math.min(Number(d.price) || 0, 200) / 250;
-  if (prefer === 'popular') v += Math.min(Number(d.order_count) || 0, 60) / 150;
+  if (prefer === 'value') v += Math.max(0, 60 - price) / 75;
+  if (prefer === 'premium') v += Math.min(price, 200) / 250;
+  if (prefer === 'special') {
+    if (Array.isArray(d.tags) && d.tags.includes('招牌')) v += 0.5;
+    if (d.category === '江湖海鲜' || d.category === '传承陕菜') v += 0.2;
+    v += Math.min(Number(d.order_count) || 0, 60) / 300;
+  }
   if (prevPenalty) v -= (prevPenalty.get(d.id) || 0) * 0.6;
   return v;
 }
@@ -112,6 +120,8 @@ function pickFromPool(queue, quota, softCap, state, opts = {}) {
   // 天价/偏贵菜会以"找不到更便宜"破例入选，一口吃掉后续槽位的预算。
   // 招牌池走非严格（必点项，池浅价高，无更低价时允许入选）。
   const priceStrict = opts.priceStrict === true;
+  // ignoreHeuristics：补结构阶段用——辣度分散/主料回避让位可能互相顶死，兜底时绕开
+  const ignoreHeuristics = opts.ignoreHeuristics === true;
   const taken = [];
   let overBudget = false;
   const take = (d) => {
@@ -134,9 +144,11 @@ function pickFromPool(queue, quota, softCap, state, opts = {}) {
       if (priceStrict || hasCheaper) { i++; continue; }
     }
     const rest = queue.slice(i + 1);
-    if ((state.spiceCount[d.spiciness] || 0) >= 2 && rest.some(x => (state.spiceCount[x.spiciness] || 0) < 2)) { i++; continue; }
-    const ing = ingredientOf(d.name);
-    if (ing && state.ingSeen.has(ing) && rest.some(x => { const g = ingredientOf(x.name); return !g || !state.ingSeen.has(g); })) { i++; continue; }
+    if (!ignoreHeuristics) {
+      if ((state.spiceCount[d.spiciness] || 0) >= 2 && rest.some(x => (state.spiceCount[x.spiciness] || 0) < 2)) { i++; continue; }
+      const ing = ingredientOf(d.name);
+      if (ing && state.ingSeen.has(ing) && rest.some(x => { const g = ingredientOf(x.name); return !g || !state.ingSeen.has(g); })) { i++; continue; }
+    }
     take(d);
     queue.splice(i, 1);
   }
@@ -199,8 +211,13 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     }
     // 用户拍板（十元档）：家常取前五元、宴请/打卡取后五元。目标取各自半区顶部，
     // 贪心贴上限的落点即回到所选半区——家常人均落在档位前五，宴请/打卡落在后五。
+    // 家常=吃饱：平价排序 + 配额加二（多吃两道），让"吃饱"落在档位内而不是吃不满。
+    if (variant.key === 'home' && partySize >= 3) {
+      quotas.hot = Math.min(quotas.hot + 1, 12, pools.hot.length);
+      quotas.cold = Math.min(quotas.cold + 1, 8, pools.cold.length);
+    }
     const BAND_WIDTH = 10;
-    const targetPerPerson = variant.key === 'home' ? budgetPerPerson - 5 : budgetPerPerson - 1;
+    const targetPerPerson = variant.key === 'home' ? budgetPerPerson : budgetPerPerson - 1;
     const extras = Number(reservedExtras) || 0;
     const softCap = Math.max(0, targetPerPerson * partySize - extras);
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
@@ -247,7 +264,9 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
       const r = { any: false };
       for (const k of poolOrder) {
         if (pickedCount[k] >= quotas[k] || !queues[k].length) continue;
-        const pr = pickFromPool(queues[k], 1, softCap, state, { allowOver: false });
+        // 补结构按最便宜优先——质量已在主循环按得分表达，这里只负责把结构填满
+        const q = queues[k].slice().sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
+        const pr = pickFromPool(q, 1, softCap, state, { allowOver: false, ignoreHeuristics: true });
         pr.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; r.any = true; });
       }
       if (!r.any) break;
@@ -261,6 +280,22 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         .sort((a, b) => sortValue(b.dish, variant.prefer, prevPenalty) - sortValue(a.dish, variant.prefer, prevPenalty));
       for (const e of rest) {
         if (safetyRounds++ > 80) break;
+        const price = Number(e.dish.price) || 0;
+        if (price <= 0 || state.total + price > softCap) continue;
+        state.usedIds.add(e.dish.id);
+        state.total += price;
+        picked.push({ dish: e.dish, pool: e.pool });
+      }
+    }
+    // 家常=吃饱兜底：配额满后若总分还没到档位下沿（人均档位下沿×人数），
+    // 继续用最便宜的可点菜加到下沿——保证"吃饱"且人均不低于所选档位。
+    if (variant.key === 'home') {
+      const bandFloor = (budgetPerPerson - BAND_WIDTH) * partySize;
+      const restMap = new Map();
+      for (const k of poolOrder) for (const x of queues[k]) if (!restMap.has(x.id) && !state.usedIds.has(x.id)) restMap.set(x.id, { dish: x, pool: k });
+      const rest = [...restMap.values()].sort((a, b) => (Number(a.dish.price) || 0) - (Number(b.dish.price) || 0));
+      for (const e of rest) {
+        if (state.total >= bandFloor) break;
         const price = Number(e.dish.price) || 0;
         if (price <= 0 || state.total + price > softCap) continue;
         state.usedIds.add(e.dish.id);
