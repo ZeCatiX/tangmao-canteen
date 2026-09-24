@@ -17,11 +17,12 @@ const STAPLE_NAME_RE = /(面|饭|馍|包|糕|皮|粥|饼)/;
 const ALLERGY_KEY_MAP = { '海鲜': 'seafood', '花生': 'peanut', '鸡蛋': 'egg', '大豆': 'soy', '麸质': 'gluten' };
 const ALLERGY_KEYS = Object.values(ALLERGY_KEY_MAP);
 
-// 三套风格变体：预算系数、招牌配额、排序偏好
+// 三套风格变体：预算完全相同（用户拍板：不应调整预算，只有侧重点不同），
+// 差异化仅来自排序偏好——宴请偏爱贵菜硬菜、打卡偏爱人气菜、家常纯看匹配分。
 const VARIANTS = [
   { key: 'home', label: '家常版', budgetFactor: 1.0, signatureQuota: 1, prefer: 'balanced' },
-  { key: 'banquet', label: '宴请版', budgetFactor: 1.45, signatureQuota: 2, prefer: 'premium' },
-  { key: 'checkin', label: '打卡版', budgetFactor: 1.1, signatureQuota: 2, prefer: 'popular' },
+  { key: 'banquet', label: '宴请版', budgetFactor: 1.0, signatureQuota: 2, prefer: 'premium' },
+  { key: 'checkin', label: '打卡版', budgetFactor: 1.0, signatureQuota: 2, prefer: 'popular' },
 ];
 
 // 食材关键词（菜名启发式，用于"主料不重复"）；长词在前防误配（如"鱼香茄子"归茄子不归鱼）

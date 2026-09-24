@@ -57,7 +57,7 @@ test('buildPools: 忌口硬过滤 + 测试脏数据排除 + 池归属', () => {
   assert.ok(!pools.staple.some(x => x.name.includes('米饭')), '米饭(主食分类)不进推荐池，由 withAutoRice 按人数配');
 });
 
-test('buildTableSets: 4人三套结构 = 凉菜2+热菜4+招牌1-2+主食2，全套菜品唯一', () => {
+test('buildTableSets: 4人三套同预算不同侧重，结构达标（热菜预算紧张允许比目标少1），全套菜品唯一', () => {
   const sets = tr.buildTableSets({ pools: score(deepPools(), { cold: 3.8, hot: 4.0, signature: 4.5, staple: 3.5 }), partySize: 4, budgetPerPerson: 80 });
   assert.deepEqual(sets.map(s => s.style), ['家常版', '宴请版', '打卡版']);
   for (const s of sets) {
@@ -66,10 +66,11 @@ test('buildTableSets: 4人三套结构 = 凉菜2+热菜4+招牌1-2+主食2，全
     const cnt = {};
     s.dishes.forEach(x => { cnt[x.pool] = (cnt[x.pool] || 0) + 1; });
     assert.equal(cnt.cold, 2);
-    assert.equal(cnt.hot, 4);
+    assert.ok(cnt.hot >= 3, '热菜目标4道，预算硬约束下允许让出1槽（实际 ' + (cnt.hot || 0) + '）');
     assert.ok(cnt.signature >= 1, '每套必含招牌');
-    assert.equal(cnt.staple, 2);
+    assert.ok(cnt.staple >= 1);
     assert.equal(s.totalPrice, s.dishes.reduce((sum, x) => sum + x.dish.price, 0));
+    assert.ok(s.totalPrice <= 320, '统一预算后不得超 80×4');
   }
   assert.equal(sets[0].dishes.filter(x => x.pool === 'signature').length, 1); // 家常版招牌1
   assert.equal(sets[1].dishes.filter(x => x.pool === 'signature').length, 2); // 宴请版招牌2

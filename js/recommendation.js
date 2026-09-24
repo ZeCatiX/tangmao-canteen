@@ -255,7 +255,6 @@ async function submitTableBuilder(){
    +'</div>';
   }).join('');
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
-  var banquetNote=s.style==='宴请版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（按约1.5倍预算配席面）</span>':(s.style==='打卡版'?'<span class="ms-1" style="font-size:0.72rem;color:var(--text-light);">（人气优先 · 约1.1倍）</span>':'');
   var autoRows=(s.autoItems||[]).map(function(d){
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
@@ -274,7 +273,7 @@ async function submitTableBuilder(){
   return '<div class="card mb-4 shadow-sm table-set-card" style="border:1px solid rgba(201,169,110,0.35);background:var(--cream);">'
    +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="border:none;">'
     +'<div class="d-flex align-items-center flex-wrap gap-2">'
-     +'<span class="badge tang-tag" style="background:'+color+';font-size:0.85rem;">'+esc(s.style)+'</span>'+overTag+banquetNote
+     +'<span class="badge tang-tag" style="background:'+color+';font-size:0.85rem;">'+esc(s.style)+'</span>'+overTag
      +'<span style="font-size:0.85rem;letter-spacing:0.5px;">共 '+s.dishes.length+' 道 · 席面总计 <strong class="table-total">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
     +'<div class="d-flex gap-2">'
      +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:2px;"><i class="bi bi-image me-1"></i>分享图</button>'
