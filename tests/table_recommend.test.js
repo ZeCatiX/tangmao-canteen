@@ -47,14 +47,16 @@ test('buildPools: 忌口硬过滤 + 测试脏数据排除 + 池归属', () => {
     mkDish(5, '油泼面', '陕西小吃', 16, '微辣'),
     mkDish(6, '酸梅汤', '飲品与酒水', 8, '不辣'),
     mkDish(7, '五常大米饭', '主食', 3, '不辣'),
+    mkDish(8, '大唐毛笔酥', '陕西小吃', 42, '不辣', { tags: ['招牌'] }),
   ];
   const { pools, excluded } = tr.buildPools(dishes, ['seafood']);
   assert.equal(excluded, 2); // 鲈鱼(忌口) + 测试菜(脏数据)
   assert.deepEqual(pools.cold, []);
   assert.equal(pools.hot.length, 1);       // 葫芦鸡（鲈鱼被忌口滤掉）
-  assert.equal(pools.signature.length, 1); // 葫芦鸡
   assert.equal(pools.staple.length, 2);    // 凉皮 + 油泼面（面点关键词）
   assert.ok(!pools.staple.some(x => x.name.includes('米饭')), '米饭(主食分类)不进推荐池，由 withAutoRice 按人数配');
+  assert.ok(!pools.staple.some(x => x.name.includes('毛笔酥')), '招牌小吃(毛笔酥)不进小吃池，专属招牌池');
+  assert.equal(pools.signature.length, 2); // 葫芦鸡 + 毛笔酥(招牌标签)
 });
 
 test('buildTableSets: 4人三套同预算不同侧重，结构达标（热菜预算紧张允许比目标少1），全套菜品唯一', () => {

@@ -74,7 +74,8 @@ function buildPools(dishes, allergyKeys) {
     if (tags.includes('招牌') || d.category === '招牌与游西安必打卡') pools.signature.push(d);
     if (POOL_CATEGORIES.cold.includes(d.category)) pools.cold.push(d);
     if (POOL_CATEGORIES.hot.includes(d.category)) pools.hot.push(d);
-    if (d.category === '陕西小吃') pools.staple.push(d);
+    // 小吃池排除招牌菜：招牌菜专属招牌池（毛笔酥这类特色点心归打卡/招牌位，不当代小吃散配）
+    if (d.category === '陕西小吃' && !tags.includes('招牌')) pools.staple.push(d);
   }
   return { pools, excluded };
 }

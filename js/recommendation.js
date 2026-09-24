@@ -173,9 +173,10 @@ function prefillTableBuilder(){
  var wrap=$('table-avoid-recent-wrap');
  if(wrap)wrap.style.display=(currentUser&&currentUser!=='guest')?'':'none';
 }
+var tableSwappedOut=[];    // 本次生成内被换掉的菜：换出去就不再换回来
 function collectTableExclusions(){
- // 本会话已点（各轮）+ 购物车里的菜 id，生成与换单道都要带上
- var ids=[];
+ // 本会话已点（各轮）+ 购物车 + 本次换菜换出去的，生成与换单道都要带上
+ var ids=tableSwappedOut.slice();
  try{
   JSON.parse(sessionStorage.getItem('lastOrderRounds')||'[]').forEach(function(r){(r.items||[]).forEach(function(it){if(it&&it.id)ids.push(it.id);});});
  }catch(e){}
@@ -215,6 +216,7 @@ async function submitTableBuilder(){
   var d=await r.json();
   if(d.success&&Array.isArray(d.sets)&&d.sets.length){
    tableSets=d.sets;
+   tableSwappedOut=[];
    lastTableMeta={excludedOrdered:d.excludedOrdered||0,usedProfile:!!d.usedProfile};
    renderTableSets();
    showSection('table-result-section');
@@ -297,6 +299,7 @@ async function swapTableDish(si,dishId,pool,btn){
    var idx=s.dishes.findIndex(function(x){return x.id===dishId;});
    if(idx>-1){
     var old=s.dishes[idx];
+    tableSwappedOut.push(old.id);
     s.dishes[idx]=d.dish;
     var ps=(lastTableParams&&lastTableParams.partySize)||1;
     s.totalPrice=Math.round((s.totalPrice-(old.price||0)+(d.dish.price||0))*100)/100;
@@ -445,4 +448,4 @@ function shareTableSetImage(si,btn){
   if(btn)btn.disabled=false;
  });
 }
-
+
