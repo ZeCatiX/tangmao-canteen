@@ -225,7 +225,8 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
       quotas.cold = Math.min(quotas.cold + 1, 8, pools.cold.length);
     }
     const BAND_WIDTH = 10;
-    const targetPerPerson = variant.key === 'home' ? budgetPerPerson - 5 : budgetPerPerson - 1;
+    // 家常=前五元顶部（预算-5）；宴请=档位上沿（最贵，撑档次）；打卡=上沿-1（人气路线略低半档）
+    const targetPerPerson = variant.key === 'home' ? budgetPerPerson - 5 : variant.key === 'checkin' ? budgetPerPerson - 1 : budgetPerPerson;
     const extras = Number(reservedExtras) || 0;
     const softCap = Math.max(0, targetPerPerson * partySize - extras);
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
