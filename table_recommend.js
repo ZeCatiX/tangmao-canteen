@@ -5,13 +5,13 @@
 
 // ── 池子配置 ──
 // 热菜不走 category='热菜'（那批是测试脏数据），由真实热菜分类组成；饮品永不参与。
+// 小吃池（键名 staple 为历史遗留）：陕西小吃整类收编——面点当主食收口、点心当餐后甜口、
+// 其余是席面的烟火气；米饭（主食分类）不进池，由 withAutoRice 按人数自动配。
 const POOL_CATEGORIES = {
   cold: ['特色凉菜'],
   hot: ['传承陕菜', '热销菜品', '江湖海鲜', '田园时蔬·汤羹'],
 };
-// 主食池：主食分类（米饭类配饭）按业务规则不参与推荐菜池，由 withAutoRice 按人数自动配；
-// 席面的主食槽位由陕西小吃里的面点（按菜名关键词识别，菜单变动自动适应）担当
-const STAPLE_NAME_RE = /(面|饭|馍|包|糕|皮|粥|饼)/;
+const STAPLE_CATEGORIES = ['陕西小吃'];
 
 // 忌口中文名（前端/用户档案口径）→ dishes.allergies JSONB 键
 const ALLERGY_KEY_MAP = { '海鲜': 'seafood', '花生': 'peanut', '鸡蛋': 'egg', '大豆': 'soy', '麸质': 'gluten' };
@@ -73,7 +73,7 @@ function buildPools(dishes, allergyKeys) {
     if (tags.includes('招牌') || d.category === '招牌与游西安必打卡') pools.signature.push(d);
     if (POOL_CATEGORIES.cold.includes(d.category)) pools.cold.push(d);
     if (POOL_CATEGORIES.hot.includes(d.category)) pools.hot.push(d);
-    if (d.category === '陕西小吃' && STAPLE_NAME_RE.test(d.name)) pools.staple.push(d);
+    if (d.category === '陕西小吃') pools.staple.push(d);
   }
   return { pools, excluded };
 }
@@ -161,9 +161,11 @@ function reasonFor(dish, pool, variant, partySize) {
       : '掌柜的看家推荐，撑得住场面的招牌菜';
   }
   if (pool === 'staple') {
-    // 甜品类主食换话术，别拿"管饱"糊弄一份凉糕
-    if (/糕|甜/.test(dish.name || '')) return '餐后甜口，席面收得漂亮';
-    return partySize > 3 ? '主食收口，管饱又实惠' : '主食收口，分量正合适';
+    // 小吃池三种口吻：面点主食收口、糕点酸奶餐后甜口、其余是席面的烟火气
+    const name = dish.name || '';
+    if (/糕|酸奶/.test(name)) return '餐后甜口，席面收得漂亮';
+    if (/面|饭|馍|皮|包/.test(name)) return partySize > 3 ? '主食收口，管饱又实惠' : '主食收口，分量正合适';
+    return '陕味小吃，席面的烟火气';
   }
   if (dish.category === '田园时蔬·汤羹') return '时蔬汤羹，一桌荤素平衡全靠它';
   if (pool === 'cold') {
