@@ -89,6 +89,13 @@ function quotasFor(partySize, pools, variant) {
   };
 }
 
+// 荤菜识别：海鲜分类直接算荤，其余按菜名关键词（鸡鱼肘子牛肚这类硬菜）
+function isMeaty(d) {
+  if (!d) return false;
+  if (d.category === '江湖海鲜') return true;
+  return /鱼|虾|蟹|鳝|肚|牛|羊|排骨|肘子|海鲜|鸡|鸭|肉/.test(d.name || '');
+}
+
 // 变体排序分（三套哲学）：家常=吃饱（平价优先，同预算吃更多道）；
 // 宴请=吃好（贵菜硬菜往前，撑得起排场）；打卡=吃特色（招牌/传承陕菜/江湖海鲜优先，人气仅弱参考）。
 // prevPenalty：跨套差异化——前几套已选过的菜按次数降权（降权不排除，保留少量重叠）。
@@ -100,6 +107,7 @@ function sortValue(d, prefer, prevPenalty) {
   if (prefer === 'special') {
     if (Array.isArray(d.tags) && d.tags.includes('招牌')) v += 0.5;
     if (d.category === '江湖海鲜' || d.category === '传承陕菜') v += 0.2;
+    if (isMeaty(d)) v += 0.15;
     v += Math.min(Number(d.order_count) || 0, 60) / 300;
   }
   if (prevPenalty) v -= (prevPenalty.get(d.id) || 0) * 0.6;
@@ -224,22 +232,32 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     // 轮转选取：每轮按 招牌→热菜→凉菜→主食 各选一道。若按池一口气吃满配额，
     // 高价热菜会把预算吃光、凉菜主食被挤到超支兜底；轮转保证席面结构均衡。
     // 预算不足时宁可该轮缺一道（allowOver:false），也不整体超支。
-    const poolOrder = ['signature', 'hot', 'cold', 'staple'];
+    // 热菜池拆荤/素两条子队列：荤菜保底 ⌈热菜配额/2⌉（打卡全素教训），
+    // 荤子队列非严格限价（硬菜是席面亮点，允许在均价内破例），素子队列严格限价填剩余。
+    const hotAll = pools.hot.slice();
+    const hotMeatDishes = hotAll.filter(isMeaty);
+    const hotVegDishes = hotAll.filter(d => !isMeaty(d));
+    quotas.hotMeat = Math.min(Math.ceil(quotas.hot / 2), hotMeatDishes.length);
+    quotas.hotVeg = quotas.hot - quotas.hotMeat;
+    quotas.hot = quotas.hotMeat + quotas.hotVeg;
+    const poolOut = k => (k === 'hotMeat' || k === 'hotVeg') ? 'hot' : k;
+    const poolOrder = ['signature', 'hotMeat', 'hotVeg', 'cold', 'staple'];
     const queues = {};
     for (const k of poolOrder) {
-      queues[k] = pools[k].slice().sort((a, b) => sortValue(b, variant.prefer, prevPenalty) - sortValue(a, variant.prefer, prevPenalty));
+      const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : pools[k];
+      queues[k] = src.slice().sort((a, b) => sortValue(b, variant.prefer, prevPenalty) - sortValue(a, variant.prefer, prevPenalty));
     }
     const picked = [];
     let overBudget = false;
-    const totalQuota = quotas.signature + quotas.hot + quotas.cold + quotas.staple;
+    const totalQuota = quotas.hotMeat + quotas.hotVeg + quotas.signature + quotas.cold + quotas.staple;
     // 全场最低菜价：用于给未填槽位留保底预算（reservation）
     let minPrice = Infinity;
-    for (const k of poolOrder) for (const x of pools[k]) { const p = Number(x.price) || 0; if (p > 0 && p < minPrice) minPrice = p; }
+    for (const k of ['cold', 'hot', 'signature', 'staple']) for (const x of pools[k]) { const p = Number(x.price) || 0; if (p > 0 && p < minPrice) minPrice = p; }
     if (!Number.isFinite(minPrice)) minPrice = 0;
     // 进度循环补选：每个未满配额的池在每轮都获得重试机会——
     // 早期因预算跳过的槽位，后续轮次预算判断变化后仍能补上，槽位不会永久死亡。
     // 循环终止：配额全满 / 无任何池能再选（预算或池子耗尽）。40 轮保险丝防意外死循环。
-    const pickedCount = { signature: 0, hot: 0, cold: 0, staple: 0 };
+    const pickedCount = { signature: 0, hotMeat: 0, hotVeg: 0, cold: 0, staple: 0 };
     let progressed = true;
     let safetyRounds = 0;
     while (picked.length < totalQuota && progressed && safetyRounds++ < 40) {
@@ -255,7 +273,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         const priceCap = Math.max(0, Math.min(avgCap, reservedCap));
         // 招牌是必点项走非严格（无更低价可破例）；其余池严格限价防价格断层破例
         const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap, priceStrict: k !== 'signature' });
-        r.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; progressed = true; });
+        r.taken.forEach(d => { picked.push({ dish: d, pool: poolOut(k) }); pickedCount[k]++; progressed = true; });
       }
     }
     // 补齐放宽：主循环可能因"辣度分散/主料不重复让位 + 限价"叠加而卡死（有预算、有候选、但互相让位）。
@@ -267,7 +285,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         // 补结构按最便宜优先——质量已在主循环按得分表达，这里只负责把结构填满
         const q = queues[k].slice().sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
         const pr = pickFromPool(q, 1, softCap, state, { allowOver: false, ignoreHeuristics: true });
-        pr.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; r.any = true; });
+        pr.taken.forEach(d => { picked.push({ dish: d, pool: poolOut(k) }); pickedCount[k]++; r.any = true; });
       }
       if (!r.any) break;
     }
@@ -275,7 +293,10 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     // 招牌不再设"必点豁免"，预算够就自然入选，不够就诚实缺席。
     if (partySize <= 2) {
       const restMap = new Map();
-      for (const k of poolOrder) for (const x of queues[k]) if (!restMap.has(x.id)) restMap.set(x.id, { dish: x, pool: k });
+      for (const k of poolOrder) {
+        const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : queues[k];
+        for (const x of src) if (!restMap.has(x.id) && !state.usedIds.has(x.id)) restMap.set(x.id, { dish: x, pool: poolOut(k) });
+      }
       const rest = [...restMap.values()].filter(e => !state.usedIds.has(e.dish.id))
         .sort((a, b) => sortValue(b.dish, variant.prefer, prevPenalty) - sortValue(a.dish, variant.prefer, prevPenalty));
       for (const e of rest) {
@@ -292,7 +313,10 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     if (variant.key === 'home') {
       const bandFloor = (budgetPerPerson - BAND_WIDTH) * partySize;
       const restMap = new Map();
-      for (const k of poolOrder) for (const x of queues[k]) if (!restMap.has(x.id) && !state.usedIds.has(x.id)) restMap.set(x.id, { dish: x, pool: k });
+      for (const k of poolOrder) {
+        const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : queues[k];
+        for (const x of src) if (!restMap.has(x.id) && !state.usedIds.has(x.id)) restMap.set(x.id, { dish: x, pool: poolOut(k) });
+      }
       const rest = [...restMap.values()].sort((a, b) => (Number(a.dish.price) || 0) - (Number(b.dish.price) || 0));
       for (const e of rest) {
         if (state.total >= bandFloor) break;
@@ -303,8 +327,36 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         picked.push({ dish: e.dish, pool: e.pool });
       }
     }
-    // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜
-    for (const p of picked) prevPenalty.set(p.dish.id, (prevPenalty.get(p.dish.id) || 0) + 1);
+    // 热菜荤素平衡：热菜全素时，把最便宜的一道素热菜换成预算内的最高分荤菜
+    const hotPicks = picked.filter(p => p.pool === 'hot');
+    if (hotPicks.length >= 2 && !hotPicks.some(p => isMeaty(p.dish)) && pools.hot.length) {
+      const meats = pools.hot.filter(d => !state.usedIds.has(d.id) && isMeaty(d))
+        .sort((a, b) => (b._score || 0) - (a._score || 0));
+      const vegs = hotPicks.slice().sort((a, b) => (Number(a.dish.price) || 0) - (Number(b.dish.price) || 0));
+      let swapped = false;
+      for (const vp of vegs) {
+        if (swapped) break;
+        const vpPrice = Number(vp.dish.price) || 0;
+        for (const mc of meats) {
+          const mcPrice = Number(mc.price) || 0;
+          if (state.total - vpPrice + mcPrice <= softCap) {
+            state.usedIds.delete(vp.dish.id);
+            state.usedIds.add(mc.id);
+            state.total = Math.round((state.total - vpPrice + mcPrice) * 100) / 100;
+            const idx = picked.indexOf(vp);
+            picked[idx] = { dish: mc, pool: 'hot' };
+            swapped = true;
+            break;
+          }
+        }
+      }
+    }
+    // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜；
+    // 热菜池惩罚减半——若全額惩罚，荤热菜会在后几套被素菜挤出（打卡全素教训）
+    for (const p of picked) {
+      const step = p.pool === 'hot' ? 0.3 : 0.6;
+      prevPenalty.set(p.dish.id, (prevPenalty.get(p.dish.id) || 0) + step);
+    }
     // 全套里 ML 分最高的一道带上匹配度话术
     let best = null;
     for (const p of picked) {
