@@ -196,7 +196,7 @@ describe('HTTP状态码和错误页面检查', () => {
     const html = await r.text();
     assert.ok(html.includes('404') || html.includes('未找到'), '404页面应显示提示');
     assert.ok(html.includes('唐猫庭院'), '404页面应包含网站名');
-    assert.ok(html.includes('返回首页'), '404页面应有返回首页链接');
+    assert.ok(html.includes('回唐猫庭院'), '404页面应有返回首页链接（插画化404）');
   });
 
   // ===== 12. API 404返回JSON =====
