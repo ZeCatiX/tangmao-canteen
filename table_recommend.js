@@ -189,6 +189,14 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
   const prevPenalty = new Map();
   for (const variant of VARIANTS) {
     const quotas = quotasFor(partySize, pools, variant);
+    // 单双人简餐结构（用户拍板）：一人食/两人餐本无"席面"，不套四池规制——
+    // 热菜×N + 小吃1 + 冷菜1（仅双人），招牌不设配额，由预算余额升级补位自然入选。
+    if (partySize <= 2) {
+      quotas.hot = Math.min(partySize, pools.hot.length);
+      quotas.cold = partySize === 2 ? Math.min(1, pools.cold.length) : 0;
+      quotas.staple = Math.min(1, pools.staple.length);
+      quotas.signature = 0;
+    }
     // 用户拍板（十元档）：家常取前五元、宴请/打卡取后五元。目标取各自半区顶部，
     // 贪心贴上限的落点即回到所选半区——家常人均落在档位前五，宴请/打卡落在后五。
     const BAND_WIDTH = 10;
@@ -243,6 +251,22 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         pr.taken.forEach(d => { picked.push({ dish: d, pool: k }); pickedCount[k]++; r.any = true; });
       }
       if (!r.any) break;
+    }
+    // 简餐升级补位（仅单双人）：结构满后预算若有余额，按得分继续加菜直到花不动——
+    // 招牌不再设"必点豁免"，预算够就自然入选，不够就诚实缺席。
+    if (partySize <= 2) {
+      const restMap = new Map();
+      for (const k of poolOrder) for (const x of queues[k]) if (!restMap.has(x.id)) restMap.set(x.id, { dish: x, pool: k });
+      const rest = [...restMap.values()].filter(e => !state.usedIds.has(e.dish.id))
+        .sort((a, b) => sortValue(b.dish, variant.prefer, prevPenalty) - sortValue(a.dish, variant.prefer, prevPenalty));
+      for (const e of rest) {
+        if (safetyRounds++ > 80) break;
+        const price = Number(e.dish.price) || 0;
+        if (price <= 0 || state.total + price > softCap) continue;
+        state.usedIds.add(e.dish.id);
+        state.total += price;
+        picked.push({ dish: e.dish, pool: e.pool });
+      }
     }
     // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜
     for (const p of picked) prevPenalty.set(p.dish.id, (prevPenalty.get(p.dish.id) || 0) + 1);
