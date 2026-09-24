@@ -1597,8 +1597,9 @@ app.post('/api/predict-rf', (req, res) => {
 // ═══════════════════════════════════════════════
 const tableRecommend = require('./table_recommend');
 
-// 组合推荐要过一遍 worker 批量打分，比普通查询贵，单独限流（env 可覆盖）
-const TABLE_RATE_LIMIT_RAW = parseInt(process.env.TABLE_RATE_LIMIT_MAX || '30');
+// 组合推荐要过一遍 worker 批量打分，比普通查询贵，单独限流（env 可覆盖）。
+// 默认 100 次/15 分钟：店内 WiFi 下顾客共享出口 IP，整店共享额度，不宜过低。
+const TABLE_RATE_LIMIT_RAW = parseInt(process.env.TABLE_RATE_LIMIT_MAX || '100');
 const TABLE_RATE_LIMIT_MAX = (Number.isFinite(TABLE_RATE_LIMIT_RAW) && TABLE_RATE_LIMIT_RAW >= 1) ? TABLE_RATE_LIMIT_RAW : 30;
 const tableLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
