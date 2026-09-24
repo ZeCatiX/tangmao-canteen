@@ -247,7 +247,10 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
       const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : pools[k];
       queues[k] = src.slice().sort((a, b) => sortValue(b, variant.prefer, prevPenalty) - sortValue(a, variant.prefer, prevPenalty));
     }
-    const hotMeatFloor = hotMeatDishes.length ? Math.min(...hotMeatDishes.map(x => Number(x.price) || 0)) : 0;
+    // 地板价封顶 35%：唯一荤菜若为天价菜，地板价会让它抢走大半预算——封顶后退回素菜补位
+    const hotMeatFloor = hotMeatDishes.length
+      ? Math.min(Math.min(...hotMeatDishes.map(x => Number(x.price) || 0)), Math.round(softCap * 0.35))
+      : 0;
     const picked = [];
     let overBudget = false;
     const totalQuota = quotas.hotMeat + quotas.hotVeg + quotas.signature + quotas.cold + quotas.staple;
@@ -276,6 +279,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         if (k === 'hotMeat' && hotMeatFloor > 0) priceCap = Math.max(priceCap, hotMeatFloor);
         // 招牌是必点项走非严格（无更低价可破例）；其余池严格限价防价格断层破例
         const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap, priceStrict: k !== 'signature' });
+
         r.taken.forEach(d => { picked.push({ dish: d, pool: poolOut(k) }); pickedCount[k]++; progressed = true; });
       }
     }
