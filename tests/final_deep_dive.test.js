@@ -91,9 +91,9 @@ describe('最终深潜检查', () => {
     const html = await r.text();
     assert.ok(html.includes('404'), '应显示404');
     assert.ok(html.includes('唐猫'), '应包含网站名');
-    assert.ok(html.includes('返回首页'), '应有返回首页按钮');
+    assert.ok(html.includes('回唐猫庭院'), '应有返回首页按钮（插画化404）');
     assert.ok(html.includes('navbar') || html.includes('btn'), '应有导航或按钮样式');
-    assert.ok(html.includes('bootstrap') || html.includes('styles.css'), '应引用CSS');
+    assert.ok(html.includes('bootstrap') || html.includes('styles.css') || html.includes('<style'), '应引用CSS（404插画页为内联自包含样式）');
   });
 
   // ===== 4. 500错误页面样式完整性 =====

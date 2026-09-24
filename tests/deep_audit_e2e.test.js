@@ -383,7 +383,7 @@ describe('2. 崩溃风险与边界情况审计', () => {
     const server = read('server.js');
     assert.ok(server.includes('res.status(404)'), '404处理');
     assert.ok(server.includes('res.status(500)'), '500处理');
-    assert.ok(server.includes('404 - 页面未找到'), '404友好页面');
+    assert.ok(server.includes('页面走丢了'), '404友好页面（插画化404.html兜底）');
     assert.ok(server.includes('服务器出了点小问题'), '500友好页面');
   });
 

@@ -178,8 +178,8 @@ function reasonFor(dish, pool, variant, partySize) {
   const price = Number(dish.price) || 0;
   if (pool === 'signature') {
     return variant && variant.key === 'checkin'
-      ? '掌柜的招牌，来唐猫庭院必打卡的看家菜'
-      : '掌柜的看家推荐，撑得住场面的招牌菜';
+      ? '猫掌柜的招牌，来唐猫庭院必打卡'
+      : '猫掌柜的看家推荐，撑得住场面的招牌菜';
   }
   if (pool === 'staple') {
     // 小吃池三种口吻：面点主食收口、糕点酸奶餐后甜口、其余是席面的烟火气
@@ -196,9 +196,9 @@ function reasonFor(dish, pool, variant, partySize) {
   if (price >= 88) {
     return variant && variant.key === 'banquet' ? '硬菜撑场，宴请倍儿有面子' : '一道硬菜，镇桌之选';
   }
-  if ((Number(dish.order_count) || 0) >= 20) return '掌柜点名的人气菜，闭眼点不踩雷';
+  if ((Number(dish.order_count) || 0) >= 20) return '猫掌柜点名的人气菜，闭眼点不踩雷';
   if (isSpicy) return `风味热菜，${spicy}过瘾下饭`;
-  return '掌柜依你的口味挑的家常热菜';
+  return '猫掌柜依你的口味挑的家常热菜';
 }
 
 // 组合主入口：输入已打分（_score）的四个池，输出三套套餐。

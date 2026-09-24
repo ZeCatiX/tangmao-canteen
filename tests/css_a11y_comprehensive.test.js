@@ -52,15 +52,10 @@ describe('CSS布局与无障碍综合审计', () => {
       const issues = [];
       document.querySelectorAll('*').forEach(el => {
         const cs = window.getComputedStyle(el);
-        if (cs.display === 'flex' || cs.display === 'inline-flex') {
-          // 检查flex子项是否溢出
-          let childWidth = 0;
-          const children = el.children;
-          for (let c = 0; c < children.length; c++) {
-            if (children[c].offsetParent !== null) childWidth += children[c].offsetWidth;
-          }
-          if (childWidth > el.clientWidth + 5 && children.length > 0) {
-            issues.push('flex溢出: ' + (el.id || el.className || el.tagName) + ' child=' + childWidth + ' parent=' + el.clientWidth);
+        // 只审计横向不换行的 flex 容器：纵向堆叠/可换行容器子项宽度求和必然超宽，属误报
+        if ((cs.display === 'flex' || cs.display === 'inline-flex') && cs.flexDirection === 'row' && cs.flexWrap === 'nowrap') {
+          if (el.scrollWidth > el.clientWidth + 5 && el.children.length > 0) {
+            issues.push('flex溢出: ' + (el.id || el.className || el.tagName) + ' scroll=' + el.scrollWidth + ' client=' + el.clientWidth);
           }
         }
       });
