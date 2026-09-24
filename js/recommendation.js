@@ -394,7 +394,7 @@ function shareTableSetImage(si,btn){
   if(brandImg)canvasDishImg(ctx,brandImg,W-72,32,80);
   // 套名行
   ctx.fillStyle='#8f2a1e';ctx.font='bold 34px "Noto Serif SC",serif';
-  ctx.fillText('「'+s.style+'」席面 · '+ps+' 人 · 共 '+s.dishes.length+' 道',W/2,headerH-40);
+  ctx.fillText('「'+s.style+'」席面 · '+ps+' 人 · 共 '+s.dishes.length+' 道',W/2,headerH-23);
   // 菜品行
   var textW=W-pad*2-84-90;
   rows.forEach(function(d,i){
@@ -417,11 +417,11 @@ function shareTableSetImage(si,btn){
   ctx.fillStyle='#fff';canvasRoundRect(ctx,pad-10,ty,W-2*(pad-10),totalsH-40,14);ctx.fill();
   ctx.strokeStyle='#c9a96e';ctx.lineWidth=1.5;ctx.stroke();
   ctx.textAlign='left';ctx.fillStyle='#3a2a20';ctx.font='bold 30px "Noto Serif SC",serif';
-  ctx.fillText('桌总价',pad+22,ty+48);
+  ctx.fillText('席面总计',pad+22,ty+48);
   ctx.textAlign='right';ctx.fillStyle='#b83a2a';ctx.font='bold 36px "Noto Serif SC",serif';
   ctx.fillText('¥'+s.totalPrice,W-pad-22,ty+48);
   ctx.textAlign='left';ctx.fillStyle='#8a7a6a';ctx.font='22px "Noto Serif SC",serif';
-  ctx.fillText('人均 ¥'+s.perPerson+(s.overBudget?' · 为保席面结构略超预算':''),pad+22,ty+84);
+  ctx.fillText('人均 ¥'+Math.round(s.perPerson)+(s.overBudget?' · 为保席面结构略超预算':''),pad+22,ty+84);
   // 页脚
   ctx.textAlign='center';ctx.fillStyle='#b83a2a';ctx.font='bold 22px "Noto Serif SC",serif';
   ctx.fillText('唐猫庭院 · 千年陕菜',W/2,H-56);
