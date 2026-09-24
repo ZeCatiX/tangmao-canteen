@@ -93,7 +93,7 @@ function quotasFor(partySize, pools, variant) {
 function isMeaty(d) {
   if (!d) return false;
   if (d.category === '江湖海鲜') return true;
-  return /鱼|虾|蟹|鳝|肚|牛|羊|排骨|肘子|海鲜|鸡|鸭|肉/.test(d.name || '');
+  return /鱼|虾|蟹|鳝|肚|牛|羊|排骨|肘子|海鲜|鸡(?!蛋)|鸭(?!蛋)|肉/.test(d.name || '');
 }
 
 // 变体排序分（三套哲学）：家常=吃饱（平价优先，同预算吃更多道）；
@@ -225,7 +225,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
       quotas.cold = Math.min(quotas.cold + 1, 8, pools.cold.length);
     }
     const BAND_WIDTH = 10;
-    const targetPerPerson = variant.key === 'home' ? budgetPerPerson : budgetPerPerson - 1;
+    const targetPerPerson = variant.key === 'home' ? budgetPerPerson - 5 : budgetPerPerson - 1;
     const extras = Number(reservedExtras) || 0;
     const softCap = Math.max(0, targetPerPerson * partySize - extras);
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
@@ -247,6 +247,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
       const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : pools[k];
       queues[k] = src.slice().sort((a, b) => sortValue(b, variant.prefer, prevPenalty) - sortValue(a, variant.prefer, prevPenalty));
     }
+    const hotMeatFloor = hotMeatDishes.length ? Math.min(...hotMeatDishes.map(x => Number(x.price) || 0)) : 0;
     const picked = [];
     let overBudget = false;
     const totalQuota = quotas.hotMeat + quotas.hotVeg + quotas.signature + quotas.cold + quotas.staple;
@@ -270,7 +271,9 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         const remainingSlots = totalQuota - picked.length;
         const avgCap = (softCap - state.total) / remainingSlots;
         const reservedCap = softCap - state.total - minPrice * Math.max(0, remainingSlots - 1);
-        const priceCap = Math.max(0, Math.min(avgCap, reservedCap));
+        let priceCap = Math.max(0, Math.min(avgCap, reservedCap));
+        // 荤子队列地板价 = 池内最便宜荤菜：保证每席至少的荤菜不因均价制饿死
+        if (k === 'hotMeat' && hotMeatFloor > 0) priceCap = Math.max(priceCap, hotMeatFloor);
         // 招牌是必点项走非严格（无更低价可破例）；其余池严格限价防价格断层破例
         const r = pickFromPool(queues[k], 1, softCap, state, { allowOver: false, priceCap, priceStrict: k !== 'signature' });
         r.taken.forEach(d => { picked.push({ dish: d, pool: poolOut(k) }); pickedCount[k]++; progressed = true; });
@@ -311,7 +314,7 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
     // 家常=吃饱兜底：配额满后若总分还没到档位下沿（人均档位下沿×人数），
     // 继续用最便宜的可点菜加到下沿——保证"吃饱"且人均不低于所选档位。
     if (variant.key === 'home') {
-      const bandFloor = (budgetPerPerson - BAND_WIDTH) * partySize;
+      const bandFloor = (budgetPerPerson - 9) * partySize; // 档位下沿（上沿-9）
       const restMap = new Map();
       for (const k of poolOrder) {
         const src = k === 'hotMeat' ? hotMeatDishes : k === 'hotVeg' ? hotVegDishes : queues[k];
@@ -453,6 +456,7 @@ module.exports = {
   PREF_VOCABS,
   ingredientOf,
   normalizeAllergies,
+  isMeaty,
   buildPools,
   quotasFor,
   pickFromPool,
