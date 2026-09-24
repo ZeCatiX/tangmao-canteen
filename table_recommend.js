@@ -179,13 +179,16 @@ function reasonFor(dish, pool, variant, partySize) {
 
 // 组合主入口：输入已打分（_score）的四个池，输出三套套餐。
 // 每套 dishes 元素形如 { dish, pool, reason }，总价/人均由跨池共享的 state 累计。
-function buildTableSets({ pools, partySize, budgetPerPerson }) {
+// reservedExtras：预算外固定项（如按人数自动配的米饭）——先从预算里预留，保证含米饭的人均仍落在所选档位内。
+function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
   const sets = [];
   // 跨套差异化：前一套选过的菜在后一套降权（降权不排除），让家常/宴请/打卡真正拉开差距
   const prevPenalty = new Map();
   for (const variant of VARIANTS) {
     const quotas = quotasFor(partySize, pools, variant);
-    const softCap = budgetPerPerson * partySize * variant.budgetFactor * 1.15;
+    // 预算硬上限 = 人均 × 人数 × 场景系数 − 预留项（米饭）。无上浮：用户选 80-89，人均就落在 80 出头。
+    const extras = Number(reservedExtras) || 0;
+    const softCap = Math.max(0, budgetPerPerson * partySize * variant.budgetFactor - extras);
     const state = { total: 0, spiceCount: {}, ingSeen: new Set(), usedIds: new Set() };
     // 轮转选取：每轮按 招牌→热菜→凉菜→主食 各选一道。若按池一口气吃满配额，
     // 高价热菜会把预算吃光、凉菜主食被挤到超支兜底；轮转保证席面结构均衡。

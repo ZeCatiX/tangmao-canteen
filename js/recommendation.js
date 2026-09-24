@@ -302,7 +302,7 @@ async function swapTableDish(si,dishId,pool,btn){
     var ps=(lastTableParams&&lastTableParams.partySize)||1;
     s.totalPrice=Math.round((s.totalPrice-(old.price||0)+(d.dish.price||0))*100)/100;
     s.perPerson=Math.round(s.totalPrice/ps*100)/100;
-    s.overBudget=s.totalPrice>(lastTableParams?lastTableParams.budgetPerPerson*ps*1.15:s.totalPrice);
+    s.overBudget=s.totalPrice>(lastTableParams?lastTableParams.budgetPerPerson*ps:s.totalPrice);
    }
    renderTableSets();
   }else{

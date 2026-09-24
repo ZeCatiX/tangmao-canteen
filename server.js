@@ -1756,16 +1756,17 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
     const source = await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
     const byId = new Map(candidates.map(d => [d.id, d]));
     for (const key of TABLE_POOL_KEYS) pools[key] = pools[key].filter(d => byId.has(d.id)).map(d => byId.get(d.id));
+    // 米饭按人数自动配：预算先预留米饭钱，保证含饭人均仍在所选档位内
+    const riceDish = (dishData || []).find(d => d && d.is_active !== false && d.category === '主食'
+      && typeof d.name === 'string' && d.name.includes('米饭'));
+    const riceReserve = riceDish ? (Number(riceDish.price) || 0) * params.partySize : 0;
     const sets = tableRecommend.buildTableSets({
-      pools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson,
+      pools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson, reservedExtras: riceReserve,
     }).map(s => ({
       key: s.key, style: s.style,
       dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
       totalPrice: s.totalPrice, perPerson: s.perPerson, overBudget: s.overBudget,
     }));
-    // 米饭按人数自动配（主食分类不参与推荐菜池，配饭直接配好个数）
-    const riceDish = (dishData || []).find(d => d && d.is_active !== false && d.category === '主食'
-      && typeof d.name === 'string' && d.name.includes('米饭'));
     const finalSets = tableRecommend.withAutoRice(sets, riceDish, params.partySize);
     logRecommendationMode(req, '一桌菜组合');
     logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded} 已点排除=${excludedOrdered}`);
