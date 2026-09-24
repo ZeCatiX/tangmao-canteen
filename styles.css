@@ -1132,3 +1132,9 @@ html.dark-mode .table-total { color: var(--gold-light); }
 .dish-name-serif { font-family: 'Noto Serif SC', serif; font-size: 0.98rem; letter-spacing: 0.5px; }
 /* 套卡头是 space-between 布局，全局 ◇◇ 装饰会成为隐形 flex 项把徽标推向中间——禁用 */
 .table-set-card .card-header::before, .table-set-card .card-header::after { content: none !important; }
+
+/* 矮视口（≤860px 高的桌面窗口）：压缩首页 hero 与间距，保证关键按钮在首屏 */
+@media (max-height: 860px) {
+  #home-section img[src*="hero-tangcat"] { max-height: 230px; object-fit: cover; }
+  #home-section .card-body { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+}
