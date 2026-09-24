@@ -388,7 +388,7 @@ function shareTableSetImage(si,btn){
   ctx.fillStyle='#c9a96e';ctx.fillRect(0,120,W,4);
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillStyle='#fff';ctx.font='bold 42px "Noto Serif SC",serif';
-  ctx.fillText('唐猫庭院 · AI 配一桌',W/2-30,48);
+  ctx.fillText('唐猫庭院 · 一席成宴',W/2-30,48);
   ctx.fillStyle='#f3e3c3';ctx.font='22px "Noto Serif SC",serif';
   ctx.fillText('千年陕菜 · 唐风雅韵',W/2-30,90);
   if(brandImg)canvasDishImg(ctx,brandImg,W-72,32,80);
@@ -439,7 +439,7 @@ function shareTableSetImage(si,btn){
  var timeout=new Promise(function(res){setTimeout(res,4000);});
  Promise.race([Promise.all(jobs).then(function(){return brandJob;}),timeout]).then(function(r){
   try{draw(r||null);var url=c.toDataURL('image/png');
-   var a=document.createElement('a');a.href=url;a.download='唐猫庭院一桌菜-'+s.style+'.png';
+   var a=document.createElement('a');a.href=url;a.download='唐猫庭院一席成宴-'+s.style+'.png';
    document.body.appendChild(a);a.click();a.remove();
    showMessage('分享图已生成','图片已开始下载，可以发给同桌的人',null,2500);
   }catch(e){showMessage('生成失败','分享图生成失败，请重试');}

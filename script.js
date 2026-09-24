@@ -359,7 +359,7 @@ function renderPrefCompletenessBanner(){
  banner.addEventListener('closed.bs.alert',function(){localStorage.setItem('prefCompletenessDismissed','true');},{once:true});
 }
 
-const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院','table-builder-section':'AI 配一桌 - 唐猫庭院','table-result-section':'一桌菜方案 - 唐猫庭院'};
+const s_titleMap={'home-section':'唐猫庭院 - 菜品推荐','login-section':'登录 - 唐猫庭院','register-section':'注册 - 唐猫庭院','preference-section':'口味偏好 - 唐猫庭院','recommendation-section':'推荐菜品 - 唐猫庭院','feedback-section':'菜品评价 - 唐猫庭院','cart-section':'购物车 - 唐猫庭院','end-section':'点餐完成 - 唐猫庭院','about-section':'关于本店 - 唐猫庭院','dataset-section':'全部菜单 - 唐猫庭院','profile-section':'个人中心 - 唐猫庭院','privacy-section':'隐私政策 - 唐猫庭院','table-builder-section':'一席成宴 - 唐猫庭院','table-result-section':'一席成宴 · 三套方案 - 唐猫庭院'};
 const s_navMap={'home-section':'nav-home','about-section':'nav-about','dataset-section':'nav-dataset','privacy-section':'nav-privacy','login-section':'nav-user','register-section':'nav-user','profile-section':'nav-profile'};
 
 function showSection(sectionId,skipScroll){
@@ -1665,7 +1665,7 @@ function shareTableSetImage(si,btn){
   ctx.fillStyle='#c9a96e';ctx.fillRect(0,120,W,4);
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillStyle='#fff';ctx.font='bold 42px "Noto Serif SC",serif';
-  ctx.fillText('唐猫庭院 · AI 配一桌',W/2-30,48);
+  ctx.fillText('唐猫庭院 · 一席成宴',W/2-30,48);
   ctx.fillStyle='#f3e3c3';ctx.font='22px "Noto Serif SC",serif';
   ctx.fillText('千年陕菜 · 唐风雅韵',W/2-30,90);
   if(brandImg)canvasDishImg(ctx,brandImg,W-72,32,80);
@@ -1716,7 +1716,7 @@ function shareTableSetImage(si,btn){
  var timeout=new Promise(function(res){setTimeout(res,4000);});
  Promise.race([Promise.all(jobs).then(function(){return brandJob;}),timeout]).then(function(r){
   try{draw(r||null);var url=c.toDataURL('image/png');
-   var a=document.createElement('a');a.href=url;a.download='唐猫庭院一桌菜-'+s.style+'.png';
+   var a=document.createElement('a');a.href=url;a.download='唐猫庭院一席成宴-'+s.style+'.png';
    document.body.appendChild(a);a.click();a.remove();
    showMessage('分享图已生成','图片已开始下载，可以发给同桌的人',null,2500);
   }catch(e){showMessage('生成失败','分享图生成失败，请重试');}
