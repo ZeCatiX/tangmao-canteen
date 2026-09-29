@@ -2097,7 +2097,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
    return;
   }
   if(target.classList.contains('cart-qty-plus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)+1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else if(document.getElementById('cart-section')?.classList.contains('active'))showCart();refreshRecipeCartBtn(id);}
-  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x)updateCartQty(id,(x.qty||1)-1);if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else if(document.getElementById('cart-section')?.classList.contains('active'))showCart();refreshRecipeCartBtn(id);}
+  else if(target.classList.contains('cart-qty-minus')){const cart=getCart();const x=cart.find(c=>c.id===id);if(x){const nq=(x.qty||1)-1;const dish=dishData.find(d=>d.id===id);const min=minQtyOf(dish||{});if(nq>=min){updateCartQty(id,nq);}else{removeFromCart(id);showMessage('已移除','「'+(x.name||'菜品')+'」已从购物车移除',null,2000);}}if(document.getElementById('dataset-section')?.classList.contains('active'))renderMenuTable();else if(document.getElementById('cart-section')?.classList.contains('active'))showCart();refreshRecipeCartBtn(id);}
   else if(target.classList.contains('cart-remove-btn')){removeFromCart(id);showCart();}
  });
  // 购物车数量输入变更
