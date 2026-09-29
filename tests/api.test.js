@@ -560,7 +560,40 @@ describe('推荐日志 API', () => {
 // 17. 用户注销 API
 // ─────────────────────────────────────────────
 describe('用户注销 API', () => {
-  it('POST /api/user/delete 注销用户', async () => {
+  it('POST /api/user/delete 不带密码返回400（密码确认必填）', async () => {
+    const uname = 'delpw_' + Date.now();
+    const pass = 'Test123!';
+    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
+    const loginRes = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
+    const token = loginRes.body.token || '';
+    const { status, body } = await api('/api/user/delete', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ username: uname }),
+    });
+    assert.equal(status, 400);
+    assert.equal(body.success, false);
+  });
+
+  it('POST /api/user/delete 错误密码返回400且账号保留', async () => {
+    const uname = 'delpw2_' + Date.now();
+    const pass = 'Test123!';
+    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
+    const loginRes = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
+    const token = loginRes.body.token || '';
+    const { status, body } = await api('/api/user/delete', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ username: uname, password: 'Wrong999' }),
+    });
+    assert.equal(status, 400);
+    assert.equal(body.success, false);
+    // 账号应仍可登录
+    const relogin = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
+    assert.equal(relogin.body.success, true, '错密码注销后账号应仍存在');
+  });
+
+  it('POST /api/user/delete 正确密码注销成功', async () => {
     const uname = 'delete_' + Date.now();
     const pass = 'Test123!';
     await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: pass }) });
@@ -570,7 +603,7 @@ describe('用户注销 API', () => {
     const { status, body } = await api('/api/user/delete', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ username: uname }),
+      body: JSON.stringify({ username: uname, password: pass }),
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
