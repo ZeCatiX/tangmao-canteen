@@ -51,11 +51,22 @@ function safeFetch(url, opts) {
 // ═══════════════ 购物车功能 ═══════════════
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
 function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
+function minQtyOf(dish){
+ if(!dish||!dish.serving)return 1;
+ const m=String(dish.serving).match(/(\d+)\s*个?起/);
+ return m?Math.max(1,parseInt(m[1],10)):1;
+}
 function addToCart(dish,qty){
  const cart=getCart();const i=cart.findIndex(x=>x.id===dish.id);
+ const min=minQtyOf(dish);
  const q=typeof qty==='number'&&qty>0?qty:1;
- if(i>=0){cart[i].qty=(cart[i].qty||1)+q}else{cart.push({id:dish.id,name:dish.name,price:dish.price,qty:q,image:dish.image_url||''})}
- saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
+ if(i>=0){cart[i].qty=(cart[i].qty||1)+q;saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);return;}
+ // 起售数量：首次加入按最小起售量（如核桃包3个起、迷你肉夹馍2个起）
+ const add=Math.max(q,min);
+ cart.push({id:dish.id,name:dish.name,price:dish.price,qty:add,image:dish.image_url||''});
+ saveCart(cart);updateCartBadge();
+ if(add>q)showMessage('已加入购物车','「'+dish.name+'」'+min+'个起售，已加 '+add+' 个',null,2500);
+ else showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
 }
 function addRiceToCart(){
   const rice = dishData.find(d => d.name === '五常大米饭');
@@ -76,7 +87,13 @@ function removeFromCart(id){
 }
 function updateCartQty(id,qty){
  const cart=getCart();const i=cart.findIndex(x=>x.id===id);
- if(i>=0){if(qty<=0)cart.splice(i,1);else cart[i].qty=qty;saveCart(cart);updateCartBadge();}
+ if(i<0)return;
+ if(qty<=0){cart.splice(i,1);saveCart(cart);updateCartBadge();return;}
+ // 起售数量保护：减到低于最小起售量时拦截（整件移除走 ✕ 删除按钮）
+ const dish=dishData.find(d=>d.id===id);
+ const min=minQtyOf(dish);
+ if(qty<min){showMessage('起售数量','「'+(cart[i].name||'该菜品')+'」'+min+'个起售，数量不能低于 '+min+' 个');return;}
+ cart[i].qty=qty;saveCart(cart);updateCartBadge();
 }
 function getCartCount(){return getCart().reduce((s,x)=>s+(x.qty||1),0)}
 function getCartTotal(){return getCart().reduce((s,x)=>s+parseFloat(x.price||0)*(x.qty||1),0)}
