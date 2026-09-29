@@ -422,11 +422,14 @@ function renderMenuTable(){
  const SUB_EMOJI={'特调饮品':'🍸','花酒天地':'🥂','茶饮':'🍵','一醉千年':'🏺','葡萄酒':'🍷','液体面包':'🍺','缤纷饮品':'🍹'};
  const SUBS=['特调饮品','花酒天地','茶饮','一醉千年','葡萄酒','液体面包','缤纷饮品'];
  // 规格 variant 合并: "X(壶)" 行并入同名主行 "X" 的卡片(与纸质菜单一行双价排版一致)
- const byName={};filtered.forEach(d=>{byName[d.name]=d;});
+ // 注意: 变体挂在全局 dishData 对象引用上, 每次渲染前必须清残留, 否则重复叠加
+ filtered.forEach(d=>{ delete d._variants; });
+ const byName={};
+ filtered.forEach(d=>{byName[d.name]=d;});
  const consumedVariants=new Set();
  filtered.forEach(d=>{
   const m=d.name.match(/^(.+)\(壶\)$/);
-  if(m&&byName[m[1]]){const main=byName[m[1]];(main._variants=main._variants||[]).push(d);consumedVariants.add(d.id);}
+  if(m&&byName[m[1]]){const main=byName[m[1]];main._variants=main._variants||[];if(!main._variants.some(v=>v.id===d.id))main._variants.push(d);consumedVariants.add(d.id);}
  });
  filtered.forEach(d=>{
   if(consumedVariants.has(d.id))return;
