@@ -344,7 +344,7 @@ function refreshRecommendationEffect() {
   try {
     const { spawn } = require('child_process');
     const proc = spawn('python', ['recommendation_effect_report.py'], {
-      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe']
+      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true
     });
     proc.on('error', e => logger.warn('生成推荐效果报告失败: ' + e.message));
     proc.on('close', code => { if (code !== 0) logger.warn('生成推荐效果报告失败，退出码: ' + code); });
@@ -942,7 +942,7 @@ app.post('/api/admin/recommendation-effect', (req, res) => {
   try {
     const { spawn } = require('child_process');
     const proc = spawn('python', ['recommendation_effect_report.py'], {
-      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe']
+      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true
     });
     let err = '';
     proc.stderr.on('data', d => { err += d.toString(); });
@@ -976,7 +976,8 @@ app.post('/api/admin/retrain', async (req, res) => {
     const proc = spawn('python', [path.join(__dirname, 'retrain_from_feedback.py')], {
       cwd: __dirname,
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-      stdio: ['ignore', 'ignore', 'pipe']
+      stdio: ['ignore', 'ignore', 'pipe'],
+      windowsHide: true
     });
     // 安全超时：30 秒后清除标志，仅当进程挂起时释放锁（防进程挂起导致标志永久锁定）
     const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; _isRetrainingCheck = false; } }, 30000);
@@ -1462,7 +1463,8 @@ function startPythonWorker() {
   pythonWorker = spawn('python', ['-u', path.join(__dirname, 'predict_worker.py')], {
     cwd: __dirname,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+    env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    windowsHide: true
   });
   workerReady = false;
   workerStartTime = Date.now();
