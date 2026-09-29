@@ -127,8 +127,14 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
  click('delete-account-btn',deleteAccount);click('profile-logout-btn',logout);click('back-to-preference',()=>showSection('preference-section'));
  // 模态框隐藏前移出焦点：焦点留在弹窗内时隐藏会触发 aria-hidden 无障碍警告(Blocked aria-hidden)
- const msgModal=document.getElementById('message-modal');
- if(msgModal)msgModal.addEventListener('hide.bs.modal',()=>{const ae=document.activeElement;if(ae&&msgModal.contains(ae))ae.blur();});
+ // Bootstrap 5 的 hide.bs.modal 事件会冒泡,document 级监听一次覆盖全站所有弹窗(提示框/选桌号/账单等)
+ document.addEventListener('hide.bs.modal',e=>{
+  const modal=e.target;
+  if(modal&&modal.classList&&modal.classList.contains('modal')){
+   const ae=document.activeElement;
+   if(ae&&modal.contains(ae))ae.blur();
+  }
+ });
  // 注:#goto-drinks-btn 在 recommendation-result 内,由 displayRecommendations 事件委托处理(js/recommendation.js)
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
