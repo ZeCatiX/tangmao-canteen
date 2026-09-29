@@ -893,13 +893,16 @@ function addToBlacklist(dishId){if(!currentUser||currentUser==='guest'){showMess
  displayRecommendations();}
 function deleteAccount(){
  const el=document.getElementById('message-modal'),cf=document.getElementById('modal-confirm-btn'),cb=document.getElementById('modal-close-btn');
- document.getElementById('modal-title').textContent='确认注销';document.getElementById('modal-body').textContent='确定要注销账号吗？此操作不可恢复！';
+ document.getElementById('modal-title').textContent='确认注销';document.getElementById('modal-body').innerHTML='确定要注销账号吗？此操作不可恢复！<input type="password" id="delete-pw-input" class="form-control mt-2" placeholder="输入登录密码确认" autocomplete="off" style="text-align:center;">';
  const origCf=cf.onclick,origCb=cb.onclick;
  const cleanup=()=>{cf.onclick=origCf;cb.onclick=origCb;el.removeEventListener('hidden.bs.modal',cleanup);};
- cf.onclick=function(){const username=currentUser;safeFetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
+ cf.onclick=function(){const username=currentUser;const pwInput=document.getElementById('delete-pw-input');const pw=pwInput?(pwInput.value||'').trim():'';
+  if(!pw){if(pwInput){pwInput.style.borderColor='#e74c3c';pwInput.focus();}return;}
+  safeFetch('/api/user/delete',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:username,password:pw})}).then(r=>r.json()).then(d=>{if(d.success){removeUser(username);currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');resetRecommendation();const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();setTimeout(()=>{showMessage('成功','账号已注销',function(){showSection('home-section');});},300);}else{showMessage('注销失败',d.error||'服务器错误');}}).catch(()=>{showMessage('网络错误','注销请求失败，请稍后重试');});};
  cb.onclick=function(){const m=bootstrap.Modal.getInstance(el);if(m)m.hide();cleanup();};
  el.addEventListener('hidden.bs.modal',cleanup);
  el.inert=false;el.removeAttribute('aria-hidden');let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el,{focus:false});m.show();
+ setTimeout(()=>{const p=document.getElementById('delete-pw-input');if(p)p.focus();},300);
   // 聚焦确认按钮
   el.addEventListener('shown.bs.modal', function focusDelHandler() {
     el.removeEventListener('shown.bs.modal', focusDelHandler);

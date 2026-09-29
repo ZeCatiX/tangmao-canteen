@@ -714,11 +714,15 @@ app.post('/api/user/logout', authMiddleware, async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
-// 注销账号（需要JWT认证，且只能注销自己的账号）
+// 注销账号（需要JWT认证，且只能注销自己的账号；需密码二次确认防误触）
 app.post('/api/user/delete', authMiddleware, async (req, res) => {
   try {
     const username = req.user.username;
     if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
+    const { password } = req.body || {};
+    if (!password) return res.status(400).json({ success: false, error: '请输入登录密码确认注销' });
+    const valid = await userStorage.validateLogin(username, password);
+    if (!valid) return res.status(400).json({ success: false, error: '密码验证失败，账号未注销' });
     // 吊销当前token，防止删除后token仍可用
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
