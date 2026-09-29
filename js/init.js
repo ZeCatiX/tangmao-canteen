@@ -125,7 +125,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  (function(){['spiciness','saltiness','sweetness','price','calorie'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(typeof renderPrefCompleteness==='function')renderPrefCompleteness();});});})();
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
- click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
+ click('delete-account-btn',deleteAccount);click('profile-logout-btn',logout);click('back-to-preference',()=>showSection('preference-section'));
  // 注:#goto-drinks-btn 在 recommendation-result 内,由 displayRecommendations 事件委托处理(js/recommendation.js)
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));

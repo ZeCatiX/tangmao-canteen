@@ -1806,7 +1806,16 @@ app.post('/api/recommend/table/swap', tableLimiter, softAuth, async (req, res) =
     if (!candidates.length) return res.status(404).json({ success: false, error: '这个位置已经没有可换的菜了' });
     await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
     candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
-    const top = candidates[0];
+    // 预算感知: 同价位段优先——优先换入"换完人均仍在本档位内"的候选;档内无候选才回退全局最高分(前端以"略超预算"角标提示)
+    let top = candidates[0];
+    const planTotal = Number(req.body.planTotal);
+    const outPrice = Number(req.body.outPrice);
+    if (Number.isFinite(planTotal) && Number.isFinite(outPrice) && planTotal >= 0) {
+      const budgetCap = params.budgetPerPerson * params.partySize;
+      const maxSwapIn = outPrice + (budgetCap - planTotal);
+      const inBudget = candidates.filter(c => (Number(c.price) || 0) <= maxSwapIn + 0.001);
+      if (inBudget.length) top = inBudget[0];
+    }
     const styleKey = ['home', 'banquet', 'checkin'].includes(req.body.style) ? req.body.style : 'home';
     const variant = tableRecommend.VARIANTS.find(v => v.key === styleKey);
     logRecommendationMode(req, '一桌菜换菜');

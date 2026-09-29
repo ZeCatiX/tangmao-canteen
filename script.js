@@ -1567,7 +1567,8 @@ async function swapTableDish(si,dishId,pool,btn){
  var s=tableSets[si];if(!s)return;
  // 排除集=桌上现有菜+本会话已点/购物车（tableNumber 由 lastTableParams 带给服务端再查进行中订单）
  var excl=s.dishes.map(function(d){return d.id;}).concat(collectTableExclusions());
- var params=Object.assign({},lastTableParams||collectTableParams(),{pool:pool,excludeIds:excl,style:s.key});
+ var outDish=s.dishes.find(function(x){return x.id===dishId;});
+ var params=Object.assign({},lastTableParams||collectTableParams(),{pool:pool,excludeIds:excl,style:s.key,planTotal:s.totalPrice,outPrice:outDish?(outDish.price||0):0});
  if(btn){btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i>';}
  try{
   var r=await safeFetch('/api/recommend/table/swap',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(params)});
@@ -1855,7 +1856,7 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  (function(){['spiciness','saltiness','sweetness','price','calorie'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>{if(typeof renderPrefCompleteness==='function')renderPrefCompleteness();});});})();
  click('view-profile-btn',showProfile);click('back-from-profile',()=>showSection('preference-section'));
  click('cancel-favorite-btn',cancelFavorite);click('cancel-blacklist-btn',cancelBlacklist);
- click('delete-account-btn',deleteAccount);click('back-to-preference',()=>showSection('preference-section'));
+ click('delete-account-btn',deleteAccount);click('profile-logout-btn',logout);click('back-to-preference',()=>showSection('preference-section'));
  // 注:#goto-drinks-btn 在 recommendation-result 内,由 displayRecommendations 事件委托处理(js/recommendation.js)
  click('logout-btn',logout);
  click('back-to-recommendations',()=>showSection(ratingReturnTo||'recommendation-section'));
