@@ -50,7 +50,8 @@ function checkApiAvailability(){
  if(apiAvailabilityCache===true&&ca<API_CACHE_DURATION)return Promise.resolve(true);
  if(apiAvailabilityCache===false&&ca<5000)return Promise.resolve(false);
  return new Promise(r=>{
-  const c=new AbortController(),t=setTimeout(()=>c.abort(),3000);
+  // 8s：公网隧道往返实测 5s+（本地毫秒级），3s 会把健康的 ML 误判为不可用而强制降级
+  const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);
   safeFetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
   .then(res=>res.json()).then(d=>{apiAvailabilityCache=!!(d&&d.ready);apiCacheTimestamp=now;r(apiAvailabilityCache);})
   .catch(()=>{apiAvailabilityCache=null;apiCacheTimestamp=0;r(false);}).finally(()=>clearTimeout(t));
