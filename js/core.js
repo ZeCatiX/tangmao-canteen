@@ -882,7 +882,7 @@ async function applyTableChoice(t){
   const oid=parseInt(ssGet('lastOrderId')||'0');
   if(oid){
    try{
-    const r=await safeFetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:t})});
+    const r=await safeFetch('/api/order/'+oid+'/table',{method:'PATCH',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({tableNumber:t,fromTable:cur})});
     const d=await r.json();
     if(!d.success){
      ['lastOrderId','lastOrderTable','lastOrderItems','lastOrderRounds','lastOrderAI','lastOrderStats','sideOrder','orderBackup'].forEach(k=>ssRemove(k));ssRemovePrefix('giftReceipt_');

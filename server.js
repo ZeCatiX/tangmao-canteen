@@ -1190,15 +1190,18 @@ app.post('/api/order', softAuth, async (req, res) => {
 app.post('/api/order/:id/add', softAuth, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
-    const { items } = req.body;
+    const { items, tableNumber } = req.body;
     if (!orderId || !items || !items.length) return res.status(400).json({ success: false, error: '参数无效' });
-    // 归属校验：非管理员只能操作自己的订单（防止篡改他人在途订单）
+    // 归属校验：本人、管理员、或同桌（请求桌号与订单桌号一致——支持游客下单后登录续点，桌号即凭证）
     const effectiveUserId = req.user?.username || 'guest';
     const isAdmin = req.user?.role === 'admin';
     const pool = db;
-    const existing = await pool.query('SELECT items, total_price, status FROM orders WHERE id=$1' + (isAdmin ? '' : ' AND user_id=$2'), isAdmin ? [orderId] : [orderId, effectiveUserId]);
+    const existing = await pool.query('SELECT items, total_price, status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     const row = existing.rows[0];
+    const isOwner = row.user_id === effectiveUserId;
+    const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
+    if (!isAdmin && !isOwner && !isTableMatch) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
     // 服务端重算加菜价格：按 dish id 查 DB，防止客户端篡改价格
     const recomputed = await recomputeOrderItems(pool, items);
@@ -1216,8 +1219,9 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     }
     const oldTotal = parseFloat(row.total_price) || 0;
     const newTotal = Math.round((oldTotal + recomputed.total) * 100) / 100;
-    await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4' + (isAdmin ? '' : ' AND user_id=$5'),
-      isAdmin ? [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId] : [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId, effectiveUserId]);
+    const upd = await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4 AND status NOT IN (\'completed\',\'cancelled\')',
+      [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]);
+    if (upd.rowCount === 0) return res.status(400).json({ success: false, error: '订单状态已变化，不能加菜' });
     res.json({ success: true, message: '加菜成功', orderId, addedCount: items.length, totalPrice: newTotal, dishCount: mergedItems.length });
   } catch (e) { logger.error('加菜API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
@@ -1226,15 +1230,20 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
 app.patch('/api/order/:id/table', softAuth, async (req, res) => {
   try {
     const orderId = parseInt(req.params.id);
-    const { tableNumber } = req.body;
+    const { tableNumber, fromTable } = req.body;
     if (!orderId || !tableNumber) return res.status(400).json({ success: false, error: '参数无效' });
-    // 归属校验：非管理员只能改自己的在途订单桌号
+    // 归属校验：本人、管理员、或同桌（fromTable=订单当前桌号——游客下单后登录挪桌，旧桌号即凭证）
     const effectiveUserId = req.user?.username || 'guest';
     const isAdmin = req.user?.role === 'admin';
     const pool = db;
     const colCheck = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'");
     if (colCheck.rows.length === 0) return res.json({ success: false, error: '订单表不支持桌号' });
-    const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled')" + (isAdmin ? "" : " AND user_id=$3") + " RETURNING id", isAdmin ? [String(tableNumber), orderId] : [String(tableNumber), orderId, effectiveUserId]);
+    const own = await pool.query('SELECT user_id, table_number, status FROM orders WHERE id=$1', [orderId]);
+    if (own.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或无权操作' });
+    const isOwner = own.rows[0].user_id === effectiveUserId;
+    const isTableMatch = own.rows[0].table_number && fromTable && String(own.rows[0].table_number) === String(fromTable);
+    if (!isAdmin && !isOwner && !isTableMatch) return res.status(400).json({ success: false, error: '订单不存在或无权操作' });
+    const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled') RETURNING id", [String(tableNumber), orderId]);
     if (r.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或无权操作' });
     res.json({ success: true, orderId, tableNumber });
   } catch (e) { logger.error('改桌号API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
