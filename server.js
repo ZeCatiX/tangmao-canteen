@@ -1133,6 +1133,22 @@ app.get('/api/admin/recommendation-stats', async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 起售数量校验：从菜品备注(serving)解析"X个起"，校验各菜品最终数量≥最小起售量
+// items 应为合并后的最终状态（建单=新items；加菜=merged）
+function validateMinQty(items, dishMeta) {
+  const bad = [];
+  for (const it of items) {
+    const meta = dishMeta.get(parseInt(it.id));
+    if (!meta) continue;
+    const m = String(meta.serving || '').match(/(\d+)\s*个?起/);
+    if (!m) continue;
+    const min = parseInt(m[1], 10);
+    const qty = parseInt(it.qty) || 1;
+    if (qty < min) bad.push((meta.name || ('菜品' + it.id)) + ' 需' + min + '个起售（当前' + qty + '个）');
+  }
+  return bad;
+}
+
 // 服务端重算订单价格：按 dish id 查 DB，拒绝客户端价格；赠菜受方(giftFrom)记 0 元
 async function recomputeOrderItems(pool, items) {
   const ids = items.map(i => parseInt(i.id)).filter(n => !isNaN(n));
@@ -1167,6 +1183,12 @@ app.post('/api/order', softAuth, async (req, res) => {
     const recomputed = await recomputeOrderItems(pool, items);
     if (!recomputed) return res.status(400).json({ success: false, error: '订单包含无效菜品' });
     const { validated: validatedItems, total: totalPrice } = recomputed;
+    // 起售数量校验：X个起 的菜低于最小起售量直接拒单
+    const metaIds = [...new Set(validatedItems.map(i => parseInt(i.id)))];
+    const metaR = await pool.query('SELECT id, name, serving FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
+    const dishMeta = new Map(metaR.rows.map(r => [r.id, r]));
+    const minBad = validateMinQty(validatedItems, dishMeta);
+    if (minBad.length) return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
     // 幂等性检查：同一用户 10 秒内相同内容且仍在进行中(pending/confirmed)的订单视为重复
     // 已完成/取消的单不算重复——顾客上单送达后重下相同单应新建
     const itemsStr = JSON.stringify(validatedItems);
@@ -1229,6 +1251,17 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     }
     const oldTotal = parseFloat(row.total_price) || 0;
     const newTotal = Math.round((oldTotal + recomputed.total) * 100) / 100;
+    // 起售数量校验（合并口径）：同 id 订单已有数量 + 新加数量 ≥ 最小起售量
+    const existingById = new Map();
+    (Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]')).forEach(x => {
+      const q = parseInt(x.qty || x.quantity, 10) || 0;
+      existingById.set(parseInt(x.id), (existingById.get(parseInt(x.id)) || 0) + q);
+    });
+    const metaIds = [...new Set([...mergedItems.map(i => parseInt(i.id)), ...existingById.keys()])];
+    const metaR = await pool.query('SELECT id, name, serving FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
+    const dishMeta = new Map(metaR.rows.map(r => [r.id, r]));
+    const minBad = validateMinQty(mergedItems, dishMeta);
+    if (minBad.length) return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
     const upd = await pool.query('UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4 AND status NOT IN (\'completed\',\'cancelled\')',
       [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]);
     if (upd.rowCount === 0) return res.status(400).json({ success: false, error: '订单状态已变化，不能加菜' });
