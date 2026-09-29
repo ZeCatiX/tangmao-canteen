@@ -1,6 +1,7 @@
 // 唐猫庭院 - 生产环境服务器 v2
 require('dotenv').config();
 const express = require('express');
+const compression = require('compression');
 const cors = require('cors');
 const helmet = require('helmet');
 const fs = require('fs');
@@ -149,6 +150,9 @@ app.use('/api/admin/login', adminLoginLimiter);
 // 请求体解析
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// 响应 gzip 压缩：HTML/JS/CSS/JSON 传输体积约降 70%，对隧道/公网访问提速显著
+app.use(compression());
 
 // 请求日志
 // 错误处理
