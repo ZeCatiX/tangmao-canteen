@@ -354,7 +354,10 @@ function setTableRiceQty(si,qty){
 function addTableDishToCart(si,dishId){
  var s=tableSets[si];if(!s)return;
  var d=s.dishes.find(function(x){return x.id===dishId;});
- if(d)addToCart({id:d.id,name:d.name,price:d.price,image_url:d.image_url},1);
+ if(!d)return;
+ // 按步进器调好的数量加购（未动过的菜默认 1，起售菜不低于起售量）
+ var q=d._qty||minQtyOf(d)||1;
+ addToCart({id:d.id,name:d.name,price:d.price,image_url:d.image_url,serving:d.serving},q);
 }
 function addTableSetToCart(si){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
