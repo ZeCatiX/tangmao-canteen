@@ -1741,6 +1741,7 @@ function dishToResult(d, pool) {
   return {
     id: d.id, name: d.name, category: d.category, spiciness: d.spiciness,
     price: Math.round((Number(d.price) || 0) * 100) / 100,
+    price_unit: d.price_unit || '', serving: d.serving || '',
     image_url: d.image_url || '', qty: 1, pool,
     matchPct: Math.min(100, Math.max(0, Math.round((d._score || 0) / 5 * 100))),
   };

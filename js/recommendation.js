@@ -214,8 +214,22 @@ async function submitTableBuilder(){
  try{
   var r=await safeFetch('/api/recommend/table',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(params)});
   var d=await r.json();
-  if(d.success&&Array.isArray(d.sets)&&d.sets.length){
+   if(d.success&&Array.isArray(d.sets)&&d.sets.length){
    tableSets=d.sets;
+   // 起售归一化: X个起 的菜按最小起售量计入席面总价(与纸质菜单/加购一致), 行上标 ×数量
+   var ps=(lastTableParams&&lastTableParams.partySize)||1;
+   tableSets.forEach(function(s){
+    var adjusted=[];
+    s.totalPrice=0;
+    s.dishes.forEach(function(d){
+     var min=minQtyOf(d);
+     if(min>1){d._qty=min;adjusted.push(d.name+'×'+min);}
+     s.totalPrice=Math.round(((s.totalPrice||0)+d.price*(d._qty||1))*100)/100;
+    });
+    (s.autoItems||[]).forEach(function(d){s.totalPrice=Math.round(((s.totalPrice||0)+d.price*d.qty)*100)/100;});
+    s.perPerson=ps?Math.round(s.totalPrice/ps*100)/100:s.totalPrice;
+    s._adjusted=adjusted;
+   });
    tableSwappedOut=[];
    lastTableMeta={excludedOrdered:d.excludedOrdered||0,usedProfile:!!d.usedProfile};
    renderTableSets();
@@ -251,7 +265,7 @@ async function submitTableBuilder(){
      +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+(d.serving?' · '+esc(d.serving):'')+'</span></div>'
      +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+esc(d.reason)+'</div>'
     +'</div>'
-    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+'</div>'
+     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+(d._qty>1?'<span style="font-size:0.75rem;color:var(--text-light);"> ×'+d._qty+'</span>':'')+'</div>'
     +'<button class="btn btn-sm table-swap-btn" data-set="'+si+'" data-id="'+d.id+'" data-pool="'+esc(d.pool)+'" title="换一道" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-arrow-repeat"></i> 换</button>'
     +'<button class="btn btn-sm table-addone-btn" data-set="'+si+'" data-id="'+d.id+'" title="单点加购" style="background:transparent;border:1px solid rgba(201,169,110,0.5);color:var(--text);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-plus-lg"></i> 加</button>'
    +'</div>';
@@ -301,9 +315,10 @@ async function swapTableDish(si,dishId,pool,btn){
    if(idx>-1){
     var old=s.dishes[idx];
     tableSwappedOut.push(old.id);
+    var newMin=minQtyOf(d.dish);d.dish._qty=newMin;
     s.dishes[idx]=d.dish;
-    var ps=(lastTableParams&&lastTableParams.partySize)||1;
-    s.totalPrice=Math.round((s.totalPrice-(old.price||0)+(d.dish.price||0))*100)/100;
+    var oldQty=old._qty||1;
+    s.totalPrice=Math.round((s.totalPrice-(old.price||0)*oldQty+(d.dish.price||0)*newMin)*100)/100;
     s.perPerson=Math.round(s.totalPrice/ps*100)/100;
     s.overBudget=s.totalPrice>(lastTableParams?lastTableParams.budgetPerPerson*ps:s.totalPrice);
    }
@@ -341,7 +356,7 @@ function addTableSetToCart(si){
  var cart=getCart();
  var adjusted=[];
  s.dishes.forEach(function(d){
-  var min=minQtyOf(d);
+  var min=d._qty||minQtyOf(d);
   var i=cart.findIndex(function(x){return x.id===d.id;});
   if(i>=0)cart[i].qty=(cart[i].qty||1)+1;
   else{
