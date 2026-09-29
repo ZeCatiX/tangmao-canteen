@@ -5,12 +5,18 @@ const assert = require('node:assert');
 const BASE = 'http://localhost:3000';
 
 async function api(path, opts = {}) {
-  const r = await fetch(BASE + path, Object.assign({ headers: { 'Content-Type': 'application/json' } }, opts, opts.body ? { body: opts.body } : {}));
-  return r.json();
+  const { headers = {}, body } = opts;
+  const r = await fetch(BASE + path, Object.assign({}, opts, {
+    headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+    body
+  }));
+  const j = await r.json().catch(() => ({ __parseError: true }));
+  j.__status = r.status;
+  return j;
 }
 
 describe('加菜归属：游客单登录后续点（同桌凭证）', () => {
-  const uname = 'reg_add_' + Date.now();
+  const uname = 'reg' + Date.now();
   const password = 'Test1234';
   let orderId = 0;
   let token = '';
@@ -33,6 +39,7 @@ describe('加菜归属：游客单登录后续点（同桌凭证）', () => {
   });
 
   it('登录后同桌(07)加菜应成功——修复点', async () => {
+    assert.ok(orderId > 0, 'orderId 无效: ' + orderId);
     const d = await api('/api/order/' + orderId + '/add', { method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ items: [{ id: 2070, name: '唐猫酸汤锅子鱼', price: 78, qty: 1, type: '购物车' }], tableNumber: '07' }) });
