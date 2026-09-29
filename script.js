@@ -1201,6 +1201,14 @@ function showCart(){
 async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
+ // 起售数量闸门：任何菜品低于最小起售量（X个起）则拦截结算——最终防线，兜住所有漏网路径
+ const violations=[];
+ cart.forEach(x=>{
+  const dish=dishData.find(d=>d.id===x.id);
+  const min=minQtyOf(dish||{});
+  if(min>1&&(x.qty||1)<min)violations.push((x.name||'菜品')+' 需'+min+'个起售（当前'+(x.qty||1)+'个）');
+ });
+ if(violations.length){showMessage('起售数量不足',violations.join('；')+'，请调整数量后结算',null,5000);return;}
  if(bEl)bEl.disabled=true;
  // 桌号：恒用锁定桌号（选桌后即锁定，改桌请用「更换/挪桌」）
  const tableNumber=ssGet('lockedTable')||'';
@@ -1582,13 +1590,20 @@ async function submitTableBuilder(){
  box.innerHTML=notesHtml+tableSets.map(function(s,si){
   var color=styleColors[s.style]||'var(--gold)';
   var rows=s.dishes.map(function(d){
+   var q=d._qty||1;
+   var stepper='<div class="d-flex align-items-center justify-content-end gap-1" style="width:96px;">'
+    +'<button class="btn btn-sm table-qty-minus" data-set="'+si+'" data-id="'+d.id+'" title="减少" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:0.95rem;'+(q<=1?'opacity:0.35;':'')+'">−</button>'
+    +'<span style="min-width:34px;text-align:center;font-size:0.95rem;font-weight:600;">'+q+'</span>'
+    +'<button class="btn btn-sm table-qty-plus" data-set="'+si+'" data-id="'+d.id+'" title="增加" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:var(--gold);border:none;color:#fff;font-size:0.95rem;">＋</button>'
+    +'</div>';
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
      +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+(d.serving?' · '+esc(d.serving):'')+'</span></div>'
      +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+esc(d.reason)+'</div>'
     +'</div>'
-     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+(d._qty>1?'<span style="font-size:0.75rem;color:var(--text-light);"> ×'+d._qty+'</span>':'')+'</div>'
+    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+'</div>'
+    +stepper
     +'<button class="btn btn-sm table-swap-btn" data-set="'+si+'" data-id="'+d.id+'" data-pool="'+esc(d.pool)+'" title="换一道" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-arrow-repeat"></i> 换</button>'
     +'<button class="btn btn-sm table-addone-btn" data-set="'+si+'" data-id="'+d.id+'" title="单点加购" style="background:transparent;border:1px solid rgba(201,169,110,0.5);color:var(--text);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-plus-lg"></i> 加</button>'
    +'</div>';
@@ -1703,6 +1718,26 @@ function addTableSetToCart(si){
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src){
  return new Promise(function(res,rej){var im=new Image();im.onload=function(){res(im);};im.onerror=rej;im.src=src;});
+}
+// 按当前各菜数量重算席面总价与人均（步进器/换菜/起售调整后统一走这里）
+function recalcTableSetTotals(s){
+ var t=0;
+ s.dishes.forEach(function(d){t+=d.price*(d._qty||1);});
+ (s.autoItems||[]).forEach(function(d){if(d.qty>0)t+=d.price*d.qty;});
+ s.totalPrice=Math.round(t*100)/100;
+ var ps=(lastTableParams&&lastTableParams.partySize)||1;
+ s.perPerson=ps?Math.round(s.totalPrice/ps*100)/100:0;
+}
+// 席面菜品数量步进：−/＋ 调整某道菜数量（下限=最小起售量），实时重算席面总价
+function changeTableDishQty(si,id,delta){
+ var s=tableSets[si];if(!s)return;
+ var d=s.dishes.find(function(x){return x.id===id;});if(!d)return;
+ var min=Math.max(1,minQtyOf(d));
+ var cur=d._qty||1;
+ var nv=cur+delta;
+ if(nv<min){showMessage('起售数量','「'+d.name+'」'+min+'个起售，数量不能低于 '+min);return;}
+ if(nv>99){showMessage('提示','数量最多 99');return;}
+ d._qty=nv;recalcTableSetTotals(s);renderTableSets();
 }
 function canvasRoundRect(ctx,x,y,w,h,r){
  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
@@ -1899,6 +1934,11 @@ document.addEventListener('DOMContentLoaded',function(){
   if(riceMinus){const si=parseInt(riceMinus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty-1);return;}
   const ricePlus=e.target.closest('.table-rice-plus');
   if(ricePlus){const si=parseInt(ricePlus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty+1);return;}
+  // 席面菜品数量步进器：− 不低于最小起售量，＋ 自由加，总价/人均实时重算
+  const qMinus=e.target.closest('.table-qty-minus');
+  if(qMinus){changeTableDishQty(parseInt(qMinus.dataset.set),parseInt(qMinus.dataset.id),-1);return;}
+  const qPlus=e.target.closest('.table-qty-plus');
+  if(qPlus){changeTableDishQty(parseInt(qPlus.dataset.set),parseInt(qPlus.dataset.id),1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
  });

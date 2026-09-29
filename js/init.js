@@ -99,6 +99,11 @@ document.addEventListener('DOMContentLoaded',function(){
   if(riceMinus){const si=parseInt(riceMinus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty-1);return;}
   const ricePlus=e.target.closest('.table-rice-plus');
   if(ricePlus){const si=parseInt(ricePlus.dataset.set);const it=tableSets[si]&&tableSets[si].autoItems&&tableSets[si].autoItems[0];if(it)setTableRiceQty(si,it.qty+1);return;}
+  // 席面菜品数量步进器：− 不低于最小起售量，＋ 自由加，总价/人均实时重算
+  const qMinus=e.target.closest('.table-qty-minus');
+  if(qMinus){changeTableDishQty(parseInt(qMinus.dataset.set),parseInt(qMinus.dataset.id),-1);return;}
+  const qPlus=e.target.closest('.table-qty-plus');
+  if(qPlus){changeTableDishQty(parseInt(qPlus.dataset.set),parseInt(qPlus.dataset.id),1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
  });
