@@ -52,8 +52,10 @@ function safeFetch(url, opts) {
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
 function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
 function minQtyOf(dish){
- if(!dish||!dish.serving)return 1;
- const m=String(dish.serving).match(/(\d+)\s*个?起/);
+ if(!dish)return 1;
+ // 起售备注可能在 serving 或 description 字段（历史数据不一致）
+ const src=((dish.serving||'')+' '+(dish.description||''));
+ const m=src.match(/(\d+)\s*个?起/);
  return m?Math.max(1,parseInt(m[1],10)):1;
 }
 function addToCart(dish,qty){
