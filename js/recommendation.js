@@ -248,7 +248,7 @@ async function submitTableBuilder(){
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
-     +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+'</span></div>'
+     +'<div class="dish-name-serif">'+esc(d.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(d.category)+' · '+esc(d.spiciness)+(d.serving?' · '+esc(d.serving):'')+'</span></div>'
      +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+esc(d.reason)+'</div>'
     +'</div>'
     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+'</div>'
@@ -337,11 +337,18 @@ function addTableDishToCart(si,dishId){
 function addTableSetToCart(si){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
  // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
+ // 起售数量：X个起 的菜品整桌加购时按最小起售量入车（如核桃包3个起→×3），并在提示中说明
  var cart=getCart();
+ var adjusted=[];
  s.dishes.forEach(function(d){
+  var min=minQtyOf(d);
   var i=cart.findIndex(function(x){return x.id===d.id;});
   if(i>=0)cart[i].qty=(cart[i].qty||1)+1;
-  else cart.push({id:d.id,name:d.name,price:d.price,qty:1,image:d.image_url||''});
+  else{
+   var q=Math.max(1,min);
+   cart.push({id:d.id,name:d.name,price:d.price,qty:q,image:d.image_url||''});
+   if(q>1)adjusted.push(d.name+'×'+q);
+  }
  });
  (s.autoItems||[]).forEach(function(d){
   if(d.qty<=0)return;
@@ -352,7 +359,8 @@ function addTableSetToCart(si){
  saveCart(cart);updateCartBadge();
  var riceQty=(s.autoItems&&s.autoItems[0]&&s.autoItems[0].qty)||0;
  var riceNote=riceQty>0?'（含米饭×'+riceQty+'）':'（未加米饭）';
- showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+'已加购，可去购物车结算',null,2500);
+ var adjNote=adjusted.length?'；起售调整：'+adjusted.join('、'):'';
+ showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+'已加购'+adjNote+'，可去购物车结算',null,4000);
 }
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src){
