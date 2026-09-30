@@ -1576,6 +1576,14 @@ var tableSets=[];          // 当前三套方案
 var lastTableParams=null;  // 生成时的入参，换单道时复用
 var tableDrinksMode=null;  // 一席成宴"去选饮品"模式：当前正在配饮品的席面下标
 var lastTableMeta=null;    // 服务端返回的元信息（已点排除数/是否用了口味档案）
+// 席面口径默认数量: "X个起"的按个卖菜至少给到用餐人数(4人桌核桃包×4而非起售的×3,不够分不如不排);
+// 非起售菜与束缚型规格(4个/笼、3碗、6块——"份"不可拆)不按人数补齐,仍为 1 份
+function tableDefaultQtyOf(dish){
+ var min=minQtyOf(dish)||1;
+ if(min<=1)return 1;
+ var ps=(lastTableParams&&lastTableParams.partySize)||0;
+ return Math.min(99,Math.max(min,ps));
+}
 function prefillTableBuilder(){
  // 登录用户从口味档案带出辣度/忌口
  var prefs=null;
@@ -1644,14 +1652,15 @@ async function submitTableBuilder(){
    if(d.success&&Array.isArray(d.sets)&&d.sets.length){
    tableSets=d.sets;
    tableDrinksMode=null;
-   // 起售归一化: X个起 的菜按最小起售量计入席面总价(与纸质菜单/加购一致), 行上标 ×数量
+   // 起售+人数归一化: X个起 的按个卖菜按 max(起售量,人数) 计入席面总价(4人桌核桃包×4), 行上标 ×数量;
+   // 束缚型规格(笼/碗/块)仍按 1 份, 与纸质菜单/加购口径一致
    var ps=(lastTableParams&&lastTableParams.partySize)||1;
    tableSets.forEach(function(s){
     var adjusted=[];
     s.totalPrice=0;
     s.dishes.forEach(function(d){
      var min=minQtyOf(d);
-     if(min>1){d._qty=min;adjusted.push(d.name+'×'+min);}
+     if(min>1){d._qty=tableDefaultQtyOf(d);adjusted.push(d.name+'×'+d._qty);}
      s.totalPrice=Math.round(((s.totalPrice||0)+d.price*(d._qty||1))*100)/100;
     });
     (s.autoItems||[]).forEach(function(d){s.totalPrice=Math.round(((s.totalPrice||0)+d.price*d.qty)*100)/100;});
@@ -1769,7 +1778,7 @@ async function swapTableDish(si,dishId,pool,btn){
    if(idx>-1){
     var old=s.dishes[idx];
     tableSwappedOut.push(old.id);
-    var newMin=minQtyOf(d.dish);d.dish._qty=newMin;
+    var newMin=tableDefaultQtyOf(d.dish);d.dish._qty=newMin;
     s.dishes[idx]=d.dish;
     var oldQty=old._qty||1;
     s.totalPrice=Math.round((s.totalPrice-(old.price||0)*oldQty+(d.dish.price||0)*newMin)*100)/100;
@@ -1802,14 +1811,14 @@ function addTableDishToCart(si,dishId){
  var s=tableSets[si];if(!s)return;
  var d=s.dishes.find(function(x){return x.id===dishId;});
  if(!d)return;
- // 按步进器调好的数量加购（未动过的菜默认 1，起售菜不低于起售量）
+ // 按步进器调好的数量加购（未动过的起售菜默认 max(起售量,人数)，其余默认 1）
  var q=d._qty||minQtyOf(d)||1;
  addToCart({id:d.id,name:d.name,price:d.price,image_url:d.image_url,serving:d.serving},q);
 }
 function addTableSetToCart(si){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
  // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
- // 起售数量：X个起 的菜品整桌加购时按最小起售量入车（如核桃包3个起→×3），并在提示中说明
+ // 起售数量：X个起 的菜品整桌加购按席面默认数量(max(起售量,人数))入车（如4人桌核桃包→×4），并在提示中说明
  // 已选饮品（chosenDrinkIds）已在购物车中，不重复加
  var cart=getCart();
  var adjusted=[];
