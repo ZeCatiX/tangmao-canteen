@@ -1672,16 +1672,22 @@ async function submitTableBuilder(){
     +'</div>'
    +'</div>';
   }).join('');
-  // 已选饮品行（"去选饮品"入口加入的，数量以购物车实时为准，含在席面总计中）
+  // 已选饮品行（"去选饮品"入口加入的，数量以购物车实时为准，含在席面总计中，可在席面上步进调整）
   var drinkRows=(s.chosenDrinkIds||[]).map(function(id){
    var c=getCart().find(function(x){return x.id===id;});
    if(!c)return '';
+   var q=c.qty||1;
    return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(c.image,52,c.name)
     +'<div class="flex-grow-1" style="min-width:0;">'
      +'<div class="dish-name-serif">🍹 '+esc(c.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">已选饮品</span></div>'
     +'</div>'
-    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(c.price))+'×'+(c.qty||1)+'</div>'
+    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(c.price))+'</div>'
+    +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:96px;">'
+     +'<button class="btn btn-sm table-drink-minus" data-id="'+c.id+'" title="减少" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:0.95rem;">−</button>'
+     +'<span style="min-width:34px;text-align:center;font-size:0.95rem;font-weight:600;">'+q+'</span>'
+     +'<button class="btn btn-sm table-drink-plus" data-id="'+c.id+'" title="增加" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:var(--gold);border:none;color:#fff;font-size:0.95rem;">＋</button>'
+    +'</div>'
    +'</div>';
   }).join('');
   return '<div class="card mb-4 shadow-sm table-set-card" style="border:1px solid rgba(201,169,110,0.35);background:var(--cream);">'
@@ -1808,6 +1814,15 @@ function changeTableDishQty(si,id,delta){
  if(nv>99){showMessage('提示','数量最多 99');return;}
  d._qty=nv;recalcTableSetTotals(s);renderTableSets();
 }
+// 席面已选饮品步进：−/＋ 改购物车实时数量（减到 0 整项取消，与购物车语义一致）
+function changeTableDrinkQty(id,delta){
+ var c=getCart().find(function(x){return x.id===id;});if(!c)return;
+ var nq=(c.qty||1)+delta;
+ if(nq<=0)removeFromCart(id);else updateCartQty(id,nq);
+ recalcTableSetTotalsAll();renderTableSets();
+}
+// 三套席面全部重算（饮品数量改动会影响所属席面总价）
+function recalcTableSetTotalsAll(){tableSets.forEach(recalcTableSetTotals);}
 function canvasRoundRect(ctx,x,y,w,h,r){
  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
 }
@@ -2008,6 +2023,11 @@ document.addEventListener('DOMContentLoaded',function(){
   if(qMinus){changeTableDishQty(parseInt(qMinus.dataset.set),parseInt(qMinus.dataset.id),-1);return;}
   const qPlus=e.target.closest('.table-qty-plus');
   if(qPlus){changeTableDishQty(parseInt(qPlus.dataset.set),parseInt(qPlus.dataset.id),1);return;}
+  // 席面已选饮品步进：改购物车实时数量（减到 0 整项取消）
+  const dMinus=e.target.closest('.table-drink-minus');
+  if(dMinus){changeTableDrinkQty(parseInt(dMinus.dataset.id),-1);return;}
+  const dPlus=e.target.closest('.table-drink-plus');
+  if(dPlus){changeTableDrinkQty(parseInt(dPlus.dataset.id),1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);return;}
   const drinks=e.target.closest('.table-drinks-btn');

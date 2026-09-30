@@ -104,6 +104,11 @@ document.addEventListener('DOMContentLoaded',function(){
   if(qMinus){changeTableDishQty(parseInt(qMinus.dataset.set),parseInt(qMinus.dataset.id),-1);return;}
   const qPlus=e.target.closest('.table-qty-plus');
   if(qPlus){changeTableDishQty(parseInt(qPlus.dataset.set),parseInt(qPlus.dataset.id),1);return;}
+  // 席面已选饮品步进：改购物车实时数量（减到 0 整项取消）
+  const dMinus=e.target.closest('.table-drink-minus');
+  if(dMinus){changeTableDrinkQty(parseInt(dMinus.dataset.id),-1);return;}
+  const dPlus=e.target.closest('.table-drink-plus');
+  if(dPlus){changeTableDrinkQty(parseInt(dPlus.dataset.id),1);return;}
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);return;}
   const drinks=e.target.closest('.table-drinks-btn');
