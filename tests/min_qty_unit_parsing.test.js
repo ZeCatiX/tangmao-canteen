@@ -43,6 +43,17 @@ async function findDish(name) {
   return list.find(x => x.name === name) || null;
 }
 
+// 建菜后服务端异步刷 dishData 缓存, 下单前轮询等缓存可见(与 /api/dishes 同源)
+async function waitDish(name, timeoutMs = 3000) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const dish = await findDish(name);
+    if (dish) return dish;
+    if (Date.now() > deadline) return null;
+    await new Promise(res => setTimeout(res, 200));
+  }
+}
+
 async function cleanup() {
   for (const oid of orderIds) {
     await fetch(BASE + '/api/orders/' + oid + '/status', {
@@ -67,7 +78,7 @@ after(cleanup);
 
 test('serving="2盒起": 下单1件被400拒单, 2件放行——量词不再限于"个"', async () => {
   const id = await createDish('测试盒起菜', '2盒起', '');
-  const dish = await findDish('测试盒起菜');
+  const dish = await waitDish('测试盒起菜');
   assert.ok(dish, '测试菜应可见');
   const low = await placeOrder({ ...dish, id }, 1);
   assert.equal(low.success, false, '低于2盒起应拒单');
@@ -77,7 +88,7 @@ test('serving="2盒起": 下单1件被400拒单, 2件放行——量词不再限
 
 test('serving 缺失但 description="3瓶起": 服务端同样按起售拒单——双字段口径与前端一致', async () => {
   const id = await createDish('测试描述起售菜', '', '3瓶起');
-  const dish = await findDish('测试描述起售菜');
+  const dish = await waitDish('测试描述起售菜');
   assert.ok(dish, '测试菜应可见');
   const low = await placeOrder({ ...dish, id }, 2);
   assert.equal(low.success, false, 'description 起售 3, 下 2 件应拒单');
