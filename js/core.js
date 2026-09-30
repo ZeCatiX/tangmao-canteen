@@ -484,6 +484,8 @@ function renderMenuTable(){
  }
  container.innerHTML='<div class="dish-grid">'+html+'</div>';
  document.getElementById('menu-count').textContent=filtered.length+'/'+dishData.length;
+ // 选饮品模式横幅随菜单重绘恢复（renderMenuTable 会重绘菜单容器周边 DOM）
+ if(typeof renderDrinksModeBanner==='function')renderDrinksModeBanner();
 }
 
 function login(){
