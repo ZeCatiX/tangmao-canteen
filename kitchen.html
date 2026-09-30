@@ -92,6 +92,31 @@
     }
 
     // 登录逻辑
+    // 新单声音提醒（P1-2）：厨房师傅不看屏幕，来新单必须有声
+    var _audio = null, _knownIds = null;
+    function _audioCtx() {
+      _audio = _audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (_audio.state === 'suspended') _audio.resume();
+      return _audio;
+    }
+    function beepNewOrders(n) {
+      try {
+        var ctx = _audioCtx(), t = ctx.currentTime;
+        for (var i = 0; i < Math.min(n, 3); i++) {
+          [880, 1245].forEach(function(f, k) {
+            var o = ctx.createOscillator(), g = ctx.createGain();
+            o.type = 'sine'; o.frequency.value = f;
+            var st = t + i * 0.5 + k * 0.16;
+            g.gain.setValueAtTime(0.35, st);
+            g.gain.exponentialRampToValueAtTime(0.001, st + 0.14);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(st); o.stop(st + 0.15);
+          });
+        }
+      } catch (e) {}
+    }
+    // 浏览器自动播放策略：任意一次用户点击即解锁音频（登录点击天然满足）
+    document.addEventListener('click', function() { try { _audioCtx(); } catch (e) {} }, { once: true });
     function doLogin() {
       const user = document.getElementById('login-user').value.trim();
       const pass = document.getElementById('login-pass').value.trim();
@@ -129,6 +154,13 @@
         .then(d => {
           if (!d) return;
           if (!d.success) return;
+          // 新单检测：与上一轮已知单号比对，有新单即响铃
+          var ids = (d.orders || []).map(function(o) { return o.id; });
+          if (_knownIds !== null) {
+            var fresh = ids.filter(function(id) { return _knownIds.indexOf(id) < 0; });
+            if (fresh.length) beepNewOrders(fresh.length);
+          }
+          _knownIds = ids;
           const container = document.getElementById('order-list');
           if (!d.orders || d.orders.length === 0) {
             container.innerHTML = '<div class="empty">📋 暂无待处理订单</div>';
