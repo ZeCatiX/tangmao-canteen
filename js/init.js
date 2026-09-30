@@ -105,7 +105,9 @@ document.addEventListener('DOMContentLoaded',function(){
   const qPlus=e.target.closest('.table-qty-plus');
   if(qPlus){changeTableDishQty(parseInt(qPlus.dataset.set),parseInt(qPlus.dataset.id),1);return;}
   const share=e.target.closest('.table-share-btn');
-  if(share){shareTableSetImage(parseInt(share.dataset.set),share);}
+  if(share){shareTableSetImage(parseInt(share.dataset.set),share);return;}
+  const drinks=e.target.closest('.table-drinks-btn');
+  if(drinks){gotoDrinksCategory();return;}
  });
  // 一桌菜忌口"无"与其他项互斥（同偏好表单联动规则）
  const tanone=$('table-allergy-none'),taboxes=document.querySelectorAll('input[name="table-allergy"]');
