@@ -454,7 +454,7 @@ function renderMenuTable(){
   const ci=cart.find(c=>c.id===d.id);
   const qty=ci?(ci.qty||1):0;
   const defaultImg='/assets/illustrations/missing-dish-cat.webp';
-  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
+  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.src=\''+defaultImg+'\'">':(d.image_url?'<span class="dish-emoji" style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
   const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">招牌</span> ':'';
   // 价格+加购区: 有规格变体时逐规格一行(各带加购), 否则单行
   const unitLabel=d=>(d.price_unit||'/份').replace(/^\//,'');
@@ -1044,7 +1044,7 @@ function showCart(){
    const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(dish.price_unit)+'</span>':'';
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
-   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'</td>'
+   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span class="dish-emoji" style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'</td>'
     +'<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>'
     +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:38px;height:30px;font-size:0.82rem;font-weight:600;padding:0;border-radius:0;border-left:1px solid #dee2e6;border-right:1px solid #dee2e6;text-align:center;display:flex;align-items:center;justify-content:center;">'
     +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div></td>'
