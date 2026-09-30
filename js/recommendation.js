@@ -374,6 +374,7 @@ async function swapTableDish(si,dishId,pool,btn){
  var excl=s.dishes.map(function(d){return d.id;}).concat(collectTableExclusions());
  var outDish=s.dishes.find(function(x){return x.id===dishId;});
  var params=Object.assign({},lastTableParams||collectTableParams(),{pool:pool,excludeIds:excl,outId:dishId,style:s.key,planTotal:s.totalPrice,outPrice:outDish?(outDish.price||0):0});
+ var ps=(lastTableParams&&lastTableParams.partySize)||1;
  if(btn){btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i>';}
  try{
   var r=await safeFetch('/api/recommend/table/swap',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify(params)});
