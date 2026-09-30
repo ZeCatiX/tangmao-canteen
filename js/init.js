@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded',function(){
   const share=e.target.closest('.table-share-btn');
   if(share){shareTableSetImage(parseInt(share.dataset.set),share);return;}
   const drinks=e.target.closest('.table-drinks-btn');
-  if(drinks){gotoDrinksCategory();return;}
+  if(drinks){gotoDrinksCategory(parseInt(drinks.dataset.set));return;}
  });
  const tanone=$('table-allergy-none'),taboxes=document.querySelectorAll('input[name="table-allergy"]');
  if(tanone){tanone.addEventListener('change',function(){taboxes.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)taboxes.forEach(cb=>cb.disabled=false);});taboxes.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){tanone.checked=false;tanone.disabled=false;}}));}
