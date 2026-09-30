@@ -2376,7 +2376,8 @@ click('view-cached-btn', () => {
  if(!localStorage.getItem('orderedDishes'))localStorage.setItem('orderedDishes','[]');
  // 触控滑动支持（左滑拉黑，右滑收藏）
  let touchStartX=0,touchStartY=0,touchEl=null;
- document.addEventListener('storage',function(e){
+ // storage 事件派发到 window，挂在 document 上收不到——跨标签页购物车同步必须挂 window
+ window.addEventListener('storage',function(e){
  if(e.key==='cart'){updateCartBadge();const cs=document.getElementById('cart-section');if(cs&&cs.classList.contains('active'))showCart();}
 });
 document.addEventListener('touchstart',function(e){
