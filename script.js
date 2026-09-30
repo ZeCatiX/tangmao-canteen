@@ -126,22 +126,24 @@ function updateFloatBar(){
  const c=getCartCount();
  const onEnd=document.getElementById('end-section')?.classList.contains('active');
  const onCart=document.getElementById('cart-section')?.classList.contains('active');
+ const onMenu=document.getElementById('dataset-section')?.classList.contains('active');
  if(c>0&&!onEnd&&!onCart){
   bar.style.display='flex';
   document.getElementById('float-cart-count').textContent=c;
   document.getElementById('float-cart-total').textContent=getCartTotal();
-  // 一席成宴选饮品模式：浮窗加"返回席面"按钮与进行中提示，防止客人稀里糊涂直接去结算
+  // 一席成宴选饮品模式：仅在菜单页（选饮品现场）显示提示与返回席面按钮
   const drinksBack=document.getElementById('float-drinks-back');
+  let hint=document.getElementById('float-drinks-hint');
   if(drinksBack){
-   const active=typeof tableDrinksMode!=='undefined'&&tableDrinksMode!==null&&window.tableSets&&window.tableSets[tableDrinksMode];
+   const active=onMenu&&typeof tableDrinksMode!=='undefined'&&tableDrinksMode!==null&&window.tableSets&&window.tableSets[tableDrinksMode];
    drinksBack.style.display=active?'inline-block':'none';
    if(active){
     const s=window.tableSets[tableDrinksMode];
     const chosen=(s.chosenDrinkIds||[]).map(function(id){return getCart().find(function(x){return x.id===id;});}).filter(Boolean);
-    let hint=document.getElementById('float-drinks-hint');
     if(!hint){hint=document.createElement('div');hint.id='float-drinks-hint';hint.style.cssText='font-size:0.85rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';bar.insertBefore(hint,bar.firstChild.nextSibling);}
+    hint.style.display=active?'block':'none';
     hint.textContent='🍹 正在为「'+s.style+'」选饮品 · 已选 '+chosen.length+' 件';
-   }
+   } else if(hint) hint.style.display='none';
   }
  } else bar.style.display='none';
 }
