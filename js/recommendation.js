@@ -123,10 +123,10 @@ function gotoDrinksCategory(si){
  const tab=[...document.querySelectorAll('.cat-tab')].find(t=>t.dataset.cat==='飲品与酒水');
  if(tab){document.querySelectorAll('.cat-tab').forEach(t=>{const on=t===tab;t.classList.toggle('active',on);t.style.background=on?'var(--primary)':'transparent';t.style.color=on?'#fff':'var(--text)';t.style.border=on?'none':'1px solid var(--gold-light)';});}
  if(tableDrinksMode!==null)renderDrinksModeBanner();
- if(typeof updateFloatBar==='function')updateFloatBar();
+ if(typeof updateFloatBar==='function'){updateFloatBar();setTimeout(function(){updateFloatBar();},80);}
 }
 // 选饮品模式横幅：显示正在为哪套席面配饮品、已选几件，一键返回席面
-function backToTableResult(){showSection('table-result-section');if(typeof updateFloatBar==='function')updateFloatBar();}
+function backToTableResult(){showSection('table-result-section');if(typeof updateFloatBar==='function'){updateFloatBar();setTimeout(function(){updateFloatBar();},80);}}
 function renderDrinksModeBanner(){
  const ds=document.getElementById('dataset-section');if(!ds)return;
  let ban=document.getElementById('drinks-mode-banner');
