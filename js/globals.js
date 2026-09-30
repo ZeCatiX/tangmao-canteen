@@ -130,8 +130,10 @@ function updateFloatBar(){
   bar.style.display='flex';
   document.getElementById('float-cart-count').textContent=c;
   document.getElementById('float-cart-total').textContent=getCartTotal();
-  // 一席成宴选饮品模式：仅在菜单页（选饮品现场）显示提示与返回席面按钮
+  // 一席成宴选饮品模式：仅在菜单页可见时（选饮品现场）显示提示与返回席面按钮
   const drinksBack=document.getElementById('float-drinks-back');
+  const dsEl=document.getElementById('dataset-section');
+  const onMenu=dsEl?getComputedStyle(dsEl).display!=='none':false;
   let hint=document.getElementById('float-drinks-hint');
   if(drinksBack){
    const active=onMenu&&typeof tableDrinksMode!=='undefined'&&tableDrinksMode!==null&&window.tableSets&&window.tableSets[tableDrinksMode];
