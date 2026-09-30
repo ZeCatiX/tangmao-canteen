@@ -157,11 +157,11 @@
     <form id="admin-login-form" onsubmit="return false;">
       <div style="text-align:left;margin-bottom:16px;">
         <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">用户名</label>
-        <input id="admin-login-user" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员账号" autocomplete="username">
+        <input id="admin-login-user" aria-label="管理员账号" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员账号" autocomplete="username">
       </div>
       <div style="text-align:left;margin-bottom:24px;">
         <label style="font-size:0.82rem;color:#4a3028;font-weight:500;display:block;margin-bottom:4px;">密码</label>
-        <input id="admin-login-pass" type="password" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员密码" autocomplete="current-password">
+        <input id="admin-login-pass" aria-label="管理员密码" type="password" class="form-control" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;" placeholder="请输入管理员密码" autocomplete="current-password">
       </div>
       <button id="admin-login-btn" type="submit" style="width:100%;background:linear-gradient(135deg,#b83a2a,#8b1a1a);color:#fff;border:none;border-radius:8px;padding:10px;font-size:0.95rem;letter-spacing:2px;cursor:pointer;">登 录</button>
     </form>
@@ -451,7 +451,7 @@
           </div>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(201,169,110,0.15);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;color:#4a3028;margin:0;">
-              <input type="checkbox" id="auto-retrain-toggle" style="width:16px;height:16px;cursor:pointer;">
+              <input type="checkbox" id="auto-retrain-toggle" aria-label="自动重训开关" style="width:16px;height:16px;cursor:pointer;">
               启用用户反馈重训
             </label>
             <span id="auto-retrain-hint" style="font-size:0.78rem;color:#8b7a6a;"></span>
@@ -695,7 +695,7 @@
           </div>
         </div>
         <div class="mb-2"><label class="form-label" for="dish-tags">标签（逗号分隔）</label><input class="form-control" id="dish-tags" placeholder="招牌, 微辣"></div>
-        <div class="mb-2"><div class="mb-2"><label class="form-label">菜品图片</label><div style="display:flex;align-items:center;gap:8px;"><input type="file" id="dish-image-file" accept="image/*" style="font-size:0.82rem;"><button type="button" class="btn btn-sm" id="dish-image-upload" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">上传</button></div><img id="dish-image-preview" alt="菜品预览" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;display:none;object-fit:cover;"></div>
+        <div class="mb-2"><div class="mb-2"><label class="form-label">菜品图片</label><div style="display:flex;align-items:center;gap:8px;"><input type="file" id="dish-image-file" aria-label="选择菜品图片文件" accept="image/*" style="font-size:0.82rem;"><button type="button" class="btn btn-sm" id="dish-image-upload" style="background:#b83a2a;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:0.78rem;">上传</button></div><img id="dish-image-preview" alt="菜品预览" style="max-width:120px;max-height:80px;margin-top:6px;border-radius:6px;display:none;object-fit:cover;"></div>
         <label class="form-label"><input type="checkbox" id="dish-active" checked style="margin-right:6px;cursor:pointer;">上架</label></div>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:space-between;">

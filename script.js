@@ -51,7 +51,7 @@ function safeFetch(url, opts) {
 }
 // ═══════════════ 购物车功能 ═══════════════
 function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}catch(e){return[]}}
-function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
+function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){};if(typeof updateCartBadge==='function')updateCartBadge();}
 function minQtyOf(dish){
  if(!dish)return 1;
  // 起售备注可能在 serving 或 description 字段（历史数据不一致）；量词不限于"个"——后台自建菜可能写 2盒起/3杯起
