@@ -1041,9 +1041,10 @@ function showCart(){
    const dish=dishData.find(d=>d.id===x.id);
    const qtyVal=x.qty||1;
    const name=dish?esc(dish.name):esc(x.name);
+   const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(dish.price_unit)+'</span>':'';
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
-   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+'</td>'
+   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'</td>'
     +'<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>'
     +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:38px;height:30px;font-size:0.82rem;font-weight:600;padding:0;border-radius:0;border-left:1px solid #dee2e6;border-right:1px solid #dee2e6;text-align:center;display:flex;align-items:center;justify-content:center;">'
     +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div></td>'
