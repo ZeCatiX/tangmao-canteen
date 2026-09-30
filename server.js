@@ -1848,9 +1848,15 @@ app.post('/api/recommend/table/swap', tableLimiter, softAuth, async (req, res) =
     const allAllergyKeys = new Set(params.allergyKeys);
     profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
     const { pools } = tableRecommend.buildPools(dishData || [], [...allAllergyKeys]);
-    const orderedIds = new Set(params.excludeIds);
-    (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
-      .forEach(id => orderedIds.add(id));
+    // 已点排除仅登录用户(与主接口同规——游客无身份,不继承他人记录); 换菜本体 outId 任何身份都必须排除,防"换出同款"
+    const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
+    const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
+    const outId = parseInt(req.body.outId, 10);
+    if (Number.isFinite(outId)) orderedIds.add(outId);
+    if (isLoggedIn) {
+      (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
+        .forEach(id => orderedIds.add(id));
+    }
     const candidates = pools[poolKey].filter(d => !orderedIds.has(d.id)).map(d => ({ ...d }));
     if (!candidates.length) return res.status(404).json({ success: false, error: '这个位置已经没有可换的菜了' });
     await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);

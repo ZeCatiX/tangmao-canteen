@@ -434,11 +434,30 @@ function renderMenuTable(){
  filtered.forEach(d=>{byName[d.name]=d;});
  const consumedVariants=new Set();
  filtered.forEach(d=>{
-  const m=d.name.match(/^(.+)\(壶\)$/);
+  const m=d.name.match(/^(.+)\(([^()]+)\)$/);
   if(m&&byName[m[1]]){const main=byName[m[1]];main._variants=main._variants||[];if(!main._variants.some(v=>v.id===d.id))main._variants.push(d);consumedVariants.add(d.id);}
  });
- filtered.forEach(d=>{
-  if(consumedVariants.has(d.id))return;
+ // 美团式口味规格: 无裸名主行的同基础名规格(如虾球原味/芥末味、华山论剑年份)互并成一张虚拟主卡,
+ // 标题取基础名, 规格行标签取括号后缀
+ const virtualById={};
+ (()=>{
+  const groups={};
+  filtered.forEach(d=>{
+   if(consumedVariants.has(d.id))return;
+   const m=d.name.match(/^(.+)\(([^()]+)\)$/);
+   if(m)(groups[m[1]]=groups[m[1]]||[]).push(d);
+  });
+  Object.keys(groups).forEach(base=>{
+   const g=groups[base];
+   const clone=Object.assign({},g[0],{name:base,_flavorLabel:(g[0].name.match(/\(([^()]+)\)$/)||[])[1]});
+   clone._variants=g.slice();
+   virtualById[g[0].id]=clone;
+   for(let i=1;i<g.length;i++)consumedVariants.add(g[i].id);
+  });
+ })();
+ filtered.forEach(rawD=>{
+  const d=virtualById[rawD.id]||rawD;
+  if(consumedVariants.has(rawD.id))return;
   if(d.category!==lastCat){
    lastCat=d.category;lastSub='';
    html+='<div class="dish-cat-sep">'+catEmojiOf(d.category)+' '+esc(d.category)+'</div>';
@@ -458,9 +477,11 @@ function renderMenuTable(){
   const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">招牌</span> ':'';
   // 价格+加购区: 有规格变体时逐规格一行(各带加购), 否则单行
   const unitLabel=d=>(d.price_unit||'/份').replace(/^\//,'');
+  // 规格行标签: 口味类取名字括号后缀(原味/芥末味/壶/年份), 其余退回单位(盖碗/6只)
+  const specLabel=d2=>{ if(d2._flavorLabel)return d2._flavorLabel; const m=String(d2.name||'').match(/\(([^()]+)\)$/); return m?m[1]:unitLabel(d2); };
   const specRow=d2=>{
    const c2=cart.find(c=>c.id===d2.id);const q2=c2?(c2.qty||1):0;
-   return '<div class="d-flex justify-content-between align-items-center" style="margin-top:4px;"><span style="font-size:0.85rem;color:var(--text-light);">'+esc(unitLabel(d2))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;">'+esc(formatPrice(d2))+'</strong>'+(q2>0?'<span class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+q2+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></span>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d2.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 12px;font-weight:600;">＋ 加入</button>')+'</span></div>';
+   return '<div class="d-flex justify-content-between align-items-center" style="margin-top:4px;"><span style="font-size:0.85rem;color:var(--text-light);">'+esc(specLabel(d2))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;">'+esc(formatPrice(d2))+'</strong>'+(q2>0?'<span class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+q2+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></span>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d2.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 12px;font-weight:600;">＋ 加入</button>')+'</span></div>';
   };
   let priceBlock;
   if(d._variants&&d._variants.length){

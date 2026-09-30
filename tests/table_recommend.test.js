@@ -161,6 +161,24 @@ async function getAdminToken() {
   return adminTokenCache;
 }
 
+// 已点排除类接口仅对登录用户生效（游客不做已点避开），排除族用例统一走这个临时用户
+var userTokenCache = null;
+async function getUserToken() {
+  if (userTokenCache) return userTokenCache;
+  const uname = 'tr' + Date.now();
+  await fetch(BASE + '/api/user/register', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: uname, password: 'Test1234' }),
+  });
+  const r = await fetch(BASE + '/api/user/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: uname, password: 'Test1234' }),
+  });
+  const d = await r.json();
+  userTokenCache = d.token || '';
+  return userTokenCache;
+}
+
 test('API: 4人默认预算返回三套完整结构', async () => {
   const r = await fetch(BASE + '/api/recommend/table', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -208,7 +226,8 @@ test('API: 忌口海鲜——结果中不出现海鲜过敏菜品', async () => 
   assert.deepEqual(seafoodIds, [], '忌口海鲜时结果不得含 seafood 菜品，违反者: ' + seafoodIds.join(','));
 });
 
-test('API: 换菜返回同池且不在排除名单的新菜', async () => {
+test('API: 换菜返回同池且不在排除名单的新菜（登录用户）', async () => {
+  const token = await getUserToken();
   const r1 = await fetch(BASE + '/api/recommend/table', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ partySize: 4 }),
@@ -219,8 +238,8 @@ test('API: 换菜返回同池且不在排除名单的新菜', async () => {
   const hotDish = home.dishes.find(x => x.pool === 'hot');
   assert.ok(hotDish, '家常版应含热菜');
   const r2 = await fetch(BASE + '/api/recommend/table/swap', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ partySize: 4, pool: 'hot', excludeIds: home.dishes.map(x => x.id), style: 'home' }),
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ partySize: 4, pool: 'hot', excludeIds: home.dishes.map(x => x.id), outId: hotDish.id, style: 'home' }),
   });
   assert.equal(r2.status, 200);
   const d2 = await r2.json();
@@ -228,6 +247,26 @@ test('API: 换菜返回同池且不在排除名单的新菜', async () => {
   assert.equal(d2.dish.pool, 'hot');
   assert.ok(d2.dish.reason, '换菜也要带理由');
   assert.ok(!home.dishes.some(x => x.id === d2.dish.id), '换来的菜不得与桌上已有菜重复');
+});
+
+test('API: 游客换菜也绝不变回同款（outId 恒排除，不依赖登录态）', async () => {
+  const r1 = await fetch(BASE + '/api/recommend/table', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4 }),
+  });
+  const d1 = await r1.json();
+  assert.equal(d1.success, true);
+  const hotDish = d1.sets[0].dishes.find(x => x.pool === 'hot');
+  assert.ok(hotDish, '基线应含热菜');
+  // 故意不带 excludeIds、不带 token——只带 outId，服务端也必须排除换菜本体
+  const r2 = await fetch(BASE + '/api/recommend/table/swap', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ partySize: 4, pool: 'hot', outId: hotDish.id, style: 'home' }),
+  });
+  assert.equal(r2.status, 200);
+  const d2 = await r2.json();
+  assert.equal(d2.success, true);
+  assert.notEqual(d2.dish.id, hotDish.id, '游客换菜不得把菜换成它自己');
 });
 
 test('API: 换菜 pool 非法返回400', async () => {
@@ -285,7 +324,8 @@ test('buildTableUserPrefs: 档案脏值安全兜底', () => {
   assert.equal(prefs['饮食_宗教'], '无特殊要求');
 });
 
-test('API: excludeIds 排除生效', async () => {
+test('API: excludeIds 排除生效（登录用户）', async () => {
+  const token = await getUserToken();
   const r1 = await fetch(BASE + '/api/recommend/table', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ partySize: 4 }),
@@ -294,7 +334,7 @@ test('API: excludeIds 排除生效', async () => {
   assert.equal(d1.success, true);
   const excludeIds = d1.sets[0].dishes.map(x => x.id);
   const r2 = await fetch(BASE + '/api/recommend/table', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
     body: JSON.stringify({ partySize: 4, excludeIds }),
   });
   const d2 = await r2.json();
@@ -327,8 +367,9 @@ test('API: tableNumber 排除本桌进行中订单的菜', async () => {
   assert.equal(dOrder.success, true, '下单应成功');
   const orderId = dOrder.orderId;
   try {
+    const token = await getUserToken();
     const r = await fetch(BASE + '/api/recommend/table', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
       body: JSON.stringify({ partySize: 4, tableNumber: '98' }),
     });
     const d = await r.json();
@@ -475,4 +516,10 @@ test('API: 米饭按人数自动配——autoItems 计入总价', async () => {
       assert.equal(s.totalPrice, Math.round((dishSum + rice.price * rice.qty) * 100) / 100, '总价应含米饭');
     }
   }
+});
+
+test('纯逻辑: 口味规格菜拆条后主料归一——一口脆虾球(原味)/(芥末味)同主料, 席面主料不重复约束可拦截同桌双口味', () => {
+  assert.equal(tr.ingredientOf('一口脆虾球(原味)'), '虾');
+  assert.equal(tr.ingredientOf('一口脆虾球(芥末味)'), '虾');
+  assert.equal(tr.ingredientOf('华山论剑(30年)'), null, '无食材关键词的规格名不误报主料');
 });
