@@ -450,7 +450,7 @@ function renderMenuTable(){
   Object.keys(groups).forEach(base=>{
    const g=groups[base];
    const clone=Object.assign({},g[0],{name:base,_flavorLabel:(g[0].name.match(/\(([^()]+)\)$/)||[])[1]});
-   clone._variants=g.slice();
+   clone._variants=g.slice(1);
    virtualById[g[0].id]=clone;
    for(let i=1;i<g.length;i++)consumedVariants.add(g[i].id);
   });
