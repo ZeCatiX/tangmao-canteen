@@ -548,10 +548,14 @@ app.get('/api/admin/feedback-summary', async (req, res) => {
 // 菜品管理 API
 app.post('/api/admin/dish', async (req, res) => {
   try {
-    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description, is_active } = req.body;
+    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description, is_active, price_unit, serving } = req.body;
     if (!name || name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
     if (name.trim().length > 100) return res.status(400).json({ success: false, error: '菜名不能超过100个字符' });
     if (description && description.length > 500) return res.status(400).json({ success: false, error: '描述不能超过500个字符' });
+    // 计价单位/起售规格：空串归一为 null（前端对 null 走 /份 兜底，起售解析也以 null 为"无"）
+    const unitNorm = (price_unit === undefined || price_unit === null) ? null : (String(price_unit).trim() || null);
+    const servingNorm = (serving === undefined || serving === null) ? null : (String(serving).trim() || null);
+    if (unitNorm && !unitNorm.startsWith('/')) return res.status(400).json({ success: false, error: '计价单位需以 / 开头，如 /份、/4个' });
     const priceNum = parseFloat(price);
     if (isNaN(priceNum) || priceNum < 0) return res.status(400).json({ success: false, error: '价格不能为负数' });
     const ratingNum = parseFloat(rating);
@@ -560,8 +564,8 @@ app.post('/api/admin/dish', async (req, res) => {
     const activeFlag = is_active === undefined ? true : (is_active === true || is_active === 'true');
     const pool = db;
     const result = await pool.query(
-      `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
-      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, activeFlag, description||null]
+      `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description, price_unit, serving) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, activeFlag, description||null, unitNorm, servingNorm]
     );
     res.json({ success: true, message: '添加成功', id: result.rows[0].id });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
@@ -572,10 +576,15 @@ app.put('/api/admin/dish/:id', async (req, res) => {
   try {
     const dishId = parseInt(req.params.id);
     if (isNaN(dishId) || dishId <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
-    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, is_active, allergies, isHalal, isVegetarian, description } = req.body;
-    if (name !== undefined && name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
-    if (price !== undefined) { const p = parseFloat(price); if (isNaN(p) || p < 0) return res.status(400).json({ success: false, error: '价格不能为负数' }); }
-    if (rating !== undefined) { const r = parseFloat(rating); if (isNaN(r) || r < 0 || r > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' }); }
+  const { name, category, spiciness, saltiness, sweetness, price, rating, tags, is_active, allergies, isHalal, isVegetarian, description, price_unit, serving } = req.body;
+  if (name !== undefined && name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
+  if (price !== undefined) { const p = parseFloat(price); if (isNaN(p) || p < 0) return res.status(400).json({ success: false, error: '价格不能为负数' }); }
+  if (rating !== undefined) { const r = parseFloat(rating); if (isNaN(r) || r < 0 || r > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' }); }
+  // 计价单位/起售规格：传了就更新，空串归一为 null；单位需以 / 开头
+  if (price_unit !== undefined) {
+    const pu = (price_unit === null) ? null : String(price_unit).trim() || null;
+    if (pu && !pu.startsWith('/')) return res.status(400).json({ success: false, error: '计价单位需以 / 开头，如 /份、/4个' });
+  }
     const pool = db;
     const sets = []; const vals = []; let idx = 1;
     if (name !== undefined) { sets.push(`name = $${idx++}`); vals.push(name); }
@@ -591,6 +600,8 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     if (isHalal !== undefined) { sets.push(`is_halal = $${idx++}`); vals.push(isHalal); }
     if (isVegetarian !== undefined) { sets.push(`is_vegetarian = $${idx++}`); vals.push(isVegetarian); }
     if (description !== undefined) { sets.push(`description = $${idx++}`); vals.push(description); }
+    if (price_unit !== undefined) { sets.push(`price_unit = $${idx++}`); vals.push((price_unit === null) ? null : String(price_unit).trim() || null); }
+    if (serving !== undefined) { sets.push(`serving = $${idx++}`); vals.push((serving === null) ? null : String(serving).trim() || null); }
     if (!sets.length) return res.status(400).json({ success: false, error: '没有要更新的字段' });
     vals.push(dishId);
     await pool.query(`UPDATE dishes SET ${sets.join(', ')} WHERE id = $${idx}`, vals);

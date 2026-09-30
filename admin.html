@@ -660,6 +660,11 @@
       <div class="modal-body">
         <input type="hidden" id="edit-dish-id">
         <div class="mb-2"><label class="form-label" for="dish-name">菜品名称</label><input class="form-control" id="dish-name" placeholder="请输入菜品名称" maxlength="100"></div><div class="mb-2"><label class="form-label" for="dish-description">菜品描述</label><textarea class="form-control" id="dish-description" rows="2" placeholder="请输入菜品描述，如特色、口味等..." maxlength="500" style="font-size:0.88rem;border-radius:8px;border:1.5px solid #e4dbcf;"></textarea></div>
+        <div class="row g-2 mb-1">
+          <div class="col-6"><label class="form-label" for="dish-price-unit">计价单位</label><input class="form-control" id="dish-price-unit" placeholder="/份、/4个、/盖碗" maxlength="12" style="font-size:0.88rem;border-radius:8px;border:1.5px solid #e4dbcf;"><div style="font-size:0.72rem;color:#8b7a6a;margin-top:2px;">留空默认 /份</div></div>
+          <div class="col-6"><label class="form-label" for="dish-serving">起售 / 规格备注</label><input class="form-control" id="dish-serving" placeholder="3个起、4个/笼、6只" maxlength="60" style="font-size:0.88rem;border-radius:8px;border:1.5px solid #e4dbcf;"><div style="font-size:0.72rem;color:#8b7a6a;margin-top:2px;">「N个起」=按个卖起售量，席面按 max(起售量,人数) 配</div></div>
+        </div>
+        <div style="font-size:0.72rem;color:#8b7a6a;margin-bottom:8px;">同菜多口味：建多条「菜名(口味)」记录（如 一口脆虾球(原味) / 一口脆虾球(芥末味)），菜单自动并成一张卡双规格行，厨房按口味出餐</div>
         <div class="row g-2 mb-2">
           <div class="col-6"><label class="form-label" for="dish-category">分类</label><select class="form-select" id="dish-category"><option>招牌与游西安必打卡</option><option>热销菜品</option><option>传承陕菜</option><option>江湖海鲜</option><option>热菜</option><option>特色凉菜</option><option>田园时蔬·汤羹</option><option>陕西小吃</option><option>凉菜凉拌</option><option>汤粥糖水</option><option>主食小吃</option><option>主食</option><option>甜品饮品</option><option>海鲜水产</option><option>清爽素食</option><option>飲品与酒水</option></select></div>
           <div class="col-6"><label class="form-label" for="dish-spiciness">辣度</label><select class="form-select" id="dish-spiciness"><option>不辣</option><option selected>微辣</option><option>中辣</option><option>特辣</option></select></div>
@@ -1215,6 +1220,8 @@ function editDish(id) {
     document.getElementById('dish-price').value = parseFloat(dish.price) || 0;
     document.getElementById('dish-rating').value = parseFloat(dish.rating) || 4.0;
     document.getElementById('dish-tags').value = (dish.tags||[]).join(', ');
+    document.getElementById('dish-price-unit').value = dish.price_unit || '';
+    document.getElementById('dish-serving').value = dish.serving || '';
     document.getElementById('dish-saltiness').value = dish.saltiness || '适中';
     document.getElementById('dish-sweetness').value = dish.sweetness || '无味';
         const _iu = dish.image_url || '';
@@ -1255,6 +1262,8 @@ document.getElementById('add-dish-btn').addEventListener('click', () => {
   document.getElementById('dish-price').value = 0;
   document.getElementById('dish-rating').value = 4.0;
   document.getElementById('dish-tags').value = '';
+  document.getElementById('dish-price-unit').value = '';
+  document.getElementById('dish-serving').value = '';
   document.getElementById('dish-active').checked = true;
   document.getElementById('dish-halal').checked = false;
   document.getElementById('dish-vegetarian').checked = false;
@@ -1325,6 +1334,8 @@ function saveDish(id) {
     price: priceNum,
     rating: ratingNum,
     tags: document.getElementById('dish-tags').value.split(',').map(t => t.trim()).filter(Boolean).join(','),
+    price_unit: document.getElementById('dish-price-unit').value.trim(),
+    serving: document.getElementById('dish-serving').value.trim(),
     is_active: document.getElementById('dish-active').checked,
     allergies: {seafood:document.getElementById('dish-allergy-seafood').checked,peanut:document.getElementById('dish-allergy-peanut').checked,egg:document.getElementById('dish-allergy-egg').checked,gluten:document.getElementById('dish-allergy-gluten').checked,soy:document.getElementById('dish-allergy-soy').checked},
     isHalal: document.getElementById('dish-halal').checked,
