@@ -308,6 +308,12 @@ function showSection(sectionId,skipScroll){
   ids.forEach(id=>refreshRecipeCartBtn(id));
  }
  if(sectionId==='recommendation-section')renderPrefCompletenessBanner();
+ // 一席成宴选饮品模式：进入菜单页刷新横幅，返回席面页刷新总价（饮品可能已变）
+ if(sectionId==='dataset-section'&&typeof renderDrinksModeBanner==='function')renderDrinksModeBanner();
+ if(sectionId==='table-result-section'&&typeof window.tableSets!=='undefined'&&window.tableSets&&window.tableSets.length&&typeof recalcTableSetTotals==='function'){
+  window.tableSets.forEach(recalcTableSetTotals);
+  if(typeof renderTableSets==='function')renderTableSets();
+ }
 }
 
 function updateModeDisplay(){const el=document.getElementById('current-recommendation-mode'),sel=document.getElementById('recommendation-mode');if(!el||!sel)return;el.textContent=({auto:'自动选择（优先API）',api:'后端API推荐（更智能）',local:'本地推荐（更快速）'})[sel.value]||'自动选择（优先API）';}
@@ -1080,6 +1086,14 @@ function showCart(){
 async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
+ // 起售数量闸门：任何菜品低于最小起售量（X个起）则拦截结算——最终防线，兜住所有漏网路径
+ const violations=[];
+ cart.forEach(x=>{
+  const dish=dishData.find(d=>d.id===x.id);
+  const min=minQtyOf(dish||{});
+  if(min>1&&(x.qty||1)<min)violations.push((x.name||'菜品')+' 需'+min+'个起售（当前'+(x.qty||1)+'个）');
+ });
+ if(violations.length){showMessage('起售数量不足',violations.join('；')+'，请调整数量后结算',null,5000);return;}
  if(bEl)bEl.disabled=true;
  // 桌号：恒用锁定桌号（选桌后即锁定，改桌请用「更换/挪桌」）
  const tableNumber=ssGet('lockedTable')||'';

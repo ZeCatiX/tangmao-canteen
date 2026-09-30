@@ -62,13 +62,23 @@ function addToCart(dish,qty){
  const cart=getCart();const i=cart.findIndex(x=>x.id===dish.id);
  const min=minQtyOf(dish);
  const q=typeof qty==='number'&&qty>0?qty:1;
- if(i>=0){cart[i].qty=(cart[i].qty||1)+q;saveCart(cart);updateCartBadge();showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);return;}
- // 起售数量：首次加入按最小起售量（如核桃包3个起、迷你肉夹馍2个起）
- const add=Math.max(q,min);
- cart.push({id:dish.id,name:dish.name,price:dish.price,qty:add,image:dish.image_url||''});
- saveCart(cart);updateCartBadge();
- if(add>q)showMessage('已加入购物车','「'+dish.name+'」'+min+'个起售，已加 '+add+' 个',null,2500);
- else showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
+ if(i>=0){cart[i].qty=(cart[i].qty||1)+q;saveCart(cart);updateCartBadge();}
+ else{
+  // 起售数量：首次加入按最小起售量（如核桃包3个起、迷你肉夹馍2个起）
+  const add=Math.max(q,min);
+  cart.push({id:dish.id,name:dish.name,price:dish.price,qty:add,image:dish.image_url||''});
+  saveCart(cart);updateCartBadge();
+  if(add>q)showMessage('已加入购物车','「'+dish.name+'」'+min+'个起售，已加 '+add+' 个',null,2500);
+  else showMessage('已加入购物车','「'+dish.name+'」已加入购物车',null,2500);
+ }
+ // 一席成宴选饮品模式：饮品自动挂到当前席面（席面卡显示、计入席面总价）
+ if(typeof tableDrinksMode!=='undefined'&&tableDrinksMode!==null&&window.tableSets&&window.tableSets[tableDrinksMode]&&dish.category==='飲品与酒水'){
+  const s=window.tableSets[tableDrinksMode];
+  s.chosenDrinkIds=s.chosenDrinkIds||[];
+  if(!s.chosenDrinkIds.includes(dish.id))s.chosenDrinkIds.push(dish.id);
+  if(typeof recalcTableSetTotals==='function')recalcTableSetTotals(s);
+  if(typeof renderDrinksModeBanner==='function')renderDrinksModeBanner();
+ }
 }
 function addRiceToCart(){
   const rice = dishData.find(d => d.name === '五常大米饭');

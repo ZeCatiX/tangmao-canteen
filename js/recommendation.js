@@ -113,12 +113,32 @@ function refreshRecipeCartBtn(id){
  if(old)old.outerHTML=renderRecipeCartBtn(d,getCart());
 }
 // 跳转到饮料酒水分类（菜单页筛选+标签高亮），AI推荐与一席成宴共用（顶层函数）
-function gotoDrinksCategory(){
+// 传入席面下标时进入"为该席选饮品"模式：菜单页顶部横幅+返回席面，此模式加的饮品挂到席面
+function gotoDrinksCategory(si){
+ if(si!==undefined&&si!==null&&window.tableSets&&window.tableSets[si]){tableDrinksMode=si;}
+ else{tableDrinksMode=null;}
  showSection('dataset-section');
  const sel=document.getElementById('menu-filter-cat');
  if(sel){sel.value='飲品与酒水';sel.dispatchEvent(new Event('change'));}
  const tab=[...document.querySelectorAll('.cat-tab')].find(t=>t.dataset.cat==='飲品与酒水');
  if(tab){document.querySelectorAll('.cat-tab').forEach(t=>{const on=t===tab;t.classList.toggle('active',on);t.style.background=on?'var(--primary)':'transparent';t.style.color=on?'#fff':'var(--text)';t.style.border=on?'none':'1px solid var(--gold-light)';});}
+ if(tableDrinksMode!==null)renderDrinksModeBanner();
+}
+// 选饮品模式横幅：显示正在为哪套席面配饮品、已选几件，一键返回席面
+function renderDrinksModeBanner(){
+ const ds=document.getElementById('dataset-section');if(!ds)return;
+ let ban=document.getElementById('drinks-mode-banner');
+ if(ban)ban.remove();
+ if(tableDrinksMode===null||!window.tableSets||!window.tableSets[tableDrinksMode]){tableDrinksMode=null;return;}
+ const s=window.tableSets[tableDrinksMode];
+ const chosen=(s.chosenDrinkIds||[]).map(function(id){return getCart().find(function(x){return x.id===id;});}).filter(Boolean);
+ ban=document.createElement('div');
+ ban.id='drinks-mode-banner';
+ ban.style.cssText='margin:10px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(201,169,110,0.15),rgba(201,169,110,0.05));border:1px solid rgba(201,169,110,0.5);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;';
+ ban.innerHTML='<span style="color:var(--text);font-size:0.9rem;">🍹 正在为「'+esc(s.style)+'」选饮品 · 已选 <strong style="color:var(--primary-accent);">'+chosen.length+'</strong> 件'+(chosen.length?'（'+esc(chosen.map(function(c){return c.name+'×'+(c.qty||1);}).join('、'))+'）':'')+'</span>'
+  +'<button class="btn btn-sm" id="drinks-back-btn" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;">返回席面</button>';
+ ds.insertBefore(ban,ds.firstChild);
+ document.getElementById('drinks-back-btn').addEventListener('click',function(){showSection('table-result-section');});
 }
 function displayRecommendations(){
  // 推荐完成，记录推荐次数
@@ -157,6 +177,7 @@ function displayRecommendations(){
 // ═══════════════ 一席成宴（组合推荐，路线图 8.4） ═══════════════
 var tableSets=[];          // 当前三套方案
 var lastTableParams=null;  // 生成时的入参，换单道时复用
+var tableDrinksMode=null;  // 一席成宴"去选饮品"模式：当前正在配饮品的席面下标
 var lastTableMeta=null;    // 服务端返回的元信息（已点排除数/是否用了口味档案）
 function prefillTableBuilder(){
  // 登录用户从口味档案带出辣度/忌口
@@ -224,6 +245,7 @@ async function submitTableBuilder(){
   var d=await r.json();
    if(d.success&&Array.isArray(d.sets)&&d.sets.length){
    tableSets=d.sets;
+   tableDrinksMode=null;
    // 起售归一化: X个起 的菜按最小起售量计入席面总价(与纸质菜单/加购一致), 行上标 ×数量
    var ps=(lastTableParams&&lastTableParams.partySize)||1;
    tableSets.forEach(function(s){
@@ -301,18 +323,30 @@ async function submitTableBuilder(){
     +'</div>'
    +'</div>';
   }).join('');
+  // 已选饮品行（"去选饮品"入口加入的，数量以购物车实时为准，含在席面总计中）
+  var drinkRows=(s.chosenDrinkIds||[]).map(function(id){
+   var c=getCart().find(function(x){return x.id===id;});
+   if(!c)return '';
+   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
+    +dishImg(c.image,52,c.name)
+    +'<div class="flex-grow-1" style="min-width:0;">'
+     +'<div class="dish-name-serif">🍹 '+esc(c.name)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">已选饮品</span></div>'
+    +'</div>'
+    +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(c.price))+'×'+(c.qty||1)+'</div>'
+   +'</div>';
+  }).join('');
   return '<div class="card mb-4 shadow-sm table-set-card" style="border:1px solid rgba(201,169,110,0.35);background:var(--cream);">'
    +'<div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="border:none;">'
     +'<div class="d-flex align-items-center flex-wrap gap-2">'
      +'<span class="badge tang-tag" style="background:'+color+';font-size:0.85rem;">'+esc(s.style)+'</span>'+overTag
      +'<span style="font-size:0.85rem;letter-spacing:0.5px;">共 '+s.dishes.length+' 道 · 席面总计 <strong class="table-total">'+esc(formatPrice(s.totalPrice))+'</strong> · 人均 '+esc(formatPrice(s.perPerson))+'</span></div>'
     +'<div class="d-flex gap-2">'
-     +'<button class="btn btn-sm table-drinks-btn" title="跳转到饮料酒水分类" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:2px;"><i class="bi bi-cup-straw me-1"></i>去选饮品</button>'
+     +'<button class="btn btn-sm table-drinks-btn" data-set="'+si+'" title="跳转到饮料酒水分类" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:2px;"><i class="bi bi-cup-straw me-1"></i>去选饮品</button>'
      +'<button class="btn btn-sm table-share-btn" data-set="'+si+'" title="生成分享图" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:20px;padding:4px 14px;font-size:0.82rem;letter-spacing:2px;"><i class="bi bi-image me-1"></i>分享图</button>'
      +'<button class="btn btn-sm table-addall-btn" data-set="'+si+'" style="background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));color:#fff;border:1px solid rgba(201,169,110,0.55);border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:2px;font-family:\'Noto Serif SC\',serif;"><i class="bi bi-cart-plus me-1"></i>整体加购</button>'
     +'</div>'
    +'</div>'
-   +'<div class="card-body py-2">'+rows+autoRows+'</div>'
+   +'<div class="card-body py-2">'+rows+autoRows+drinkRows+'</div>'
    +'</div>';
  }).join('');
 }
@@ -372,12 +406,14 @@ function addTableSetToCart(si){
  var s=tableSets[si];if(!s||!s.dishes.length)return;
  // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
  // 起售数量：X个起 的菜品整桌加购时按最小起售量入车（如核桃包3个起→×3），并在提示中说明
+ // 已选饮品（chosenDrinkIds）已在购物车中，不重复加
  var cart=getCart();
  var adjusted=[];
+ var chosen=(s.chosenDrinkIds||[]);
  s.dishes.forEach(function(d){
   var min=d._qty||minQtyOf(d);
   var i=cart.findIndex(function(x){return x.id===d.id;});
-  if(i>=0)cart[i].qty=(cart[i].qty||1)+1;
+  if(i>=0)cart[i].qty=(cart[i].qty||1)+min;
   else{
    var q=Math.max(1,min);
    cart.push({id:d.id,name:d.name,price:d.price,qty:q,image:d.image_url||''});
@@ -393,8 +429,9 @@ function addTableSetToCart(si){
  saveCart(cart);updateCartBadge();
  var riceQty=(s.autoItems&&s.autoItems[0]&&s.autoItems[0].qty)||0;
  var riceNote=riceQty>0?'（含米饭×'+riceQty+'）':'（未加米饭）';
+ var drinkNote=chosen.length?'（含已选饮品×'+chosen.length+'）':'';
  var adjNote=adjusted.length?'；起售调整：'+adjusted.join('、'):'';
- showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+'已加购'+adjNote+'，可去购物车结算',null,4000);
+ showMessage('已加入购物车','「'+esc(s.style)+'」整桌 '+s.dishes.length+' 道菜'+riceNote+drinkNote+'已加购'+adjNote+'，可去购物车结算',null,4000);
 }
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src){
@@ -405,6 +442,8 @@ function recalcTableSetTotals(s){
  var t=0;
  s.dishes.forEach(function(d){t+=d.price*(d._qty||1);});
  (s.autoItems||[]).forEach(function(d){if(d.qty>0)t+=d.price*d.qty;});
+ // 已选饮品（从"去选饮品"入口加入，数量以购物车实时为准）
+ (s.chosenDrinkIds||[]).forEach(function(id){var c=getCart().find(function(x){return x.id===id;});if(c)t+=c.price*(c.qty||1);});
  s.totalPrice=Math.round(t*100)/100;
  var ps=(lastTableParams&&lastTableParams.partySize)||1;
  s.perPerson=ps?Math.round(s.totalPrice/ps*100)/100:0;
