@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded',function(){
   const drinks=e.target.closest('.table-drinks-btn');
   if(drinks){gotoDrinksCategory();return;}
  });
- // 一桌菜忌口"无"与其他项互斥（同偏好表单联动规则）
  const tanone=$('table-allergy-none'),taboxes=document.querySelectorAll('input[name="table-allergy"]');
  if(tanone){tanone.addEventListener('change',function(){taboxes.forEach(cb=>{cb.checked=false;cb.disabled=this.checked;});if(!this.checked)taboxes.forEach(cb=>cb.disabled=false);});taboxes.forEach(cb=>cb.addEventListener('change',function(){if(this.checked){tanone.checked=false;tanone.disabled=false;}}));}
  click('continue-btn',()=>{if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u&&u.preferences)loadUserPreferences(u.preferences);}showSection('preference-section');});
