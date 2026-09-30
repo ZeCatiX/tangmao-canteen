@@ -53,9 +53,9 @@ function getCart(){try{return JSON.parse(localStorage.getItem('cart')||'[]')}cat
 function saveCart(c){try{localStorage.setItem('cart',JSON.stringify(c))}catch(e){}}
 function minQtyOf(dish){
  if(!dish)return 1;
- // 起售备注可能在 serving 或 description 字段（历史数据不一致）
+ // 起售备注可能在 serving 或 description 字段（历史数据不一致）；量词不限于"个"——后台自建菜可能写 2盒起/3杯起
  const src=((dish.serving||'')+' '+(dish.description||''));
- const m=src.match(/(\d+)\s*个?起/);
+ const m=src.match(/(\d+)\s*[个盒杯碗瓶只块份包袋听支罐]?起/);
  return m?Math.max(1,parseInt(m[1],10)):1;
 }
 function addToCart(dish,qty){

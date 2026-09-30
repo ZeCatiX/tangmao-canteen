@@ -1151,7 +1151,10 @@ function validateMinQty(items, dishMeta) {
   for (const it of items) {
     const meta = dishMeta.get(parseInt(it.id));
     if (!meta) continue;
-    const m = String(meta.serving || '').match(/(\d+)\s*个?起/);
+    // 起售备注口径与前端 minQtyOf 一致：serving 与 description 都参与解析
+    const metaSrc = String((meta.serving || '') + ' ' + (meta.description || ''));
+    // 量词不限于"个"——后台自建菜可能写 2盒起/3杯起
+    const m = metaSrc.match(/(\d+)\s*[个盒杯碗瓶只块份包袋听支罐]?起/);
     if (!m) continue;
     const min = parseInt(m[1], 10);
     const qty = parseInt(it.qty) || 1;
@@ -1196,7 +1199,7 @@ app.post('/api/order', softAuth, async (req, res) => {
     const { validated: validatedItems, total: totalPrice } = recomputed;
     // 起售数量校验：X个起 的菜低于最小起售量直接拒单
     const metaIds = [...new Set(validatedItems.map(i => parseInt(i.id)))];
-    const metaR = await pool.query('SELECT id, name, serving FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
+    const metaR = await pool.query('SELECT id, name, serving, description FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
     const dishMeta = new Map(metaR.rows.map(r => [r.id, r]));
     const minBad = validateMinQty(validatedItems, dishMeta);
     if (minBad.length) return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
@@ -1269,7 +1272,7 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
       existingById.set(parseInt(x.id), (existingById.get(parseInt(x.id)) || 0) + q);
     });
     const metaIds = [...new Set([...mergedItems.map(i => parseInt(i.id)), ...existingById.keys()])];
-    const metaR = await pool.query('SELECT id, name, serving FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
+    const metaR = await pool.query('SELECT id, name, serving, description FROM dishes WHERE id = ANY($1::int[])', [metaIds]);
     const dishMeta = new Map(metaR.rows.map(r => [r.id, r]));
     const minBad = validateMinQty(mergedItems, dishMeta);
     if (minBad.length) return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
