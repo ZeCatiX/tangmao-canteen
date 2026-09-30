@@ -1788,10 +1788,14 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
     const allAllergyKeys = new Set(params.allergyKeys);
     profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
     const { pools, excluded } = tableRecommend.buildPools(dishData || [], [...allAllergyKeys]);
-    // 已点菜排除：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
-    const orderedIds = new Set(params.excludeIds);
-    (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
-      .forEach(id => orderedIds.add(id));
+    // 已点菜排除：仅登录用户提供（游客无身份，不做已点排除——换桌/新客不继承他人记录）
+    // 登录用户：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
+    const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
+    const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
+    if (isLoggedIn) {
+      (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
+        .forEach(id => orderedIds.add(id));
+    }
     // 跨池按 id 去重后浅克隆打分（不污染共享缓存 dishData）
     const union = [];
     const seen = new Set();

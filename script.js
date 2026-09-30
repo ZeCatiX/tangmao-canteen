@@ -1579,12 +1579,13 @@ function prefillTableBuilder(){
 }
 var tableSwappedOut=[];    // 本次生成内被换掉的菜：换出去就不再换回来
 function collectTableExclusions(){
- // 本会话已点（各轮）+ 购物车 + 本次换菜换出去的，生成与换单道都要带上
+ // 换菜状态：本次换出去的不应再换回（与身份无关，始终排除）
  var ids=tableSwappedOut.slice();
- try{
-  JSON.parse(sessionStorage.getItem('lastOrderRounds')||'[]').forEach(function(r){(r.items||[]).forEach(function(it){if(it&&it.id)ids.push(it.id);});});
- }catch(e){}
- getCart().forEach(function(c){ids.push(c.id);});
+ // 已点排除（本会话各轮+购物车）：仅登录用户提供——游客无身份，不做已点排除（换桌/新客不继承他人记录）
+ if(currentUser&&currentUser!=='guest'){
+  try{ JSON.parse(sessionStorage.getItem('lastOrderRounds')||'[]').forEach(function(r){(r.items||[]).forEach(function(it){if(it&&it.id)ids.push(it.id);});}); }catch(e){}
+  getCart().forEach(function(c){ids.push(c.id);});
+ }
  return ids;
 }
 function collectTableParams(){
