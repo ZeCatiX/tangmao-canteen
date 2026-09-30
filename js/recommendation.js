@@ -125,6 +125,7 @@ function gotoDrinksCategory(si){
  if(tableDrinksMode!==null)renderDrinksModeBanner();
 }
 // 选饮品模式横幅：显示正在为哪套席面配饮品、已选几件，一键返回席面
+function backToTableResult(){showSection('table-result-section');}
 function renderDrinksModeBanner(){
  const ds=document.getElementById('dataset-section');if(!ds)return;
  let ban=document.getElementById('drinks-mode-banner');
