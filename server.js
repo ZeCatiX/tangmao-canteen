@@ -490,6 +490,24 @@ async function adminAuth(req, res, next) {
 // 所有 /api/admin/* 路由需要认证
 app.use('/api/admin', adminAuth);
 
+// 桌码管理（A2）：批量生成签名桌码链接（协议/域名取自请求头，支持反代与隧道）
+app.get('/api/admin/table-qrcodes', (req, res) => {
+  try {
+    const from = Math.max(1, parseInt(req.query.from, 10) || 1);
+    const to = Math.min(99, parseInt(req.query.to, 10) || 30);
+    if (to < from) return res.status(400).json({ success: false, error: '结束桌号不能小于起始桌号' });
+    const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http');
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000');
+    const origin = proto + '://' + host;
+    const qrcodes = [];
+    for (let n = from; n <= to; n++) {
+      const num = String(n).padStart(2, '0');
+      qrcodes.push({ table: num, url: origin + '/api/table-view?t=' + encodeURIComponent(num + '.' + tableSig(num)) });
+    }
+    res.json({ success: true, qrcodes });
+  } catch (e) { logger.error('桌码生成失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // ═══════════════════════════════════════════════
 // 管理后台 API
 // ═══════════════════════════════════════════════
