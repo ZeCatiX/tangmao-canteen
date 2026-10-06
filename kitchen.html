@@ -161,6 +161,13 @@
             if (fresh.length) beepNewOrders(fresh.length);
           }
           _knownIds = ids;
+          // 断线横幅清理：成功拉到数据就移除上次的"连接断开"提示（跳过重建的 early return 之前做）
+          const staleBanner = document.querySelector('#order-list .conn-lost');
+          if (staleBanner) staleBanner.remove();
+          // 渲染签名：数据没变化就跳过整表重建——每10秒无谓重绘会打断"完成"二次确认、页面闪烁
+          var renderSig = JSON.stringify((d.orders || []).map(function(o) { return o.id + ':' + o.status; }));
+          if (renderSig === _lastRenderSig) return;
+          _lastRenderSig = renderSig;
           const container = document.getElementById('order-list');
           if (!d.orders || d.orders.length === 0) {
             container.innerHTML = '<div class="empty">📋 暂无待处理订单</div>';
@@ -204,6 +211,7 @@
 
     // 二次确认状态按订单id记录——看板每10秒整表重渲染，挂在按钮节点上会被刷新静默重置（回归修复）
     var _armedCompletes = {};
+    var _lastRenderSig = '';
     function completeOrder(id, btn) {
       // 二次点击确认（不依赖原生 confirm，任何环境可用）
       if (!_armedCompletes[id]) {

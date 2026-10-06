@@ -37,6 +37,16 @@ test('回归-BUG2: 厨房完成按钮的二次确认状态按订单id记录, 重
   assert.ok(!/btn\.dataset\.armed/.test(kit), '禁止再把确认状态挂在按钮节点属性上(会被 innerHTML 重建清掉)');
 });
 
+test('回归-看板稳定: 订单数据无变化时跳过整表重建(不重绘/不打断交互)', () => {
+  const kit = read('kitchen.html');
+  assert.ok(kit.includes('var _lastRenderSig'), '必须有渲染签名变量');
+  assert.ok(kit.includes('renderSig === _lastRenderSig'), '数据未变化必须 early return 跳过 innerHTML 重建');
+  // 签名检查必须在新单响铃之后（不能因为跳过重绘而漏掉新单提示音）
+  const sigPos = kit.indexOf('renderSig === _lastRenderSig');
+  const beepPos = kit.indexOf('beepNewOrders');
+  assert.ok(beepPos > -1 && beepPos < sigPos, '响铃判定必须在渲染签名检查之前执行');
+});
+
 test('回归-BUG3: 购物车行菜名走 dishNameOf(随英文菜单切换)', () => {
   const core = read('js/core.js');
   assert.ok(core.includes('const name=dish?esc(dishNameOf(dish)):esc(x.name)'), 'showCart 行名必须优先 dishNameOf(dish), 仅无匹配菜品时回退快照名');
