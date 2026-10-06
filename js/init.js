@@ -90,6 +90,8 @@ document.addEventListener('DOMContentLoaded',function(){
  click('nav-profile',e=>{e.preventDefault();showProfile();});
  click('login-btn',()=>showSection('login-section'));
  click('register-btn',()=>showSection('register-section'));
+ click('goto-register',e=>{e.preventDefault();showSection('register-section');});
+ click('goto-login',e=>{e.preventDefault();showSection('login-section');});
  click('guest-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('menu');return;}showDataset();});
  click('ai-recommend-btn',()=>{if(!ssGet('lockedTable')){openTablePicker('ai');return;}
   openAIRecommend();
