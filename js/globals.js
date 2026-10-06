@@ -150,4 +150,23 @@ function updateFloatBar(){
 }
 
 
-
+// ═══ 中英双语（C11）：菜名/分类/描述按语言显示，切换记忆在 localStorage ═══
+var menuLang = localStorage.getItem('menuLang') || 'zh';
+var CAT_EN = { '主食': 'Staples', '招牌与游西安必打卡': 'Must-Try Signatures', '热销菜品': 'Best Sellers', '传承陕菜': 'Heritage Shaanxi', '江湖海鲜': 'Jianghu Seafood', '田园时蔬·汤羹': 'Greens & Soups', '特色凉菜': 'Signature Cold Dishes', '陕西小吃': 'Shaanxi Snacks', '飲品与酒水': 'Drinks & Wines', '凉菜凉拌': 'Cold Dishes', '汤粥糖水': 'Soups & Desserts', '主食小吃': 'Staples & Snacks', '甜品饮品': 'Desserts & Drinks', '海鲜水产': 'Seafood', '清爽素食': 'Light Vegetarian' };
+function dishNameOf(d) {
+  if (menuLang === 'en' && d) { if (d.name_en) return d.name_en; const m = String(d.name || '').match(/^(.+)\(([^()]+)\)$/); if (m && d.name_en) return d.name_en; }
+  return (d && d.name) || '';
+}
+function catNameOf(c) { return menuLang === 'en' && CAT_EN[c] ? CAT_EN[c] : c; }
+function toggleMenuLang() {
+  menuLang = menuLang === 'zh' ? 'en' : 'zh';
+  localStorage.setItem('menuLang', menuLang);
+  const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  const sec = document.querySelector('.section.active');
+  if (!sec) return;
+  if (sec.id === 'dataset-section') renderMenuTable();
+  else if (sec.id === 'recommendation-section') { if (typeof displayRecommendations === 'function') displayRecommendations(); }
+  else if (sec.id === 'table-result-section') { if (typeof renderTableSets === 'function') renderTableSets(); }
+  else if (sec.id === 'cart-section') { if (typeof showCart === 'function') showCart(); }
+  else if (sec.id === 'home-section') showSection('home-section');
+}
