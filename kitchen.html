@@ -149,7 +149,7 @@
     function loadOrders() {
       const token = getToken();
       if (!token) return;
-      fetch('/api/orders?status=pending,confirmed', { headers: getAuthHeaders() })
+      fetch('/api/orders?status=pending,confirmed,completed', { headers: getAuthHeaders() })
         .then(r => { if (r.status === 401) { localStorage.removeItem('kitchenToken'); location.reload(); return null; } return r.json(); })
         .then(d => {
           if (!d) return;
@@ -166,7 +166,9 @@
             container.innerHTML = '<div class="empty">📋 暂无待处理订单</div>';
             return;
           }
-          container.innerHTML = d.orders.map(o => {
+          // 进行中 + 当日已完成分离：完成单折叠归档，当天对账可查（A5）
+          const isToday = o => { if (!o.completed_at && !o.created_at) return false; const d = new Date(o.completed_at || o.created_at); const n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate(); };
+          const cardOf = o => {
             const items = (o.items || []).filter(i => !i.giftTo).map(i => {
               const qty = parseInt(i.qty || i.quantity) || 1;
               if (i.giftFrom) {
@@ -175,19 +177,25 @@
               }
               return '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + qty + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>' + (i.note ? '<div class="item" style="color:#e67e22;font-size:0.82em;">📝 顾客要求：' + esc(i.note) + '</div>' : '');
             }).join('');
-            const time = o.created_at ? new Date(o.created_at).toLocaleTimeString() : '';
-            return '<div class="order-card" data-id="' + o.id + '">'
+            const time = (o.completed_at || o.created_at) ? new Date(o.completed_at || o.created_at).toLocaleTimeString() : '';
+            const doneBadge = o.status === 'completed' ? '<span class="status" style="color:#27ae60;">✅ 已完成</span>' : '<span class="status">' + (o.status === 'confirmed' ? '✅ 已确认' : '📌 待处理') + '</span>';
+            return '<div class="order-card" data-id="' + o.id + '" style="' + (o.status === 'completed' ? 'opacity:0.7;' : '') + '">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
               + '<span class="table-num">' + esc(o.table_number ? (o.table_number === '打包' ? '🥡 打包带走' : '桌号 ' + o.table_number) : '外卖') + '</span>'
               + '<span class="time">' + time + '</span>'
               + '</div>'
               + '<div class="items">' + items + '</div>'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-              + '<span class="status">' + (o.status === 'confirmed' ? '✅ 已确认' : '📌 待处理') + '</span>'
-              + '<button class="btn-complete" onclick="completeOrder(' + o.id + ', this)">完成</button>'
+              + doneBadge
+              + (o.status !== 'completed' ? '<button class="btn-complete" onclick="completeOrder(' + o.id + ', this)">完成</button>' : '')
               + '</div>'
               + '</div>';
-          }).join('');
+          };
+          const active = d.orders.filter(o => o.status !== 'completed');
+          const doneToday = d.orders.filter(o => o.status === 'completed' && isToday(o));
+          container.innerHTML = active.map(cardOf).join('')
+            + (doneToday.length ? '<details style="margin-top:16px;"><summary style="cursor:pointer;color:#c9a96e;font-size:0.85em;">🗂 今日已完成（' + doneToday.length + ' 单）</summary><div style="margin-top:8px;">' + doneToday.map(cardOf).join('') + '</div></details>' : '');
+          if (!active.length && !doneToday.length) container.innerHTML = '<div class="empty">📋 暂无待处理订单</div>';
         }).catch(() => {
           const c = document.getElementById('order-list');
           if (c) c.insertAdjacentHTML('afterbegin', '<div class="conn-lost" style="padding:10px;margin:8px 0;background:#fff3cd;border:1px solid #ffe082;border-radius:6px;color:#856404;text-align:center;">⚠ 连接断开，正在重试…</div>');
