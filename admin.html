@@ -1203,10 +1203,19 @@ function loadDishes() {
   fetch('/api/dishes').then(r => r.json()).then(d => {
     if (!d.success) return;
     document.querySelector('#dish-table-body').innerHTML = d.dishes.map(x =>
-      `<tr><td>${esc(x.id)}</td><td>${x.image_url?(x.image_url.startsWith('/')||x.image_url.startsWith('http')?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:`<span style="font-size:1.3rem;margin-right:6px;vertical-align:middle;">${esc(x.image_url)}</span>`):""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span></td>
-        <td><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
+      `<tr><td>${esc(x.id)}</td><td>${x.image_url?(x.image_url.startsWith('/')||x.image_url.startsWith('http')?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:`<span style="font-size:1.3rem;margin-right:6px;vertical-align:middle;">${esc(x.image_url)}</span>`):""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span>${x.is_sold_out===true?' <span class="badge bg-danger" style="border-radius:4px;">售罄</span>':''}</td>
+        <td><button class="btn btn-sm ${x.is_sold_out?'btn-success':'btn-outline-danger'}" onclick="toggleSoldOut(${esc(x.id)}, ${x.is_sold_out===true})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;" title="售罄菜当日不进菜单与推荐">${x.is_sold_out?'补货':'售罄'}</button><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
     ).join('');
   }).catch(() => { console.warn('数据加载失败'); });
+}
+
+function toggleSoldOut(id, cur) {
+  const token = localStorage.getItem('adminToken');
+  fetch('/api/admin/dish/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ is_sold_out: !cur }) })
+    .then(r => r.json()).then(d => {
+      if (d.success) { setTimeout(function() { loadDishes(); }, 500); showToast(cur ? '已标记补货' : '已标记售罄', 'success'); }
+      else showToast(d.error || '操作失败', 'error');
+    }).catch(() => showToast('网络错误', 'error'));
 }
 
 function editDish(id) {

@@ -68,6 +68,7 @@ function buildPools(dishes, allergyKeys) {
   let excluded = 0;
   for (const d of (dishes || [])) {
     if (!d || d.is_active === false) continue;
+    if (d.is_sold_out === true) continue; // 售罄菜当日不进推荐池
     if (typeof d.name === 'string' && d.name.includes('测试')) { excluded++; continue; }
     if (dishHasAllergy(d, allergyKeys)) { excluded++; continue; }
     const tags = Array.isArray(d.tags) ? d.tags : [];

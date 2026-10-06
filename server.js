@@ -602,6 +602,7 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     if (description !== undefined) { sets.push(`description = $${idx++}`); vals.push(description); }
     if (price_unit !== undefined) { sets.push(`price_unit = $${idx++}`); vals.push((price_unit === null) ? null : String(price_unit).trim() || null); }
     if (serving !== undefined) { sets.push(`serving = $${idx++}`); vals.push((serving === null) ? null : String(serving).trim() || null); }
+    if (is_sold_out !== undefined) { sets.push(`is_sold_out = $${idx++}`); vals.push(is_sold_out === true); }
     if (!sets.length) return res.status(400).json({ success: false, error: '没有要更新的字段' });
     vals.push(dishId);
     await pool.query(`UPDATE dishes SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
@@ -1167,10 +1168,15 @@ function validateMinQty(items, dishMeta) {
 async function recomputeOrderItems(pool, items) {
   const ids = items.map(i => parseInt(i.id)).filter(n => !isNaN(n));
   const priceMap = {};
+  const soldOutNames = [];
   if (ids.length) {
-    const pr = await pool.query('SELECT id, price FROM dishes WHERE id = ANY($1::int[])', [ids]);
-    pr.rows.forEach(r => { priceMap[r.id] = parseFloat(r.price); });
+    const pr = await pool.query('SELECT id, price, is_sold_out, name FROM dishes WHERE id = ANY($1::int[])', [ids]);
+    pr.rows.forEach(r => {
+      priceMap[r.id] = parseFloat(r.price);
+      if (r.is_sold_out === true) soldOutNames.push(r.name || ('菜品' + r.id));
+    });
   }
+  if (soldOutNames.length) return { error: '以下菜品已售罄：' + soldOutNames.join('、') + '，请移除后再结算' };
   const validated = items.map(i => {
     const did = parseInt(i.id);
     if (isNaN(did) || priceMap[did] === undefined) return null;
@@ -1195,6 +1201,7 @@ app.post('/api/order', softAuth, async (req, res) => {
     const pool = db;
     // 服务端重算价格：按 dish id 查 DB，防止客户端篡改价格（0 元单）
     const recomputed = await recomputeOrderItems(pool, items);
+    if (recomputed && recomputed.error) return res.status(400).json({ success: false, error: recomputed.error });
     if (!recomputed) return res.status(400).json({ success: false, error: '订单包含无效菜品' });
     const { validated: validatedItems, total: totalPrice } = recomputed;
     // 起售数量校验：X个起 的菜低于最小起售量直接拒单
@@ -1251,6 +1258,7 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
     // 服务端重算加菜价格：按 dish id 查 DB，防止客户端篡改价格
     const recomputed = await recomputeOrderItems(pool, items);
+    if (recomputed && recomputed.error) return res.status(400).json({ success: false, error: recomputed.error });
     if (!recomputed) return res.status(400).json({ success: false, error: '加菜包含无效菜品' });
     const addItems = recomputed.validated;
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
