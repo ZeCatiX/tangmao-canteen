@@ -270,6 +270,13 @@ click('privacy-link',e=>{e.preventDefault();showSection('privacy-section');});
  });
  // 购物车数量输入变更
  document.addEventListener('change',function(e){
+  if(e.target.classList.contains('cart-note-input')){
+   // 菜品要求备注：写进购物车条目，随订单到厨房
+   const id=parseInt(e.target.dataset.id);const cart=getCart();
+   const it=cart.find(c=>c.id===id);
+   if(it){it.note=e.target.value.trim().slice(0,30);saveCart(cart);}
+   return;
+  }
   if(!e.target.classList.contains('cart-qty-input'))return;
   const id=parseInt(e.target.dataset.id);const val=parseInt(e.target.value);
   if(!isNaN(val)&&val>0)updateCartQty(id,val);else updateCartQty(id,1);

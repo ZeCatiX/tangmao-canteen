@@ -1185,8 +1185,9 @@ async function recomputeOrderItems(pool, items) {
     const rawQty = i.qty !== undefined ? parseInt(i.qty) : parseInt(i.quantity);
     const qty = Number.isFinite(rawQty) ? rawQty : 1;
     if (!Number.isInteger(qty) || qty < 1 || qty > 999) return null;
+    const note = String(i.note || '').trim().slice(0, 50);
     const dbPrice = priceMap[did];
-    return i.giftFrom ? { ...i, qty, price: 0, origPrice: dbPrice } : { ...i, qty, price: dbPrice };
+    return i.giftFrom ? { ...i, qty, price: 0, origPrice: dbPrice, note } : { ...i, qty, price: dbPrice, note };
   });
   if (validated.some(i => i === null)) return null;
   const sum = validated.reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.qty) || 1), 0);
@@ -1263,8 +1264,8 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     if (!recomputed) return res.status(400).json({ success: false, error: '加菜包含无效菜品' });
     const addItems = recomputed.validated;
     const oldItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
-    // 同菜合并：id 与赠菜标记都相同才合并（普通菜与赠菜价格不同，不能混为一行）
-    const keyOf = it => (it.id) + '|' + (it.giftTo || '') + '|' + (it.giftFrom || '');
+    // 同菜合并：id 与赠菜标记都相同才合并（普通菜与赠菜价格不同，不能混为一行）；备注不同视为不同行（厨房分开出）
+    const keyOf = it => (it.id) + '|' + (it.giftTo || '') + '|' + (it.giftFrom || '') + '|' + (it.note || '');
     const mergedItems = oldItems.map(x => ({ ...x }));
     for (const it of addItems) {
       const k = keyOf(it);

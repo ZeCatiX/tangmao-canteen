@@ -171,9 +171,9 @@
               const qty = parseInt(i.qty || i.quantity) || 1;
               if (i.giftFrom) {
                 const op = parseFloat(i.origPrice) || 0;
-                return '<div class="item"><span>🎁 ' + esc(i.name || '未知') + ' × ' + qty + ' <span style="color:#c9a96e;font-size:0.85em;">(' + esc(String(i.giftFrom)) + '号桌赠)</span></span><span>0元 <span style="color:#8b7a6a;text-decoration:line-through;font-size:0.85em;">' + op + '元</span></span></div>';
+                return '<div class="item"><span>🎁 ' + esc(i.name || '未知') + ' × ' + qty + ' <span style="color:#c9a96e;font-size:0.85em;">(' + esc(String(i.giftFrom)) + '号桌赠)</span></span><span>0元 <span style="color:#8b7a6a;text-decoration:line-through;font-size:0.85em;">' + op + '元</span></span></div>' + (i.note ? '<div class="item" style="color:#e67e22;font-size:0.82em;">📝 顾客要求：' + esc(i.note) + '</div>' : '');
               }
-              return '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + qty + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>';
+              return '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + qty + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>' + (i.note ? '<div class="item" style="color:#e67e22;font-size:0.82em;">📝 顾客要求：' + esc(i.note) + '</div>' : '');
             }).join('');
             const time = o.created_at ? new Date(o.created_at).toLocaleTimeString() : '';
             return '<div class="order-card" data-id="' + o.id + '">'
