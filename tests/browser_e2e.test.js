@@ -171,14 +171,14 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
   it('4.3 提交偏好获取推荐结果', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
+    // 2026-10-06 B7冷启动:未声明偏好的新客点AI直达热门Top6,不再进偏好表单。
+    // 要走"偏好表单→推荐"路径,先标记 tasteFilled(等价于声明过偏好)。
+    await page.evaluate(() => sessionStorage.setItem('tasteFilled', '1'));
     // 2026-09-17: AI入口+选桌(偏好页)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
     await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
-    await sleep(500);
-    await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
-    await sleep(500);
+    await sleep(800);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');

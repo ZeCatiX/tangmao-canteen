@@ -176,6 +176,8 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
+    // 2026-10-06 B7冷启动:新客点AI直达热门Top6不进表单;先标记 tasteFilled 才走偏好路径
+    await page.evaluate(() => sessionStorage.setItem('tasteFilled', '1'));
     // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);

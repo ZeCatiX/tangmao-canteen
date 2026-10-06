@@ -93,31 +93,38 @@ describe('显示修复回归', () => {
 });
 
 // ================================================================
-// 前端修复 - script.js
+// 前端修复 - js/ 模块源码（2026-10-06:esbuild 压缩产物变量名会被改写,
+// 源码模式断言一律读 js/ 模块;script.js 产物仅做整体冒烟）
 // ================================================================
 describe('前端修复回归', () => {
   it('register 使用正斜杠路径（非反斜杠）', () => {
-    const s = read('script.js');
-    // 2026-09-17: 实现已改用 safeFetch 封装,断言放宽为"存在调用 /api/user/register 且用正斜杠"
+    const s = read('js/core.js');
     assert.ok(s.includes("'/api/user/register'"), 'register 应用正斜杠路径');
     assert.ok(!s.includes("'\\api\\user\\register'"), '不应有反斜杠路径');
   });
-  it('renderMenuTable tags 已转义防存储型 XSS', () => {
-    const s = read('script.js');
-    assert.ok(s.includes('esc(tags)'), 'tags 应使用 esc 转义');
+  it('renderMenuTable 动态标签安全（白名单+转义）防存储型 XSS', () => {
+    const s = read('js/core.js');
+    // 模块化重构后 tags 不再整体拼接:只渲染 SUBS 白名单二级分隔(且 esc)与固定文案角标
+    assert.ok(s.includes('const SUBS=['), '二级分隔应走 SUBS 白名单');
+    assert.ok(s.includes('esc(sub)'), '白名单标签仍应 esc 转义');
   });
   it('checkoutCart 发送原始 name 非双重转义', () => {
-    const s = read('script.js');
+    const s = read('js/core.js');
     assert.ok(s.includes('name:x.name'), '应发送原始 name');
     assert.ok(!s.includes('name:esc(x.name)'), '不应双重转义');
   });
   it('fetchRecommendations userProfile 空值保护', () => {
-    const s = read('script.js');
-    assert.ok(s.includes("const up=userProfile||{}"), '应有 userProfile 空值保护');
+    const s = read('js/recommendation.js');
+    assert.ok(s.includes('const up=userProfile||{}'), '应有 userProfile 空值保护');
   });
   it('localStorage setItem 有 try-catch', () => {
-    const s = read('script.js');
+    const s = read('js/core.js');
     assert.ok(s.includes("try{localStorage.setItem('orderedDishes'"), 'setItem 应有 try-catch 防隐私模式崩溃');
+  });
+  it('fetchRecommendations 推荐池排除售罄菜（2026-10-06 回归）', () => {
+    const s = read('js/recommendation.js');
+    // 售罄菜不进偏好推荐池:与菜单灰化/冷启动过滤/结算拦截构成完整售罄链路
+    assert.ok(s.includes('is_sold_out===true'), '推荐池应过滤 is_sold_out');
   });
 });
 

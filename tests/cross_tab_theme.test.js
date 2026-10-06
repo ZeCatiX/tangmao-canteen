@@ -183,7 +183,8 @@ describe('页面交互细节深度检查', () => {
   // ===== 10. 首页特色卡片显示 =====
   it('10.1 首页特色卡片有内容', async () => {
     const cards = await page.evaluate(() => {
-      const cards = document.querySelectorAll('#home-section .card, #home-section h6');
+      // 2026-10-06:三特色卡标题 h6→h2(标题层级修复),选择器同步
+      const cards = document.querySelectorAll('#home-section .card, #home-section h2');
       return cards.length;
     });
     assert.ok(cards > 0, '首页应有特色卡片');

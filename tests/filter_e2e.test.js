@@ -43,12 +43,11 @@ describe('菜单筛选器测试', () => {
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const cards = document.querySelectorAll('#dataset-table-body .dish-card');
+      // 2026-10-06:卡片副标题为 "分类 · 辣度 · 规格"(规格后加),按 " · " 分段取第1段=分类
       const cats = [...new Set([...cards].map(c => {
         var p = c.querySelector('.dish-card-body p');
         if (!p) return '';
-        var t = p.textContent;
-        var li = t.lastIndexOf('·');
-        return li > 0 ? t.slice(0, li).trim() : t.trim();
+        return (p.textContent.split(' · ')[0] || '').trim();
       }))];
       return { count: count, rows: cards.length, cats: cats };
     });
@@ -68,12 +67,11 @@ describe('菜单筛选器测试', () => {
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const cards = document.querySelectorAll('#dataset-table-body .dish-card');
+      // 第2段=辣度(规格在第3段,分类名内部的 · 无空格不受影响)
       const spices = [...new Set([...cards].map(function(c) {
         var p = c.querySelector('.dish-card-body p');
         if (!p) return '';
-        var t = p.textContent;
-        var li = t.lastIndexOf('·');
-        return li > 0 ? t.slice(li + 1).trim() : t.trim();
+        return (p.textContent.split(' · ')[1] || '').trim();
       }))];
       return { count: count, rows: cards.length, spices: spices };
     });

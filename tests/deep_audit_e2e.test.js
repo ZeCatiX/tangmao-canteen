@@ -257,9 +257,10 @@ describe('1. 全面按钮可用性审计', () => {
 
   it('管理后台添加菜品按钮使用null保护访问DOM', () => {
     const html = read('admin.html');
+    // 2026-10-06:表单加了英文双语等字段,重置代码后移,窗口从 1600 放宽到 4000
     const addBtnBlock = html.substring(
       html.indexOf("document.getElementById('add-dish-btn')"),
-      html.indexOf("document.getElementById('add-dish-btn')") + 1600
+      html.indexOf("document.getElementById('add-dish-btn')") + 4000
     );
     assert.ok(addBtnBlock.includes('const preview = document.getElementById'), '图片预览使用const变量');
     assert.ok(addBtnBlock.includes('if (preview)'), '图片预览有null保护');
@@ -1438,9 +1439,10 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('菜品图片有默认SVG兜底', () => {
-    const script = read('script.js');
-    assert.ok(script.includes('defaultImg'), '默认图片变量存在');
-    assert.ok(script.includes('onerror="this.src'), '图片加载失败有兜底');
+    // 2026-10-06:esbuild 会改写函数内局部变量名,断言读模块源码
+    const rec = read('js/recommendation.js');
+    assert.ok(rec.includes('defaultImg'), '默认图片变量存在');
+    assert.ok(rec.includes('onerror='), '图片加载失败有兜底');
   });
 
   it('predict-rf限制菜品数量', () => {

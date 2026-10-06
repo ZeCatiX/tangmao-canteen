@@ -623,9 +623,10 @@ describe('43. 前端 null 安全保护', () => {
   it('script.js 关键函数有 null 保护', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    assert.ok(content.includes('const rl=$s(\'recommendation-loading\')') || content.includes('document.getElementById(id);return el'),
-      '应包含安全 DOM 访问');
+    // esbuild 压缩会改写局部变量名(rl/rr/$s),精确断言读模块源码
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
+    assert.ok(content.includes('if(!rl||!rr)'),
+      '推荐入口应有 null 保护');
   });
 });
 
@@ -684,9 +685,11 @@ describe('45. recommendation.js DOM null 保护', () => {
   it('script.js 构建产物包含 null 保护', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    assert.ok(content.includes('if(!rl||!rr)'), '构建产物应有 null 保护');
-    assert.ok(content.includes('isFinite(d.matchRate)'), '构建产物应有 isFinite 保护');
+    // 变量名会被压缩改写,产物级只断言压缩后仍稳定的形态;精确断言由源码用例覆盖
+    const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+    assert.ok(bundle.includes('isFinite('), '构建产物应有 isFinite 保护(函数名全局保留)');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
+    assert.ok(src.includes('if(!rl||!rr)'), '源码应有 rl/rr null 保护');
   });
 });
 
@@ -713,9 +716,10 @@ describe('46. checkoutCart 修复验证', () => {
   it('script.js 构建产物包含认证头', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    // 确认 checkoutCart 和 endRecommendation 的订单请求都包含 authHeaders
-    assert.ok(content.includes('\'Content-Type\':\'application/json\',...authHeaders()'), '构建产物应有 authHeaders');
+    const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+    // 确认构建产物仍携带认证头调用(authHeaders 是 HTML onclick 引用的全局名,压缩不会改写);
+    // 引号形态 esbuild 用双引号,断言按正则容忍两种引号
+    assert.ok(/['"]Content-Type['"]\s*:\s*['"]application\/json['"]\s*,\s*\.\.\.authHeaders\(\)/.test(bundle), '构建产物应有 authHeaders');
   });
 });
 
@@ -747,8 +751,11 @@ describe('47. submitStarFeedback null 保护', () => {
   it('script.js 构建产物包含评分安全保护', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    assert.ok(content.includes('if(h)h.textContent'), '构建产物应有 star-hint 保护');
+    // h 是函数内局部变量,压缩后形态不定;产物级断言函数名级别特征,精确断言由源码用例覆盖
+    const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+    assert.ok(bundle.includes('function submitStarFeedback'), '构建产物应保留 submitStarFeedback');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    assert.ok(src.includes('if(h)h.textContent'), '源码应有 star-hint 保护');
   });
 });
 
@@ -840,16 +847,19 @@ describe('51. docker-compose 环境变量', () => {
 });
 
 // ================================================================
-// 52. 新增：build.js 改进去重逻辑验证
+// 52. build.js 构建管线验证（2026-10-06:esbuild 替代手写去重机后重写）
 // ================================================================
-describe('52. build.js 改进去重逻辑', () => {
-  it('大括号匹配跳过字符串和正则', () => {
+describe('52. build.js esbuild 构建管线', () => {
+  it('build.js 走 esbuild 压缩且保留顶层全局名', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'build.js'), 'utf8');
-    assert.ok(content.includes('inString'), '应有字符串状态检测');
-    assert.ok(content.includes('inRegex'), '应有正则状态检测');
-    assert.ok(content.includes('stringChar'), '应有字符串引号跟踪');
+    assert.ok(content.includes('esbuild'), '应使用 esbuild 构建');
+    assert.ok(content.includes("require('fs')") || content.includes('readFileSync'), '应拼接 js/ 模块源码');
+    assert.ok(content.includes('minify: true'), '应开启压缩');
+    // 内联 onclick 依赖顶层全局函数名,构建不得打包改名(transform 模式不重命名顶层标识符)
+    const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+    assert.ok(bundle.includes('function checkoutCart') && bundle.includes('function addToCart'), '产物应保留全局函数名');
   });
 
   it('构建产物语法正确', () => {
@@ -968,11 +978,11 @@ describe('57. 视觉和编辑脚本修复', () => {
     assert.ok(!content.includes('!process.env.LOCAL'), '不应使用取反判断');
   });
 
-  it('edit_package.js 有 scripts 保护', () => {
+  it('edit_package.js scripts 保护断言下线(文件已在治理提交 f1bc12a 删除)', () => {
+    // 原 edit_package.js 的 pkg.scripts 兜底逻辑随文件删除;占位用例保持编号连续
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'edit_package.js'), 'utf8');
-    assert.ok(content.includes('if (!pkg.scripts) pkg.scripts = {}'), '应有 scripts 保护');
+    assert.ok(!fs.existsSync(path.join(__dirname, '..', 'edit_package.js')), 'edit_package.js 应已删除');
   });
 });
 

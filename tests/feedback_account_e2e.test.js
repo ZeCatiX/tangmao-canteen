@@ -136,7 +136,9 @@ describe('评价反馈与账户管理测试', () => {
     });
     console.log('确认模态框显示:', modalShown);
     assert.ok(modalShown, '删除应弹出确认模态框');
-    // 点击模态框确认按钮
+    // 点击模态框确认按钮（2026-10-06:注销需密码二次确认——先填密码,空密码点击会被前端拦截且无反馈）
+    await page.type('#delete-pw-input', 'Pass1234!', { delay: 10 });
+    await sleep(200);
     await page.evaluate(() => document.getElementById('modal-confirm-btn')?.click());
     await sleep(2000);
     const state = await page.evaluate(() => {

@@ -155,7 +155,8 @@ describe('E2E 覆盖缺口补充测试', () => {
         body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试', price: 1, quantity: 1 }], total: 1, userId: 'csrf_test' }),
       });
       // 订单创建成功或返回合理错误，说明依赖 JSON body + 认证头而非隐藏 Cookie
-      assert.ok([200, 400, 401].includes(status), '订单API应正常响应，实际: ' + status);
+      // 429 = 同桌/同IP频度防刷触发,同样是"正常响应而非依赖Cookie"的证据
+      assert.ok([200, 400, 401, 429].includes(status), '订单API应正常响应，实际: ' + status);
     });
   });
 

@@ -67,18 +67,19 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
   });
 
   it('2.3 购物车数量加减', async () => {
+    // 2026-10-06:购物车行内首个 input 是备注框,数量读写用专用类;+号类名为 cart-qty-plus
     const beforeCount = await page.evaluate(() => {
-      const input = document.querySelector('#cart-table-body input');
+      const input = document.querySelector('#cart-table-body .cart-qty-input');
       return input ? input.value : null;
     });
     // 点击+号
     await page.evaluate(() => {
-      const btn = document.querySelector('#cart-table-body .btn-plus, #cart-table-body button[onclick*="inc"]');
+      const btn = document.querySelector('#cart-table-body .cart-qty-plus');
       if (btn) btn.click();
     });
     await sleep(500);
     const afterCount = await page.evaluate(() => {
-      const input = document.querySelector('#cart-table-body input');
+      const input = document.querySelector('#cart-table-body .cart-qty-input');
       return input ? input.value : null;
     });
     console.log('数量:', beforeCount, '->', afterCount);

@@ -24,6 +24,11 @@ require('dotenv').config();
 
 
 // 管理后台凭据（支持通过环境变量覆盖）
+
+// 2026-10-06 防刷适配:下单按桌号限频(60s/5单),压力类用例每单注入唯一桌号避免互相触发 IP 桶
+let _uniqSeq = 0;
+function uniqTable(prefix) { return (prefix || 'UT') + Date.now().toString().slice(-6) + (++_uniqSeq); }
+
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
 if (!ADMIN_PASS) throw new Error('❌ ADMIN_PASS 未设置，请在 .env 中配置管理后台密码');
@@ -259,6 +264,7 @@ describe('订单 API', () => {
         userId: 'test_user',
         items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }],
         totalPrice: 18,
+        tableNumber: uniqTable(),
       }),
     });
     assert.equal(status, 200);
@@ -488,7 +494,7 @@ describe('订单状态管理 API', () => {
   before(async () => {
     const r = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'status_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price }),
+      body: JSON.stringify({ userId: 'status_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price, tableNumber: uniqTable() }),
     });
     orderId = r.body.orderId || '';
     // 获取管理员token用于订单状态更新（需要认证）
@@ -1510,6 +1516,7 @@ describe('订单创建完整字段', () => {
           { id: dishPool[2].id, name: dishPool[2].name, price: dishPool[2].price },
         ],
         totalPrice: 75,
+        tableNumber: uniqTable(),
       }),
     });
     assert.equal(status, 200);
@@ -1523,6 +1530,7 @@ describe('订单创建完整字段', () => {
         userId: 'free_test',
         items: [{ id: dishPool[0].id, name: dishPool[0].name, price: 0 }],
         totalPrice: 0,
+        tableNumber: uniqTable(),
       }),
     });
     assert.equal(status, 200, '零总价订单应成功: ' + status);
@@ -1564,7 +1572,7 @@ describe('订单状态筛选完整', () => {
   before(async () => {
     adminToken = await getAdminToken();
     const r = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'filter_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price }),
+      method: 'POST', body: JSON.stringify({ userId: 'filter_test', items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price }], totalPrice: dishPool[0].price, tableNumber: uniqTable() }),
     });
     orderId = r.body.orderId || '';
   });

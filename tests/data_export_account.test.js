@@ -158,11 +158,11 @@ describe('用户删除和账号注销流程', () => {
       headers: { 'Authorization': 'Bearer ' + token },
     });
     assert.ok(ordersRes.status === 200 || ordersRes.status === 404, 'token应有效');
-    // 删除账号
+    // 删除账号（2026-10-06:接口需密码二次确认防误触,见 /api/user/delete 的 password 校验）
     const delRes = await api('/api/user/delete', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ username: uniq }),
+      body: JSON.stringify({ username: uniq, password: 'DelTest123!' }),
     });
     // 应成功删除或返回成功
     assert.ok(delRes.status === 200, '删除账号应返回200');
@@ -174,7 +174,7 @@ describe('用户删除和账号注销流程', () => {
     assert.equal(afterDelRes.status, 401, '删除后token应失效');
   });
 
-  // ===== 12. 删除不存在的用户 =====
+  // ===== 12. 删除接口的密码确认与身份边界 =====
   it('12.1 删除不存在的用户不崩溃', async () => {
     const uniq = 'nouser_' + Date.now();
     const reg = await api('/api/user/register', {
@@ -182,13 +182,26 @@ describe('用户删除和账号注销流程', () => {
       body: JSON.stringify({ username: uniq, password: 'Test1234!' }),
     });
     const token = reg.body.token;
+    // 身份取自 JWT,body 里的 username 不被信任(IDOR 防护)——传别人的用户名也只会删自己
     const delRes = await api('/api/user/delete', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ username: 'nonexistent_user_xyz' }),
+      body: JSON.stringify({ username: 'nonexistent_user_xyz', password: 'Test1234!' }),
     });
-    // 应返回200或错误，但不崩溃
-    assert.ok(delRes.status === 200 || delRes.status === 404, '应返回200或404');
+    // 带正确密码 → 删除的是 JWT 本人,应成功;不崩溃
+    assert.ok(delRes.status === 200 || delRes.status === 404, '应返回200或404,实际: ' + delRes.status);
+    // 密码错误 → 400 拒绝,账号未注销(注意用户名上限20字符,'n_'前缀防超长)
+    const reg2 = await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: 'n_' + Date.now(), password: 'Test1234!' }),
+    });
+    const wrongPw = await api('/api/user/delete', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + reg2.body.token },
+      body: JSON.stringify({ password: 'WrongPass999!' }),
+    });
+    assert.equal(wrongPw.status, 400, '密码错误应返回400');
+    assert.equal(wrongPw.body.success, false, '密码错误不应删除成功');
   });
 
   // ===== 13. 用户退出后token被列入黑名单 =====

@@ -109,8 +109,8 @@ describe('全面丰富 E2E 测试', () => {
       // 评价（带认证头）
       const feedback = await api('/api/feedback', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ dishId: 1, score: 5, userId: uname }) });
       assert.equal(feedback.status, 200, '评价应成功，实际: ' + feedback.status);
-      // 注销（POST /api/user/delete 带认证头）
-      const del = await api('/api/user/delete', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ username: uname }) });
+      // 注销（POST /api/user/delete 带认证头;2026-10-06 起需密码二次确认）
+      const del = await api('/api/user/delete', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ username: uname, password: 'Test1234!' }) });
       assert.equal(del.status, 200, '注销应成功，实际: ' + del.status + ' ' + JSON.stringify(del.body));
     });
   });
@@ -247,7 +247,7 @@ describe('全面丰富 E2E 测试', () => {
 
     it('订单状态可流转（创建→完成）', async () => {
       // 创建订单
-      const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: 'rich_kitchen_' + uid() }) });
+      const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, tableNumber: '96', userId: 'rich_kitchen_' + uid() }) });
       assert.equal(order.status, 200, '创建订单应成功');
       const orderId = order.body.orderId || order.body.id;
       assert.ok(orderId, '创建订单应返回 orderId');

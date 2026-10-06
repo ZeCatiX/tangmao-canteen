@@ -246,11 +246,11 @@ describe('反馈环路与统计联动测试', () => {
       body: JSON.stringify({ username: uniq, password: 'DelLoop123!' }),
     });
     const token = reg.body.token;
-    // 删除用户
+    // 删除用户（2026-10-06:接口需密码二次确认,不带 password 会被 400 拒绝）
     const del = await api('/api/user/delete', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ username: uniq }),
+      body: JSON.stringify({ username: uniq, password: 'DelLoop123!' }),
     });
     assert.equal(del.status, 200, '用户删除应成功');
     // 管理后台用户列表应不含该用户（需刷新缓存）

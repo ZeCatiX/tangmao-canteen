@@ -47,14 +47,16 @@ describe('菜单加购与结算流程测试', () => {
     await sleep(600);
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
+    // 2026-10-06:卡片布局下规格变体菜一卡多个加购按钮、售罄菜(无变体)整卡灰化无按钮,
+    // 不变量改为"每张非售罄卡至少一个加购按钮"
     const info = await page.evaluate(() => {
-      const addBtns = document.querySelectorAll('#dataset-table-body .dish-card .add-to-cart-btn').length;
-      const rows = document.querySelectorAll('#dataset-table-body .dish-card').length;
-      return { addBtns, rows };
+      const cards = [...document.querySelectorAll('#dataset-table-body .dish-card')];
+      const bad = cards.filter(c => !c.querySelector('.add-to-cart-btn') && !c.textContent.includes('已售罄')).length;
+      return { addBtns: document.querySelectorAll('#dataset-table-body .dish-card .add-to-cart-btn').length, rows: cards.length, bad };
     });
-    console.log('加购按钮:', info.addBtns, '/ 行数:', info.rows);
+    console.log('加购按钮:', info.addBtns, '/ 卡片:', info.rows, '/ 缺按钮卡片:', info.bad);
     assert.ok(info.addBtns >= 60, '应有60+加购按钮: ' + info.addBtns);
-    assert.ok(info.addBtns === info.rows, '每行都应有加购按钮');
+    assert.equal(info.bad, 0, '非售罄卡片都应有加购按钮');
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 

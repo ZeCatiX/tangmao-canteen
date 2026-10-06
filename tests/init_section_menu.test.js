@@ -73,6 +73,8 @@ describe('init事件绑定完整性检查', () => {
       if (['refresh-recommendations', 'end-recommendation', 'end-logout-btn', 'goto-drinks-btn', 'table-generate-btn'].includes(id)) continue; // table-generate-btn 由 table-builder-form 的 submit 统一处理
       // 2026-09-17: Bootstrap data-bs-dismiss 按钮由框架处理关闭,无需 JS 绑定
       if (['addon-close', 'table-picker-close'].includes(id)) continue;
+      // 2026-10-06: 内联 onclick 绑定的按钮(中英切换/返回席面),不经过 init.js
+      if (['lang-toggle', 'float-drinks-back'].includes(id)) continue;
       // 检查init.js中是否有click('id'或submit('id'或事件委托
       const inInit = init.includes(`'${id}'`) || init.includes(`"${id}"`);
       if (!inInit) unbound.push(id);

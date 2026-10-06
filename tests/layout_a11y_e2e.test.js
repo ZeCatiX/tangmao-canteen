@@ -40,8 +40,9 @@ describe('排版与无障碍检查', () => {
 
   it('首页图片有alt属性', async () => {
     const noAlt = await page.evaluate(() => {
+      // alt="" 是装饰性图片的规范写法(分类圆徽图标旁有可见文字标签),只揪真正缺失 alt 的
       return Array.from(document.querySelectorAll('img'))
-        .filter(img => !img.getAttribute('alt'))
+        .filter(img => img.getAttribute('alt') === null)
         .map(img => img.src.substring(0, 50));
     });
     assert.equal(noAlt.length, 0, '首页所有图片应有alt属性，缺少: ' + noAlt.join(', '));

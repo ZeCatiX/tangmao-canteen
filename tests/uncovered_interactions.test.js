@@ -57,10 +57,13 @@ async function getRecommendations(page) {
 
 describe('未覆盖交互路径补充检查', () => {
   before(async () => {
-    browser = await puppeteer.launch({
+    // 批量跑测试时偶发 Chrome 启动瞬态失败(资源竞争),重试一次再放弃
+    const launch = () => puppeteer.launch({
       headless: 'new', executablePath: CHROME_PATH,
       args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
     });
+    try { browser = await launch(); }
+    catch (e) { await new Promise(r => setTimeout(r, 1500)); browser = await launch(); }
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];

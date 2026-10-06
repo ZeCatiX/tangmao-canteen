@@ -71,11 +71,7 @@ describe('剩余基础设施文件最终检查', () => {
     assert.ok(content.length > 100, '应有实质内容');
   });
 
-  // ===== 10. edit_package.js 存在 =====
-  it('10.1 edit_package.js 存在且包含编辑逻辑', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'edit_package.js'), 'utf8');
-    assert.ok(content.length > 50, '应有实质内容');
-  });
+  // ===== 10. edit_package.js 已删除(治理提交 f1bc12a),清单断言随之下线 =====
 
   // ===== 11. 所有文件无BOM =====
   it('11.1 所有JS/JSON文件无BOM头', () => {
