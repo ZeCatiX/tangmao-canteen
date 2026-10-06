@@ -1266,8 +1266,11 @@ setInterval(() => {
     if (alive.length) _orderFreqMap.set(k, alive); else _orderFreqMap.delete(k);
   }
 }, 300000).unref();
-function orderFreqCheck(tableNumber, ip) {
-  const key = String(tableNumber || ip || 'unknown');
+// 防刷 key 三级取值:桌号 → 登录用户名 → IP。
+// 无桌号订单不能一律落到 IP:堂食 Wi-Fi 下所有顾客共享 NAT 出口,打包/外卖顾客会互相误触发限流;
+// 登录用户按用户名分桶,只有匿名无桌号单才回退 IP(防脚本滥用)。
+function orderFreqCheck(tableNumber, identity) {
+  const key = String(tableNumber || identity || 'unknown');
   const now = Date.now();
   const arr = (_orderFreqMap.get(key) || []).filter(t => now - t < 60000);
   if (arr.length >= 5) { _orderFreqMap.set(key, arr); return false; }
@@ -1281,7 +1284,7 @@ app.post('/api/order', softAuth, async (req, res) => {
   try {
     const { items, tableNumber } = req.body;  // userId 取 JWT、totalPrice 服务端重算，均不信任客户端
     if (!items || !items.length) return res.status(400).json({ success: false, error: '订单不能为空' });
-    if (!orderFreqCheck(tableNumber, req.ip)) return res.status(429).json({ success: false, error: '下单过于频繁，请稍后再试' });
+    if (!orderFreqCheck(tableNumber, req.user?.username || req.ip)) return res.status(429).json({ success: false, error: '下单过于频繁，请稍后再试' });
     const effectiveUserId = req.user?.username || 'guest';
     const pool = db;
     // 服务端重算价格：按 dish id 查 DB，防止客户端篡改价格（0 元单）
@@ -1443,10 +1446,17 @@ app.put('/api/orders/:id/status', authMiddleware, async (req, res) => {
     const pool = db;
     let result;
     // 管理员可以更新任意订单，普通用户只能更新自己的订单
+    // 推进到 completed 时记完成时间（厨房"当日已完成"归档用；重复完成/回退不覆盖已有值）
     if (req.user.role === 'admin') {
-      result = await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, orderId]);
+      result = await pool.query(
+        "UPDATE orders SET status = $1::text, completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END WHERE id = $2",
+        [status, orderId]
+      );
     } else {
-      result = await pool.query('UPDATE orders SET status = $1 WHERE id = $2 AND user_id = $3', [status, orderId, req.user.username]);
+      result = await pool.query(
+        "UPDATE orders SET status = $1::text, completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END WHERE id = $2 AND user_id = $3::text",
+        [status, orderId, req.user.username]
+      );
     }
     if (result.rowCount === 0) return res.status(404).json({ success: false, error: '订单不存在或无权限' });
     res.json({ success: true, message: '订单状态已更新' });
@@ -2486,6 +2496,12 @@ httpServer.listen(PORT, () => {
 db.query(`ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(50) DEFAULT '单菜推荐'`)
   .then(() => logger.info('recommendation_log.mode 列就绪'))
   .catch(e => logger.error('recommendation_log.mode 迁移失败: ' + e.message));
+
+// 幂等迁移：orders 补 completed_at 列（厨房看板"当日已完成"按完成时间归档，
+// 原来回退用 created_at 近似——跨天完成的单会被归错档）。GET /api/orders 走 SELECT * 自动带出。
+db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ`)
+  .then(() => logger.info('orders.completed_at 列就绪'))
+  .catch(e => logger.error('orders.completed_at 迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';

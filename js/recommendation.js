@@ -25,6 +25,7 @@ async function fetchRecommendations(isRefresh){
 
  let dishes=dishData.filter(d=>{
   if(d.is_active===false)return false;
+  if(d.is_sold_out===true)return false; // 售罄菜不进推荐池(菜单灰化/冷启动/结算拦截之外的推荐侧防线)
   if(d.category==='飲品与酒水'||d.category==='主食')return false;
   // 价格改为软打分(computeDishMatch),不再硬过滤
   const p=parseFloat(d.price);if(!isNaN(p)){}
