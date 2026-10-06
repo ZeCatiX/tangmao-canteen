@@ -356,18 +356,19 @@ function showDataset(){
 }
 // ─── 分类元数据（唯一配置源：分类新增/改名只需改这里，下拉框/快捷按钮/图标/排序全部自动生成）───
 const CATEGORY_CONFIG=[
- {cat:'主食',emoji:'🍚',tab:''},
- {cat:'招牌与游西安必打卡',emoji:'🏆',tab:'招牌'},
- {cat:'热销菜品',emoji:'🔥',tab:'热销'},
- {cat:'传承陕菜',emoji:'🍲',tab:'陕菜'},
- {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜'},
- {cat:'田园时蔬·汤羹',emoji:'🥬',tab:'蔬羹'},
- {cat:'特色凉菜',emoji:'🥗',tab:'凉菜'},
- {cat:'陕西小吃',emoji:'🥟',tab:'小吃'},
- {cat:'飲品与酒水',emoji:'🍹',tab:'饮品'}
+ {cat:'主食',emoji:'🍚',tab:'',icon:'assets/icons/cat-staple.webp'},
+ {cat:'招牌与游西安必打卡',emoji:'🏆',tab:'招牌',icon:'assets/icons/cat-signature.webp'},
+ {cat:'热销菜品',emoji:'🔥',tab:'热销',icon:'assets/icons/cat-hot.webp'},
+ {cat:'传承陕菜',emoji:'🍲',tab:'陕菜',icon:'assets/icons/cat-heritage.webp'},
+ {cat:'江湖海鲜',emoji:'🦐',tab:'海鲜',icon:'assets/icons/cat-seafood.webp'},
+ {cat:'田园时蔬·汤羹',emoji:'🥬',tab:'蔬羹',icon:'assets/icons/cat-veggies.webp'},
+ {cat:'特色凉菜',emoji:'🥗',tab:'凉菜',icon:'assets/icons/cat-cold.webp'},
+ {cat:'陕西小吃',emoji:'🥟',tab:'小吃',icon:'assets/icons/cat-snacks.webp'},
+ {cat:'飲品与酒水',emoji:'🍹',tab:'饮品',icon:'assets/icons/cat-drinks.webp'}
 ];
 function catOrderOf(cat){const i=CATEGORY_CONFIG.findIndex(c=>c.cat===cat);return i===-1?999:i;}
 function catEmojiOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m?m.emoji:'🍽';}
+function catIconOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.icon?'<img src="'+m.icon+'" alt="" loading="lazy" style="width:22px;height:22px;border-radius:50%;vertical-align:-5px;margin-right:6px;box-shadow:0 1px 3px rgba(139,0,0,.25);">':catEmojiOf(cat)+' ';}
 function catTabLabelOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.tab?m.tab:cat;}
 // 从菜品实际分类生成分类 UI；分类集合变化时自动重建并保留当前选中
 function buildCategoryUI(){
@@ -491,7 +492,7 @@ function renderMenuTable(){
   if(consumedVariants.has(rawD.id))return;
   if(d.category!==lastCat){
    lastCat=d.category;lastSub='';
-   html+='<div class="dish-cat-sep">'+catEmojiOf(d.category)+' '+esc(catNameOf(d.category))+'</div>';
+   html+='<div class="dish-cat-sep">'+catIconOf(d.category)+esc(catNameOf(d.category))+'</div>';
   }
   // 飲品与酒水二级分隔
   if(d.category==='飲品与酒水'){
