@@ -304,6 +304,7 @@ async function loadDishData() {
       isVegetarian: d.is_vegetarian || false,
       allergies: d.allergies || {},
       is_active: d.is_active,
+      is_sold_out: d.is_sold_out === true,
       description: d.description || '',
       price_unit: d.price_unit || '',
       serving: d.serving || '',
