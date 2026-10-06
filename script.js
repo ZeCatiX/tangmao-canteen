@@ -550,6 +550,36 @@ function buildCategoryUI(){
   if(cur&&cats.includes(cur))sel.value=cur;
  }
 }
+// B8 菜品详情弹层：点菜名看大图/描述/过敏源/热量/口味
+function showDishDetail(id){
+ const d=dishData.find(x=>x.id===id);
+ if(!d)return;
+ const old=document.getElementById('dish-detail-modal');if(old)old.remove();
+ const al=d.allergies||{};
+ const alTags=[['seafood','海鲜'],['peanut','花生'],['egg','鸡蛋'],['soy','大豆'],['gluten','麸质']].filter(a=>al[a[0]]).map(a=>'<span style="background:rgba(192,57,43,0.12);color:#c0392b;font-size:0.72rem;padding:2px 8px;border-radius:10px;margin-right:4px;">⚠ '+a[1]+'</span>').join('');
+ const imgHtml=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;" alt="'+esc(d.name)+'" onerror="this.style.display=\'none\'">':(d.image_url?'<div style="font-size:5rem;text-align:center;">'+esc(d.image_url)+'</div>':'');
+ const specs=(d._variants&&d._variants.length)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+[d].concat(d._variants).map(v=>'<div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:3px 0;border-bottom:1px dashed #eee;"><span>'+esc((v._flavorLabel||(String(v.name).match(/\\(([^()]+)\\)$/)||[,''])[1])||'标准')+'</span><span>'+esc(formatPrice(v))+'</span></div>').join('')+'</div>':'';
+ const modal=document.createElement('div');
+ modal.id='dish-detail-modal';
+ modal.innerHTML='<div class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="border-radius:14px;overflow:hidden;">'
+  +'<button type="button" class="btn-close" data-bs-dismiss="modal" style="position:absolute;top:10px;right:10px;z-index:10;background-color:rgba(255,255,255,0.9);border-radius:50%;padding:8px;"></button>'
+  +imgHtml
+  +'<div class="modal-body" style="padding:16px 20px;">'
+  +'<h4 style="font-family:\'Noto Serif SC\',serif;font-weight:700;">'+esc(d.name)+(d.tags&&d.tags.includes('招牌')?' <span style="background:var(--primary-accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:10px;vertical-align:middle;">招牌</span>':'')+'</h4>'
+  +'<p style="color:#8b7a6a;font-size:0.85rem;">'+esc(d.category)+' · '+esc(d.spiciness)+' · 咸淡'+esc(d.saltiness)+' · 甜酸'+esc(d.sweetness)+' · 热量'+esc(d.calorie||'未知')+'</p>'
+  +(d.description?'<p style="font-size:0.9rem;">'+esc(d.description)+'</p>':'')
+  +'<div style="font-size:1.2rem;color:var(--primary);font-weight:700;margin:6px 0;">'+esc(formatPrice(d))+'</div>'
+  +specs
+  +(alTags?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">含过敏源</div>'+alTags+'</div>':'')
+  +'<div style="margin-top:10px;font-size:0.8rem;color:#8b7a6a;">'+(d.is_sold_out===true?'⚠ 今日已售罄':'✅ 可正常点餐')+(d.serving?' · '+esc(d.serving):'')+'</div>'
+  +'</div></div></div></div>';
+ document.body.appendChild(modal);
+ const el=modal.querySelector('.modal');
+ let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el);
+ el.addEventListener('hidden.bs.modal',function(){modal.remove();},{once:true});
+ m.show();
+}
+
 function renderMenuTable(){
  const container=document.getElementById('dataset-table-body');if(!container)return;
  // 如果 dishData 为空，最多重试 3 次
@@ -648,7 +678,7 @@ function renderMenuTable(){
   }else{
    priceBlock='<div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">'+esc(formatPrice(d))+'</strong>'+(qty>0?'<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>')+'</div>';
   }
-  html+='<div class="dish-card"'+(d.is_sold_out===true&&!d._variants?' style="opacity:0.6;"':'')+'>'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;">'+(d.is_sold_out===true&&!d._variants?'<span style="background:#8f2318;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:4px;margin-right:4px;">已售罄</span>':'')+star+esc(d.name)+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(d.category)+' · '+esc(d.spiciness)+(d.serving?' · <span style="color:#e67e22;">'+esc(d.serving)+'</span>':'')+'</p>'+priceBlock+'</div></div>';
+  html+='<div class="dish-card"'+(d.is_sold_out===true&&!d._variants?' style="opacity:0.6;"':'')+'>'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;cursor:pointer;" onclick="showDishDetail('+d.id+')" title="查看详情">'+(d.is_sold_out===true&&!d._variants?'<span style="background:#8f2318;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:4px;margin-right:4px;">已售罄</span>':'')+star+esc(d.name)+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(d.category)+' · '+esc(d.spiciness)+(d.serving?' · <span style="color:#e67e22;">'+esc(d.serving)+'</span>':'')+'</p>'+priceBlock+'</div></div>';
  });
  if(!filtered.length){
   // 空态: 搜索/筛选无结果时给出明确反馈与引导
