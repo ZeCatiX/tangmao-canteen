@@ -508,6 +508,35 @@ app.get('/api/admin/table-qrcodes', (req, res) => {
   } catch (e) { logger.error('桌码生成失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
+// 营业日报（A3）：按日聚合单量/金额/动销/退单/时段分布
+app.get('/api/admin/daily-report', async (req, res) => {
+  try {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || '')) ? String(req.query.date) : new Date().toISOString().slice(0, 10);
+    const byStatus = await db.query(
+      `SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(total_price),0)::float AS amount
+       FROM orders WHERE created_at::date = $1::date GROUP BY status`, [date]);
+    let totalOrders = 0, revenue = 0, cancelled = 0, cancelledAmount = 0, pendingConfirmed = 0;
+    byStatus.rows.forEach(r => {
+      if (r.status === 'cancelled') { cancelled += r.cnt; cancelledAmount += r.amount; }
+      else { totalOrders += r.cnt; revenue += r.amount; if (r.status === 'pending' || r.status === 'confirmed') pendingConfirmed += r.cnt; }
+    });
+    const dishes = await db.query(
+      `SELECT e->>'name' AS name, SUM((e->>'qty')::int) AS qty, SUM(COALESCE(e->>'price','0')::numeric * (e->>'qty')::int)::float AS revenue
+       FROM orders o, jsonb_array_elements(o.items) e
+       WHERE o.created_at::date = $1::date AND o.status <> 'cancelled'
+       GROUP BY e->>'name' ORDER BY qty DESC, revenue DESC LIMIT 20`, [date]);
+    const hours = await db.query(
+      `SELECT EXTRACT(HOUR FROM created_at)::int AS hr, COUNT(*)::int AS cnt, COALESCE(SUM(total_price),0)::float AS amount
+       FROM orders WHERE created_at::date = $1::date AND status <> 'cancelled' GROUP BY hr ORDER BY hr`, [date]);
+    res.json({
+      success: true, date,
+      stats: { totalOrders, revenue: Math.round(revenue * 100) / 100, avgTicket: totalOrders ? Math.round(revenue / totalOrders * 100) / 100 : 0, cancelled, cancelledAmount: Math.round(cancelledAmount * 100) / 100, pendingConfirmed },
+      dishes: dishes.rows.map(r => ({ name: r.name, qty: r.qty, revenue: Math.round(r.revenue * 100) / 100 })),
+      hours: hours.rows.map(r => ({ hr: r.hr, cnt: r.cnt, amount: Math.round(r.amount * 100) / 100 }))
+    });
+  } catch (e) { logger.error('营业日报失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
 // ═══════════════════════════════════════════════
 // 管理后台 API
 // ═══════════════════════════════════════════════

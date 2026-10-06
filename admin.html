@@ -138,6 +138,7 @@
   <div class="nav-links">
     <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i> 控制面板</a>
     <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i> 菜品管理</a>
+    <a href="#" data-page="report"><i class="bi bi-journal-text"></i> 营业日报</a>
     <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i> 桌码管理</a>
     <a href="#" data-page="users"><i class="bi bi-people"></i> 用户管理</a>
     <a href="#" data-page="feedback"><i class="bi bi-star"></i> 反馈查看</a>
@@ -179,6 +180,7 @@
     <nav class="sidebar-nav">
       <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i>控制面板</a>
       <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i>菜品管理</a>
+      <a href="#" data-page="report"><i class="bi bi-journal-text"></i>营业日报</a>
       <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i>桌码管理</a>
       <a href="#" data-page="users"><i class="bi bi-people"></i>用户管理</a>
       <a href="#" data-page="feedback"><i class="bi bi-star"></i>反馈查看</a>
@@ -283,6 +285,28 @@
         .qr-card { background:#fff; border:1px solid #e4dbcf; border-radius:10px; padding:10px; text-align:center; }
         .qr-card .qr-table-no { font-family:'Noto Serif SC',serif; font-weight:700; font-size:1rem; color:#2c1810; margin-top:4px; }
       </style>
+    </div>
+
+    <div class="page" id="page-report">
+      <div class="page-title">
+        <h2 style="font-family:'Noto Serif SC',serif;letter-spacing:2px;">营业日报</h2>
+        <p style="color:#8b7a6a;font-size:0.85rem;margin:4px 0 0;">按日单量 / 营业额 / 客单价 / 菜品动销 / 退单 / 时段分布（已取消订单不计入营业额）。</p>
+      </div>
+      <div class="card shadow-sm rounded-4" style="padding:1.2rem;margin-bottom:1rem;">
+        <div class="d-flex flex-wrap align-items-end gap-3">
+          <div><label class="form-label" style="font-size:0.8rem;margin-bottom:2px;">日期</label><input type="date" id="report-date" class="form-control form-control-sm" style="width:160px;"></div>
+          <button class="btn btn-sm" id="report-load-btn" style="background:var(--primary);color:#fff;border-radius:8px;padding:0.45rem 0.9rem;">查询</button>
+        </div>
+      </div>
+      <div id="report-stats" class="row g-3 mb-3"></div>
+      <div class="card shadow-sm rounded-4" style="padding:1.2rem;margin-bottom:1rem;">
+        <h5 style="font-family:'Noto Serif SC',serif;">菜品动销 Top 20</h5>
+        <div style="overflow-x:auto;"><table class="table table-sm" id="report-dishes"><thead><tr><th>菜品</th><th>份数</th><th>销售额</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="card shadow-sm rounded-4" style="padding:1.2rem;">
+        <h5 style="font-family:'Noto Serif SC',serif;">时段分布（有效单）</h5>
+        <div id="report-hours" style="display:flex;gap:6px;align-items:flex-end;height:130px;flex-wrap:wrap;"></div>
+      </div>
     </div>
 
     <div class="page" id="page-feedback">
@@ -755,6 +779,12 @@ document.querySelectorAll('[data-page]').forEach(a => {
     }
     if (a.dataset.page === 'users') {
       setTimeout(loadUsers, 100);
+    }
+    if (a.dataset.page === 'report') {
+      // 营业日报：进入 tab 时默认查今天（若无值先填今天）
+      const inp = document.getElementById('report-date');
+      if (inp && !inp.value) { const d = new Date(); inp.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+      setTimeout(() => { if (typeof loadDailyReport === 'function') loadDailyReport(inp ? inp.value : localToday()); }, 100);
     }
   });
 });
@@ -1711,4 +1741,30 @@ document.getElementById('qr-gen-btn').addEventListener('click', async function()
   finally { btn.disabled = false; btn.textContent = '生成桌码'; }
 });
 document.getElementById('qr-print-btn').addEventListener('click', function() { window.print(); });
+</script>
+<script>
+// ═══ 营业日报（A3）：按日聚合查询与渲染 ═══
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function localToday(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
+function loadDailyReport(date){
+  const token=localStorage.getItem('adminToken');
+  fetch('/api/admin/daily-report?date='+encodeURIComponent(date),{headers:{'Authorization':'Bearer '+token}})
+  .then(r=>r.json()).then(d=>{
+    if(!d.success){showToast(d.error||'加载失败','error');return;}
+    const s=d.stats;
+    document.getElementById('report-stats').innerHTML=
+      '<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">有效单量</div><h4 style="margin:0;">'+s.totalOrders+'</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">营业额</div><h4 style="margin:0;">'+s.revenue+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">客单价</div><h4 style="margin:0;">'+s.avgTicket+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>';
+    const tb=document.querySelector('#report-dishes tbody');
+    tb.innerHTML=d.dishes.length?d.dishes.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+x.revenue+' 元</td></tr>').join(''):'<tr><td colspan="3" style="color:#8b7a6a;">当日无动销</td></tr>';
+    const maxC=Math.max(1,...d.hours.map(h=>h.cnt));
+    document.getElementById('report-hours').innerHTML=d.hours.length?d.hours.map(h=>'<div style="text-align:center;"><div style="width:26px;margin:0 auto;background:linear-gradient(180deg,var(--gold),var(--primary));border-radius:4px 4px 0 0;height:'+Math.round(h.cnt/maxC*80+6)+'px;" title="'+h.cnt+' 单 / '+h.amount+' 元"></div><small style="font-size:0.65rem;color:#8b7a6a;">'+h.hr+'时</small></div>').join(''):'<div style="color:#8b7a6a;font-size:0.8rem;">当日无有效订单</div>';
+  }).catch(()=>showToast('网络错误','error'));
+}
+document.getElementById('report-load-btn').addEventListener('click',function(){
+  const v=document.getElementById('report-date').value;
+  if(v)loadDailyReport(v);else showToast('请选择日期','warning');
+});
 </script>
