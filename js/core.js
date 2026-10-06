@@ -988,6 +988,14 @@ function updateTableStatusCard(){
  if(pt){pt.value=t==='打包'?'打包':(t||'');pt.readOnly=!!t;pt.placeholder=t?'':'选择桌号';pt.style.background=t?'var(--cream-dark)':'';}
 }
 var _tablePickIntent=null;
+// AI选菜入口的唯一判定源：已声明偏好的老用户进偏好表单微调，新客/未填偏好直达热门Top6（B7冷启动）。
+// 首页按钮和"选完桌号后续路由"都走这里——之前选桌分支硬编码跳偏好表单，把冷启动整个绕过（回归修复）。
+function openAIRecommend(){
+ if(!currentUser)currentUser='guest';
+ const prefs=currentUser!=='guest'?(getUserData(currentUser)||{}).preferences:null;
+ const filled=(prefs&&Object.keys(prefs).length>0)||sessionStorage.getItem('tasteFilled')==='1';
+ if(filled)showSection('preference-section');else coldStartHotRecommend();
+}
 function openTablePicker(intent){
  _tablePickIntent=intent||null;
  const grid=document.getElementById('table-grid');
@@ -1032,7 +1040,7 @@ async function applyTableChoice(t){
  closeTablePicker();
  const intent=_tablePickIntent;_tablePickIntent=null;
  if(intent==='menu')showDataset();
- else if(intent==='ai')showSection('preference-section');
+ else if(intent==='ai')openAIRecommend();
  else if(intent==='table'){prefillTableBuilder();showSection('table-builder-section');}
  else if(intent==='checkout')checkoutCart();
 }
@@ -1138,7 +1146,7 @@ function showCart(){
   if(tb)tb.innerHTML=cart.map(x=>{
    const dish=dishData.find(d=>d.id===x.id);
    const qtyVal=x.qty||1;
-   const name=dish?esc(dish.name):esc(x.name);
+   const name=dish?esc(dishNameOf(dish)):esc(x.name);
    const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(dish.price_unit)+'</span>':'';
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
