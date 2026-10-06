@@ -315,6 +315,8 @@ async function loadDishData() {
       allergies: d.allergies || {},
       is_active: d.is_active,
       is_sold_out: d.is_sold_out === true,
+      name_en: d.name_en || null,
+      description_en: d.description_en || null,
       description: d.description || '',
       price_unit: d.price_unit || '',
       serving: d.serving || '',
