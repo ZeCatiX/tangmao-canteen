@@ -17,79 +17,96 @@
 </head>
 <body>
 <h1>唐猫庭院 · 顾客完整流程</h1>
-<div class="sub">基于代码实际行为梳理 · 标注关键 API 与鉴权</div>
+<div class="sub">基于代码实际行为梳理 · 标注关键 API 与鉴权 · 2026-10-06 全量交叉验证更新（v2）</div>
 
-<h2>一、点餐主流程(含加菜 / 挪桌 / 赠菜)</h2>
+<h2>一、点餐主流程（三入口 · 含 AI 推荐 / 一席成宴 / 加菜 / 挪桌 / 赠菜）</h2>
 <div class="mermaid">
 flowchart TD
-    StartN(["访问 / · 加载 GET /api/dishes 110道"]) --> Home["首页 home-section"]
+    Start(["访问 / · GET /api/dishes 116道<br/>弱网先用本地缓存渲染,后台刷新"]) --> Home["首页 home-section"]
     Home --> BtnQ{"点哪个入口?"}
-    BtnQ -- "开始点餐 guest-btn" --> G1{"有桌号?"}
-    BtnQ -- "AI帮你选 ai-recommend-btn" --> G2{"有桌号?"}
-    BtnQ -. "导航栏 全部菜单 nav-dataset" .-> Menu["全部菜单 dataset<br/>分类/搜索/辣度/价格/排序<br/>⚠ 无桌号也能进(导航直入)"]
-    G1 -- 否 --> Pick1["openTablePicker(menu)<br/>选完→showDataset"]
-    G1 -- 是 --> Menu
-    Pick1 --> Menu
-    G2 -- 否 --> Pick2["openTablePicker(ai)<br/>选完→preference"]
-    G2 -- 是 --> Pref["口味偏好<br/>辣度/咸淡/甜酸/热量/价格"]
-    Pick2 --> Pref
-    Pref --> Rec["fetchRecommendations<br/>POST /api/predict-rf → Python worker<br/>失败回退 computeDishMatch"]
-    Rec --> RecRes["AI推荐结果<br/>换一批 / 加入购物车 / 结束"]
-    RecRes --> AddCart["加入购物车 addToCart"]
+    BtnQ -- "开始点餐 guest-btn" --> G1{"有锁定桌号?"}
+    BtnQ -- "AI帮你选 ai-recommend-btn" --> G2{"有锁定桌号?"}
+    BtnQ -- "一席成宴 ai-table-btn" --> G4{"有锁定桌号?"}
+    BtnQ -. "导航栏 全部菜单 nav-dataset<br/>不拦桌号,可无桌号浏览加购" .-> Menu
+    G1 -- 否 --> Pick["openTablePicker(menu)<br/>1-30号桌/手输/打包带走<br/>选完自动续走对应入口"]
+    G1 -- 是 --> Menu["全部菜单 dataset<br/>分类Tab/搜索/辣度/价格/排序<br/>售罄菜灰化+角标·详情弹层"]
+    Pick --> Menu
+    G2 -- 否 --> Pick2["openTablePicker(ai)<br/>选完自动续走对应入口"]
+    G2 -- 是 --> AIEntry["openAIRecommend 唯一判定源"]
+    Pick2 --> AIEntry
+    AIEntry --> AIQ{"声明过偏好?<br/>(登录档案 或 tasteFilled)"}
+    AIQ -- "否·新客 B7冷启动" --> Cold["本店热门 Top6<br/>销量排序·排除饮品/主食/售罄<br/>横幅引导补全偏好"]
+    AIQ -- 是 --> Pref["口味偏好表单<br/>辣度/咸淡/甜酸/热量/价格/忌口<br/>档案预填·完整度仪表盘"]
+    Cold --> Rec
+    Pref --> Rec["fetchRecommendations<br/>过滤:下架/售罄/饮品/主食/忌口/黑名单<br/>POST /api/predict-rf→Python worker<br/>失败回退本地决策树"]
+    Rec --> RecRes["AI推荐结果 5道+盲盒1<br/>匹配指数·收藏/拉黑/评分<br/>加一碗米饭·去选饮品<br/>换一批/选好了/退出<br/>登录用户缓存推荐"]
+    RecRes --> AddCart["加入购物车 addToCart<br/>起售菜按最小起售量入车"]
     Menu --> AddCart
-    AddCart --> Cart["购物车 cart<br/>改数量 / 删除 / 清空 / 改桌号"]
-    Cart --> Ck{"结算:有桌号?"}
-    Ck -- 否 --> PickC["openTablePicker()<br/>选完回购物车→重新结算"]
+    G4 -- 否 --> Pick3["openTablePicker(table)"]
+    G4 -- 是 --> TB["一席成宴表单<br/>人数/人均预算/口味/忌口<br/>登录档案预填·近期避开(可选)"]
+    Pick3 --> TB
+    TB --> TGen["POST /api/recommend/table<br/>服务端:忌口硬过滤+已点排除(登录)<br/>规则引擎出三套:家常/宴请/打卡"]
+    TGen --> TRes["席面结果页<br/>数量步进(不低于起售)/换单道swap/单点加购<br/>米饭按人数自动配·去选饮品挂席面<br/>canvas分享图·整体加购"]
+    TRes --> AddCart
+    AddCart --> Cart["购物车 cart<br/>改数量(不低于起售)/删除/清空<br/>行内备注30字/更换桌号"]
+    Cart --> Ck{"结算 checkoutCart<br/>恒用锁定桌号"}
+    Ck -- "无桌号" --> PickC["openTablePicker(checkout)<br/>选完自动续结算(不需再点)"]
     PickC --> Cart
-    Ck -- 是 --> OrderQ{"进行中订单 且 同桌?"}
-    OrderQ -- 是加菜 --> AddMore["POST /api/order/:id/add"]
-    OrderQ -- 否新单 --> NewOrder["POST /api/order"]
-    AddMore --> Kitchen["厨房看板 kitchen.html 实时接单"]
-    NewOrder --> Kitchen
-    Kitchen --> Done["点餐完成 end-section<br/>记录轮次 lastOrderRounds"]
+    Ck -- "有桌号" --> Guard{"防刷 orderFreqCheck<br/>同桌60秒5单"}
+    Guard -- 超限 --> Cart
+    Guard -- 通过 --> OrderQ{"进行中订单 且 同桌?"}
+    OrderQ -- 是加菜 --> AddMore["POST /api/order/:id/add<br/>服务端重算价·售罄拦截·起售校验"]
+    OrderQ -- 否新单 --> NewOrder["POST /api/order<br/>无桌号=打包/外卖"]
+    AddMore --> Kitchen
+    NewOrder --> Kitchen["厨房看板 kitchen.html 接单"]
+    Kitchen --> Done["点餐完成 end-section<br/>时间线轮次 lastOrderRounds<br/>AI统计·满意度评价"]
     Done --> EndQ{"操作?"}
-    EndQ -- 评价 --> FB["POST /api/feedback<br/>整体满意度 + 菜品评分"]
-    EndQ -- 查看订单 --> View["rebuildEndView 时间线"]
+    EndQ -- 评价 --> FB["POST /api/feedback<br/>整体满意度+菜品星级"]
+    EndQ -- 查看订单 --> View["rebuildEndView 时间线<br/>横幅入口随时可回"]
     EndQ -- 加菜 --> Panel["加菜面板 addon-modal"]
     Panel --> PanelQ{"三选一"}
     PanelQ -- 本桌加菜 --> S1["选菜 AI/菜单<br/>isAddMore→/order/:id/add"]
-    PanelQ -- 挪桌 --> S2["openTablePicker<br/>PATCH /order/:id/table"]
-    PanelQ -- 给别桌加菜 --> S3["切桌 sideOrder + 选菜<br/>赠菜双向记账"]
+    PanelQ -- 挪桌 --> S2["openTablePicker<br/>PATCH /order/:id/table<br/>有进行中订单自动改单"]
+    PanelQ -- 给别桌加菜 --> S3["切桌 sideOrder+备份orderBackup<br/>下单后自动恢复本桌"]
     S3 --> Gt1["被赠桌:0元 giftFrom<br/>POST /api/order"]
-    S3 --> Gt2["本桌:正常计费 giftTo<br/>POST /order/{本桌id}/add"]
+    S3 --> Gt2["本桌:正常计费 giftTo<br/>POST /order/本桌id/add"]
     S3 --> Gt3["小票 showGiftReceipt<br/>账单 GET /api/table-view"]
     S1 --> Cart
     S2 --> Cart
     Gt2 --> Cart
     FB --> MLp["ML闭环:评价+日志+订单→重训→worker 更新"]
+    QR["扫桌码 ?t=桌号.签名<br/>TABLE_SECRET 防伪造"] -.-> Home
+    QR -.-> Bill["本桌账单弹窗<br/>GET /api/table-view 免登录"]
 </div>
 
 <h2>二、账户与登录流程</h2>
 <div class="mermaid">
 flowchart TD
-    NU["顶栏 登录 nav-user"] --> ChQ{"登录 / 注册"}
+    NU["顶栏 登录 nav-user"] --> ChQ{"登录 / 注册<br/>两页互链 goto-register / goto-login"}
     ChQ -- 登录 --> LI["POST /api/user/login → JWT"]
-    ChQ -- 注册 --> RG["POST /api/user/register → 自动登录"]
+    ChQ -- 注册 --> RG["POST /api/user/register<br/>注册即自动登录"]
     LI --> Prof["个人中心 profile-section showProfile"]
     RG --> Prof
     Prof --> F1["收藏列表 + 取消<br/>POST /api/user-favorites"]
-    Prof --> F2["黑名单 + 取消<br/>本地,不进推荐"]
-    Prof --> F3["点餐历史(近10单)<br/>GET /api/orders?userId"]
-    Prof --> F4["历史菜品补评分/复评<br/>→ feedback → POST /api/feedback"]
+    Prof --> F2["黑名单 + 取消<br/>不进推荐池"]
+    Prof --> F3["点餐历史(近10单)<br/>GET /api/orders"]
+    F3 --> F3a["再来一单 C13<br/>整单重新入车<br/>赠菜/售罄/下架自动跳过"]
+    Prof --> F4["历史菜品补评分/复评<br/>→ POST /api/feedback"]
     Prof --> F5["偏好保存<br/>POST /api/user-preferences"]
     Prof --> F6["退出登录<br/>POST /api/user/logout (token_blacklist)"]
     Prof --> F7["注销账号<br/>POST /api/user/delete"]
     NU2["顶栏 我的 nav-profile<br/>(登录后显示)"] --> Prof
+    Home2["首页(登录用户)"] --> F8["查看上次推荐<br/>localStorage 缓存"]
 </div>
 
 <h2>三、ML 反馈闭环</h2>
 <div class="mermaid">
 flowchart LR
-    E1["顾客评价<br/>/api/feedback"] --> E2["推荐日志<br/>/api/recommendation-log"]
+    E1["顾客评价<br/>/api/feedback"] --> E2["推荐日志<br/>/api/recommendation-log<br/>(含冷启动/一桌菜模式)"]
     E2 --> E3["订单<br/>/api/order"]
     E3 --> E4["后台数据分析<br/>/admin"]
     E4 --> E5["重训<br/>POST /api/admin/retrain"]
-    E5 --> E6["更新 predict_worker.py"]
+    E5 --> E6["retrain_from_feedback.py<br/>覆写 pkl+特征重要性"]
     E6 --> E7["推荐更准 ↺"]
     E7 -.反馈回流.-> E1
 </div>
@@ -98,22 +115,23 @@ flowchart LR
 <div class="mermaid">
 flowchart LR
     subgraph Client["浏览器(3 页面)"]
-        IDX["index.html 点餐<br/>script.js + styles.css"]
-        ADM["admin.html 后台"]
+        IDX["index.html 点餐<br/>js/模块源码 esbuild→script.js"]
+        ADM["admin.html 后台 11页面"]
         KIT["kitchen.html 厨房看板"]
     end
-    subgraph Server["Express server.js :3000/:3443"]
+    subgraph Server["Express server.js :3000/:3443<br/>pm2 应用 tangmao"]
         API["API 路由<br/>softAuth 游客 / authMiddleware 登录"]
-        SEC["安全层<br/>helmet·rate-limit·JWT·TABLE_SECRET 桌码签名"]
-        STATIC["静态服务 express.static<br/>按启动目录实时读盘"]
+        SEC["安全层<br/>helmet·CSP·分层限流·JWT<br/>TABLE_SECRET 桌码签名"]
+        TR["table_recommend.js<br/>一桌菜规则引擎(纯JS)"]
+        STATIC["express.static<br/>按启动目录实时读盘"]
     end
     subgraph Data["PostgreSQL tangmao :5432"]
-        DB1[("dishes 110道")]
-        DB2[("orders / feedback")]
+        DB1[("dishes 116道 9分类<br/>含 is_sold_out / name_en")]
+        DB2[("orders / feedback<br/>recommendation_log")]
         DB3[("users / token_blacklist")]
     end
     subgraph ML["Python 侧"]
-        PW["predict_worker.py<br/>在线预测"]
+        PW["predict_worker.py<br/>FIFO 队列在线预测"]
         RT["retrain_from_feedback.py<br/>反馈增量重训"]
         PKL[("recommendation_model.pkl")]
     end
@@ -121,8 +139,9 @@ flowchart LR
     ADM --> API
     KIT --> API
     API --> SEC
+    API --> TR
     API --> DB1 & DB2 & DB3
-    API -->|"POST /predict-rf"| PW
+    API -->|"POST /predict-rf 共享队列"| PW
     PW --> PKL
     RT -->|"读 feedback"| DB2
     RT -->|"覆写"| PKL
@@ -149,36 +168,36 @@ flowchart TD
     Start -.-> Guard["禁令:不在主目录改代码 / 不 cp 复制 /<br/>起服务先探测 3000 / 禁 taskkill /IM node.exe"]
 </div>
 
-<h2>六、管理后台流程（admin.html）</h2>
+<h2>六、管理后台流程（admin.html · 侧边栏 11 页面）</h2>
 <div class="mermaid">
 flowchart TD
     AL["admin.html 登录页"] --> ALQ{"POST /api/admin/login"}
     ALQ -- 失败 --> AL
-    ALQ -- 成功 --> Panel["后台主面板 adminAuth 会话"]
-    Panel --> D1["数据看板<br/>stats · popular-dishes · worst-dishes<br/>feedback-summary · user-activity"]
+    ALQ -- 成功 --> Panel["后台主面板 adminAuth 会话<br/>11页面:控制面板/菜品/订单/营业日报/桌码/<br/>用户/反馈/偏好分布/数据分析/模型/API文档"]
+    Panel --> D1["控制面板<br/>stats·popular/worst-dishes<br/>评分分布图·模型摘要"]
     Panel --> D2["菜品管理"]
     D2 --> D2Q{"操作"}
-    D2Q -- 新建 --> E0["POST /api/admin/dish<br/>图片 upload-image"]
+    D2Q -- 新建 --> E0["POST /api/admin/dish<br/>图片上传→sharp自动缩略图<br/>英文菜名/描述双语字段"]
     D2Q -- 编辑 --> E1["PUT /api/admin/dish/:id"]
-    D2Q -- 下架软删 --> E2["DELETE /api/admin/dish/:id"]
-    D2Q -- 彻底删除 --> E3["DELETE .../dish/:id/permanent"]
-    Panel --> D3["模型与推荐分析<br/>preference-stats · model-history<br/>recommendation-effect · settings"]
-    Panel --> D4["重训触发<br/>POST /api/admin/retrain"]
-    D4 --> D5["服务端执行增量重训<br/>覆写 recommendation_model.pkl"]
+    D2Q -- 一键售罄/补货 --> E4["行内快捷按钮<br/>is_sold_out 透传"]
+    D2Q -- 下架软删/彻底删除 --> E2["DELETE /api/admin/dish/:id<br/>(.../permanent)"]
+    Panel --> D3["订单管理(只读)<br/>状态/桌号筛选<br/>GET /api/admin/orders"]
+    Panel --> D6["营业日报<br/>GET /api/admin/daily-report<br/>单量/金额/客单价/动销Top20/时段"]
+    Panel --> D7["桌码管理<br/>批量生成签名二维码+打印视图"]
+    Panel --> D8["用户管理<br/>启停/删除·重置密码<br/>PUT /api/admin/users/:id/reset-password"]
+    Panel --> D5["模型管理<br/>model-info/history/compare<br/>重训 POST /api/admin/retrain"]
+    Panel --> D9["导出 CSV<br/>popular-dishes/feedback/orders"]
     LO["退出登录 admin-logout"] --> Panel
 </div>
 
-<h2>七、厨房看板与订单状态机（kitchen.html）</h2>
+<h2>七、厨房看板与订单状态（kitchen.html）</h2>
 <div class="mermaid">
 flowchart LR
-    K["kitchen.html<br/>每 10 秒轮询 loadOrders"] --> P["pending 待处理<br/>📌 确认按钮"]
-    P -->|"确认"| C1["confirmed 已确认"]
-    C1 --> C2["preparing 制作中"]
-    C2 --> C3["completed 完成"]
-    P -.-> X["cancelled 取消"]
-    C1 -.-> X
-    C2 -.-> X
-    XN["约束<br/>状态推进 PUT /api/orders/:id/status 需登录<br/>加菜与挪桌仅限非 completed·cancelled 订单"]
+    K["kitchen.html<br/>10秒轮询 loadOrders<br/>数据无变化跳过重建<br/>新单WebAudio声音提醒"] --> P["pending 待处理<br/>卡片:桌号/菜品/顾客备注高亮<br/>赠菜行0元+原价划线"]
+    P -->|"完成按钮<br/>(二次确认,按订单id记忆)"| C3["completed 完成<br/>写入 completed_at"]
+    C3 --> ARC["当日已完成归档<br/>按完成时间折叠,当日对账"]
+    APIX["API 合法五态<br/>pending/confirmed/preparing/completed/cancelled<br/>注:confirmed·preparing·cancelled 暂无UI入口,仅API可推<br/>管理员可推任意态,普通用户仅自己的单"]
+    K -.-> XN["约束<br/>状态推进 PUT /api/orders/:id/status 需登录<br/>加菜与挪桌仅限非 completed·cancelled 订单"]
 </div>
 
 <h2>八、运维与备份</h2>
@@ -186,16 +205,21 @@ flowchart LR
 flowchart LR
     T["Windows 计划任务 TangMaoBackup<br/>每日 02:00 setup_backup.bat"] --> B["node backup_db.js<br/>pg_dump 自动探测路径<br/>backups/ 轮转保留 3 份"]
     DEP["部署二选一"] --> DEP1["docker compose<br/>tangmao-db + tangmao-app"]
-    DEP --> DEP2["PM2 ecosystem.config.js<br/>或直接 node server.js"]
+    DEP --> DEP2["PM2 ecosystem.config.js<br/>(当前: tangmao 从 worktree 起)<br/>或直接 node server.js"]
     RES["恢复"] --> RES1["按 备份与恢复.md<br/>回滚 backups/ 快照"]
 </div>
 
 <div class="note">
-<b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」两个<b>首页按钮</b>会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完自动续结算)。<br>
-<b>鉴权两档</b>:<code>softAuth</code> 游客可用(下单/推荐/评价);<code>authMiddleware</code> 需登录(收藏/黑名单/历史/偏好)。<br>
-<b>状态存储</b>:<code>sessionStorage</code> 桌号·订单轮次·给别桌中间态;<code>localStorage</code> 用户·收藏·购物车·深色模式。<br>
+<b>桌号拦截点(关键)</b>:「开始点餐」「AI帮你选」「一席成宴」三个<b>首页按钮</b>都会拦桌号;但<b>导航栏「全部菜单」直入不拦</b>,可无桌号浏览加购。桌号真正强制在<b>结算时</b>(checkoutCart:无桌号→openTablePicker→选完自动续结算)。选桌器含「打包带走」选项(tableNumber='打包');扫桌码 ?t=桌号.签名 会直接锁桌并出现「本桌账单」入口。<br>
+<b>防刷口径(2026-10-06 修正)</b>:下单频度守卫按「桌号 → 登录用户名 → IP」三级取 key,60 秒 5 单。无桌号订单不再共用 IP 桶(堂食 Wi-Fi 同 NAT 出口不互相误伤)。<br>
+<b>售罄链路</b>:admin 一键售罄 → 菜单灰化+角标、推荐池排除(冷启动与偏好推荐均过滤)、结算服务端最后拦截(POST /api/order 重算时校验)。<br>
+<b>起售数量</b>:「X个起」的菜入车按最小起售量;购物车减量与结算都有下限防线。<br>
+<b>鉴权两档</b>:<code>softAuth</code> 游客可用(下单/推荐/评价/一桌菜);<code>authMiddleware</code> 需登录(收藏/历史/偏好/订单状态)。一桌菜的「已点排除」仅登录用户生效(游客无身份,不继承他人记录)。<br>
+<b>状态存储</b>:<code>sessionStorage</code> 桌号·订单轮次·给别桌中间态;<code>localStorage</code> 用户·收藏·购物车·深色模式·菜单语言·菜品缓存(dishDataCache,弱网兜底)。<br>
 <b>赠菜记账</b>:被赠桌 0 元(原价划线),本桌正常计费,两边账单独立。<br>
-<b>服务与部署</b>:静态文件按服务启动目录实时读盘(改代码后页面没变=服务起的不是这份);启动需 .env 含 TABLE_SECRET(≥16 位,worktree 与主目录密钥必须一致);改 server.js 须重启服务,改前端刷新即可。
+<b>中英切换</b>:导航栏 EN 按钮切换菜名/分类/描述语言,记忆在 localStorage;后台可为菜品维护英文字段。<br>
+<b>订单状态实况</b>:看板一键「完成」(二次确认)从 pending 直达 completed 并记 completed_at;confirmed/preparing/cancelled 仅 API 合法、暂无界面入口(取消订单需直接调 API)。<br>
+<b>服务与部署</b>:静态文件按服务启动目录实时读盘(改代码后页面没变=服务起的不是这份);当前 pm2 应用 tangmao 从 worktree 目录起;启动需 .env 含 TABLE_SECRET(≥16 位,worktree 与主目录密钥必须一致);改 server.js 须重启服务(pm2 restart tangmao),改前端刷新即可。
 </div>
 <div class="err" id="err">⚠ Mermaid 未加载,请检查 /mermaid.min.js 是否存在。</div>
 
