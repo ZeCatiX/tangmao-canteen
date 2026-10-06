@@ -89,7 +89,12 @@ document.addEventListener('DOMContentLoaded',function(){
  click('login-btn',()=>showSection('login-section'));
  click('register-btn',()=>showSection('register-section'));
  click('guest-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('menu');return;}showDataset();});
- click('ai-recommend-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('ai');return;}showSection('preference-section');});
+ click('ai-recommend-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('ai');return;}
+  // B7 冷启动：从未声明偏好的顾客直达本店热门，结果页横幅引导补全
+  const prefs=currentUser!=='guest'?(getUserData(currentUser)||{}).preferences:null;
+  const filled=(prefs&&Object.keys(prefs).length>0)||sessionStorage.getItem('tasteFilled')==='1';
+  if(filled)showSection('preference-section');else coldStartHotRecommend();
+ });
  click('ai-table-btn',()=>{if(!currentUser)currentUser='guest';if(!ssGet('lockedTable')){openTablePicker('table');return;}prefillTableBuilder();showSection('table-builder-section');});
  submit('table-builder-form',submitTableBuilder);
  click('table-builder-back-btn',()=>showSection('home-section'));

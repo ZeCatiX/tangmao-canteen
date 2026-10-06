@@ -612,6 +612,26 @@ function loadUserPreferences(prefs){
    setDisabled(id, true);
   });
  }
+ }
+
+// B7 冷启动：从未声明偏好的顾客直达本店热门 Top6（销量排序，排除饮品/主食/售罄），
+// 结果页"还有 X 项偏好未设置"横幅自动引导补全——不强迫新客先填表
+function coldStartHotRecommend(){
+ const $=id=>document.getElementById(id);
+ userProfile={spiciness:'无所谓',saltiness:'无所谓',sweetness:'无所谓',price:'不限',calorie:'不限',religion:'无特殊要求',allergies:[],recommendationMode:'本地推荐（更快速）',blindBoxMode:'智能选（按偏好加权）',coldStart:true};
+ showSection('recommendation-section');
+ const rl=$('recommendation-loading'),rr=$('recommendation-result');
+ if(rl)rl.classList.add('d-none');
+ if(rr)rr.classList.remove('d-none');
+ const hot=dishData
+  .filter(d=>d.is_active!==false&&d.is_sold_out!==true&&d.category!=='飲品与酒水'&&d.category!=='主食')
+  .sort((a,b)=>(b.order_count||0)-(a.order_count||0)).slice(0,6)
+  .map(d=>Object.assign({},d,{reason:'本店人气招牌，最近大家都在点',matchRate:0.5,matchIndex:0.5,type:'热门推荐'}));
+ currentRecommendations=hot;
+ const dl=$('dish-list');if(dl)dl.innerHTML='';
+ if(typeof displayRecommendations==='function')displayRecommendations();
+ if(typeof renderPrefCompletenessBanner==='function')renderPrefCompletenessBanner();
+ safeFetch('/api/recommendation-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'冷启动热门推荐'})}).catch(()=>{});
 }
 
 function submitPreference(){
@@ -629,7 +649,8 @@ function submitPreference(){
   localStorage.setItem('savedPrefs','true');
   safeFetch('/api/user-preferences',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,preferences:userProfile})}).catch(()=>{});
 }
- // 记录偏好选择
+ // 记录偏好选择（填过表单的标记：下次点 AI 直达表单）
+ sessionStorage.setItem('tasteFilled','1');
  safeFetch('/api/preference-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({spiciness:userProfile.spiciness,saltiness:userProfile.saltiness,sweetness:userProfile.sweetness,price:userProfile.price,calorie:userProfile.calorie,religion:userProfile.religion,allergies:userProfile.allergies,userId:currentUser||'guest',recommendationMode:userProfile.recommendationMode})}).catch(()=>{});
  showSection('recommendation-section');
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
