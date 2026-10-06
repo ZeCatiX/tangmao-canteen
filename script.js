@@ -968,10 +968,11 @@ function showProfile(){
  const bl=$('blacklist-list');if(bl)bl.innerHTML=user.blacklist?.length?user.blacklist.map((id,i)=>{const d=dishData.find(x=>x.id==id);return '<div class="d-flex justify-content-between align-items-center mb-2"><span>'+(i+1)+'. '+(d?esc(d.name):'菜品'+esc(String(id)))+'</span><button class="btn btn-sm btn-danger cancel-blacklist" data-id="'+esc(String(id))+'">取消</button></div>';}).join(''):'<p class="text-muted">还没有拉黑的菜品</p>';
  document.querySelectorAll('.cancel-favorite').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.favorites){u.favorites=u.favorites.filter(x=>x!=id);updateUserData(currentUser,{favorites:u.favorites});safeFetch('/api/user-favorites',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({username:currentUser,favorites:u.favorites})}).catch(()=>{});showMessage('成功','已取消收藏',showProfile);}}));
  document.querySelectorAll('.cancel-blacklist').forEach(b=>b.addEventListener('click',function(){const id=this.getAttribute('data-id');const u=getUserData(currentUser);if(u&&u.blacklist){u.blacklist=u.blacklist.filter(x=>x!=id);updateUserData(currentUser,{blacklist:u.blacklist});showMessage('成功','已取消',showProfile);}}));
- // 加载推荐历史
+ // 加载推荐历史（C13：缓存到全局供"再来一单"使用）
  const rh=$('rec-history-list');if(rh)rh.innerHTML='<p class="text-muted" style="font-size:0.85rem;">加载中...</p>';
  safeFetch('/api/orders?userId='+encodeURIComponent(currentUser),{headers:authHeaders()}).then(r=>r.json()).then(d=>{
   if(d.success&&d.orders&&d.orders.length){
+   window.recentOrdersCache=d.orders;
             const items=d.orders.slice(0,10).map((o,oi)=>{
     const dishList=o.items||[];
     const time=o.created_at?new Date(o.created_at).toLocaleString():'';
@@ -986,11 +987,31 @@ function showProfile(){
     return '<div style="font-size:0.82rem;color:#4a3028;padding:6px 0;border-bottom:1px solid rgba(201,169,110,0.12);">'
      +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
      +'<span style="color:#8b7a6a;font-size:0.75rem;">'+time+'</span>'
-     +'<span style="color:#b83a2a;font-weight:600;">共'+dishList.length+'道</span>'
+     +'<span><button class="btn btn-sm reorder-btn" data-oi="'+oi+'" style="font-size:0.72rem;padding:1px 8px;border-radius:4px;border-color:var(--gold);color:var(--primary);margin-right:4px;" title="把这一单的菜重新加入购物车">🔁 再来一单</button>'
+     +'<span style="color:#b83a2a;font-weight:600;">共'+dishList.length+'道</span></span>'
      +'</div>'
      +dishRows+'</div>';
    }).join('');  rh.innerHTML=items;
    // 绑定评分按钮事件
+   // C13 再来一单：整单菜品重新加入购物车（赠菜/售罄/下架跳过）
+   rh.querySelectorAll('.reorder-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+     const oi=parseInt(this.dataset.oi);
+     const o=(window.recentOrdersCache||[])[oi];
+     if(!o){showMessage('提示','订单数据已过期，请刷新后重试');return;}
+     const items=(o.items||[]).filter(i=>!i.giftTo&&!i.giftFrom);
+     if(!items.length){showMessage('提示','这一单没有可复购的菜品');return;}
+     let added=0,skipped=[];
+     items.forEach(i=>{
+      const dish=dishData.find(d=>d.id===parseInt(i.id));
+      if(!dish||dish.is_active===false||dish.is_sold_out===true){skipped.push(i.name||('菜品'+i.id));return;}
+      const min=minQtyOf(dish);const q=Math.max(parseInt(i.qty)||1,min);
+      addToCart({id:dish.id,name:dish.name,price:dish.price,image_url:dish.image_url,serving:dish.serving},q);added++;
+     });
+     if(skipped.length)showMessage('部分菜品已加入','以下菜品今日已售罄，已跳过：'+skipped.join('、'));
+     else showMessage('已加入购物车',added+' 件商品已重新加入，去结算或继续加菜',function(){showSection('cart-section');showCart();});
+    });
+   });
    rh.querySelectorAll('.re-rate-btn').forEach(function(btn){
     btn.addEventListener('click',function(){
      const dishId=parseInt(this.dataset.dishid);
