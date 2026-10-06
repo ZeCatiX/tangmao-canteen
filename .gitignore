@@ -77,6 +77,7 @@ _v*.png
 # 测试截图产物(每次全量回归自动重生成)
 screenshots/
 _shots/
+gui-test-screenshots/
 
 # 历史审查报告与临时诊断脚本(信息量大但已过时)
 审查报告_*.md
@@ -88,6 +89,7 @@ logo-preview-full.png
 
 # AI 客户端本地产物(plan/会话等)
 .ai/
+.aiignore
 
 # AI box-agent 运行时任务注册目录
 2026-*/
