@@ -606,7 +606,7 @@ app.get('/api/admin/feedback-summary', async (req, res) => {
 // 菜品管理 API
 app.post('/api/admin/dish', async (req, res) => {
   try {
-    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description, is_active, price_unit, serving } = req.body;
+    const { name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, isHalal, isVegetarian, description, is_active, price_unit, serving, name_en, description_en } = req.body;
     if (!name || name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
     if (name.trim().length > 100) return res.status(400).json({ success: false, error: '菜名不能超过100个字符' });
     if (description && description.length > 500) return res.status(400).json({ success: false, error: '描述不能超过500个字符' });
@@ -634,7 +634,7 @@ app.put('/api/admin/dish/:id', async (req, res) => {
   try {
     const dishId = parseInt(req.params.id);
     if (isNaN(dishId) || dishId <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
-  const { name, category, spiciness, saltiness, sweetness, price, rating, tags, is_active, allergies, isHalal, isVegetarian, description, price_unit, serving, is_sold_out } = req.body;
+  const { name, category, spiciness, saltiness, sweetness, price, rating, tags, is_active, allergies, isHalal, isVegetarian, description, price_unit, serving, is_sold_out, name_en, description_en } = req.body;
   if (name !== undefined && name.trim().length < 2) return res.status(400).json({ success: false, error: '菜名至少2个字符' });
   if (price !== undefined) { const p = parseFloat(price); if (isNaN(p) || p < 0) return res.status(400).json({ success: false, error: '价格不能为负数' }); }
   if (rating !== undefined) { const r = parseFloat(rating); if (isNaN(r) || r < 0 || r > 5) return res.status(400).json({ success: false, error: '评分必须在0-5之间' }); }
@@ -661,6 +661,8 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     if (price_unit !== undefined) { sets.push(`price_unit = $${idx++}`); vals.push((price_unit === null) ? null : String(price_unit).trim() || null); }
     if (serving !== undefined) { sets.push(`serving = $${idx++}`); vals.push((serving === null) ? null : String(serving).trim() || null); }
     if (is_sold_out !== undefined) { sets.push(`is_sold_out = $${idx++}`); vals.push(is_sold_out === true); }
+    if (name_en !== undefined) { sets.push(`name_en = $${idx++}`); vals.push((name_en === null) ? null : String(name_en).trim() || null); }
+    if (description_en !== undefined) { sets.push(`description_en = $${idx++}`); vals.push((description_en === null) ? null : String(description_en).trim() || null); }
     if (!sets.length) return res.status(400).json({ success: false, error: '没有要更新的字段' });
     vals.push(dishId);
     await pool.query(`UPDATE dishes SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
