@@ -138,6 +138,7 @@
   <div class="nav-links">
     <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i> 控制面板</a>
     <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i> 菜品管理</a>
+    <a href="#" data-page="orders"><i class="bi bi-receipt"></i> 订单管理</a>
     <a href="#" data-page="report"><i class="bi bi-journal-text"></i> 营业日报</a>
     <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i> 桌码管理</a>
     <a href="#" data-page="users"><i class="bi bi-people"></i> 用户管理</a>
@@ -180,6 +181,7 @@
     <nav class="sidebar-nav">
       <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i>控制面板</a>
       <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i>菜品管理</a>
+      <a href="#" data-page="orders"><i class="bi bi-receipt"></i>订单管理</a>
       <a href="#" data-page="report"><i class="bi bi-journal-text"></i>营业日报</a>
       <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i>桌码管理</a>
       <a href="#" data-page="users"><i class="bi bi-people"></i>用户管理</a>
@@ -686,6 +688,34 @@
 </div>
 
 
+<!-- 订单管理页 -->
+<div class="page" id="page-orders">
+  <div class="page-title"><span>订单管理</span></div>
+  <div class="card">
+    <div class="card-header">全部订单（只读，最新在前）</div>
+    <div class="card-body" style="padding:0;">
+      <div style="padding:10px 12px;border-bottom:1px solid rgba(201,169,110,0.1);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select class="form-select form-select-sm" id="orders-status" aria-label="按状态筛选" style="max-width:150px;font-size:0.85rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+          <option value="all">全部状态</option>
+          <option value="pending">待处理</option>
+          <option value="confirmed">已确认</option>
+          <option value="preparing">制作中</option>
+          <option value="completed">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <input class="form-control form-control-sm" id="orders-table-search" aria-label="搜索桌号" placeholder="🔍 搜索桌号/打包..." style="font-size:0.85rem;border-radius:8px;border:1.5px solid #e4dbcf;max-width:200px;">
+        <button class="btn btn-sm btn-primary" id="orders-load-btn" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">查询</button>
+        <span style="font-size:0.75rem;color:#8b7a6a;">最多显示最近 100 条</span>
+      </div>
+      <div class="table-wrap" style="max-height:520px;">
+        <table class="table table-hover mb-0" style="font-size:0.82rem;">
+          <thead><tr><th>订单号</th><th>桌号</th><th>状态</th><th>件数</th><th>合计</th><th>下单时间</th><th>明细</th></tr></thead>
+          <tbody id="orders-table-body"><tr><td colspan="7" style="text-align:center;color:#8b7a6a;padding:20px;">选择筛选后点击「查询」</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- 用户管理页 -->
 <div class="page" id="page-users">
   <div class="page-title"><span>用户管理</span></div>
@@ -704,6 +734,21 @@
     </div>
   </div>
   </div>
+<!-- 重置密码弹窗 -->
+<div class="modal fade" id="resetPwdModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header" style="border-bottom:1px solid rgba(201,169,110,0.2);"><h5 class="modal-title">重置密码</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem;color:#6b5d4f;margin-bottom:8px;">为用户 <strong id="reset-pwd-username">-</strong> 设置新密码（线下已核实身份）</p>
+        <input type="text" class="form-control" id="reset-pwd-new" placeholder="8-20位，须含大小写字母和数字" maxlength="20" autocomplete="new-password" style="font-size:0.9rem;border-radius:8px;border:1.5px solid #e4dbcf;">
+        <div id="reset-pwd-msg" style="display:none;font-size:0.82rem;margin-top:8px;"></div>
+        <div style="font-size:0.72rem;color:#8b7a6a;margin-top:8px;">提醒：把新密码通过电话/当面告知顾客，建议提醒其尽快修改。</div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid rgba(201,169,110,0.2);"><button type="button" class="btn btn-sm btn-outline-secondary text-body" data-bs-dismiss="modal">取消</button><button type="button" class="btn btn-sm btn-primary" id="reset-pwd-confirm" style="background-color:var(--primary-accent);border-color:var(--primary-accent);">确认重置</button></div>
+    </div>
+  </div>
+</div>
 <!-- 添加菜品弹窗 -->
 <div class="modal fade" id="dishModal" tabindex="-1">
   <div class="modal-dialog modal-sm">
@@ -783,6 +828,9 @@ document.querySelectorAll('[data-page]').forEach(a => {
     }
     if (a.dataset.page === 'users') {
       setTimeout(loadUsers, 100);
+    }
+    if (a.dataset.page === 'orders') {
+      setTimeout(() => { if (typeof loadAdminOrders === 'function') loadAdminOrders(); }, 100);
     }
     if (a.dataset.page === 'report') {
       // 营业日报：进入 tab 时默认查今天（若无值先填今天）
@@ -1642,6 +1690,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     document.querySelector('#user-table-body').innerHTML = users.map(u =>
       '<tr><td>' + esc(u.id) + '</td><td>' + esc(u.username) + '</td><td>' + (u.created_at ? new Date(u.created_at).toLocaleString() : '-') + '</td><td>' + (u.last_login ? new Date(u.last_login).toLocaleString() : '从未登录') + '</td>'
       + '<td><button class="btn btn-sm btn-outline-secondary text-body" onclick="toggleUserDetail(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;">详情</button>'
+      + '<button class="btn btn-sm btn-outline-secondary text-body" onclick="openResetPwd(' + esc(u.id) + ', \'' + esc(u.username).replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;">重置密码</button>'
       + '<button class="btn btn-sm btn-outline-danger fw-bold" onclick="deleteUser(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;">删除</button></td></tr>'
       + '<tr class="user-detail-row" id="user-detail-' + esc(u.id) + '" style="display:none;"><td colspan="5" style="background:#fdfaf5;padding:12px;">点击查看详情</td></tr>'
     ).join('');
@@ -1671,6 +1720,65 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   }
   // 用户搜索（客户端过滤用户名）
   (function(){ var s=document.getElementById('user-search'); if(s) s.addEventListener('input', function(){ var q=this.value.trim().toLowerCase(); renderUserRows((usersCache||[]).filter(u => (u.username||'').toLowerCase().includes(q))); }); })();
+
+  // ─── 重置用户密码（顾客忘记密码时店主线下核实后操作）───
+  var resetPwdUserId = null, resetPwdUsername = '';
+  function openResetPwd(id, username) {
+    resetPwdUserId = id; resetPwdUsername = username;
+    document.getElementById('reset-pwd-username').textContent = username;
+    document.getElementById('reset-pwd-new').value = '';
+    document.getElementById('reset-pwd-msg').style.display = 'none';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('resetPwdModal')).show();
+  }
+  function submitResetPwd() {
+    var np = document.getElementById('reset-pwd-new').value;
+    var msg = document.getElementById('reset-pwd-msg');
+    msg.style.display = 'none';
+    fetch('/api/admin/users/' + resetPwdUserId + '/reset-password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') },
+      body: JSON.stringify({ newPassword: np })
+    }).then(r => r.json()).then(d => {
+      msg.style.display = 'block';
+      msg.style.color = d.success ? '#27ae60' : '#e74c3c';
+      msg.textContent = d.message || d.error || (d.success ? '已重置' : '重置失败');
+      if (d.success) { setTimeout(function(){ bootstrap.Modal.getInstance(document.getElementById('resetPwdModal')).hide(); }, 1200); }
+    }).catch(function(){ msg.style.display = 'block'; msg.style.color = '#e74c3c'; msg.textContent = '网络错误，请重试'; });
+  }
+  (function(){ var b=document.getElementById('reset-pwd-confirm'); if(b) b.addEventListener('click', submitResetPwd); })();
+
+  // ─── 订单管理（只读列表 + 状态/桌号筛选）───
+  var ORDERS_STATUS_MAP = { pending: '📌 待处理', confirmed: '✅ 已确认', preparing: '🍳 制作中', completed: '✅ 已完成', cancelled: '🚫 已取消' };
+  function loadAdminOrders() {
+    var status = document.getElementById('orders-status').value;
+    var table = document.getElementById('orders-table-search').value.trim();
+    var body = document.getElementById('orders-table-body');
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#8b7a6a;padding:20px;">查询中...</td></tr>';
+    var qs = new URLSearchParams();
+    if (status && status !== 'all') qs.set('status', status);
+    if (table) qs.set('table', table);
+    qs.set('limit', '100');
+    fetch('/api/admin/orders?' + qs.toString(), { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('adminToken') } })
+      .then(r => r.json()).then(d => {
+        if (!d.success) { body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e74c3c;padding:20px;">加载失败</td></tr>'; return; }
+        if (!d.orders.length) { body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#8b7a6a;padding:20px;">无匹配订单</td></tr>'; return; }
+        body.innerHTML = d.orders.map(function(o) {
+          var items = (o.items || []);
+          var qty = items.reduce(function(s, i) { return s + (parseInt(i.qty || i.quantity) || 1); }, 0);
+          var detail = items.map(function(i) { return esc(i.name || '?') + ' × ' + (parseInt(i.qty || i.quantity) || 1); }).join('；');
+          var time = o.created_at ? new Date(o.created_at).toLocaleString() : '-';
+          return '<tr><td>#' + esc(o.id) + '</td><td>' + esc(o.table_number || '外卖') + '</td>'
+            + '<td>' + (ORDERS_STATUS_MAP[o.status] || esc(o.status)) + '</td>'
+            + '<td>' + qty + '</td><td>' + (parseFloat(o.total_price) || 0).toFixed(2) + ' 元</td><td>' + time + '</td>'
+            + '<td style="max-width:260px;font-size:0.75rem;color:#6b5d4f;word-break:break-all;">' + detail + '</td></tr>';
+        }).join('');
+      }).catch(function(){ body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e74c3c;padding:20px;">网络错误</td></tr>'; });
+  }
+  (function(){
+    var btn=document.getElementById('orders-load-btn'); if(btn) btn.addEventListener('click', loadAdminOrders);
+    var sel=document.getElementById('orders-status'); if(sel) sel.addEventListener('change', loadAdminOrders);
+    var inp=document.getElementById('orders-table-search'); if(inp) inp.addEventListener('keydown', function(e){ if(e.key==='Enter') loadAdminOrders(); });
+  })();
 
   function deleteUser(id, btn) {
     confirmAction(btn, '删除', function() {

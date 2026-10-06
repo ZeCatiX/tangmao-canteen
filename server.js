@@ -1255,11 +1255,33 @@ async function recomputeOrderItems(pool, items) {
   return { validated, total: Math.round(sum * 100) / 100 };
 }
 
+// 下单频度防刷：同一桌号（无桌号按 IP）60 秒内最多 5 单。
+// 正常顾客一桌一轮用餐加菜 2-3 次，远低于此阈值；用于挡脚本刷单。
+// 内存级即可（重启清零可接受）；按桌号而非 IP——店内所有顾客共享同一出口 IP，按 IP 会误伤。
+const _orderFreqMap = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, arr] of _orderFreqMap) {
+    const alive = arr.filter(t => now - t < 60000);
+    if (alive.length) _orderFreqMap.set(k, alive); else _orderFreqMap.delete(k);
+  }
+}, 300000).unref();
+function orderFreqCheck(tableNumber, ip) {
+  const key = String(tableNumber || ip || 'unknown');
+  const now = Date.now();
+  const arr = (_orderFreqMap.get(key) || []).filter(t => now - t < 60000);
+  if (arr.length >= 5) { _orderFreqMap.set(key, arr); return false; }
+  arr.push(now);
+  _orderFreqMap.set(key, arr);
+  return true;
+}
+
 // 订单 API（软身份验证）
 app.post('/api/order', softAuth, async (req, res) => {
   try {
     const { items, tableNumber } = req.body;  // userId 取 JWT、totalPrice 服务端重算，均不信任客户端
     if (!items || !items.length) return res.status(400).json({ success: false, error: '订单不能为空' });
+    if (!orderFreqCheck(tableNumber, req.ip)) return res.status(429).json({ success: false, error: '下单过于频繁，请稍后再试' });
     const effectiveUserId = req.user?.username || 'guest';
     const pool = db;
     // 服务端重算价格：按 dish id 查 DB，防止客户端篡改价格（0 元单）
@@ -2323,6 +2345,46 @@ app.get('/api/admin/users/:id', async (req, res) => {
     const result = await pool.query("SELECT id, username, preferences, favorites, blacklist, created_at, last_login FROM users WHERE id = $1", [userId]);
     if (!result.rows.length) return res.status(404).json({ success: false, error: '用户不存在' });
     res.json({ success: true, user: result.rows[0] });
+  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
+// 管理员重置用户密码——顾客忘记密码时店主线下核实身份后操作（系统无邮箱/手机，无法自助找回）
+app.put('/api/admin/users/:id/reset-password', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const newPassword = req.body ? req.body.newPassword : null;
+    if (isNaN(userId) || userId <= 0) return res.status(400).json({ success: false, error: '无效的用户ID' });
+    if (!newPassword || typeof newPassword !== 'string') return res.status(400).json({ success: false, error: '新密码不能为空' });
+    if (newPassword.length < 8 || newPassword.length > 20) return res.status(400).json({ success: false, error: '密码须为 8-20 位' });
+    if (!/[A-Z]/.test(newPassword)) return res.status(400).json({ success: false, error: '密码必须包含大写字母' });
+    if (!/[a-z]/.test(newPassword)) return res.status(400).json({ success: false, error: '密码必须包含小写字母' });
+    if (!/[0-9]/.test(newPassword)) return res.status(400).json({ success: false, error: '密码必须包含数字' });
+    const found = await db.query('SELECT username FROM users WHERE id = $1', [userId]);
+    if (!found.rows.length) return res.status(404).json({ success: false, error: '用户不存在' });
+    const ok = await userStorage.updateUser(found.rows[0].username, { password: newPassword });
+    if (!ok) return res.status(500).json({ success: false, error: '重置失败' });
+    logger.info(`管理员重置用户密码：${found.rows[0].username}`);
+    res.json({ success: true, message: '密码已重置' });
+  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+});
+
+// 管理员订单列表（只读）：按状态/桌号筛选，最新在前
+app.get('/api/admin/orders', async (req, res) => {
+  try {
+    const status = String(req.query.status || '').trim();
+    const table = String(req.query.table || '').trim();
+    const limitRaw = parseInt(req.query.limit) || 100;
+    const limit = Math.min(Math.max(limitRaw, 1), 300);
+    const conds = [];
+    const vals = [];
+    if (status && status !== 'all') { vals.push(status); conds.push(`status = $${vals.length}`); }
+    if (table) { vals.push('%' + table + '%'); conds.push(`table_number ILIKE $${vals.length}`); }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const result = await db.query(
+      `SELECT id, table_number, status, total_price, items, created_at FROM orders ${where} ORDER BY created_at DESC LIMIT ${limit}`,
+      vals
+    );
+    res.json({ success: true, orders: result.rows });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 

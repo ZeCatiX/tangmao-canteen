@@ -150,7 +150,8 @@ function updateFloatBar(){
 }
 
 
-// ═══ 中英双语（C11）：菜名/分类/描述按语言显示，切换记忆在 localStorage ═══
+
+// ═══ 中英双语（C11）：菜名/分类/描述按语言显示，切换记忆在 localStorage ═══
 var menuLang = localStorage.getItem('menuLang') || 'zh';
 var CAT_EN = { '主食': 'Staples', '招牌与游西安必打卡': 'Must-Try Signatures', '热销菜品': 'Best Sellers', '传承陕菜': 'Heritage Shaanxi', '江湖海鲜': 'Jianghu Seafood', '田园时蔬·汤羹': 'Greens & Soups', '特色凉菜': 'Signature Cold Dishes', '陕西小吃': 'Shaanxi Snacks', '飲品与酒水': 'Drinks & Wines', '凉菜凉拌': 'Cold Dishes', '汤粥糖水': 'Soups & Desserts', '主食小吃': 'Staples & Snacks', '甜品饮品': 'Desserts & Drinks', '海鲜水产': 'Seafood', '清爽素食': 'Light Vegetarian' };
 function dishNameOf(d) {
@@ -168,5 +169,6 @@ function toggleMenuLang() {
   else if (sec.id === 'recommendation-section') { if (typeof displayRecommendations === 'function') displayRecommendations(); }
   else if (sec.id === 'table-result-section') { if (typeof renderTableSets === 'function') renderTableSets(); }
   else if (sec.id === 'cart-section') { if (typeof showCart === 'function') showCart(); }
+  else if (sec.id === 'profile-section') { if (typeof showProfile === 'function') showProfile(); }
   else if (sec.id === 'home-section') showSection('home-section');
 }
