@@ -1701,9 +1701,10 @@ document.getElementById('qr-gen-btn').addEventListener('click', async function()
     const d = await r.json();
     if (!d.success) { showToast(d.error || '生成失败', 'error'); return; }
     const grid = document.getElementById('qr-grid');
-    grid.innerHTML = d.qrcodes.map(q =>
-      '<div class="qr-card"><div style="display:flex;justify-content:center;"><img src="' + q.dataUrl + '" alt="桌码" style="width:120px;height:120px;"></div><div class="qr-table-no">' + esc(q.table) + ' 号桌</div></div>'
-    ).join('');
+    grid.innerHTML = d.qrcodes.map(q => {
+      const g = qrcode(0, 'M'); g.addData(q.url); g.make();
+      return '<div class="qr-card"><div style="display:flex;justify-content:center;"><img src="' + g.createDataURL(6, 4) + '" alt="' + esc(q.table) + ' 号桌桌码" style="width:120px;height:120px;"></div><div class="qr-table-no">' + esc(q.table) + ' 号桌</div></div>';
+    }).join('');
     document.getElementById('qr-print-btn').style.display = 'inline-block';
     showToast('已生成 ' + d.qrcodes.length + ' 张桌码', 'success');
   } catch (e) { showToast('网络错误', 'error'); }
