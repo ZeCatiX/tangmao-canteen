@@ -216,9 +216,19 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
     if (oldDish.rows.length > 0 && oldDish.rows[0].image_url && oldDish.rows[0].image_url.startsWith('/uploads/')) {
       const oldImagePath = path.join(__dirname, oldDish.rows[0].image_url.replace(/^\//, ''));
       try { if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath); } catch(e) { /* 忽略旧文件清理错误 */ }
+      const oldThumb = path.join(__dirname, 'uploads', 'thumbs', oldDish.rows[0].image_url.replace(/^\/uploads\//, '').replace(/\.[^.]+$/, '') + '.webp');
+      try { if (fs.existsSync(oldThumb)) fs.unlinkSync(oldThumb); } catch(e) {}
     }
     fs.renameSync(req.file.path, newPath);
     const imageUrl = '/uploads/' + newName;
+    // 同步生成缩略图（B6）：菜单卡片用 thumbs/*.webp，失败不阻断上传
+    try {
+      const thumbDir = path.join(__dirname, 'uploads', 'thumbs');
+      fs.mkdirSync(thumbDir, { recursive: true });
+      const sharp = require('sharp');
+      await sharp(newPath).rotate().resize({ width: 420, withoutEnlargement: true }).webp({ quality: 78 })
+        .toFile(path.join(thumbDir, newName.replace(/\.[^.]+$/, '') + '.webp'));
+    } catch(e) { logger.error('缩略图生成失败:', e.message); }
     await pool.query('UPDATE dishes SET image_url = $1 WHERE id = $2', [imageUrl, dishId]);
     res.json({ success: true, imageUrl });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
