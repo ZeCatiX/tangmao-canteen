@@ -1995,14 +1995,22 @@ document.addEventListener('DOMContentLoaded',function(){
  // 优先级：localStorage保存的偏好 > 系统偏好
  const shouldBeDark=savedDark!==null?savedDark==='true':prefersDark;
  if(shouldBeDark){document.documentElement.classList.add('dark-mode');const tb=document.getElementById('dark-mode-toggle');if(tb){const ic=tb.querySelector('i');if(ic)ic.className='bi bi-sun';}}
-	 // 从API加载菜品数据
- Promise.race([safeFetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
-  if(d.success&&d.dishes.length){
-    // 顾客端只显示上架菜(is_active !== false)；下架菜不进菜单/推荐池/购物车
-    dishData=filterVisibleDishes(d.dishes);
-    renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
-  }
-}).catch((e)=>{console.warn('菜品数据加载超时/失败',e);const tb=document.getElementById('dataset-table-body');if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#c0392b;">菜品数据加载失败，<a href="#" id="retry-load-dishes" style="color:#27ae60;font-weight:600;">点击重试</a></td></tr>';const rb=document.getElementById('retry-load-dishes');if(rb)rb.addEventListener('click',function(ev){ev.preventDefault();location.reload();});});
+	 // 从API加载菜品数据（弱网兜底：先用本地缓存立即渲染菜单，成功后覆盖并更新缓存——断网/慢网下菜单仍可浏览）
+	 let hasCache=false;
+	 try{
+	  const cached=localStorage.getItem('dishDataCache');
+	  if(cached){const arr=JSON.parse(cached);if(Array.isArray(arr)&&arr.length){dishData=filterVisibleDishes(arr);hasCache=true;renderMenuTable();}}
+	 }catch(e){}
+	 Promise.race([safeFetch('/api/dishes'),new Promise((_,r)=>setTimeout(()=>r(new Error('超时')),10000))]).then(r=>r.json()).then(d=>{
+	  if(d.success&&d.dishes.length){
+	    // 顾客端只显示上架菜(is_active !== false)；下架菜不进菜单/推荐池/购物车
+	    dishData=filterVisibleDishes(d.dishes);
+	    try{localStorage.setItem('dishDataCache',JSON.stringify(dishData));}catch(e){}
+	    renderMenuTable(); // 数据就绪后立即渲染，避免竞态空表格
+	  }
+	}).catch((e)=>{console.warn('菜品数据加载超时/失败',e);
+	 if(hasCache){console.warn('使用本地缓存菜单（弱网模式）');return;}
+	 const tb=document.getElementById('dataset-table-body');if(tb)tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#c0392b;">菜品数据加载失败，<a href="#" id="retry-load-dishes" style="color:#27ae60;font-weight:600;">点击重试</a></td></tr>';const rb=document.getElementById('retry-load-dishes');if(rb)rb.addEventListener('click',function(ev){ev.preventDefault();location.reload();});});
  setTimeout(()=>checkApiAvailability().then(a=>{if(a)console.log('API可用,ML模型已就绪');else console.log('ML模型启动中,暂用本地推荐(稍后自动恢复)')}),100);
  const $=id=>document.getElementById(id);
  const click=(id,fn)=>{const el=$(id);if(el)el.addEventListener('click',fn);};
