@@ -51,3 +51,22 @@ test('回归-BUG3: 购物车行菜名走 dishNameOf(随英文菜单切换)', () 
   const core = read('js/core.js');
   assert.ok(core.includes('const name=dish?esc(dishNameOf(dish)):esc(x.name)'), 'showCart 行名必须优先 dishNameOf(dish), 仅无匹配菜品时回退快照名');
 });
+
+// ═══ 备注保存三重防线（2026-10-07 内置浏览器实测发现备注静默丢失）═══
+// 背景: 备注原只靠 change(失焦)事件保存, 自动填充/移动键盘收起等不触发 blur 的路径
+//       会让备注静默丢失(订单11196实测note为空)。修复: ①init.js input+change 双事件
+//       实时写车 ②core.js 结算前从 DOM 收口读取实际值。
+test('备注保存防线①: init.js 同时监听 input 与 change 事件写购物车', () => {
+  const src = read('js/init.js');
+  assert.ok(/addEventListener\('input'[\s\S]{0,200}cart-note-input/.test(src), 'init.js 应监听 input 事件保存备注');
+  assert.ok(/addEventListener\('change'[\s\S]{0,400}cart-qty-input/.test(src), 'change 监听器应保留(数量输入)');
+});
+
+test('备注保存防线②: 结算前从 .cart-note-input DOM 收口实际值', () => {
+  const src = read('js/core.js');
+  const cki = src.indexOf('async function checkoutCart()');
+  assert.ok(cki > 0, 'checkoutCart 应存在');
+  const body = src.slice(cki, cki + 2000);
+  assert.ok(/querySelectorAll\('\.cart-note-input'\)/.test(body), '结算开头应遍历备注输入框兜底读取');
+  assert.ok(body.indexOf('saveCart(cart)') < body.indexOf('起售数量'), '兜底应在起售闸门之前写回购物车');
+});

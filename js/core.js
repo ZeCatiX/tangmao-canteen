@@ -1196,6 +1196,13 @@ function showCart(){
 async function checkoutCart(){
  const cart=getCart(),bEl=document.getElementById('cart-checkout-btn');
  if(!cart.length){showMessage('提示','购物车是空的');return;}
+ // 备注兜底：以结算时刻输入框的实际值为准——备注平时靠 change(失焦)事件保存，
+ // 自动填充/部分移动键盘收起不触发 blur 会静默丢备注，结算前从 DOM 收口一次
+ document.querySelectorAll('.cart-note-input').forEach(inp=>{
+  const it=cart.find(c=>c.id===parseInt(inp.dataset.id));
+  if(it)it.note=String(inp.value||'').trim().slice(0,30);
+ });
+ saveCart(cart);
  // 起售数量闸门：任何菜品低于最小起售量（X个起）则拦截结算——最终防线，兜住所有漏网路径
  const violations=[];
  cart.forEach(x=>{
