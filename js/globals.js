@@ -246,6 +246,7 @@ var ZH_EN = {
   '点餐完成':'Order Placed','菜品已记录，厨房正在为您准备':'Recorded — the kitchen is on it','本次点餐':'This order','下单成功':'Placed','当前轮':'current','本轮推荐':'This round','本轮未启用 AI — 普通点餐，无推荐分析':'AI off this round — plain order, no match stats','模型评估':'Model quality','决定系数':'R² score','均方误差':'MSE','均方根误差':'RMSE','平均绝对误差':'MAE','对这次推荐满意吗？':'How were the picks?','点击选择满意度':'Tap to rate','提交评价':'Submit','影响推荐的关键因素':'What shaped this','加菜 / 继续点餐':'Add more','重新点餐':'Start over','结束用餐，退出':'Finish & exit',
   // 个人中心
   '最后登录：':'Last sign-in:','最近推荐记录':'Recent recommendations','还没有推荐记录':'No recommendations yet','收藏菜品':'Favorites','还没有收藏的菜品':'No favorites yet','取消收藏':'Unfavorite','拉黑的菜品':'Blocked dishes','还没有拉黑的菜品':'No blocked dishes','退出登录':'Sign out','注销账号':'Delete account','再来一单':'Reorder',
+  '本桌账单':'Table Bill','查看上次推荐':'View Last Recommendations','继续上次推荐':'Continue Last Recommendations',
   // 登录/注册
   '用户名':'Username','密码':'Password','确认密码':'Confirm password','显示密码':'Show','隐藏密码':'Hide','还没有账号？':'No account yet?','去注册':'Register','已有账号？':'Have an account?','去登录':'Sign in','我已阅读并同意':'I have read and agreed to the','《隐私政策》':'Privacy Policy',
   // 品牌面（2026-10-07 用户拍板：品牌资产也要翻——意译保唐韵，不逐字；品牌名保留中文为主）
