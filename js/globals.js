@@ -286,8 +286,12 @@ function applyUiLang() {
   });
   const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
-  // ② 遍历式：全页面文本节点精确匹配
-  if (typeof document.createTreeWalker !== 'function') return;
+  // ② 遍历式：en 全页面扫描翻译；zh 只还原已翻译清单（免全文档扫描——中文模式每次按键渲染都会触发本函数）
+  if (menuLang !== 'en') {
+    __zhTranslated.forEach(n => { if (n.__zhOrig !== undefined) { n.textContent = n.__zhOrig; delete n.__zhOrig; } });
+    __zhTranslated = [];
+    document.querySelectorAll('input[data-zh-ph], textarea[data-zh-ph]').forEach(el => { el.placeholder = el.getAttribute('data-zh-ph'); el.removeAttribute('data-zh-ph'); });
+  } else {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
     acceptNode: n => (n.nodeName === 'SCRIPT' || n.nodeName === 'STYLE') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
   });
@@ -296,20 +300,16 @@ function applyUiLang() {
   nodes.forEach(n => {
     const raw = n.textContent;
     if (!raw || !raw.trim()) return;
-    if (menuLang === 'en') {
-      if (n.__zhOrig !== undefined) return; // 已翻译(记忆挂文本节点自身——挂父元素会同段多节点互相遮挡)
+    if (n.__zhOrig === undefined) {
       const key = raw.trim();
       if (ZH_EN[key]) {
         n.__zhOrig = raw;
+        __zhTranslated.push(n);
         n.textContent = raw.replace(key, ZH_EN[key]);
-      }
-    } else {
-      if (n.__zhOrig !== undefined) {
-        n.textContent = n.__zhOrig;
-        delete n.__zhOrig;
       }
     }
   });
+  }
   // ③ placeholder
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
     if (menuLang === 'en') {
@@ -334,6 +334,7 @@ function applyUiLang() {
     }
   });
 }
+var __zhTranslated = [];
 var _uiLangApplying = false;
 function applyUiLangGuarded() { if (_uiLangApplying) return; _uiLangApplying = true; try { applyUiLang(); } finally { setTimeout(() => { _uiLangApplying = false; }, 60); } }
 function toggleMenuLang() {
