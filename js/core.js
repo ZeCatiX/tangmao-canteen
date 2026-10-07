@@ -412,13 +412,13 @@ function showDishDetail(id){
   +imgHtml
   +'<div class="modal-body" style="padding:16px 20px;">'
   +'<h4 style="font-family:\'Noto Serif SC\',serif;font-weight:700;">'+esc(dishNameOf(d))+(d.tags&&d.tags.includes('招牌')?' <span style="background:var(--primary-accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:10px;vertical-align:middle;">招牌</span>':'')+'</h4>'
-  +'<p style="color:#8b7a6a;font-size:0.85rem;">'+esc(catNameOf(d.category))+' · '+esc(d.spiciness)+' · 咸淡'+esc(d.saltiness)+' · 甜酸'+esc(d.sweetness)+' · 热量'+esc(d.calorie||'未知')+'</p>'
+  +'<p style="color:#8b7a6a;font-size:0.85rem;">'+esc(catNameOf(d.category))+' · '+esc(menuLang==='en'?(SPICE_EN[d.spiciness]||d.spiciness):d.spiciness)+' · '+(menuLang==='en'?('Salt '+(SALT_EN[d.saltiness]||d.saltiness)+' · Sweet-sour '+(SWEET_EN[d.sweetness]||d.sweetness)+' · Calories '+(CAL_EN[d.calorie]||d.calorie||'Unknown')):('咸淡'+esc(d.saltiness)+' · 甜酸'+esc(d.sweetness)+' · 热量'+esc(d.calorie||'未知')))+'</p>'
   +(menuLang==='en'&&d.description_en?'<p style="font-size:0.9rem;color:var(--text);">'+esc(d.description_en)+'</p>':'')
   +(d.description?'<p style="font-size:0.9rem;">'+esc(d.description)+'</p>':'')
   +'<div style="font-size:1.2rem;color:var(--primary);font-weight:700;margin:6px 0;">'+esc(formatPrice(d))+'</div>'
   +specs
-  +(alTags?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">含过敏源</div>'+alTags+'</div>':'')
-  +'<div style="margin-top:10px;font-size:0.8rem;color:#8b7a6a;">'+(d.is_sold_out===true?'⚠ 今日已售罄':'✅ 可正常点餐')+(d.serving?' · '+esc(d.serving):'')+'</div>'
+  +(alTags?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">'+(menuLang==='en'?'Allergens':'含过敏源')+'</div>'+alTags+'</div>':'')
+  +'<div style="margin-top:10px;font-size:0.8rem;color:#8b7a6a;">'+(d.is_sold_out===true?(menuLang==='en'?'⚠ Sold out today':'⚠ 今日已售罄'):(menuLang==='en'?'✅ Orderable now':'✅ 可正常点餐'))+(d.serving?' · '+esc(specLang(d.serving)):'')+'</div>'
   +'</div></div></div></div>';
  document.body.appendChild(modal);
  const el=modal.querySelector('.modal');
@@ -534,7 +534,7 @@ function renderMenuTable(){
   container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--text-light);">'
    +'<img src="/assets/illustrations/search-empty-cat.webp" alt="唐猫拿着放大镜在菜单里寻找" style="width:240px;display:block;margin:0 auto 10px;border-radius:12px;">'
    +'<p style="font-size:1.05rem;color:var(--ink);margin:0 0 6px;">'+hint+'</p>'
-   +'<p style="font-size:0.85rem;margin:0;">换个关键词，或清除筛选条件再试试</p>'
+   +'<p style="font-size:0.85rem;margin:0;">'+(menuLang==='en'?'Try another keyword, or reset the filters':'换个关键词，或清除筛选条件再试试')+'</p>'
    +'</div>';
   document.getElementById('menu-count').textContent='0/'+dishData.length;
   return;
