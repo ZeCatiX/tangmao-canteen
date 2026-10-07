@@ -4,6 +4,13 @@ document.addEventListener('DOMContentLoaded',function(){
  // 从localStorage恢复登录状态
  const savedUser=localStorage.getItem('currentUser');
  if(savedUser&&getUserData(savedUser))currentUser=savedUser;
+ // 恢复登录态 UI：导航"我的"显示/登录入口隐藏 + 首页登录/注册按钮隐藏（此前只覆盖登录动作瞬间，刷新后按钮复活）
+ if(currentUser&&savedUser){
+  const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');
+  if(pi)pi.classList.remove('d-none');if(nu)nu.classList.add('d-none');
+  const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');
+  if(hlb)hlb.classList.add('d-none');if(hrb)hrb.classList.add('d-none');
+ }
  showSection('home-section');
  // 恢复购物车徽标（刷新后保持显示）
  if(typeof updateCartBadge==='function')updateCartBadge();
