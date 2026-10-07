@@ -4,9 +4,10 @@
 """
 import os, pickle, json, sys, random
 import numpy as np
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding='utf-8')
 
-with open('recommendation_model.pkl', 'rb') as f:
+with open(os.path.join(_ROOT, 'recommendation_model.pkl'), 'rb') as f:
     md = pickle.load(f)
 model = md['model']
 

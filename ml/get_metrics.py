@@ -5,13 +5,14 @@
 import sys
 import os
 import json
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_metrics():
     """获取模型评估指标"""
     # 首先尝试加载轻量级的JSON文件
-    if os.path.exists('model_metrics.json'):
+    if os.path.exists(os.path.join(_ROOT, 'model_metrics.json')):
         try:
-            with open('model_metrics.json', 'r', encoding='utf-8') as f:
+            with open(os.path.join(_ROOT, 'model_metrics.json'), 'r', encoding='utf-8') as f:
                 metrics = json.load(f)
             print(json.dumps(metrics, ensure_ascii=False))
             return
@@ -21,7 +22,7 @@ def get_metrics():
     # 如果JSON文件不存在或加载失败，尝试从完整的pickle文件加载
     try:
         import pickle
-        with open('recommendation_model.pkl', 'rb') as f:
+        with open(os.path.join(_ROOT, 'recommendation_model.pkl'), 'rb') as f:
             model_data = pickle.load(f)
 
         if 'metrics' in model_data:

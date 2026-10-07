@@ -339,7 +339,7 @@ def main():
             'feature_names': FEATURE_NAMES
         }
     }
-    model_path = os.path.join(os.path.dirname(__file__), 'recommendation_model.pkl')
+    model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recommendation_model.pkl')  # 项目根(脚本已迁 ml/), worker 从根读
     with open(model_path, 'wb') as f:
         pickle.dump(model_data, f)
     print(f'\n模型已保存: {model_path}', file=sys.stderr)

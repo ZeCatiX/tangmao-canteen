@@ -6,6 +6,8 @@
 import sys
 import json
 import pickle
+import os
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 
 # 修复 Windows 终端中文乱码：显式设置 stderr 编码为 UTF-8
@@ -30,7 +32,7 @@ NUM_PATTERN = re.compile(r'[\d.]+')
 _model_cache = None
 print("[信息] Worker进程启动，正在加载模型...", file=sys.stderr)
 try:
-    with open('recommendation_model.pkl', 'rb') as f:
+    with open(os.path.join(_ROOT, 'recommendation_model.pkl'), 'rb') as f:
         _model_cache = pickle.load(f)
     print("[信息] 模型加载完成", file=sys.stderr)
     json_print({"ready": True})
