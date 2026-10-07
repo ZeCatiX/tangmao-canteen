@@ -142,6 +142,6 @@ test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输�
   const c = read('js/core.js');
   assert.ok(c.includes("taste preferences not set"), 'core.js 偏好横幅应双语');
   const r = read('js/recommendation.js');
-  assert.ok(r.includes("Currently using: ") && r.includes("var MODE_EN"), '当前使用行应双语+mode映射');
+  assert.ok(r.includes("Currently using: ") && r.includes("MODE_EN"), '当前使用行应双语+mode映射');
   assert.ok(r.includes("Wuchang Steamed Rice") && r.includes("¥3/bowl"), '米饭行应双语');
 });
