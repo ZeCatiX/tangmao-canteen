@@ -250,8 +250,8 @@ function renderPrefCompletenessBanner(){
  }
  banner.className='alert alert-warning alert-dismissible fade show pref-completeness-banner';
  banner.classList.remove('d-none');
- banner.innerHTML='<i class="bi bi-info-circle me-2"></i>还有 '+(c.total-c.declared)+' 项口味偏好未设置，补全后推荐更贴合你的口味。'
-  +'<a href="#" class="alert-link ms-1" id="pref-completeness-goto">去补全 →</a>'
+ banner.innerHTML='<i class="bi bi-info-circle me-2"></i>'+(menuLang==='en'?(c.total-c.declared)+' taste preferences not set — complete them for better matches.':'还有 '+(c.total-c.declared)+' 项口味偏好未设置，补全后推荐更贴合你的口味。')
+  +'<a href="#" class="alert-link ms-1" id="pref-completeness-goto">'+(menuLang==='en'?'Complete them →':'去补全 →')+'</a>'
   +'<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>';
  const goto=banner.querySelector('#pref-completeness-goto');
  if(goto)goto.addEventListener('click',function(e){e.preventDefault();showSection('preference-section');const fu=c.fields.find(f=>!f.declared);if(fu)setTimeout(()=>prefScrollAndHighlight(fu.key),350);});

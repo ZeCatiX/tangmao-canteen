@@ -136,3 +136,12 @@ test('遍历器遮挡修复: 原文记忆挂文本节点自身而非父元素', 
   assert.ok(g.includes('Grand Tang Mall Branch') && g.includes('SAGA'), '页脚/门店英文地址应存在');
   assert.ok(g.includes('本地人的待客小宴') && g.includes("the locals"), '尾句条目应存在(两种引号形态其一)');
 });
+
+// ═══ 推荐页动态拼接串双语（2026-10-07 用户实测 EN 推荐页残留三处）═══
+test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输出', () => {
+  const c = read('js/core.js');
+  assert.ok(c.includes("taste preferences not set"), 'core.js 偏好横幅应双语');
+  const r = read('js/recommendation.js');
+  assert.ok(r.includes("Currently using: ") && r.includes("var MODE_EN"), '当前使用行应双语+mode映射');
+  assert.ok(r.includes("Wuchang Steamed Rice") && r.includes("¥3/bowl"), '米饭行应双语');
+});
