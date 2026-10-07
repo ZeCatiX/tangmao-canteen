@@ -899,6 +899,17 @@ html.dark-mode #home-section .row.g-4 .p-3 h6 { color: var(--gold-light) !import
 html.dark-mode #home-section .row.g-4 .p-3 small { color: var(--text-light) !important; }
 /* 桌号状态卡:内联写死浅米底 #f7efdf,暗色下 var(--text) 翻浅色后浅底浅字看不清 */
 html.dark-mode #table-status-card { background: #1a1a1a !important; border-color: rgba(201,169,110,0.35) !important; }
+/* 品牌红文字暗色提亮:--primary(#d0453a) 对深底只有 3.8:1(<4.5 AA),不能全局提亮变量
+   (红底白字按钮会跌到 3.4),只覆盖文字用途 —— 内联样式/样式表文字规则/Bootstrap text-danger */
+html.dark-mode .text-danger { color: #e4605c !important; }
+/* 只匹配文字色:选择器锚定"开头"或"分号后",避免子串误伤 background-color:/border-color: */
+html.dark-mode [style^="color:var(--primary"], html.dark-mode [style*=";color:var(--primary"],
+html.dark-mode [style^="color: var(--primary"], html.dark-mode [style*="; color: var(--primary"] { color: #e4605c !important; }
+html.dark-mode .btn-outline-primary { color: #e4605c; border-color: rgba(228,96,92,0.55); }
+html.dark-mode .pref-meter-item.todo small.pref-meter-todo,
+html.dark-mode .pref-meter-item.done.weak,
+html.dark-mode .pref-meter-item.todo.weak { color: #e4605c; }
+html.dark-mode #register-section .btn-link:hover { color: #e4605c; }
 html.dark-mode .navbar { background: linear-gradient(165deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%) !important; }
 html.dark-mode .card,
 html.dark-mode .list-group-item { background-color: #1a1a1a; border-color: #2a2a2a; color: var(--text); }

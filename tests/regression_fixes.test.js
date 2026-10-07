@@ -134,6 +134,30 @@ describe('前端修复回归', () => {
 });
 
 // ================================================================
+// 暗色模式对比度全面审计回归（2026-10-07,三页面 DOM 审计驱动）
+// ================================================================
+describe('暗色模式对比度回归', () => {
+  it('styles.css 品牌红文字暗色提亮,且属性选择器锚定防误伤 background-color:', () => {
+    const s = read('styles.css');
+    assert.ok(/html\.dark-mode \.text-danger\s*{\s*color:\s*#e4605c\s*!important/.test(s), 'text-danger 暗色应提亮到 #e4605c');
+    // 子串写法 [style*="color:var(--primary"] 会命中 background-color:/border-color:,必须锚定开头或分号后
+    assert.ok(s.includes('[style^="color:var(--primary"') && s.includes('[style*=";color:var(--primary"'), '内联红字覆盖必须锚定,防误伤红底按钮');
+  });
+  it('admin.html :root 必须定义 --primary-accent（缺失曾致确认重置/订单查询按钮透明不可见）', () => {
+    const s = read('admin.html');
+    assert.ok(/:root\s*{[^}]*--primary-accent:\s*#b83a2a/.test(s), '--primary-accent 缺失 = var() 失效按钮透明');
+  });
+  it('admin.html 暗色块覆盖类选择器来源的深底深字', () => {
+    const s = read('admin.html');
+    assert.ok(s.includes('--bs-body-color: #e0d5c1'), '暗色应翻转 bootstrap --bs-body-color(.card 内文字继承它)');
+    assert.ok(s.includes('color-scheme: dark'), '暗色应声明 color-scheme 托管原生下拉/日期控件');
+    assert.ok(/html\.dark-mode \.form-label\s*{\s*color:\s*var\(--gold-light\)/.test(s), 'form-label 暗色应提亮(#4a3028 类规则在内联覆盖体系之外)');
+    assert.ok(/html\.dark-mode \.modal-content\s*{\s*background-color:\s*#1a1a1a/.test(s), '弹窗内容区暗色应有深底(否则浅字落白底)');
+    assert.ok(/html\.dark-mode \.badge\.bg-warning\s*{\s*color:\s*#1a1a1a\s*!important/.test(s), '黄色徽标暗色应配深字');
+  });
+});
+
+// ================================================================
 // 后端修复 - 日志路径
 // ================================================================
 describe('日志路径修复回归', () => {
