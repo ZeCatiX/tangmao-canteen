@@ -530,7 +530,7 @@ function renderMenuTable(){
  if(!filtered.length){
   // 空态: 搜索/筛选无结果时给出明确反馈与引导
   const kw=q?esc(q):'';
-  const hint=q?'唐猫找了一圈，没有找到「'+kw+'」':'当前筛选条件下没有菜品';
+  const hint=q?(menuLang==='en'?('The cat looked everywhere — no "'+kw+'" on the menu'):'唐猫找了一圈，没有找到「'+kw+'」'):(menuLang==='en'?'No dishes match the current filters':'当前筛选条件下没有菜品');
   container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--text-light);">'
    +'<img src="/assets/illustrations/search-empty-cat.webp" alt="唐猫拿着放大镜在菜单里寻找" style="width:240px;display:block;margin:0 auto 10px;border-radius:12px;">'
    +'<p style="font-size:1.05rem;color:var(--ink);margin:0 0 6px;">'+hint+'</p>'

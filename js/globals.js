@@ -173,6 +173,9 @@ var UI_STR = {
 };
 var TAB_EN = { '主食': 'Staples', '招牌': 'Signature', '热销': 'Hot', '陕菜': 'Shaanxi', '海鲜': 'Seafood', '蔬羹': 'Greens', '凉菜': 'Cold', '小吃': 'Snacks', '饮品': 'Drinks' };
 var SPICE_EN = { '不辣': 'Mild', '微辣': 'Mildly spicy', '中辣': 'Medium spicy', '重辣': 'Extra spicy' };
+var SALT_EN = { '清淡': 'Light', '适中': 'Just right', '偏咸': 'Salty' };
+var SWEET_EN = { '无味': 'Neither', '甜味': 'Sweet', '酸味': 'Sour', '酸甜': 'Sweet & sour' };
+var CAL_EN = { '高': 'Hearty', '中': 'Medium', '低': 'Light', '适中': 'Medium', '未知': 'Unknown' };
 // 规格数据级枚举（116 道菜固定值，DB serving/flavor 为中文）：英文模式渲染时转写，数据不动
 var SPEC_EN = { '6颗':'6 pcs','6个':'6 pcs','6块':'6 pcs','6支':'6 sticks','6只':'6 pcs','2个起':'2 min.','3个起':'3 min.','4个/笼':'4 per steamer','150克':'150g','冰镇':'Chilled','常温/冰镇':'Room temp / chilled','约250克净鱼':'About 250g fish, cleaned','鱿鱼、鱼肚、丸子':'Squid, fish maw & meatballs','菠萝味/橙味':'Pineapple / orange','脐橙汁/桃汁':'Orange / peach juice','310ml/听':'310ml can','330ml/听':'330ml can','原味':'Original','芥末味':'Wasabi','壶':'Pot','盖碗':'Gaiwan' };
 function specLang(s) {
