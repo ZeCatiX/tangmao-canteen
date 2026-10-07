@@ -261,7 +261,15 @@ var ZH_EN = {
   '本地头牌·待客小宴':'local icon and host of intimate feasts',
   '——"本地人的待客小宴"。':' — "the locals\' table for honored guests."',
   '🥇 大众点评·美团 陕菜榜 N.1':'🥇 #1 Shaanxi Cuisine on Dianping & Meituan rankings',
-  '大众点评收藏打卡关注门店送小挂件或冰峰':'Follow & check in on Dianping for a free souvenir or Bingfeng soda'
+  '大众点评收藏打卡关注门店送小挂件或冰峰':'Follow & check in on Dianping for a free souvenir or Bingfeng soda',
+  '🏆 荣誉':'🏆 Honors','🍳 西安名厨精英大赛团体金奖':'🍳 Team Gold Award, Xi\'an Master Chefs Competition','📺 CCTV上榜品牌':'📺 Featured on CCTV','🌟 粉丝千万级明星餐厅':'🌟 Star restaurant with 10M+ followers',
+  '🤝 四大服务承诺':'🤝 Our Four Service Promises','① 上错菜品免费赠送':'① Wrong dish served? It\'s free','② 菜品有问题直接退换':'② Any issue — return or replace, no questions','③ 超30分钟菜未上齐，全单享9折优惠':'③ Order not complete in 30 min? 10% off the bill','④ 打包菜品免打包费':'④ Free takeaway packing',
+  '📍 门店信息':'📍 Locations','✨ 推荐特色':'✨ What We\'re Known For',
+  '🏆 招牌必打卡：唐猫酸汤锅子鱼、葫芦鸡、唐僧望塔酥、大唐妃子笑':'🏆 Must-try signatures: Tang Cat Sour Soup Fish, Gourd Crispy Chicken, Monk Pagoda Pastry, Imperial Concubine Smile',
+  '🧠 智能推荐：根据口味偏好推荐菜品（随机森林模型）':'🧠 Smart recommendations tuned to your taste (random-forest model)',
+  '👤 个性化定制：辣度、咸淡、甜酸随心选':'👤 Personalize spice, saltiness and sweet-sour to taste',
+  '🏮 唐风体验：梦回大唐，品味长安':'🏮 Tang-dynasty dining: dream of the Tang, taste of Chang\'an',
+  '技术栈':'Tech Stack','前端':'Frontend','后端':'Backend','机器学习':'Machine Learning'
 };
 var PH_EN = { '搜索菜品名称...':'Search dishes...', '搜索菜品名称':'Search dishes', '选择桌号':'Pick a table', '桌号':'Table No.', '备注：少辣/不要香菜…':'e.g. less spicy / no cilantro…' };
 function applyUiLang() {
