@@ -91,9 +91,9 @@ npm run security        # npm audit 依赖安全检查
 ├── admin.html           # 管理后台
 ├── kitchen.html         # 厨房看板
 ├── js/                  # 前端源码（构建合并为 script.js）
-├── predict_worker.py    # Python 预测 Worker 进程
-├── retrain_from_feedback.py  # 模型重训练脚本
-├── train_ml_model.py    # 模型训练脚本
+├── ml/                  # Python ML 管线(预测worker/重训/全量训练/指标脚本)
+
+
 ├── docker-compose.yml   # Docker 编排
 ├── ecosystem.config.js  # PM2 进程管理
 └── tests/               # 测试套件

@@ -13,7 +13,7 @@ describe('ML模型与PythonWorker深度检查', () => {
 
   // ===== 1. predict_worker.py 存在 =====
   it('1.1 predict_worker.py 存在且可执行', () => {
-    const p = path.join(ROOT, 'predict_worker.py');
+    const p = path.join(ROOT, 'ml', 'predict_worker.py');
     assert.ok(fs.existsSync(p), 'predict_worker.py应存在');
     const content = fs.readFileSync(p, 'utf8');
     assert.ok(content.length > 100, '应有实质内容');
@@ -43,9 +43,9 @@ describe('ML模型与PythonWorker深度检查', () => {
   // ===== 4. Python脚本结构检查 =====
   it('4.1 Python脚本包含关键结构', () => {
     // rgzn.py 已归档至 deprecated/(commit 47095d2),根目录不再保留旧训练脚本
-    const pyFiles = ['predict_worker.py', 'train_restaurant_model.py', 'train_restaurant_model.py',
-      'retrain_from_feedback.py', 'get_metrics.py', 'get_feature_importance.py',
-      'save_importance.py', 'convert_report.py', 'create_optimized_report.py'];
+    const pyFiles = ['ml/predict_worker.py', 'ml/train_restaurant_model.py',
+      'ml/retrain_from_feedback.py', 'ml/get_metrics.py', 'ml/get_feature_importance.py',
+      'ml/save_importance.py', 'ml/convert_report.py', 'ml/create_optimized_report.py'];
     for (const f of pyFiles) {
       const p = path.join(ROOT, f);
       assert.ok(fs.existsSync(p), `${f}应存在`);

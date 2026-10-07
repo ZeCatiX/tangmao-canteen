@@ -206,7 +206,7 @@ def main():
         yp_te = model.predict(X_te)
         _r2 = 1 - np.sum((y_te - yp_te) ** 2) / np.sum((y_te - y_te.mean()) ** 2)
         _mse = float(np.mean((y_te - yp_te) ** 2))
-        _dir = os.path.dirname(__file__)
+        _dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根(脚本已迁 ml/), 指标 JSON 仍写根供 server/radar 读取
         with open(os.path.join(_dir, 'model_metrics.json'), 'w', encoding='utf-8') as f:
             json.dump({
                 'r2': float(_r2), 'mse': _mse, 'rmse': float(np.sqrt(_mse)),

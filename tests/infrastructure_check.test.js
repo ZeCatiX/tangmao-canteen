@@ -82,9 +82,9 @@ describe('基础设施核心文件语法检查', () => {
   // ===== 9. Python脚本语法检查 =====
   it('9.1 Python脚本语法正确', () => {
     // rgzn.py 已归档至 deprecated/(commit 47095d2),根目录不再保留旧训练脚本
-    const pyFiles = ['predict_worker.py', 'train_restaurant_model.py', 'train_restaurant_model.py',
-      'retrain_from_feedback.py', 'get_metrics.py', 'get_feature_importance.py',
-      'save_importance.py', 'convert_report.py', 'create_optimized_report.py'];
+    const pyFiles = ['ml/predict_worker.py', 'ml/train_restaurant_model.py',
+      'ml/retrain_from_feedback.py', 'ml/get_metrics.py', 'ml/get_feature_importance.py',
+      'ml/save_importance.py', 'ml/convert_report.py', 'ml/create_optimized_report.py'];
     let missing = [];
     for (const f of pyFiles) {
       const p = path.join(ROOT, f);

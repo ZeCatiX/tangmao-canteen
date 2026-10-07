@@ -20,7 +20,7 @@ from train_restaurant_model import (encode_dish, compute_score, load_dishes_from
                                     ORD_MAPPINGS, parse_tags)
 
 MIN_SAMPLES = 30
-OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recommendation_effect.json')
+OUT_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recommendation_effect.json')  # 项目根, server 从根读
 
 
 def load_feedback_from_db():
@@ -78,7 +78,7 @@ def main():
         dishes = load_dishes_from_db()
         by_id = {d[0]: d for d in dishes}
 
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recommendation_model.pkl'), 'rb') as f:
+        with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recommendation_model.pkl'), 'rb') as f:
             model = pickle.load(f)['model']
 
         rows = load_feedback_from_db()

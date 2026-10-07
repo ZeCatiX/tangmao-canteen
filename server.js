@@ -236,7 +236,7 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
 
 // 静态文件服务（只允许前端需要的文件类型，阻止敏感文件泄露）
 const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
-const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_effect.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'get_feature_importance.py', 'get_metrics.py', 'retrain_from_feedback.py', 'train_ml_model.py', 'train_restaurant_model.py', 'predict_worker.py', 'convert_report.py', 'create_optimized_report.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
+const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_effect.json', 'recommendation_model.pkl', 'feature_importance.json', 'dishes_current.json', 'dishes_verify.json', 'registry.json', 'ml/', 'train_ml_model.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.retired/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
 app.use((req, res, next) => {
   if (req.method !== 'GET') return next();
   const ext = path.extname(req.path).toLowerCase();
@@ -361,7 +361,7 @@ async function syncDishRatings() {
 function refreshRecommendationEffect() {
   try {
     const { spawn } = require('child_process');
-    const proc = spawn('python', ['recommendation_effect_report.py'], {
+    const proc = spawn('python', ['ml/recommendation_effect_report.py'], {
       cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true
     });
     proc.on('error', e => logger.warn('生成推荐效果报告失败: ' + e.message));
@@ -1020,7 +1020,7 @@ app.get('/api/admin/recommendation-effect', (req, res) => {
 app.post('/api/admin/recommendation-effect', (req, res) => {
   try {
     const { spawn } = require('child_process');
-    const proc = spawn('python', ['recommendation_effect_report.py'], {
+    const proc = spawn('python', ['ml/recommendation_effect_report.py'], {
       cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true
     });
     let err = '';
@@ -1052,7 +1052,7 @@ app.post('/api/admin/retrain', async (req, res) => {
     backupOldModel();
     // 异步执行训练，不阻塞事件循环
     const { spawn } = require('child_process');
-    const proc = spawn('python', [path.join(__dirname, 'retrain_from_feedback.py')], {
+    const proc = spawn('python', [path.join(__dirname, 'ml', 'retrain_from_feedback.py')], {
       cwd: __dirname,
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       stdio: ['ignore', 'ignore', 'pipe'],
@@ -1618,7 +1618,7 @@ const MAX_RESTART_ATTEMPTS = 3;
 function startPythonWorker() {
   if (pythonWorker) { try { pythonWorker.kill(); } catch(e) {} pythonWorker = null; }
   const { spawn } = require('child_process');
-  pythonWorker = spawn('python', ['-u', path.join(__dirname, 'predict_worker.py')], {
+  pythonWorker = spawn('python', ['-u', path.join(__dirname, 'ml', 'predict_worker.py')], {
     cwd: __dirname,
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
@@ -2077,7 +2077,7 @@ async function checkAndRetrain() {
       logger.info(`检测到 ${newCount} 条新反馈，开始自动重训练...`);
       backupOldModel();
       const { spawn } = require('child_process');
-      const proc = spawn('python', [path.join(__dirname, 'retrain_from_feedback.py')], {
+      const proc = spawn('python', [path.join(__dirname, 'ml', 'retrain_from_feedback.py')], {
         cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
         stdio: ['ignore', 'ignore', 'pipe']
       });
