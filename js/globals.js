@@ -19,8 +19,9 @@ function esc(str) {
   if (typeof str !== 'string') return str;
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-// 价格格式化：数字 → "88元"，null/undefined → "未知"
-function formatPrice(d){const p=(d&&typeof d==='object')?d.price:d;if(p===null||p===undefined||p==='')return'未知';return parseFloat(p).toFixed(0)+'元'+((d&&d.price_unit)||'');}
+// 价格格式化：数字 → "88元"，null/undefined → "未知"；英文模式 ¥88 / bowl
+var UNIT_EN = { '/碗':'/bowl','/份':'/portion','/只':'/whole','/瓶':'/bottle','/听':'/can','/杯':'/cup','/个':'/pc','/盒':'/box','/壶':'/pot','/盖碗':'/gaiwan','/6只':'/6 pcs','/6块':'/6 pcs','/3碗':'/3 bowls','/4个':'/4 pcs','/支':'/stick','/颗':'/pc','/块':'/pc','/笼':'/steamer' };
+function formatPrice(d){const p=(d&&typeof d==='object')?d.price:d;if(p===null||p===undefined||p==='')return'未知';const unit=(d&&d.price_unit)||'';return parseFloat(p).toFixed(0)+(menuLang==='en'?'¥':'元')+(unit?(menuLang==='en'?(UNIT_EN[unit]||unit):unit):'');}
 // 获取用户认证头
 function authHeaders(){const t=localStorage.getItem('userToken');return t?{'Authorization':'Bearer '+t}:{};}
 const DEFAULT_DISH_IMG='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
