@@ -275,6 +275,14 @@ var ZH_EN = {
   '掌柜懂菜，更懂你 · 报上人数即成宴':'The butler knows dishes — just tell us your party size',
   '猫掌柜正在为您设席 · 凉热荤素配平中':'Setting your feast · balancing dishes',
   '五常大米饭':'Wuchang Steamed Rice',
+  '饮食要求':'Dietary requirements',
+  '推荐模式':'Algorithm',
+  '自动选择（优先API）':'Auto (API first)',
+  '后端API推荐（更智能）':'Backend API (smarter)',
+  '本地推荐（更快速）':'Local rules (faster)',
+  '选择推荐算法模式':'Choose algorithm',
+  '显示当前使用的推荐算法':'Shows the active algorithm',
+  '🍽️ 点餐完成':'🍽️ Order Placed',
   '3元/碗':'¥3/bowl',
   '当前使用：':'Currently using: ',
   '本桌账单':'Table Bill','查看上次推荐':'View Last Recommendations','继续上次推荐':'Continue Last Recommendations',
@@ -366,8 +374,12 @@ function applyUiLang() {
   });
 }
 var __zhTranslated = [];
-var _uiLangApplying = false;
-function applyUiLangGuarded() { if (_uiLangApplying) return; _uiLangApplying = true; try { applyUiLang(); } finally { setTimeout(() => { _uiLangApplying = false; }, 60); } }
+var _uiLangApplying = false, _uiLangPending = false;
+function applyUiLangGuarded() {
+  if (_uiLangApplying) { _uiLangPending = true; return; } // 锁内来的请求不丢弃, 解锁后补跑一轮
+  _uiLangApplying = true;
+  try { applyUiLang(); } finally { setTimeout(() => { _uiLangApplying = false; if (_uiLangPending) { _uiLangPending = false; applyUiLangGuarded(); } }, 60); }
+}
 function toggleMenuLang() {
   menuLang = menuLang === 'zh' ? 'en' : 'zh';
   localStorage.setItem('menuLang', menuLang);
