@@ -127,3 +127,12 @@ test('品牌面英译: hero诗句/口号/关于本店/页脚双语并列', () =>
   assert.ok(!/^\s*'唐猫庭院':/.test(g), '品牌名本身不应被翻译替换');
   assert.ok(!g.includes("'🏮 大唐不夜城店"), '门店地址原文不应整体替换');
 });
+
+// ═══ 遍历器遮挡修复（2026-10-07 实测: 同段多文本节点只翻第一个）═══
+test('遍历器遮挡修复: 原文记忆挂文本节点自身而非父元素', () => {
+  const g = read('js/globals.js');
+  assert.ok(g.includes('n.__zhOrig'), '记忆应挂文本节点自身(__zhOrig)');
+  assert.ok(!g.includes('data-zh-orig'), '不得再把记忆挂父元素 data-zh-orig(同段多节点互相遮挡)');
+  assert.ok(g.includes('Grand Tang Mall Branch') && g.includes('SAGA'), '页脚/门店英文地址应存在');
+  assert.ok(g.includes('本地人的待客小宴') && g.includes("the locals"), '尾句条目应存在(两种引号形态其一)');
+});

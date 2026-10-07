@@ -260,14 +260,11 @@ var ZH_EN = {
   '7年砥砺奋进，已成长为本地人日常待客、宴请、聚餐、约会的优选餐厅。是名副其实的':'Seven years on, we have become the local first choice for everyday hosting, banquets, gatherings and dates — a true ',
   '本地头牌·待客小宴':'local icon and host of intimate feasts',
   '——"本地人的待客小宴"。':' — "the locals\' table for honored guests."',
-  '——"本地人的待客小宴"。':' — "the locals\' table for honored guests."',
-  '🏮 大唐不夜城店：大雁塔南广场东南角13栋1单元 · 客服 19991210572':'🏮 Grand Tang Mall Branch: Bldg 13-1, SE corner of Giant Wild Goose Pagoda South Plaza · Tel 19991210572',
-  '🏬 赛格店：小寨赛格国际12楼 · 客服 19829809735':'🏬 SAGA Int\'l Mall Branch: 12F, Xiaozhai SAGA International · Tel 19829809735',
-  '🥇 大众点评·美团 陕菜榜 N.1':'🥇 #1 Shaanxi Cuisine on Dianping & Meituan rankings',
+  '✨ 推荐特色':'✨ What We\'re Known For',
   '大众点评收藏打卡关注门店送小挂件或冰峰':'Follow & check in on Dianping for a free souvenir or Bingfeng soda',
   '🏆 荣誉':'🏆 Honors','🍳 西安名厨精英大赛团体金奖':'🍳 Team Gold Award, Xi\'an Master Chefs Competition','📺 CCTV上榜品牌':'📺 Featured on CCTV','🌟 粉丝千万级明星餐厅':'🌟 Star restaurant with 10M+ followers',
   '🤝 四大服务承诺':'🤝 Our Four Service Promises','① 上错菜品免费赠送':'① Wrong dish served? It\'s free','② 菜品有问题直接退换':'② Any issue — return or replace, no questions','③ 超30分钟菜未上齐，全单享9折优惠':'③ Order not complete in 30 min? 10% off the bill','④ 打包菜品免打包费':'④ Free takeaway packing',
-  '📍 门店信息':'📍 Locations','✨ 推荐特色':'✨ What We\'re Known For',
+  '📍 门店信息':'📍 Locations',
   '🏆 招牌必打卡：唐猫酸汤锅子鱼、葫芦鸡、唐僧望塔酥、大唐妃子笑':'🏆 Must-try signatures: Tang Cat Sour Soup Fish, Gourd Crispy Chicken, Monk Pagoda Pastry, Imperial Concubine Smile',
   '🧠 智能推荐：根据口味偏好推荐菜品（随机森林模型）':'🧠 Smart recommendations tuned to your taste (random-forest model)',
   '👤 个性化定制：辣度、咸淡、甜酸随心选':'👤 Personalize spice, saltiness and sweet-sour to taste',
@@ -297,19 +294,17 @@ function applyUiLang() {
   nodes.forEach(n => {
     const raw = n.textContent;
     if (!raw || !raw.trim()) return;
-    const parent = n.parentElement;
-    if (!parent) return;
     if (menuLang === 'en') {
-      if (parent.dataset && parent.dataset.zhOrig !== undefined) return; // 已翻译
+      if (n.__zhOrig !== undefined) return; // 已翻译(记忆挂文本节点自身——挂父元素会同段多节点互相遮挡)
       const key = raw.trim();
       if (ZH_EN[key]) {
-        parent.setAttribute('data-zh-orig', raw);
+        n.__zhOrig = raw;
         n.textContent = raw.replace(key, ZH_EN[key]);
       }
     } else {
-      if (parent.dataset && parent.dataset.zhOrig !== undefined) {
-        n.textContent = parent.dataset.zhOrig;
-        parent.removeAttribute('data-zh-orig');
+      if (n.__zhOrig !== undefined) {
+        n.textContent = n.__zhOrig;
+        delete n.__zhOrig;
       }
     }
   });
@@ -319,8 +314,8 @@ function applyUiLang() {
       if (PH_EN[el.placeholder]) { if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder); el.placeholder = PH_EN[el.placeholder]; }
     } else if (el.dataset && el.dataset.zhPh !== undefined) { el.placeholder = el.dataset.zhPh; el.removeAttribute('data-zh-ph'); }
   });
-  // ④ 页脚地址：中英并列（不替换——老外要英文认路，打车师傅要中文）
-  document.querySelectorAll('footer p').forEach(p => {
+  // ④ 地址行：中英并列（不替换——老外要英文认路，打车师傅要中文）；页脚与关于本店一致
+  document.querySelectorAll('footer p, #about-section li, #about-section p').forEach(p => {
     const isAddr = /大唐不夜城店|赛格店/.test(p.textContent);
     if (menuLang === 'en') {
       if (isAddr && !p.querySelector('.addr-en')) {
