@@ -220,7 +220,7 @@ function uiText(key) { const v = UI_STR[key]; return v ? (menuLang === 'en' ? v[
 // 背景：data-i18n 只盖了骨架，筛选下拉/表单选项/按钮/动态渲染仍残留中文——用户实测"切了没变化"
 var ZH_EN = {
   // 导航/通用
-  '首页':'Home','关于本店':'About Us','全部菜单':'Full Menu','隐私政策':'Privacy','我的':'My','我的购物车':'My Cart','登录':'Sign In','注册':'Register','返回':'Back','关闭':'Close','确定':'OK','取消':'Cancel','加载中...':'Loading...','展开导航菜单':'Menu',
+  '首页':'Home','关于本店':'About Us','全部菜单':'Full Menu','隐私政策':'Privacy','我的':'My','我的购物车':'My Cart','登录':'Sign In','注册':'Register','返回':'Back','关闭':'Close','确定':'OK','取消':'Cancel','加载中...':'Loading...','正在提交订单...':'Submitting your order...','展开导航菜单':'Menu',
   // 桌号弹窗
   '请选择桌号':'Pick a Table','确认':'Confirm','🥡 打包带走':'🥡 Takeaway',
   // 菜单页
@@ -263,6 +263,7 @@ var ZH_EN = {
   '✨ 推荐特色':'✨ What We\'re Known For',
   '大众点评收藏打卡关注门店送小挂件或冰峰':'Follow & check in on Dianping for a free souvenir or Bingfeng soda',
   '🏆 荣誉':'🏆 Honors','🍳 西安名厨精英大赛团体金奖':'🍳 Team Gold Award, Xi\'an Master Chefs Competition','📺 CCTV上榜品牌':'📺 Featured on CCTV','🌟 粉丝千万级明星餐厅':'🌟 Star restaurant with 10M+ followers',
+  '🥇 大众点评·美团 陕菜榜 N.1':'🥇 #1 Shaanxi Cuisine on Dianping & Meituan rankings',
   '🤝 四大服务承诺':'🤝 Our Four Service Promises','① 上错菜品免费赠送':'① Wrong dish served? It\'s free','② 菜品有问题直接退换':'② Any issue — return or replace, no questions','③ 超30分钟菜未上齐，全单享9折优惠':'③ Order not complete in 30 min? 10% off the bill','④ 打包菜品免打包费':'④ Free takeaway packing',
   '📍 门店信息':'📍 Locations',
   '🏆 招牌必打卡：唐猫酸汤锅子鱼、葫芦鸡、唐僧望塔酥、大唐妃子笑':'🏆 Must-try signatures: Tang Cat Sour Soup Fish, Gourd Crispy Chicken, Monk Pagoda Pastry, Imperial Concubine Smile',
