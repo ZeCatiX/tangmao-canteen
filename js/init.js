@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded',function(){
  if(typeof updateCartBadge==='function')updateCartBadge();
  // 恢复语言按钮文字（中英切换记忆）
  (function(){const t=document.getElementById('lang-toggle-text');if(t&&typeof menuLang!=='undefined')t.textContent=menuLang==='en'?'中':'EN';})();
+ // 按存储语言应用 UI 骨架（导航/首页按钮/页头）——刷新后英文模式不回退中文
+ if (typeof applyUiLang === 'function') applyUiLang();
  // 暗黑模式：检测系统偏好 + 用户手动切换
  const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
  const savedDark=localStorage.getItem('darkMode');

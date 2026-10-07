@@ -70,3 +70,28 @@ test('备注保存防线②: 结算前从 .cart-note-input DOM 收口实际值',
   assert.ok(/querySelectorAll\('\.cart-note-input'\)/.test(body), '结算开头应遍历备注输入框兜底读取');
   assert.ok(body.indexOf('saveCart(cart)') < body.indexOf('起售数量'), '兜底应在起售闸门之前写回购物车');
 });
+
+// ═══ UI 骨架 i18n（2026-10-07 用户实测反馈：切英文后首页/导航毫无变化，"中英文切换没有用"）═══
+// 根因: 翻译只覆盖菜品数据面(菜名/分类/描述), 导航/首页按钮/桌号卡/菜单页头全是写死中文,
+//       切换后唯一变化是折叠菜单里的小按钮文字——用户感知为零。
+// 修复: UI_STR 字典 + data-i18n 声明 + applyUiLang() 统一应用(切换与初始加载都调用)。
+test('UI骨架i18n①: 关键骨架元素带 data-i18n 声明', () => {
+  const src = read('index.html');
+  for (const id of ['nav-home', 'nav-dataset', 'guest-btn', 'ai-recommend-btn', 'ai-table-btn', 'table-change-btn', 'login-btn', 'register-btn']) {
+    const at = src.indexOf('id="' + id + '"');
+    assert.ok(at > 0 && src.slice(at, at + 400).includes('data-i18n'), id + ' 应带 data-i18n 声明');
+  }
+  assert.ok(src.includes('data-i18n="menu_title"'), '菜单页头应带 data-i18n');
+});
+
+test('UI骨架i18n②: 字典/应用函数/切换与初始加载接线', () => {
+  const g = read('js/globals.js');
+  assert.ok(g.includes('var UI_STR'), 'globals 应有 UI_STR 字典');
+  assert.ok(g.includes('function applyUiLang'), 'globals 应有 applyUiLang');
+  assert.ok(/function toggleMenuLang\(\)[\s\S]{0,300}applyUiLang\(\)/.test(g), 'toggleMenuLang 应调用 applyUiLang');
+  assert.ok(g.includes('var TAB_EN'), '分类 tab 短名应有 TAB_EN 映射');
+  const c = read('js/core.js');
+  assert.ok(c.includes("uiText('table_none')") && c.includes("uiText('table_pick')"), '桌号状态卡应走 uiText');
+  const i = read('js/init.js');
+  assert.ok(i.includes('applyUiLang()'), '初始加载应应用已存语言');
+});

@@ -45,15 +45,15 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item"><a class="nav-link" href="#" id="nav-home">首页</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" id="nav-about">关于本店</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" id="nav-dataset">全部菜单</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" id="nav-privacy"><i class="bi bi-shield-lock"></i> 隐私政策</a></li>
-                        <li class="nav-item d-none" id="nav-profile-item"><a class="nav-link" href="#" id="nav-profile"><i class="bi bi-person-circle"></i> 我的</a></li>
-                        <li class="nav-item"><a class="nav-link" href="#" id="nav-user"><i class="bi bi-person"></i> 登录</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="nav-home" data-i18n="nav_home">首页</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="nav-about" data-i18n="nav_about">关于本店</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="nav-dataset" data-i18n="nav_menu">全部菜单</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="nav-privacy"><i class="bi bi-shield-lock"></i> <span data-i18n="nav_privacy">隐私政策</span></a></li>
+                        <li class="nav-item d-none" id="nav-profile-item"><a class="nav-link" href="#" id="nav-profile"><i class="bi bi-person-circle"></i> <span data-i18n="nav_mine">我的</span></a></li>
+                        <li class="nav-item"><a class="nav-link" href="#" id="nav-user"><i class="bi bi-person"></i> <span data-i18n="login">登录</span></a></li>
                         <li class="nav-item position-relative">
                             <a class="nav-link d-flex align-items-center" href="#" id="nav-cart" title="我的购物车">
-                                <i class="bi bi-cart3 me-1"></i>我的购物车
+                                <i class="bi bi-cart3 me-1"></i><span data-i18n="nav_cart">我的购物车</span>
                                 <span class="badge rounded-pill bg-danger ms-2" id="cart-badge" style="font-size:0.65rem;display:none;">0</span>
                             </a>
                         </li>
@@ -113,36 +113,36 @@
                 <div class="text-center mb-3">
                     <div id="table-status-card" style="display:inline-flex;align-items:center;gap:12px;padding:8px 18px;border-radius:24px;background:#f7efdf;border:1px solid rgba(201,169,110,0.4);">
                         <span style="font-size:0.92rem;color:var(--text);">📍 <span id="table-status-text">未选择桌号</span></span>
-                        <button class="btn btn-sm" id="table-change-btn" style="background:var(--gold);color:#fff;border:none;border-radius:14px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;">选择桌号</button>
+                        <button class="btn btn-sm" id="table-change-btn" style="background:var(--gold);color:#fff;border:none;border-radius:14px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;" data-i18n="table_pick">选择桌号</button>
                     </div>
                 </div>
 
                 <div class="text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);">
+                        <button class="btn btn-primary btn-lg px-5 py-3" id="guest-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:3px;min-width:260px;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));box-shadow:0 8px 24px rgba(192,57,43,0.25);" data-i18n="home_start">
                             <i class="bi bi-hand-index-thumb me-2"></i>开始点餐
                         </button>
-                        <button class="btn btn-lg px-5 py-3" id="ai-recommend-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);">
+                        <button class="btn btn-lg px-5 py-3" id="ai-recommend-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);" data-i18n="home_ai">
                             <i class="bi bi-magic me-2"></i>不知道吃什么？猫掌柜 AI 帮你选
                         </button>
-                        <button class="btn btn-lg px-5 py-3" id="ai-table-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);">
+                        <button class="btn btn-lg px-5 py-3" id="ai-table-btn" style="border-radius:50px;font-size:1rem;letter-spacing:2px;min-width:260px;max-width:260px;background:rgba(201,169,110,0.08);border:2px solid var(--gold);color:var(--gold);" data-i18n="home_table">
                             <i class="bi bi-basket me-2"></i>人多点啥？一席成宴
                         </button>
                     </div>
-                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;margin-top:8px;">
+                    <button class="btn btn-lg px-5 py-3 d-none" id="continue-btn" style="border-radius:50px;font-size:1.1rem;letter-spacing:2px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.4);color:var(--text-light);line-height:1.5;margin-top:8px;" data-i18n="home_continue">
                         <i class="bi bi-arrow-repeat me-2"></i>继续上次推荐
                     </button>
-                    <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:var(--primary-accent);line-height:1.5;margin-top:8px;">
+                    <button class="btn btn-lg px-5 py-3 d-none" id="view-cached-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1px solid rgba(192,57,43,0.3);color:var(--primary-accent);line-height:1.5;margin-top:8px;" data-i18n="home_last">
                         <i class="bi bi-clock-history me-2"></i>查看上次推荐
                     </button>
                     <button class="btn btn-lg px-5 py-3 d-none" id="table-bill-btn" style="border-radius:50px;font-size:1rem;letter-spacing:1px;min-width:260px;background:transparent;border:1.5px solid rgba(201,169,110,0.5);color:var(--gold);line-height:1.5;margin-top:8px;">
                         <i class="bi bi-receipt me-2"></i><span id="table-bill-btn-txt">本桌账单</span>
                     </button>
                     <div class="mt-3">
-                        <button class="btn btn-outline-secondary btn-sm" id="login-btn" style="border-radius:20px;padding:4px 18px;font-size:0.82rem;border-color:rgba(201,169,110,0.4);color:var(--text-light);">
+                        <button class="btn btn-outline-secondary btn-sm" id="login-btn" style="border-radius:20px;padding:4px 18px;font-size:0.82rem;border-color:rgba(201,169,110,0.4);color:var(--text-light);" data-i18n="login">
                             <i class="bi bi-person me-1"></i>登录
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm ms-2" id="register-btn" style="border-radius:20px;padding:4px 18px;font-size:0.82rem;border-color:rgba(201,169,110,0.4);color:var(--text-light);">
+                        <button class="btn btn-outline-secondary btn-sm ms-2" id="register-btn" style="border-radius:20px;padding:4px 18px;font-size:0.82rem;border-color:rgba(201,169,110,0.4);color:var(--text-light);" data-i18n="register">
                             <i class="bi bi-person-plus me-1"></i>注册
                         </button>
                     </div>
@@ -1000,7 +1000,7 @@
             <section id="dataset-section" class="section">
                 <div class="card shadow-lg rounded-4">
                     <div class="card-header text-white" style="background-color:var(--primary-accent);">
-                        <h2 class="mb-0">全部菜单</h2>
+                        <h2 class="mb-0" data-i18n="menu_title">全部菜单</h2>
                     </div>
                     <div class="card-body p-5">
                         <div class="mb-4">
@@ -1254,7 +1254,7 @@
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
-    <script src="script.js?v=20261006f"></script>
+    <script src="script.js?v=20261006g"></script>
     <script src="js/password-toggle.js?v=20260910"></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>

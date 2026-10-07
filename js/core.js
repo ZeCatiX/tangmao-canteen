@@ -369,7 +369,7 @@ const CATEGORY_CONFIG=[
 function catOrderOf(cat){const i=CATEGORY_CONFIG.findIndex(c=>c.cat===cat);return i===-1?999:i;}
 function catEmojiOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m?m.emoji:'🍽';}
 function catIconOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.icon?'<img src="'+m.icon+'" alt="" loading="lazy" style="width:22px;height:22px;border-radius:50%;vertical-align:-5px;margin-right:6px;box-shadow:0 1px 3px rgba(139,0,0,.25);">':catEmojiOf(cat)+' ';}
-function catTabLabelOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);return m&&m.tab?m.tab:cat;}
+function catTabLabelOf(cat){const m=CATEGORY_CONFIG.find(c=>c.cat===cat);const tab=m&&m.tab?m.tab:cat;return menuLang==='en'&&TAB_EN[tab]?TAB_EN[tab]:tab;}
 // 从菜品实际分类生成分类 UI；分类集合变化时自动重建并保留当前选中
 function buildCategoryUI(){
  const cats=[...new Set(dishData.map(d=>d.category).filter(Boolean))].sort((a,b)=>catOrderOf(a)-catOrderOf(b)||a.localeCompare(b,'zh'));
@@ -976,13 +976,16 @@ function normTableNo(v){
  if(n<1||n>99)return null;
  return String(n).padStart(2,'0');
 }
-function tableLabel(t){return t==='打包'?'打包带走':(t?t+' 号桌':'');}
+function tableLabel(t){
+ if(menuLang==='en')return t==='打包'?'Takeaway':(t?'Table '+t:'');
+ return t==='打包'?'打包带走':(t?t+' 号桌':'');
+}
 function updateTableStatusCard(){
  const t=ssGet('lockedTable')||'';
  const txt=document.getElementById('table-status-text');
  const btn=document.getElementById('table-change-btn');
- if(txt)txt.textContent=t?tableLabel(t):'未选择桌号';
- if(btn)btn.textContent=t?'更换':'选择桌号';
+ if(txt)txt.textContent=t?tableLabel(t):uiText('table_none');
+ if(btn)btn.textContent=t?uiText('table_change'):uiText('table_pick');
  const ti=document.getElementById('cart-table-number');
  if(ti){ti.value=t==='打包'?'打包':(t||'');ti.readOnly=!!t;ti.placeholder=t?'':'选择桌号';ti.style.background=t?'var(--cream-dark)':'';}
  const pt=document.getElementById('pref-table-number');

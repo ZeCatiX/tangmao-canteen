@@ -159,13 +159,37 @@ function dishNameOf(d) {
   return (d && d.name) || '';
 }
 function catNameOf(c) { return menuLang === 'en' && CAT_EN[c] ? CAT_EN[c] : c; }
+// ═══ UI 骨架 i18n（2026-10-07 用户反馈：切英文后首页/导航毫无变化，观感"没有用"）═══
+// 覆盖导航/首页主按钮/桌号卡/菜单页头/弹窗标题；菜品数据面（菜名/描述/分类）原有逻辑不变
+var UI_STR = {
+  nav_home: ['首页', 'Home'], nav_about: ['关于本店', 'About Us'], nav_menu: ['全部菜单', 'Full Menu'],
+  nav_privacy: ['隐私政策', 'Privacy'], nav_mine: ['我的', 'My'], nav_cart: ['我的购物车', 'My Cart'],
+  home_start: ['开始点餐', 'Start Ordering'], home_ai: ['不知道吃什么？猫掌柜 AI 帮你选', 'Not sure? Ask the AI Butler'],
+  home_table: ['人多点啥？一席成宴', 'Group? AI Table Feast'], home_continue: ['继续上次推荐', 'Continue Last Recommendations'],
+  home_last: ['查看上次推荐', 'View Last Recommendations'], login: ['登录', 'Sign In'], register: ['注册', 'Register'],
+  table_none: ['未选择桌号', 'No table yet'], table_pick: ['选择桌号', 'Pick a Table'], table_change: ['更换', 'Change'],
+  menu_title: ['全部菜单', 'Full Menu'], back: ['返回', 'Back'], table_pick_title: ['请选择桌号', 'Pick a Table']
+};
+var TAB_EN = { '主食': 'Staples', '招牌': 'Signature', '热销': 'Hot', '陕菜': 'Shaanxi', '海鲜': 'Seafood', '蔬羹': 'Greens', '凉菜': 'Cold', '小吃': 'Snacks', '饮品': 'Drinks' };
+function uiText(key) { const v = UI_STR[key]; return v ? (menuLang === 'en' ? v[1] : v[0]) : ''; }
+function applyUiLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const v = UI_STR[el.getAttribute('data-i18n')];
+    if (!v) return;
+    const target = menuLang === 'en' ? v[1] : v[0];
+    let replaced = false;
+    el.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) { n.textContent = target; replaced = true; } });
+    if (!replaced && !el.children.length) el.textContent = target;
+  });
+  const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+}
 function toggleMenuLang() {
   menuLang = menuLang === 'zh' ? 'en' : 'zh';
   localStorage.setItem('menuLang', menuLang);
-  const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  applyUiLang();
   const sec = document.querySelector('.section.active');
   if (!sec) return;
-  if (sec.id === 'dataset-section') renderMenuTable();
+  if (sec.id === 'dataset-section') { const tb = document.getElementById('category-tabs'); if (tb) delete tb.dataset.cats; if (typeof buildCategoryUI === 'function') buildCategoryUI(); renderMenuTable(); }
   else if (sec.id === 'recommendation-section') { if (typeof displayRecommendations === 'function') displayRecommendations(); }
   else if (sec.id === 'table-result-section') { if (typeof renderTableSets === 'function') renderTableSets(); }
   else if (sec.id === 'cart-section') { if (typeof showCart === 'function') showCart(); }
