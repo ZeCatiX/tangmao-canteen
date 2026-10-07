@@ -1300,11 +1300,13 @@ app.post('/api/order', softAuth, async (req, res) => {
     if (minBad.length) return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
     // 幂等性检查：同一用户 10 秒内相同内容且仍在进行中(pending/confirmed)的订单视为重复
     // 已完成/取消的单不算重复——顾客上单送达后重下相同单应新建
+    // 时钟必须全在 PG 侧：created_at 是无时区 naive 列(存本地时间)，此前拿 UTC ISO 字符串
+    // 作比较值，PG 按无时区直接剥离 Z，比较值比本地慢 8 小时 → 窗口实际≈8小时，
+    // 不同桌的相同购物车会被并进旧桌订单；现改 NOW() 单侧计时并加桌号匹配
     const itemsStr = JSON.stringify(validatedItems);
-    const tenSecAgo = new Date(Date.now() - 10000).toISOString();
     const existing = await pool.query(
-      "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > $3 AND status IN ('pending','confirmed') LIMIT 1",
-      [effectiveUserId, itemsStr, tenSecAgo]
+      "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > NOW() - INTERVAL '10 seconds' AND status IN ('pending','confirmed') AND table_number IS NOT DISTINCT FROM $3 LIMIT 1",
+      [effectiveUserId, itemsStr, tableNumber || null]
     );
     if (existing.rows.length > 0) {
       return res.json({ success: true, message: '订单已存在（防重复提交）', orderId: existing.rows[0].id });
@@ -1333,14 +1335,15 @@ app.post('/api/order/:id/add', softAuth, async (req, res) => {
     const orderId = parseInt(req.params.id);
     const { items, tableNumber } = req.body;
     if (!orderId || !items || !items.length) return res.status(400).json({ success: false, error: '参数无效' });
-    // 归属校验：本人、管理员、或同桌（请求桌号与订单桌号一致——支持游客下单后登录续点，桌号即凭证）
+    // 归属校验：本人(登录用户)、管理员、或同桌（请求桌号与订单桌号一致——桌号即凭证）
+    // 游客单的 user_id 一律是 'guest'，不能作为归属凭证（否则任何游客可给任何游客订单加菜）
     const effectiveUserId = req.user?.username || 'guest';
     const isAdmin = req.user?.role === 'admin';
     const pool = db;
     const existing = await pool.query('SELECT items, total_price, status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     const row = existing.rows[0];
-    const isOwner = row.user_id === effectiveUserId;
+    const isOwner = effectiveUserId !== 'guest' && row.user_id === effectiveUserId;
     const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
     if (!isAdmin && !isOwner && !isTableMatch) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
     if (row.status === 'completed' || row.status === 'cancelled') return res.status(400).json({ success: false, error: '订单已' + (row.status === 'completed' ? '完成' : '取消') + '，不能加菜' });
