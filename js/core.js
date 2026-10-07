@@ -1151,7 +1151,7 @@ function showCart(){
    const dish=dishData.find(d=>d.id===x.id);
    const qtyVal=x.qty||1;
    const name=dish?esc(dishNameOf(dish)):esc(x.name);
-   const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(dish.price_unit)+'</span>':'';
+   const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(menuLang==='en'?(UNIT_EN[dish.price_unit]||dish.price_unit):dish.price_unit)+'</span>':'';
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
    return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span class="dish-emoji" style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'<div style="margin-top:4px;"><input class="form-control form-control-sm cart-note-input" data-id="'+esc(String(x.id))+'" value="'+esc(x.note||'')+'" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;max-width:220px;" aria-label="菜品备注"></div></td>'
