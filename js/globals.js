@@ -182,6 +182,7 @@ function applyUiLang() {
     if (!replaced && !el.children.length) el.textContent = target;
   });
   const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
 }
 function toggleMenuLang() {
   menuLang = menuLang === 'zh' ? 'en' : 'zh';
