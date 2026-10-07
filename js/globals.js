@@ -167,7 +167,7 @@ var UI_STR = {
   nav_privacy: ['隐私政策', 'Privacy'], nav_mine: ['我的', 'My'], nav_cart: ['我的购物车', 'My Cart'],
   home_start: ['开始点餐', 'Start Ordering'], home_ai: ['不知道吃什么？猫掌柜 AI 帮你选', 'Not sure? Ask the AI Butler'],
   home_table: ['人多点啥？一席成宴', 'Group? AI Table Feast'], home_continue: ['继续上次推荐', 'Continue Last Recommendations'],
-  home_last: ['查看上次推荐', 'View Last Recommendations'], login: ['登录', 'Sign In'], register: ['注册', 'Register'],
+  home_last: ['查看上次推荐', 'View Last Recommendations'], home_bill: ['本桌账单', 'Table Bill'], login: ['登录', 'Sign In'], register: ['注册', 'Register'],
   table_none: ['未选择桌号', 'No table yet'], table_pick: ['选择桌号', 'Pick a Table'], table_change: ['更换', 'Change'],
   menu_title: ['全部菜单', 'Full Menu'], back: ['返回', 'Back'], table_pick_title: ['请选择桌号', 'Pick a Table']
 };
