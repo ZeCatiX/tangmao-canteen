@@ -115,3 +115,15 @@ test('遍历式翻译②: 动态渲染接入(下拉/meta/匹配指数/轮次/观
   const i = read('js/init.js');
   assert.ok(i.includes('MutationObserver') && i.includes('applyUiLangGuarded'), '动态渲染应挂观察器补翻');
 });
+
+// ═══ 品牌面英译（2026-10-07 用户拍板：品牌资产也要翻，意译保唐韵；品牌名保留中文为主）═══
+test('品牌面英译: hero诗句/口号/关于本店/页脚双语并列', () => {
+  const g = read('js/globals.js');
+  for (const k of ['— 唐风雅韵 · 猫趣悠然 —', '梦回大唐 · 品味长安', '宫廷御膳 · 匠心呈现', '唐猫庭院 · 千年陕菜', '本地人的待客小宴', '大众点评收藏打卡关注门店送小挂件或冰峰']) {
+    assert.ok(g.includes("'" + k + "':"), 'ZH_EN 缺品牌条目: ' + k);
+  }
+  assert.ok(g.includes('addr-en') && g.includes('Grand Tang Mall Branch'), '页脚地址应中英并列注入');
+  // 品牌名"唐猫庭院"与地址原文不得作为 key(保留中文/并列而非替换)
+  assert.ok(!/^\s*'唐猫庭院':/.test(g), '品牌名本身不应被翻译替换');
+  assert.ok(!g.includes("'🏮 大唐不夜城店"), '门店地址原文不应整体替换');
+});

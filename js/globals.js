@@ -247,7 +247,22 @@ var ZH_EN = {
   // 个人中心
   '最后登录：':'Last sign-in:','最近推荐记录':'Recent recommendations','还没有推荐记录':'No recommendations yet','收藏菜品':'Favorites','还没有收藏的菜品':'No favorites yet','取消收藏':'Unfavorite','拉黑的菜品':'Blocked dishes','还没有拉黑的菜品':'No blocked dishes','退出登录':'Sign out','注销账号':'Delete account','再来一单':'Reorder',
   // 登录/注册
-  '用户名':'Username','密码':'Password','确认密码':'Confirm password','显示密码':'Show','隐藏密码':'Hide','还没有账号？':'No account yet?','去注册':'Register','已有账号？':'Have an account?','去登录':'Sign in','我已阅读并同意':'I have read and agreed to the','《隐私政策》':'Privacy Policy'
+  '用户名':'Username','密码':'Password','确认密码':'Confirm password','显示密码':'Show','隐藏密码':'Hide','还没有账号？':'No account yet?','去注册':'Register','已有账号？':'Have an account?','去登录':'Sign in','我已阅读并同意':'I have read and agreed to the','《隐私政策》':'Privacy Policy',
+  // 品牌面（2026-10-07 用户拍板：品牌资产也要翻——意译保唐韵，不逐字；品牌名保留中文为主）
+  '— 唐风雅韵 · 猫趣悠然 —':'— Tang Elegance · Feline Charm —',
+  '唐风雅韵':'Tang Elegance','梦回大唐 · 品味长安':'Dream of the Tang, Taste of Chang\'an',
+  '猫趣盎然':'Playful Cats','灵猫相伴 · 妙趣横生':'Charming cats, delightful bites',
+  '珍馐美馔':'Imperial Delicacies','宫廷御膳 · 匠心呈现':'Royal recipes, modern craft',
+  '唐猫庭院 · 千年陕菜':'Tang Cat Courtyard · A Thousand Years of Shaanxi Flavor',
+  '本地人的待客小宴':'A local\'s table for honored guests',
+  '唐风雅韵，猫趣悠然':'Tang Elegance, Feline Charm',
+  '关于本店':'About Us',
+  '唐猫庭院，从网红店到本地头牌，十桌老顾客，八桌本地人。感谢一面之缘的外地新朋，更感谢每周光顾的本地老友。':'From internet sensation to local favorite — at any table, eight of ten are regulars. A warm welcome to first-time visitors from afar, and deeper thanks to the locals who dine with us every week.',
+  '7年砥砺奋进，已成长为本地人日常待客、宴请、聚餐、约会的优选餐厅。是名副其实的':'Seven years on, we have become the local first choice for everyday hosting, banquets, gatherings and dates — a true',
+  '本地头牌·待客小宴':'local icon and host of intimate feasts',
+  '——"本地人的待客小宴"。':' — "the locals\' table for honored guests."',
+  '🥇 大众点评·美团 陕菜榜 N.1':'🥇 #1 Shaanxi Cuisine on Dianping & Meituan rankings',
+  '大众点评收藏打卡关注门店送小挂件或冰峰':'Follow & check in on Dianping for a free souvenir or Bingfeng soda'
 };
 var PH_EN = { '搜索菜品名称...':'Search dishes...', '搜索菜品名称':'Search dishes', '选择桌号':'Pick a table', '桌号':'Table No.', '备注：少辣/不要香菜…':'e.g. less spicy / no cilantro…' };
 function applyUiLang() {
@@ -293,6 +308,23 @@ function applyUiLang() {
     if (menuLang === 'en') {
       if (PH_EN[el.placeholder]) { if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder); el.placeholder = PH_EN[el.placeholder]; }
     } else if (el.dataset && el.dataset.zhPh !== undefined) { el.placeholder = el.dataset.zhPh; el.removeAttribute('data-zh-ph'); }
+  });
+  // ④ 页脚地址：中英并列（不替换——老外要英文认路，打车师傅要中文）
+  document.querySelectorAll('footer p').forEach(p => {
+    const isAddr = /大唐不夜城店|赛格店/.test(p.textContent);
+    if (menuLang === 'en') {
+      if (isAddr && !p.querySelector('.addr-en')) {
+        const en = document.createElement('span');
+        en.className = 'addr-en';
+        en.style.cssText = 'display:block;font-size:0.78rem;color:#b8a88f;';
+        en.textContent = /大唐不夜城店/.test(p.textContent)
+          ? 'Grand Tang Mall Branch: Bldg 13-1, SE corner of Giant Wild Goose Pagoda South Plaza · Tel 19991210572'
+          : 'SAGA Int\'l Mall Branch: 12F, Xiaozhai SAGA International · Tel 19829809735';
+        p.appendChild(en);
+      }
+    } else {
+      p.querySelectorAll('.addr-en').forEach(x => x.remove());
+    }
   });
 }
 var _uiLangApplying = false;
