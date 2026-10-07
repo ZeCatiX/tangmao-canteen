@@ -324,6 +324,7 @@ var ZH_EN = {
   '🏮 唐风体验：梦回大唐，品味长安':'🏮 Tang-dynasty dining: dream of the Tang, taste of Chang\'an',
   '技术栈':'Tech Stack','前端':'Frontend','后端':'Backend','机器学习':'Machine Learning'
 };
+var ZH_EN_KEYS = Object.keys(ZH_EN).sort((a, b) => b.length - a.length);
 var PH_EN = { '搜索菜品名称...':'Search dishes...', '搜索菜品名称':'Search dishes', '选择桌号':'Pick a table', '桌号':'Table No.', '备注：少辣/不要香菜…':'e.g. less spicy / no cilantro…' };
 function applyUiLang() {
   // ① data-i18n 声明式（骨架）
@@ -338,6 +339,7 @@ function applyUiLang() {
   const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
   // ② 遍历式：en 全页面扫描翻译；zh 只还原已翻译清单（免全文档扫描——中文模式每次按键渲染都会触发本函数）
+  const cjkRe = /[一-鿿]/;
   if (menuLang !== 'en') {
     __zhTranslated.forEach(n => { if (n.__zhOrig !== undefined) { n.textContent = n.__zhOrig; delete n.__zhOrig; } });
     __zhTranslated = [];
@@ -357,6 +359,11 @@ function applyUiLang() {
         n.__zhOrig = raw;
         __zhTranslated.push(n);
         n.textContent = raw.replace(key, ZH_EN[key]);
+      } else if (cjkRe.test(key) && key.length <= 60) {
+        // 包含式回退: 前缀符号(● ◆)/拼接句内中文子串按长 key 优先逐个替换
+        let out2 = raw, hit = false;
+        for (const k of ZH_EN_KEYS) { if (out2.includes(k)) { out2 = out2.split(k).join(ZH_EN[k]); hit = true; } }
+        if (hit) { n.__zhOrig = raw; __zhTranslated.push(n); n.textContent = out2; }
       }
     }
   });
