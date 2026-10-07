@@ -19,6 +19,11 @@ document.addEventListener('DOMContentLoaded',function(){
  // 按存储语言应用 UI 骨架（导航/首页按钮/页头）——刷新后英文模式不回退中文
  if (typeof applyUiLang === 'function') applyUiLang();
  // 动态渲染补翻译：任何 DOM 更新(菜单重绘/购物车/弹窗)后 en 模式自动补翻，防自触发
+ // 区块切换兜底：切页后延迟补翻一次(部分 section 的动态渲染不触发 childList)
+ if (typeof showSection === 'function' && typeof applyUiLangGuarded === 'function') {
+   const _origShowSection = showSection;
+   showSection = function () { const r = _origShowSection.apply(this, arguments); if (menuLang === 'en') setTimeout(applyUiLangGuarded, 120); return r; };
+ }
  if (typeof MutationObserver === 'function' && typeof applyUiLangGuarded === 'function' && typeof menuLang !== 'undefined') {
    new MutationObserver(function(){ if (menuLang === 'en') applyUiLangGuarded(); })
      .observe(document.body, { childList: true, subtree: true });
