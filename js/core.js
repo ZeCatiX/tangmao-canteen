@@ -391,7 +391,7 @@ function buildCategoryUI(){
  const sel=document.getElementById('menu-filter-cat');
  if(sel&&sel.dataset.cats!==key){
   const cur=sel.value;
-  sel.innerHTML='<option value="">全部分类</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join('');
+  sel.innerHTML='<option value="">'+(menuLang==='en'?'All categories':'全部分类')+'</option>'+cats.map(c=>'<option value="'+esc(c)+'">'+esc(catNameOf(c))+'</option>').join('');
   sel.dataset.cats=key;
   if(cur&&cats.includes(cur))sel.value=cur;
  }
@@ -948,7 +948,7 @@ function renderRoundsHTML(rounds){
  const gifts=rounds.map((r,i)=>({r,i})).filter(o=>o.r.giftTo);
  let html=normal.map(o=>{
   const r=o.r,cur=o.i===lastIdx;
-  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+(r.label||('第'+(r.round||o.i+1)+'轮'))+(cur?' ← 当前轮':' · '+(r.time||''))+'</div>'
+  return '<div style="border-left:2px solid '+(cur?'var(--gold)':'rgba(201,169,110,0.25)')+';padding-left:10px;margin-bottom:12px;opacity:'+(cur?1:0.6)+';"><div style="font-size:0.8rem;font-weight:600;color:'+(cur?'var(--gold)':'var(--text-light)')+';padding-bottom:3px;">● '+roundLabelLang(r.label||('第'+(r.round||o.i+1)+'轮'))+(cur?(menuLang==='en'?' ← current':' ← 当前轮'):' · '+(r.time||''))+'</div>'
    +(r.items||[]).map(x=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">'+esc(x.name)+'</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×'+(x.qty||1)+'</strong> · '+formatPrice(x.price)+'</span></div>').join('')
    +'</div>';
  }).join('');

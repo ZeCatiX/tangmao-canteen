@@ -11,6 +11,11 @@ document.addEventListener('DOMContentLoaded',function(){
  (function(){const t=document.getElementById('lang-toggle-text');if(t&&typeof menuLang!=='undefined')t.textContent=menuLang==='en'?'中':'EN';})();
  // 按存储语言应用 UI 骨架（导航/首页按钮/页头）——刷新后英文模式不回退中文
  if (typeof applyUiLang === 'function') applyUiLang();
+ // 动态渲染补翻译：任何 DOM 更新(菜单重绘/购物车/弹窗)后 en 模式自动补翻，防自触发
+ if (typeof MutationObserver === 'function' && typeof applyUiLangGuarded === 'function' && typeof menuLang !== 'undefined') {
+   new MutationObserver(function(){ if (menuLang === 'en') applyUiLangGuarded(); })
+     .observe(document.body, { childList: true, subtree: true });
+ }
  // 暗黑模式：检测系统偏好 + 用户手动切换
  const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;
  const savedDark=localStorage.getItem('darkMode');

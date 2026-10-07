@@ -171,8 +171,78 @@ var UI_STR = {
   menu_title: ['全部菜单', 'Full Menu'], back: ['返回', 'Back'], table_pick_title: ['请选择桌号', 'Pick a Table']
 };
 var TAB_EN = { '主食': 'Staples', '招牌': 'Signature', '热销': 'Hot', '陕菜': 'Shaanxi', '海鲜': 'Seafood', '蔬羹': 'Greens', '凉菜': 'Cold', '小吃': 'Snacks', '饮品': 'Drinks' };
+var SPICE_EN = { '不辣': 'Mild', '微辣': 'Mildly spicy', '中辣': 'Medium spicy', '重辣': 'Extra spicy' };
+// 轮次标签是存进 sessionStorage 的中文数据，渲染时按语言转写（数据不动）
+function roundLabelLang(s) {
+  if (menuLang !== 'en' || !s) return s;
+  return s.replace(/^第(\d+)轮点餐$/, 'Round $1').replace(/^第(\d+)轮加菜$/, 'Round $1 · added')
+          .replace(/^赠给 (\S+) 号桌$/, 'Gifted to Table $1');
+}
+// 服务端推荐理由模板 → 英文（reasonFor/table_recommend.js 与单菜推荐），尾缀"AI 匹配度 X%"保留数字
+var REASON_EN = {
+  '猫掌柜的招牌，来唐猫庭院必打卡': "The butler's check-in special at Tang Cat Courtyard",
+  '猫掌柜的看家推荐，撑得住场面的招牌菜': "The butler's signature pick — a true centerpiece",
+  '餐后甜口，席面收得漂亮': 'A sweet finish to close the feast',
+  '主食收口，管饱又实惠': 'A filling staple, great value',
+  '主食收口，分量正合适': 'A staple to round it off, just right',
+  '陕味小吃，席面的烟火气': "Shaanxi snack — the feast's street-food soul",
+  '时蔬汤羹，一桌荤素平衡全靠它': 'Greens & soup that balance the whole table',
+  '开胃凉菜，清爽解腻': 'Appetizing cold dish, light and refreshing',
+  '硬菜撑场，宴请倍儿有面子': 'A showstopper that honors the banquet',
+  '一道硬菜，镇桌之选': 'A hearty dish, the anchor of the table',
+  '猫掌柜点名的人气菜，闭眼点不踩雷': "Butler-approved favorite — you can't go wrong",
+  '猫掌柜依你的口味挑的家常热菜': 'Home-style hot dish picked for your taste',
+  '本店人气招牌，最近大家都在点': 'House signature, trending lately',
+  '根据你的口味偏好为你推荐': 'Picked to match your taste profile',
+  '你的口味档案专属推荐': 'Chosen from your taste profile'
+};
+function reasonZhToEn(s) {
+  if (!s) return s;
+  if (REASON_EN[s]) return REASON_EN[s];
+  // 带辣度拼接的模板：开胃凉菜，X爽口解腻 / 风味热菜，X过瘾下饭；及"模板，AI 匹配度 N%"尾缀
+  const m = s.match(/^(开胃凉菜，|风味热菜，)(.+)(爽口解腻|过瘾下饭)$/);
+  if (m) return (m[1] === '开胃凉菜，' ? 'Appetizing cold dish, ' : 'Flavorful hot dish, ') + (SPICE_EN[m[2]] || m[2]) + (m[3] === '爽口解腻' ? ' and refreshing' : ' — great with rice');
+  const tail = s.match(/^(.*)，AI 匹配度 (\d+)%$/);
+  if (tail && REASON_EN[tail[1]]) return REASON_EN[tail[1]] + ', AI match ' + tail[2] + '%';
+  return s;
+}
 function uiText(key) { const v = UI_STR[key]; return v ? (menuLang === 'en' ? v[1] : v[0]) : ''; }
+// ═══ 遍历式 UI 翻译：精确匹配文本节点（trim 后），en 替换并记忆原文，zh 还原 ═══
+// 背景：data-i18n 只盖了骨架，筛选下拉/表单选项/按钮/动态渲染仍残留中文——用户实测"切了没变化"
+var ZH_EN = {
+  // 导航/通用
+  '首页':'Home','关于本店':'About Us','全部菜单':'Full Menu','隐私政策':'Privacy','我的':'My','我的购物车':'My Cart','登录':'Sign In','注册':'Register','返回':'Back','关闭':'Close','确定':'OK','取消':'Cancel','加载中...':'Loading...','展开导航菜单':'Menu',
+  // 桌号弹窗
+  '请选择桌号':'Pick a Table','确认':'Confirm','🥡 打包带走':'🥡 Takeaway',
+  // 菜单页
+  '浏览本店全部菜品，共':'Browse our full menu —','道。':'dishes.','重置':'Reset','＋ 加入':'+ Add','加入':'Add','查看详情':'View details','售罄':'Sold out','补货':'Restock',
+  '全部分类':'All categories','全部辣度':'All spice levels','全部价格':'All prices','默认排序':'Default order','按人气':'By popularity','按评分':'By rating','价格从低到高':'Price: low to high','价格从高到低':'Price: high to low',
+  '不辣':'Mild','微辣':'Mildly spicy','中辣':'Medium spicy','重辣':'Extra spicy',
+  '20元以下':'Under ¥20','20-40元':'¥20–40','40-60元':'¥40–60','60元以上':'Over ¥60',
+  '主食':'Staples','招牌与游西安必打卡':'Must-Try Signatures','热销菜品':'Best Sellers','传承陕菜':'Heritage Shaanxi','江湖海鲜':'Jianghu Seafood','田园时蔬·汤羹':'Greens & Soups','特色凉菜':'Signature Cold Dishes','陕西小吃':'Shaanxi Snacks','飲品与酒水':'Drinks & Wines',
+  // 一席成宴表单
+  '猫掌柜 · 一席成宴':'Butler AI · Table Feast','壹用餐人数':'1. Party size','贰人均预算 ':'2. Budget per guest ','（含每人一碗米饭）':'(incl. a bowl of rice)','叁辣度偏好':'3. Spice','肆咸淡偏好':'4. Saltiness','伍甜酸偏好':'5. Sweet & sour','陆热量偏好':'6. Calories','柒饮食要求':'7. Dietary','捌忌口（过敏源）':'8. Allergies',
+  '无所谓':'No preference','清淡':'Light','适中':'Just right','偏咸':'Saltier','无味':'Neither','甜味':'Sweet','酸味':'Sour','酸甜':'Sweet & sour','不限':'Any','低卡':'Light','高能量':'Hearty','无特殊要求':'No restrictions','素食':'Vegetarian','清真':'Halal','无':'None','海鲜':'Seafood','花生':'Peanuts','鸡蛋':'Eggs','大豆':'Soy','麸质':'Gluten',
+  '避开最近吃过的菜（7 天内点过的不再推荐）':'Avoid dishes I ordered recently (within 7 days)','生成席面 · 三套方案':'Generate · 3 Set Menus','返回首页':'Back to Home',
+  '1 人':'1 guest','2 人':'2 guests','3 人':'3 guests','4 人':'4 guests','5 人':'5 guests','6 人':'6 guests','7 人':'7 guests','8 人':'8 guests','9 人':'9 guests','10 人':'10 guests','11 人':'11 guests','12 人':'12 guests','13 人':'13 guests','14 人':'14 guests','15 人':'15 guests','16 人':'16 guests','17 人':'17 guests','18 人':'18 guests','19 人':'19 guests','20 人':'20 guests',
+  '20-29 元':'¥20–29','30-39 元':'¥30–39','40-49 元':'¥40–49','50-59 元':'¥50–59','60-69 元':'¥60–69','70-79 元':'¥70–79','80-89 元':'¥80–89','90-99 元':'¥90–99','100-109 元':'¥100–109','110-119 元':'¥110–119','120-129 元':'¥120–129','130-139 元':'¥130–139','140-149 元':'¥140–149','150 元以上':'¥150+',
+  // 三套卡与理由（server 模板，渲染后经遍历器命中）
+  '家常版':'Home-style','宴请版':'Banquet','打卡版':'Check-in','去选饮品':'Drinks','生成分享图':'Share Image','整体加购':'Add All','换一道':'Swap','单点加购':'Add','减少':'−','增加':'+',
+  '猫掌柜的招牌，来唐猫庭院必打卡':"The butler's check-in special",'猫掌柜的看家推荐，撑得住场面的招牌菜':"The butler's signature pick — a true centerpiece",'餐后甜口，席面收得漂亮':'A sweet finish to close the feast','主食收口，管饱又实惠':'A filling staple, great value','主食收口，分量正合适':'A staple to round it off, just right','陕味小吃，席面的烟火气':'Shaanxi snack — the soul of the feast','时蔬汤羹，一桌荤素平衡全靠它':'Greens & soup that balance the whole table','开胃凉菜，清爽解腻':'Appetizing cold dish, light and refreshing','硬菜撑场，宴请倍儿有面子':'A showstopper that honors the banquet','一道硬菜，镇桌之选':'A hearty dish, the anchor of the table','猫掌柜点名的人气菜，闭眼点不踩雷':"Butler-approved favorite — you can't go wrong",'猫掌柜依你的口味挑的家常热菜':'Home-style hot dish picked for your taste',
+  // 推荐页
+  '为您推荐':'Recommended for You','换一批':'Refresh','选好了':'Done','退出':'Exit','加一碗米饭':'Add a bowl of rice','饮料酒水':'Drinks','搭配更尽兴':'Better together','操作':'Actions','收藏':'Favorite','已收藏':'Favorited','拉黑':'Block','已拉黑':'Blocked','评分':'Rate','匹配度':'Match','试试手气':'Try your luck','盲盒':'Blind box','本店人气招牌，最近大家都在点':'House signature, trending lately','去补全 →':'Complete them →','换口味':'Change taste',
+  // 购物车
+  '菜品':'Dish','数量':'Qty','单价':'Price','小计':'Subtotal','去结算':'Checkout','清空':'Clear','合计：':'Total:','购物车是空的':'Your cart is empty','去推荐菜品页面添加你喜欢的菜吧':'Open recommendations to add dishes','待加菜':'To add','查看订单':'View order','已结算':'Settled','✕ 关闭':'✕ Close',
+  // 完成页
+  '点餐完成':'Order Placed','菜品已记录，厨房正在为您准备':'Recorded — the kitchen is on it','本次点餐':'This order','下单成功':'Placed','当前轮':'current','本轮推荐':'This round','本轮未启用 AI — 普通点餐，无推荐分析':'AI off this round — plain order, no match stats','模型评估':'Model quality','决定系数':'R² score','均方误差':'MSE','均方根误差':'RMSE','平均绝对误差':'MAE','对这次推荐满意吗？':'How were the picks?','点击选择满意度':'Tap to rate','提交评价':'Submit','影响推荐的关键因素':'What shaped this','加菜 / 继续点餐':'Add more','重新点餐':'Start over','结束用餐，退出':'Finish & exit',
+  // 个人中心
+  '最后登录：':'Last sign-in:','最近推荐记录':'Recent recommendations','还没有推荐记录':'No recommendations yet','收藏菜品':'Favorites','还没有收藏的菜品':'No favorites yet','取消收藏':'Unfavorite','拉黑的菜品':'Blocked dishes','还没有拉黑的菜品':'No blocked dishes','退出登录':'Sign out','注销账号':'Delete account','再来一单':'Reorder',
+  // 登录/注册
+  '用户名':'Username','密码':'Password','确认密码':'Confirm password','显示密码':'Show','隐藏密码':'Hide','还没有账号？':'No account yet?','去注册':'Register','已有账号？':'Have an account?','去登录':'Sign in','我已阅读并同意':'I have read and agreed to the','《隐私政策》':'Privacy Policy'
+};
+var PH_EN = { '搜索菜品名称...':'Search dishes...', '搜索菜品名称':'Search dishes', '选择桌号':'Pick a table', '桌号':'Table No.', '备注：少辣/不要香菜…':'e.g. less spicy / no cilantro…' };
 function applyUiLang() {
+  // ① data-i18n 声明式（骨架）
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const v = UI_STR[el.getAttribute('data-i18n')];
     if (!v) return;
@@ -183,7 +253,41 @@ function applyUiLang() {
   });
   const t = document.getElementById('lang-toggle-text'); if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
+  // ② 遍历式：全页面文本节点精确匹配
+  if (typeof document.createTreeWalker !== 'function') return;
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (n.nodeName === 'SCRIPT' || n.nodeName === 'STYLE') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+  });
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(n => {
+    const raw = n.textContent;
+    if (!raw || !raw.trim()) return;
+    const parent = n.parentElement;
+    if (!parent) return;
+    if (menuLang === 'en') {
+      if (parent.dataset && parent.dataset.zhOrig !== undefined) return; // 已翻译
+      const key = raw.trim();
+      if (ZH_EN[key]) {
+        parent.setAttribute('data-zh-orig', raw);
+        n.textContent = raw.replace(key, ZH_EN[key]);
+      }
+    } else {
+      if (parent.dataset && parent.dataset.zhOrig !== undefined) {
+        n.textContent = parent.dataset.zhOrig;
+        parent.removeAttribute('data-zh-orig');
+      }
+    }
+  });
+  // ③ placeholder
+  document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+    if (menuLang === 'en') {
+      if (PH_EN[el.placeholder]) { if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder); el.placeholder = PH_EN[el.placeholder]; }
+    } else if (el.dataset && el.dataset.zhPh !== undefined) { el.placeholder = el.dataset.zhPh; el.removeAttribute('data-zh-ph'); }
+  });
 }
+var _uiLangApplying = false;
+function applyUiLangGuarded() { if (_uiLangApplying) return; _uiLangApplying = true; try { applyUiLang(); } finally { setTimeout(() => { _uiLangApplying = false; }, 60); } }
 function toggleMenuLang() {
   menuLang = menuLang === 'zh' ? 'en' : 'zh';
   localStorage.setItem('menuLang', menuLang);

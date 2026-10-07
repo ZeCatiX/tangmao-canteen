@@ -95,3 +95,23 @@ test('UI骨架i18n②: 字典/应用函数/切换与初始加载接线', () => {
   const i = read('js/init.js');
   assert.ok(i.includes('applyUiLang()'), '初始加载应应用已存语言');
 });
+
+// ═══ 遍历式 UI 翻译（2026-10-07 "都做"包：筛选下拉/表单选项/理由话术等动态面全量英文化）═══
+test('遍历式翻译①: ZH_EN 字典覆盖扫描出的残留串', () => {
+  const g = read('js/globals.js');
+  const must = ['全部分类','全部辣度','全部价格','默认排序','按人气','请选择桌号','🥡 打包带走','浏览本店全部菜品，共','购物车是空的','去结算','家常版','宴请版','打卡版','壹用餐人数','避开最近吃过的菜（7 天内点过的不再推荐）','生成席面 · 三套方案','再来一单','退出登录','注销账号','去注册'];
+  for (const k of must) assert.ok(g.includes("'" + k + "':"), 'ZH_EN 缺: ' + k);
+  assert.ok(g.includes('var PH_EN') && g.includes('搜索菜品名称'), 'placeholder 映射应存在');
+  assert.ok(g.includes('createTreeWalker'), '应有遍历器');
+  assert.ok(g.includes('REASON_EN') && g.includes('function reasonZhToEn'), '理由话术映射应存在');
+});
+
+test('遍历式翻译②: 动态渲染接入(下拉/meta/匹配指数/轮次/观察器)', () => {
+  const c = read('js/core.js');
+  assert.ok(c.includes("catNameOf(c)") && c.includes("All categories"), '分类下拉显示应走 catNameOf');
+  assert.ok(c.includes('roundLabelLang'), '轮次条应按语言转写');
+  const r = read('js/recommendation.js');
+  assert.ok(r.includes('SPICE_EN[d.spiciness]') && r.includes('reasonZhToEn(d.reason)') && r.includes("Match: "), '推荐卡 meta/理由/匹配指数应按语言输出');
+  const i = read('js/init.js');
+  assert.ok(i.includes('MutationObserver') && i.includes('applyUiLangGuarded'), '动态渲染应挂观察器补翻');
+});
