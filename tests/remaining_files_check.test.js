@@ -31,9 +31,9 @@ describe('剩余基础设施文件最终检查', () => {
     assert.ok(content.length > 100, '应有版本记录内容');
   });
 
-  // ===== 4. CHECKLIST.md 存在 =====
-  it('4.1 CHECKLIST.md 存在且包含检查标题', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'CHECKLIST.md'), 'utf8');
+  // ===== 4. CHECKLIST.md 存在（2026-10-07 归档至 docs/archive/） =====
+  it('4.1 CHECKLIST.md 存在于归档目录且包含检查标题', () => {
+    const content = fs.readFileSync(path.join(ROOT, 'docs', 'archive', 'CHECKLIST.md'), 'utf8');
     assert.ok(content.includes('##') || content.includes('检查'), '应包含检查标题');
     assert.ok(content.length > 100, '应有实质内容');
   });
