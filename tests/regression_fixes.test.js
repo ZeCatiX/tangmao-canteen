@@ -126,6 +126,11 @@ describe('前端修复回归', () => {
     // 售罄菜不进偏好推荐池:与菜单灰化/冷启动过滤/结算拦截构成完整售罄链路
     assert.ok(s.includes('is_sold_out===true'), '推荐池应过滤 is_sold_out');
   });
+  it('桌号状态卡暗色模式覆盖（2026-10-07 回归）', () => {
+    const s = read('styles.css');
+    // 内联浅米底 #f7efdf 在暗色下与 var(--text) 浅色文字对比不足,必须有 dark-mode 深底覆盖
+    assert.ok(/html\.dark-mode #table-status-card\s*{[^}]*background:\s*#1a1a1a\s*!important/.test(s), '暗色模式应有 #table-status-card 深底覆盖');
+  });
 });
 
 // ================================================================

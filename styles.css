@@ -897,6 +897,8 @@ html.dark-mode #home-section .row.g-4 .p-3 {
 html.dark-mode #home-section .row.g-4 .p-3::before { border-color: rgba(201,169,110,0.12) !important; }
 html.dark-mode #home-section .row.g-4 .p-3 h6 { color: var(--gold-light) !important; }
 html.dark-mode #home-section .row.g-4 .p-3 small { color: var(--text-light) !important; }
+/* 桌号状态卡:内联写死浅米底 #f7efdf,暗色下 var(--text) 翻浅色后浅底浅字看不清 */
+html.dark-mode #table-status-card { background: #1a1a1a !important; border-color: rgba(201,169,110,0.35) !important; }
 html.dark-mode .navbar { background: linear-gradient(165deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%) !important; }
 html.dark-mode .card,
 html.dark-mode .list-group-item { background-color: #1a1a1a; border-color: #2a2a2a; color: var(--text); }
