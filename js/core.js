@@ -499,7 +499,7 @@ function renderMenuTable(){
    const sub=d.tags&&d.tags.find(t=>SUBS.includes(t));
    if(sub&&sub!==lastSub){
     lastSub=sub;
-    html+='<div class="dish-sub-sep">'+(SUB_EMOJI[sub]||'·')+' '+esc(sub)+'</div>';
+    html+='<div class="dish-sub-sep">'+(SUB_EMOJI[sub]||'·')+' '+esc(menuLang==='en'?(SUB_EN[sub]||sub):sub)+'</div>';
    }
   }
   const ci=cart.find(c=>c.id===d.id);
@@ -515,7 +515,7 @@ function renderMenuTable(){
    const c2=cart.find(c=>c.id===d2.id);const q2=c2?(c2.qty||1):0;
    const so=d2.is_sold_out===true;
    const ctrl=so?'<span style="font-size:0.8rem;color:#b3261e;background:rgba(179,38,30,0.08);padding:3px 10px;border-radius:10px;white-space:nowrap;">已售罄</span>':(q2>0?'<span class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+q2+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></span>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d2.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 12px;font-weight:600;white-space:nowrap;">＋ 加入</button>');
-   return '<div class="d-flex justify-content-between align-items-center" style="margin-top:4px;gap:6px;'+(so?'opacity:0.65;':'')+'"><span style="font-size:0.85rem;color:var(--text-light);white-space:nowrap;">'+esc(specLabel(d2))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;white-space:nowrap;'+(so?'text-decoration:line-through;':'')+'">'+esc(formatPrice(d2))+'</strong>'+ctrl+'</span></div>';
+   return '<div class="d-flex justify-content-between align-items-center" style="margin-top:4px;gap:6px;'+(so?'opacity:0.65;':'')+'"><span style="font-size:0.85rem;color:var(--text-light);white-space:nowrap;">'+esc(specLang(specLabel(d2)))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;white-space:nowrap;'+(so?'text-decoration:line-through;':'')+'">'+esc(formatPrice(d2))+'</strong>'+ctrl+'</span></div>';
   };
   let priceBlock;
   if(d._variants&&d._variants.length){
@@ -525,7 +525,7 @@ function renderMenuTable(){
   }else{
    priceBlock='<div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">'+esc(formatPrice(d))+'</strong>'+(qty>0?'<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>')+'</div>';
   }
-  html+='<div class="dish-card"'+(d.is_sold_out===true&&!d._variants?' style="opacity:0.6;"':'')+'>'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;cursor:pointer;" onclick="showDishDetail('+d.id+')" title="查看详情">'+(d.is_sold_out===true&&!d._variants?'<span style="background:#8f2318;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:4px;margin-right:4px;">'+(menuLang==='en'?'Sold out':'已售罄')+'</span>':'')+star+esc(dishNameOf(d))+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(catNameOf(d.category))+' · '+esc(menuLang==='en'?(SPICE_EN[d.spiciness]||d.spiciness):d.spiciness)+(d.serving?' · <span style="color:#e67e22;">'+esc(menuLang==='en'?(d.description_en||d.serving):d.serving)+'</span>':'')+'</p>'+priceBlock+'</div></div>';
+  html+='<div class="dish-card"'+(d.is_sold_out===true&&!d._variants?' style="opacity:0.6;"':'')+'>'+imgUrl+'<div class="dish-card-body"><h6 style="font-family:Noto Serif SC,serif;font-weight:600;margin:8px 0 4px;cursor:pointer;" onclick="showDishDetail('+d.id+')" title="查看详情">'+(d.is_sold_out===true&&!d._variants?'<span style="background:#8f2318;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:4px;margin-right:4px;">'+(menuLang==='en'?'Sold out':'已售罄')+'</span>':'')+star+esc(dishNameOf(d))+'</h6><p style="font-size:0.78rem;color:var(--text-light);margin:0 0 8px;">'+esc(catNameOf(d.category))+' · '+esc(menuLang==='en'?(SPICE_EN[d.spiciness]||d.spiciness):d.spiciness)+(d.serving?' · <span style="color:#e67e22;">'+esc(specLang(d.serving))+'</span>':'')+'</p>'+priceBlock+'</div></div>';
  });
  if(!filtered.length){
   // 空态: 搜索/筛选无结果时给出明确反馈与引导
