@@ -256,7 +256,6 @@ var ZH_EN = {
   '唐猫庭院 · 千年陕菜':'Tang Cat Courtyard · A Thousand Years of Shaanxi Flavor',
   '本地人的待客小宴':'A local\'s table for honored guests',
   '唐风雅韵，猫趣悠然':'Tang Elegance, Feline Charm',
-  '关于本店':'About Us',
   '唐猫庭院，从网红店到本地头牌，十桌老顾客，八桌本地人。感谢一面之缘的外地新朋，更感谢每周光顾的本地老友。':'From internet sensation to local favorite — at any table, eight of ten are regulars. A warm welcome to first-time visitors from afar, and deeper thanks to the locals who dine with us every week.',
   '7年砥砺奋进，已成长为本地人日常待客、宴请、聚餐、约会的优选餐厅。是名副其实的':'Seven years on, we have become the local first choice for everyday hosting, banquets, gatherings and dates — a true',
   '本地头牌·待客小宴':'local icon and host of intimate feasts',
