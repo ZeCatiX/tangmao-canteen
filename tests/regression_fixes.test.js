@@ -105,8 +105,10 @@ describe('前端修复回归', () => {
   it('renderMenuTable 动态标签安全（白名单+转义）防存储型 XSS', () => {
     const s = read('js/core.js');
     // 模块化重构后 tags 不再整体拼接:只渲染 SUBS 白名单二级分隔(且 esc)与固定文案角标
+    // 2026-10-08: i18n 改造把 esc(sub) 升级为 esc(EN 查表||sub),白名单+转义性质不变,断言随行
     assert.ok(s.includes('const SUBS=['), '二级分隔应走 SUBS 白名单');
-    assert.ok(s.includes('esc(sub)'), '白名单标签仍应 esc 转义');
+    assert.ok(/SUBS\.includes\(t\)/.test(s), '标签必须先过白名单才上屏');
+    assert.ok(s.includes("esc(menuLang==='en'?(SUB_EN[sub]||sub):sub)"), '白名单标签仍应 esc 转义');
   });
   it('checkoutCart 发送原始 name 非双重转义', () => {
     const s = read('js/core.js');
@@ -130,6 +132,15 @@ describe('前端修复回归', () => {
     const s = read('styles.css');
     // 内联浅米底 #f7efdf 在暗色下与 var(--text) 浅色文字对比不足,必须有 dark-mode 深底覆盖
     assert.ok(/html\.dark-mode #table-status-card\s*{[^}]*background:\s*#1a1a1a\s*!important/.test(s), '暗色模式应有 #table-status-card 深底覆盖');
+  });
+  it('推荐模式词表统一为枚举,消费端兼容旧中文标签（2026-10-08 回归）', () => {
+    const core = read('js/core.js');
+    // 冷启动曾写入中文标签'本地推荐（更快速）',消费端只认枚举 → "本地"语义静默失效
+    assert.ok(core.includes("recommendationMode:'local',blindBoxMode:'smart',coldStart:true"), '冷启动 userProfile 应写枚举');
+    // 恢复链路曾静默拒绝旧中文值 → 保存过"本地"的老用户下拉被重置回 auto
+    assert.ok(core.includes("m.indexOf('本地')>=0?'local'"), 'loadUserPreferences 应把旧中文标签归一化为枚举');
+    const rec = read('js/recommendation.js');
+    assert.ok(rec.includes("rawMode.indexOf('本地')>=0?'local'"), 'fetchRecommendations 消费端应兼容旧中文标签');
   });
 });
 

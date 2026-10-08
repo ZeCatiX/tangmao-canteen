@@ -1192,6 +1192,17 @@ describe('推荐预测边界测试', () => {
     assert.equal(body.success, false);
   });
 
+  it('POST /api/predict-rf 数字id全部未命中返回400且不挂起（2026-10-08 回归）', async () => {
+    const t0 = Date.now();
+    const { status, body } = await api('/api/predict-rf', {
+      method: 'POST',
+      body: JSON.stringify({ userPrefs: { spiciness: '微辣' }, dishes: [987654, 987655] }),
+    });
+    assert.equal(status, 400, '展开为空应立即400,实际: ' + status);
+    assert.equal(body.success, false);
+    assert.ok(Date.now() - t0 < 5000, '应在5秒内拒绝(曾挂50s硬超时),实际: ' + (Date.now() - t0) + 'ms');
+  });
+
   it('POST /api/predict-rf 缺少参数返回400', async () => {
     const { status } = await api('/api/predict-rf', {
       method: 'POST',
@@ -1497,7 +1508,7 @@ describe('订单创建完整字段', () => {
         userId: 'table_test',
         items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 2 }],
         totalPrice: 56,
-        tableNumber: 5,
+        tableNumber: uniqTable('T5'),
       }),
     });
     assert.equal(status, 200);

@@ -628,7 +628,7 @@ function loadUserPreferences(prefs){
  if(prefs.sweetness) setVal('sweetness', prefs.sweetness);
  if(prefs.price) setVal('price', prefs.price);
  if(prefs.calorie) setVal('calorie', prefs.calorie);
- if(prefs.recommendationMode&&['auto','api','local'].includes(prefs.recommendationMode)) setVal('recommendation-mode', prefs.recommendationMode);
+ if(prefs.recommendationMode){const m=prefs.recommendationMode;const norm=['auto','api','local'].includes(m)?m:(m.indexOf('本地')>=0?'local':m.indexOf('API')>=0?'api':'');if(norm)setVal('recommendation-mode',norm);}
  if(prefs.religion) setVal('religion', prefs.religion);
  if(prefs.allergies&&prefs.allergies.length>0){
   setChecked('allergy-none', false);
@@ -650,7 +650,7 @@ function loadUserPreferences(prefs){
 // 结果页"还有 X 项偏好未设置"横幅自动引导补全——不强迫新客先填表
 function coldStartHotRecommend(){
  const $=id=>document.getElementById(id);
- userProfile={spiciness:'无所谓',saltiness:'无所谓',sweetness:'无所谓',price:'不限',calorie:'不限',religion:'无特殊要求',allergies:[],recommendationMode:'本地推荐（更快速）',blindBoxMode:'智能选（按偏好加权）',coldStart:true};
+ userProfile={spiciness:'无所谓',saltiness:'无所谓',sweetness:'无所谓',price:'不限',calorie:'不限',religion:'无特殊要求',allergies:[],recommendationMode:'local',blindBoxMode:'smart',coldStart:true};
  showSection('recommendation-section');
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
  if(rl)rl.classList.add('d-none');
