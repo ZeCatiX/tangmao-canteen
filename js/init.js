@@ -19,6 +19,19 @@ document.addEventListener('DOMContentLoaded',function(){
  // 按存储语言应用 UI 骨架（导航/首页按钮/页头）——刷新后英文模式不回退中文
  if (typeof applyUiLang === 'function') applyUiLang();
  // 动态渲染补翻译：任何 DOM 更新(菜单重绘/购物车/弹窗)后 en 模式自动补翻，防自触发
+ // 品牌启动动画「数据长成唐猫」：每会话首访播放一次(纯图形中英通用); reduced-motion 用户与已播会话跳过; 点击任意处跳过
+ (function(){
+   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+   if (reduce || sessionStorage.getItem('logoIntroShown') || typeof TangCatIntro === 'undefined') return;
+   sessionStorage.setItem('logoIntroShown', '1');
+   var ov = document.getElementById('logo-intro-overlay'), stage = document.getElementById('logo-intro-stage');
+   if (!ov || !stage) return;
+   ov.style.display = 'flex';
+   var done = false;
+   function close(){ if (done) return; done = true; TangCatIntro.stop(); ov.style.transition = 'opacity .5s'; ov.style.opacity = '0'; setTimeout(function(){ ov.style.display = 'none'; }, 520); }
+   ov.addEventListener('click', close);
+   TangCatIntro.play(stage, { duration: 4200, onDone: function(){ setTimeout(close, 900); } });
+ })();
  // 区块切换兜底：切页后延迟补翻一次(部分 section 的动态渲染不触发 childList)
  if (typeof showSection === 'function' && typeof applyUiLangGuarded === 'function') {
    const _origShowSection = showSection;
