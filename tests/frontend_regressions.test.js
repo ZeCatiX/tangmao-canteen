@@ -145,3 +145,13 @@ test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输�
   assert.ok(r.includes("Currently using: ") && r.includes("MODE_EN"), '当前使用行应双语+mode映射');
   assert.ok(r.includes("Wuchang Steamed Rice") && r.includes("¥3/bowl"), '米饭行应双语');
 });
+
+// ═══ 偏好表单残留修复（2026-10-07 用户实测：退出登录后偏好选项残留给下一顾客）═══
+// 根因: 偏好回填三分支漏了 guest——currentUser='guest' 时既不回填账号偏好也不重置表单,
+//       上一登录用户的选项残留给下一顾客(共享平板/扫码设备隐私问题)。
+test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖三分支)', () => {
+  const c = read('js/core.js');
+  assert.ok(c.includes("else resetPreferenceForm();"), 'guest/未登录应走 resetPreferenceForm');
+  assert.ok(!c.includes("else if(!currentUser)resetPreferenceForm();"), '旧条件(仅null重置)应已移除');
+  assert.ok(c.includes("removeItem('savedPrefs')"), '退出登录应清 savedPrefs 偏好痕迹标记');
+});
