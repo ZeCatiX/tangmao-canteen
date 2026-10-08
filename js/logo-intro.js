@@ -100,6 +100,21 @@ var TangCatIntro = (function () {
     el(g.gP2, 'path', { d: 'M 426 448 Q 430 468 446 463 Q 450 461 450 454 Q 450 461 454 463 Q 470 468 474 448', fill: 'none', stroke: '#2c1810', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
     var whiskers = el(g.gP2, 'g', { stroke: '#5a4a3a', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0.9 });
     [[272, 412, 188, 398], [272, 428, 178, 428], [272, 444, 188, 458], [628, 412, 712, 398], [628, 428, 722, 428], [628, 444, 712, 458]].forEach(function (l) { el(whiskers, 'line', { x1: l[0], y1: l[1], x2: l[2], y2: l[3] }); });
+
+    /* ═══ 标签层(2026-10-08 移植自 radar.html: 维度名+权重%,用户口味维红色加粗/菜品维墨色;EN 模式换词表) ═══ */
+    g.labelLayer = el(g.svg, 'g', { id: 'labelLayer' });
+    var EN = typeof menuLang !== 'undefined' && menuLang === 'en';
+    var EN_NAME = { '辣度': 'Spicy', '咸淡': 'Salty', '甜酸': 'Sweet·Sour', '热量': 'Calorie', '价格': 'Price', '招牌': 'Signature', '评分': 'Rating', '用户辣度': 'Your Spicy', '用户咸淡': 'Your Salty', '用户甜酸': 'Your Sweet', '用户价格': 'Your Price', '用户热量': 'Your Calorie' };
+    g.labelEls = [];
+    ORD.forEach(function (n) {
+      var a0 = STATE[n].a0, c = Math.cos(a0), s = Math.sin(a0);
+      var lr0 = Math.max(W[n] * UNIT, 70);
+      var px = CX + lr0 * Math.cos(a0), py = CY + lr0 * Math.sin(a0);
+      var isUser = n.indexOf('用户') === 0;
+      var t = el(g.labelLayer, 'text', { x: px.toFixed(1), y: (py + (s < -0.5 ? -2 : (s > 0.5 ? 12 : 5))).toFixed(1), 'font-size': (isUser ? 15 : 14), 'font-weight': (isUser ? 700 : 400), fill: (isUser ? '#b83a2a' : '#2c1810'), 'text-anchor': (c > 0.3 ? 'start' : (c < -0.3 ? 'end' : 'middle')) });
+      t.textContent = (EN ? EN_NAME[n] : n) + ' ' + W[n].toFixed(1) + '%';
+      g.labelEls.push(t);
+    });
   }
 
   /* ═══ 动画驱动(与 radar.html 同一套三幕时序) ═══ */
@@ -137,12 +152,38 @@ var TangCatIntro = (function () {
     g.catFrame.setAttribute('opacity', (1 - 0.75 * kc2).toFixed(2));
     g.decor.setAttribute('opacity', (1 - 0.4 * kc2).toFixed(2));
     g.gEar.setAttribute('opacity', (0.85 * kc2).toFixed(2));
+    /* 标签跟随顶点(成形后沿径向外移 36 离开轮廓线,radar.html 同款);近零权重维(评分/招牌)顶点在圆心,标签强制最小半径 70 防重叠。
+       注意 a/r 是顶点循环内部变量,这里必须按 STATE 重算,直接引用会 ReferenceError 被 frame 的 try/catch 吞掉 */
+    if (g.labelEls) ORD.forEach(function (n, i) {
+      var t = g.labelEls[i]; if (!t) return;
+      var st = STATE[n];
+      var d = st.a1 - st.a0;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      var a = st.a0 + d * ka;
+      var r = st.r0 + (st.r1 - st.r0) * kr;
+      if (kc) r += (st.r2 - r) * kc;
+      var lr = Math.max(r + 36 * kc2, 70);
+      var lx = CX + lr * Math.cos(a), ly = CY + lr * Math.sin(a);
+      var lc = Math.cos(a), ls = Math.sin(a);
+      t.setAttribute('x', lx.toFixed(1));
+      t.setAttribute('y', (ly + (ls < -0.5 ? -2 : (ls > 0.5 ? 12 : 5))).toFixed(1));
+      t.setAttribute('text-anchor', (lc > 0.3 ? 'start' : (lc < -0.3 ? 'end' : 'middle')));
+    });
   }
   function setFace(k1, k2) {
     g.gP1.setAttribute('opacity', k1.toFixed(2));
     g.gP2.setAttribute('opacity', k2.toFixed(2));
   }
   function frame(ms) {
+    /* 标签: 变形期间淡出(画面只留轮廓飞行),猫头定格后淡回(radar.html 同款时序) */
+    var lv;
+    if (ms < 900) lv = 1;
+    else if (ms < 1400) lv = 1 - smooth((ms - 900) / 500);
+    else if (ms < 3400) lv = 0;
+    else if (ms < 4100) lv = smooth((ms - 3400) / 700);
+    else lv = 1;
+    if (g.labelEls) g.labelEls.forEach(function (t) { t.setAttribute('opacity', lv.toFixed(2)); });
     if (ms < 2800) setFace(0, 0);
     if (ms < 900) { updateData(0, 0, 0); }
     else if (ms < 3400) {

@@ -142,6 +142,14 @@ describe('前端修复回归', () => {
     const rec = read('js/recommendation.js');
     assert.ok(rec.includes("rawMode.indexOf('本地')>=0?'local'"), 'fetchRecommendations 消费端应兼容旧中文标签');
   });
+  it('logo-intro 十二维雷达带维度标签（2026-10-08 回归）', () => {
+    const s = read('js/logo-intro.js');
+    // 首版抽取时剥掉了 radar.html 的标签层,十二维雷达没有轴标签
+    assert.ok(s.includes('labelLayer'), '应有标签层');
+    assert.ok(s.includes("W[n].toFixed(1)+'%'") || s.includes("W[n].toFixed(1) + '%'"), '标签应含维度名+权重%');
+    assert.ok(/isUser\s*\?\s*'#b83a2a'/.test(s), '用户口味维应红色加粗区分');
+    assert.ok(s.includes('EN_NAME'), 'EN 模式应有词表');
+  });
 });
 
 // ================================================================
