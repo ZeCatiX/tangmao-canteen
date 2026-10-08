@@ -4,6 +4,8 @@
 使用批量向量化操作提升性能
 """
 import sys
+import time as _time
+_T0 = _time.time()
 import json
 import pickle
 import os

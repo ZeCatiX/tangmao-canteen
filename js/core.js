@@ -53,8 +53,8 @@ function checkApiAvailability(){
   // 8s：公网隧道往返实测 5s+（本地毫秒级），3s 会把健康的 ML 误判为不可用而强制降级
   const c=new AbortController(),t=setTimeout(()=>c.abort(),8000);
   safeFetch('/api/worker-health',{signal:c.signal,headers:{'Cache-Control':'no-cache'}})
-  .then(res=>res.json()).then(d=>{apiAvailabilityCache=!!(d&&d.ready);apiCacheTimestamp=now;r(apiAvailabilityCache);})
-  .catch(()=>{apiAvailabilityCache=null;apiCacheTimestamp=0;r(false);}).finally(()=>clearTimeout(t));
+  .then(res=>res.json()).then(d=>{apiAvailabilityCache=!!(d&&d.ready);apiCacheTimestamp=now;if(!apiAvailabilityCache)console.warn('[推荐] ML未就绪(worker加载中), 本次使用本地推荐');r(apiAvailabilityCache);})
+  .catch(()=>{apiAvailabilityCache=null;apiCacheTimestamp=0;console.warn('[推荐] ML健康检查失败, 本次使用本地推荐');r(false);}).finally(()=>clearTimeout(t));
  });
 }
 
