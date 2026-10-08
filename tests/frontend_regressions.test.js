@@ -154,4 +154,5 @@ test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖�
   assert.ok(c.includes("else resetPreferenceForm();"), 'guest/未登录应走 resetPreferenceForm');
   assert.ok(!c.includes("else if(!currentUser)resetPreferenceForm();"), '旧条件(仅null重置)应已移除');
   assert.ok(c.includes("removeItem('savedPrefs')"), '退出登录应清 savedPrefs 偏好痕迹标记');
+  assert.ok(/localStorage\.removeItem\('savedPrefs'\);[\s\S]{0,120}resetPreferenceForm\(\)/.test(c), '退出登录应同步重置偏好表单DOM');
 });
