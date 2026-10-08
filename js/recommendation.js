@@ -96,7 +96,9 @@ async function fallback(prefs,blk,dishes){
   const rs=parseFloat(d.rating);md.rating=!isNaN(rs)?Math.round((rs/5)*2.5*10)/10:2.0;
   const total=md.taste+md.cuisine+md.calorie+md.price+md.rating;
   d.matchRateDisplay=0.35+(total/14)*0.6;d.matchIndex=Math.round(d.matchRateDisplay*100)/100;d.matchDetails=md;d.predictedScore=ps;d.matchRate=total/14;
-  d.reason='推荐理由：口味'+md.taste+' 招牌'+md.cuisine+' 热量'+md.calorie+' 价格'+md.price+' 评分'+md.rating;d.type='偏好推荐';
+  /* 无个性化信号(未声明口味)时排序退化为原序——按评分/招牌标记, 前端显"本店推荐"而非假匹配度 */
+  const hasSig=Object.keys(prefs).some(function(k){return prefs[k]&&prefs[k]!=='无'&&prefs[k]!=='无特殊要求'&&prefs[k]!=='不限';});
+  d.hasTasteSignal=hasSig;d.reason=hasSig?d.reason:'本店人气招牌，最近大家都在点';d.type=hasSig?'偏好推荐':'热门推荐';
  });
  dishes.sort((a,b)=>b.matchIndex-a.matchIndex);const top=dishes.slice(0,5);
  const blind=selectBlindBoxDish(prefs,top,blk);if(blind)top.push(blind);
