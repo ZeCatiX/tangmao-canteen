@@ -179,7 +179,8 @@ describe('完整用户会话流程', () => {
     // 获取推荐
     const rec = await api('/api/predict-rf', {
       method: 'POST',
-      body: JSON.stringify({ userPrefs: { spiciness: '微辣' }, dishes: [1, 2, 3] }),
+      // 真实菜品 id 走服务端数字展开垫片;曾用 [1,2,3] 展开为空挂 worker 50s 才降级
+      body: JSON.stringify({ userPrefs: { spiciness: '微辣' }, dishes: dishPool.slice(0, 3).map(d => d.id) }),
     });
     // 推荐API可能返回200或504（Worker超时），只要不崩溃即可
     assert.ok(rec.status === 200 || rec.status === 504, '推荐API应响应: ' + rec.status);

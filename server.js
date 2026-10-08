@@ -1809,6 +1809,8 @@ app.post('/api/predict-rf', (req, res) => {
   let processedDishes = dishes;
   if (typeof dishes[0] === 'number') {
     processedDishes = dishes.map(id => dishData.find(d => d.id === id)).filter(Boolean);
+    // 数字 id 全部未命中(展开为空)时立即 400:空载荷曾让 worker 挂满 50s 硬超时,占住 FIFO 队列拖垮并发
+    if (processedDishes.length === 0) return res.status(400).json({ success: false, error: 'dishes 中的菜品 ID 均不存在' });
   }
   // 兼容 userPrefs 字段名：将英文名映射为中文名
   let processedPrefs = userPrefs;
