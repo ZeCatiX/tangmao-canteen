@@ -4,6 +4,8 @@
 使用批量向量化操作提升性能
 """
 import sys
+import time as _time
+_T0 = _time.time()
 import json
 import pickle
 import os
@@ -34,7 +36,7 @@ print("[信息] Worker进程启动，正在加载模型...", file=sys.stderr)
 try:
     with open(os.path.join(_ROOT, 'recommendation_model.pkl'), 'rb') as f:
         _model_cache = pickle.load(f)
-    print("[信息] 模型加载完成", file=sys.stderr)
+    print(f'[信息] 模型加载完成({(_time.time()-_T0)*1000:.0f}ms)', file=sys.stderr)
     json_print({"ready": True})
 except Exception as e:
     print(f"[错误] 模型加载失败: {e}", file=sys.stderr)

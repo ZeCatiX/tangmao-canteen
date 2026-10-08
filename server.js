@@ -1609,6 +1609,7 @@ app.get('/api/feature-importance', (req, res) => {
 // ═══════════════════════════════════════════════
 let pythonWorker = null;
 let workerReady = false;
+let workerSpawnAt = Date.now();
 let workerStartTime = 0;
 let pendingRequests = new Map();
 let pendingRequestIdCounter = 0;
@@ -1618,6 +1619,8 @@ const MAX_RESTART_ATTEMPTS = 3;
 function startPythonWorker() {
   if (pythonWorker) { try { pythonWorker.kill(); } catch(e) {} pythonWorker = null; }
   const { spawn } = require('child_process');
+  workerSpawnAt = Date.now();
+  logger.info('ML Worker 启动中(加载模型约需1-2秒, 期间推荐自动降级本地规则)');
   pythonWorker = spawn('python', ['-u', path.join(__dirname, 'ml', 'predict_worker.py')], {
     cwd: __dirname,
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -1636,7 +1639,7 @@ function startPythonWorker() {
       if (line.trim()) {
         try {
           const result = JSON.parse(line);
-          if (result.ready) { workerReady = true; restartAttempts = 0; logger.info('Python Worker已就绪'); }
+          if (result.ready) { if (!workerReady) logger.info(`ML 模型加载完成(${Date.now() - (workerSpawnAt || Date.now())}ms), 推荐服务就绪`); workerReady = true; restartAttempts = 0; }
           else if (pendingRequests.size > 0) {
             // 使用 Map 的迭代器获取第一个待处理请求，保证 FIFO 顺序
             const firstEntry = pendingRequests.entries().next();
@@ -1687,6 +1690,7 @@ function dispatchToWorker(inputData, handlers) {
   const requestId = ++pendingRequestIdCounter;
   const timeoutId = setTimeout(() => {
     pendingRequests.delete(requestId);
+    logger.warn('ML打分请求超时(50s), 可能模型过载');
     settleError(504, '请求超时，请重试');
   }, 50000);
   const addPendingRequest = () => {
