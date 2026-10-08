@@ -164,7 +164,7 @@ function catNameOf(c) { return menuLang === 'en' && CAT_EN[c] ? CAT_EN[c] : c; }
 // 覆盖导航/首页主按钮/桌号卡/菜单页头/弹窗标题；菜品数据面（菜名/描述/分类）原有逻辑不变
 var UI_STR = {
   nav_home: ['首页', 'Home'], nav_about: ['关于本店', 'About Us'], nav_menu: ['全部菜单', 'Full Menu'],
-  nav_privacy: ['隐私政策', 'Privacy'], nav_mine: ['我的', 'My'], nav_cart: ['我的购物车', 'My Cart'],
+  nav_privacy: ['隐私政策', 'Privacy'], nav_mine: ['我的', 'My Account'], nav_cart: ['我的购物车', 'My Cart'],
   home_start: ['开始点餐', 'Start Ordering'], home_ai: ['不知道吃什么？猫掌柜 AI 帮你选', 'Not sure? Ask the AI Butler'],
   home_table: ['人多点啥？一席成宴', 'Group? AI Table Feast'], home_continue: ['继续上次推荐', 'Continue Last Recommendations'],
   home_last: ['查看上次推荐', 'View Last Recommendations'], home_bill: ['本桌账单', 'Table Bill'], login: ['登录', 'Sign In'], register: ['注册', 'Register'],
@@ -223,7 +223,7 @@ function uiText(key) { const v = UI_STR[key]; return v ? (menuLang === 'en' ? v[
 // 背景：data-i18n 只盖了骨架，筛选下拉/表单选项/按钮/动态渲染仍残留中文——用户实测"切了没变化"
 var ZH_EN = {
   // 导航/通用
-  '首页':'Home','关于本店':'About Us','全部菜单':'Full Menu','隐私政策':'Privacy','我的':'My','我的购物车':'My Cart','登录':'Sign In','注册':'Register','返回':'Back','关闭':'Close','确定':'OK','取消':'Cancel','加载中...':'Loading...','正在提交订单...':'Submitting your order...','展开导航菜单':'Menu',
+  '首页':'Home','关于本店':'About Us','全部菜单':'Full Menu','隐私政策':'Privacy','我的':'My Account','我的购物车':'My Cart','登录':'Sign In','注册':'Register','返回':'Back','关闭':'Close','确定':'OK','取消':'Cancel','加载中...':'Loading...','正在提交订单...':'Submitting your order...','展开导航菜单':'Menu',
   // 桌号弹窗
   '请选择桌号':'Pick a Table','确认':'Confirm','🥡 打包带走':'🥡 Takeaway',
   // 菜单页
@@ -233,7 +233,7 @@ var ZH_EN = {
   '20元以下':'Under ¥20','20-40元':'¥20–40','40-60元':'¥40–60','60元以上':'Over ¥60',
   '主食':'Staples','招牌与游西安必打卡':'Must-Try Signatures','热销菜品':'Best Sellers','传承陕菜':'Heritage Shaanxi','江湖海鲜':'Jianghu Seafood','田园时蔬·汤羹':'Greens & Soups','特色凉菜':'Signature Cold Dishes','陕西小吃':'Shaanxi Snacks','飲品与酒水':'Drinks & Wines',
   // 一席成宴表单
-  '猫掌柜 · 一席成宴':'Butler AI · Table Feast','壹用餐人数':'1. Party size','贰人均预算 ':'2. Budget per guest ','（含每人一碗米饭）':'(incl. a bowl of rice)','叁辣度偏好':'3. Spice','肆咸淡偏好':'4. Saltiness','伍甜酸偏好':'5. Sweet & sour','陆热量偏好':'6. Calories','柒饮食要求':'7. Dietary','捌忌口（过敏源）':'8. Allergies',
+  '猫掌柜 · 一席成宴':'Butler AI · Table Feast','壹用餐人数':'1. Party size','贰人均预算 ':'2. Budget per guest ','（含每人一碗米饭）':'(incl. a bowl of rice)','叁辣度偏好':'3. Spice level','肆咸淡偏好':'4. Saltiness','伍甜酸偏好':'5. Sweet & sour','陆热量偏好':'6. Calories','柒饮食要求':'7. Dietary','捌忌口（过敏源）':'8. Allergies',
   '无所谓':'No preference','清淡':'Light','适中':'Just right','偏咸':'Saltier','无味':'Neither','甜味':'Sweet','酸味':'Sour','酸甜':'Sweet & sour','不限':'Any','低卡':'Light','高能量':'Hearty','无特殊要求':'No restrictions','素食':'Vegetarian','清真':'Halal','无':'None','海鲜':'Seafood','花生':'Peanuts','鸡蛋':'Eggs','大豆':'Soy','麸质':'Gluten',
   '避开最近吃过的菜（7 天内点过的不再推荐）':'Avoid dishes I ordered recently (within 7 days)','生成席面 · 三套方案':'Generate · 3 Set Menus','返回首页':'Back to Home',
   '1 人':'1 guest','2 人':'2 guests','3 人':'3 guests','4 人':'4 guests','5 人':'5 guests','6 人':'6 guests','7 人':'7 guests','8 人':'8 guests','9 人':'9 guests','10 人':'10 guests','11 人':'11 guests','12 人':'12 guests','13 人':'13 guests','14 人':'14 guests','15 人':'15 guests','16 人':'16 guests','17 人':'17 guests','18 人':'18 guests','19 人':'19 guests','20 人':'20 guests',
@@ -249,7 +249,7 @@ var ZH_EN = {
   '点餐完成':'Order Placed','菜品已记录，厨房正在为您准备':'Recorded — the kitchen is on it','本次点餐':'This order','下单成功':'Placed','当前轮':'current','本轮推荐':'This round','本轮未启用 AI — 普通点餐，无推荐分析':'AI off this round — plain order, no match stats','模型评估':'Model quality','决定系数':'R² score','均方误差':'MSE','均方根误差':'RMSE','平均绝对误差':'MAE','对这次推荐满意吗？':'How were the picks?','点击选择满意度':'Tap to rate','提交评价':'Submit','影响推荐的关键因素':'What shaped this','加菜 / 继续点餐':'Add more','重新点餐':'Start over','结束用餐，退出':'Finish & exit',
   // 个人中心
   '最后登录：':'Last sign-in:','最近推荐记录':'Recent recommendations','还没有推荐记录':'No recommendations yet','收藏菜品':'Favorites','还没有收藏的菜品':'No favorites yet','取消收藏':'Unfavorite','拉黑的菜品':'Blocked dishes','还没有拉黑的菜品':'No blocked dishes','退出登录':'Sign out','注销账号':'Delete account','再来一单':'Reorder',
-  '● 辣度':'● Spice',
+  '● 辣度':'● Spice level',
   '◆ 咸淡':'◆ Saltiness',
   '● 甜酸':'● Sweet & sour',
   '● 预算':'● Budget',
@@ -271,13 +271,13 @@ var ZH_EN = {
   '我的口味':'My taste',
   '未设置':'Not set',
   '口味偏好':'Taste preferences',
-  '辣度':'Spice',
+  '辣度':'Spice level',
   '咸淡':'Saltiness',
   '甜酸':'Sweetness',
   '价位、忌口与饮食要求':'Budget, allergies & dietary',
   '预算':'Budget',
-  '经济（20元以下）':'Economy (under ¥20)',
-  '适中（20-50元）':'Mid (¥20–50)',
+  '经济（20元以下）':'Value (under ¥20)',
+  '适中（20-50元）':'Mid-range (¥20–50)',
   '品质（50元以上）':'Premium (over ¥50)',
   '热量偏好':'Calorie preference',
   '过敏源':'Allergens',
