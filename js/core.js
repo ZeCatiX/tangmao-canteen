@@ -288,7 +288,7 @@ function showSection(sectionId,skipScroll){
    sel.removeEventListener('change',updateModeDisplay);
    sel.addEventListener('change',updateModeDisplay);
   }
-  const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else if(!currentUser)resetPreferenceForm();
+  const u=getUserData(currentUser);if(currentUser&&currentUser!=='guest'&&u&&u.preferences)loadUserPreferences(u.preferences);else resetPreferenceForm();
   // 2026-09-17: 游客进偏好页同步过敏源联动态(勾"无"时其他项应为禁用,此前仅在重置表单时处理)
   {const an=$('allergy-none');if(an&&an.checked&&currentUser==='guest'){['allergy-seafood','allergy-peanut','allergy-egg','allergy-soy','allergy-gluten'].forEach(id=>{if($(id))$(id).disabled=true;});}}
   // 桌号锁定：加菜流程中偏好页桌号同样锁定
@@ -804,7 +804,7 @@ function logout(){const msg=currentUser==='guest'?'已退出':'已退出登录';
  // 尽力吊销服务端 token（fire-and-forget，不阻塞退出流程）
  const token=localStorage.getItem('userToken');
  if(token){safeFetch('/api/user/logout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}}).catch(()=>{});}
- currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');localStorage.removeItem('prefCompletenessDismissed');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
+ currentUser=null;localStorage.removeItem('currentUser');localStorage.removeItem('userToken');localStorage.removeItem('prefCompletenessDismissed');localStorage.removeItem('savedPrefs');resetRecommendation();const pi=document.getElementById('nav-profile-item'),nu=document.getElementById('nav-user');if(pi)pi.classList.add('d-none');if(nu)nu.classList.remove('d-none');const hlb=document.getElementById('login-btn'),hrb=document.getElementById('register-btn');if(hlb)hlb.classList.remove('d-none');if(hrb)hrb.classList.remove('d-none');const vcbG=document.getElementById('view-cached-btn');if(vcbG)vcbG.classList.add('d-none');if(window.updateHomeButtons)window.updateHomeButtons();showMessage('已退出',msg,function(){showSection('home-section');});}
 function showProfile(){
  if(!currentUser||currentUser==='guest'){showMessage('提示','请先登录');return;}
  const user=getUserData(currentUser);if(!user){showMessage('错误','无法获取用户信息');return;}
