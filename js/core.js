@@ -658,7 +658,7 @@ function coldStartHotRecommend(){
  const hot=dishData
   .filter(d=>d.is_active!==false&&d.is_sold_out!==true&&d.category!=='飲品与酒水'&&d.category!=='主食')
   .sort((a,b)=>(b.order_count||0)-(a.order_count||0)).slice(0,6)
-  .map(d=>Object.assign({},d,{reason:'本店人气招牌，最近大家都在点',matchRate:0.5,matchIndex:0.5,type:'热门推荐'}));
+  .map(d=>Object.assign({},d,{reason:'本店人气招牌，最近大家都在点',matchRate:0.5,matchIndex:0.5,hasTasteSignal:false,type:'热门推荐'}));
  currentRecommendations=hot;
  const dl=$('dish-list');if(dl)dl.innerHTML='';
  if(typeof displayRecommendations==='function')displayRecommendations();
