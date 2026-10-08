@@ -1626,6 +1626,24 @@ try {
   histgbFallback = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'ml', 'histgb_model.json'), 'utf8'));
   logger.info('Node 端 HistGB 兜底模型已加载: ' + histgbFallback.n + ' 棵树');
 } catch (e) { logger.warn('HistGB 兜底模型加载失败(仅影响降级路径质量): ' + e.message); }
+function histgbNodeScoreDish(d, up) {
+  const M = ORD_MAPPINGS_CACHE;
+  const f = [
+    M['辣度'].get(d.spiciness, 1),
+    M['咸淡'].get(d.saltiness, 1),
+    M['甜酸'].get(d.sweetness, 1),
+    M['热量'].get(d.calorie, 2),
+    (parseFloat(d.price) || 0) / 100,
+    (d.tags && d.tags.includes('招牌')) ? 1 : 0,
+    (parseFloat(d.rating) || 3.5) / 5,
+    M['辣度'].get(up['辣度'], 1),
+    M['咸淡'].get(up['咸淡'], 1),
+    M['甜酸'].get(up['甜酸'], 1),
+    M['价格区间'].get(up['价格区间'], 1),
+    M['热量'].get(up['calorie'], 1),
+  ];
+  return Math.max(0, Math.min(5, histgbNodePredict(f)));
+}
 function histgbNodePredict(features) {
   let sum = histgbFallback.baseline;
   for (const tree of histgbFallback.trees) {
@@ -1714,7 +1732,26 @@ function startPythonWorker() {
 function dispatchToWorker(inputData, handlers) {
   let settled = false;
   const settleResult = (r) => { if (!settled) { settled = true; handlers.onResult(r); } };
-  const settleError = (status, msg) => { if (!settled) { settled = true; handlers.onError(status, msg); } };
+  const settleError = (status, msg) => {
+    if (settled) return;
+    settled = true;
+    // 兜底: Python worker 不可用时, Node 端用导出的 HistGB 同模型打分
+    // 保证 ML 推荐可用性——降级的是推理引擎(Python→Node), 不是模型质量
+    try {
+      if (histgbFallback && inputData) {
+        const input = JSON.parse(inputData);
+        const up = input.userPrefs || {};
+        const predictions = (input.dishes || []).map(d => ({
+          id: d.id, name: d.name,
+          score: Math.max(0, Math.min(5, histgbNodeScoreDish(d, up))),
+        }));
+        logger.warn(`ML降级: Python worker不可用(${msg}), Node端HistGB兜底打分 ${predictions.length} 道`);
+        handlers.onResult({ success: true, predictions, degraded: 'node-histgb' });
+        return;
+      }
+    } catch (e) { logger.error('Node HistGB 兜底失败: ' + e.message); }
+    handlers.onError(status, msg);
+  };
   const requestId = ++pendingRequestIdCounter;
   const timeoutId = setTimeout(() => {
     pendingRequests.delete(requestId);
