@@ -71,7 +71,8 @@ async function fetchRecommendations(isRefresh){
   ft('/api/predict-rf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userPrefs:prefs,dishes:od})},TIMEOUT)
   .then(r=>r.ok?r.json():Promise.reject(Error('HTTP'+r.status))).then(d=>{if(d.success)processML(d.predictions||[]);else fallback(prefs,blk,dishes);}).catch(()=>fallback(prefs,blk,dishes));
  };
- const mode=userProfile?.recommendationMode||'auto';
+ const rawMode=String((userProfile&&userProfile.recommendationMode)||'auto');
+ const mode=rawMode==='local'||rawMode.indexOf('本地')>=0?'local':rawMode==='api'||rawMode.indexOf('API')>=0?'api':'auto';
  if(mode==='local'){fallback(prefs,blk,dishes);return;}
  checkApiAvailability().then(a=>{if(a)callAPI(dishes);else if(mode==='api'){showMessage('提示','API不可用，已自动切换为本地推荐模式');fallback(prefs,blk,dishes);}else fallback(prefs,blk,dishes);});
 }
