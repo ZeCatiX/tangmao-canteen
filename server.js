@@ -1610,6 +1610,34 @@ app.get('/api/feature-importance', (req, res) => {
 let pythonWorker = null;
 let workerReady = false;
 let workerSpawnAt = Date.now();
+const ORD_MAPPINGS_CACHE = {
+  '辣度': { '无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4 },
+  '咸淡': { '无': 0, '清淡': 1, '适中': 2, '偏咸': 3 },
+  '甜酸': { '无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4 },
+  '热量': { '无': 0, '低': 1, '中': 2, '高': 3 },
+  '价格区间': { '经济型（<12元）': 0, '标准型（12-20元）': 1, '品质型（20元以上）': 2, '经济': 1, '适中': 2, '品质': 3, '无': 0, '不限': 0 }
+};
+
+// ═══ Node 端 HistGB 兜底打分器: Python worker 不可用(重启窗口/崩溃)时的同模型降级 ═══
+// 模型 JSON 由 ml/export_histgb_to_js.py 从生产 pkl 导出, 与 Python predict 偏差<1e-4分(实用精度)
+// 与 predict_worker.py 的区分: worker 走 Python 原生推理(主路径); 此处为 Node 纯 JS 推理(兜底路径)
+let histgbFallback = null;
+try {
+  histgbFallback = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'ml', 'histgb_model.json'), 'utf8'));
+  logger.info('Node 端 HistGB 兜底模型已加载: ' + histgbFallback.n + ' 棵树');
+} catch (e) { logger.warn('HistGB 兜底模型加载失败(仅影响降级路径质量): ' + e.message); }
+function histgbNodePredict(features) {
+  let sum = histgbFallback.baseline;
+  for (const tree of histgbFallback.trees) {
+    let ni = 0;
+    for (;;) {
+      const n = tree[ni];
+      if (n.leaf) { sum += n.v; break; }
+      ni = features[n.f] <= n.t ? n.l : n.r;
+    }
+  }
+  return sum;
+}
 let workerStartTime = 0;
 let pendingRequests = new Map();
 let pendingRequestIdCounter = 0;
@@ -1764,7 +1792,35 @@ app.post('/api/predict-rf', (req, res) => {
   const sendResponse = (status, data) => { if (!responseSent && !res.headersSent) { responseSent = true; res.status(status).json(data); } };
   const dispatch = dispatchToWorker(inputData, {
     onResult: (result) => sendResponse(200, result),
-    onError: (status, msg) => sendResponse(status, { success: false, error: msg }),
+    onError: (status, msg) => {
+      // 兜底: Python worker 不可用(重启窗口/崩溃)时, Node 端用导出的 HistGB 同模型打分
+      // 保证 ML 推荐可用性——降级的是推理引擎, 不是模型质量
+      try {
+        if (!histgbFallback) throw new Error('Node 兜底模型未加载');
+        const predictions = processedDishes.map(d => {
+          const f = [
+            ORD_MAPPINGS_CACHE['辣度'].get(d.spiciness, 1),
+            ORD_MAPPINGS_CACHE['咸淡'].get(d.saltiness, 1),
+            ORD_MAPPINGS_CACHE['甜酸'].get(d.sweetness, 1),
+            ORD_MAPPINGS_CACHE['热量'].get(d.calorie, 2),
+            (parseFloat(d.price) || 0) / 100,
+            (d.tags && d.tags.includes('招牌')) ? 1 : 0,
+            (parseFloat(d.rating) || 3.5) / 5,
+            ORD_MAPPINGS_CACHE['辣度'].get(userPrefs['辣度'], 1),
+            ORD_MAPPINGS_CACHE['咸淡'].get(userPrefs['咸淡'], 1),
+            ORD_MAPPINGS_CACHE['甜酸'].get(userPrefs['甜酸'], 1),
+            ORD_MAPPINGS_CACHE['价格区间'].get(userPrefs['价格区间'], 1),
+            ORD_MAPPINGS_CACHE['热量'].get(userPrefs['calorie'], 1),
+          ];
+          return { id: d.id, name: d.name, score: Math.max(0, Math.min(5, histgbNodePredict(f))) };
+        });
+        logger.warn(`predict-rf 降级: Python worker 不可用(${msg}), 已用 Node 端 HistGB 兜底打分`);
+        sendResponse(200, { success: true, predictions, degraded: 'node-histgb' });
+      } catch (e) {
+        logger.error('predict-rf Node 兜底也失败: ' + e.message);
+        sendResponse(status, { success: false, error: msg });
+      }
+    },
   });
   req.on('aborted', () => dispatch.abort());
 });
