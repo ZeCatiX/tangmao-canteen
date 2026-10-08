@@ -11,6 +11,7 @@ const files = [
   'js/globals.js',
   'js/core.js',
   'js/recommendation.js',
+  'js/logo-intro.js',
   'js/init.js',
 ];
 

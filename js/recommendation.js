@@ -5,7 +5,7 @@ async function fetchRecommendations(isRefresh){
  const $=id=>document.getElementById(id);
  const rl=$('recommendation-loading'),rr=$('recommendation-result');
  if(!rl||!rr){console.warn('推荐元素未找到');showMessage('提示','页面加载中，请稍后重试');return;}
- rl.classList.remove('d-none');rr.classList.add('d-none');
+ rl.classList.remove('d-none');rr.classList.add('d-none');if(window.TangCatIntro){var _la=document.getElementById('rec-logo-anim');if(_la)TangCatIntro.play(_la,{duration:4200,loop:true});}
 
  // 等待菜品数据加载完成（最多等5秒）
  if(!dishData.length){
@@ -161,7 +161,7 @@ function displayRecommendations(){
  const cart=getCart();
  let fav=[],blk=[];if(currentUser&&currentUser!=='guest'){const u=getUserData(currentUser);if(u){fav=u.favorites||[];blk=u.blacklist||[];}}
  let ordered=[];try{ordered=JSON.parse(localStorage.getItem('orderedDishes')||'[]')}catch(e){};
- const dl=$('dish-list');if(!dl){console.warn('dish-list 元素未找到');loading.classList.add('d-none');return;}dl.innerHTML='';
+ const dl=$('dish-list');if(!dl){console.warn('dish-list 元素未找到');if(window.TangCatIntro)TangCatIntro.stop();loading.classList.add('d-none');return;}dl.innerHTML='';
  currentRecommendations.forEach((d,i)=>{
   const isFav=fav.includes(d.id),isBlk=blk.includes(d.id),isOrdered=ordered.includes(d.id);
   const tags=d.tags?d.tags.filter(t=>t!=='招牌'&&t!=='中辣'&&t!=='重辣'&&t!=='微辣'&&t!=='清爽'&&t!=='夏季限定').join(' '):'';
@@ -173,7 +173,7 @@ function displayRecommendations(){
  const img=(d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?(function(){const src=esc(d.image_url);const thumb=d.image_url.startsWith('/uploads/')&&!d.image_url.includes('thumbs/')?('/uploads/thumbs/'+d.image_url.split('/').pop().replace(/\.[^.]+$/,'')+'.webp'):src;return '<img src="'+thumb+'" style="width:160px;height:160px;border-radius:12px;object-fit:cover;margin-left:12px;vertical-align:middle;" alt="'+esc(d.name)+'" loading="lazy" onerror="if(this.src.indexOf(\'/thumbs/\')>-1){this.src=\''+src+'\';}else{this.onerror=null;this.src=\''+defaultImg+'\';}">';})():(d.image_url?'<span class="dish-emoji" style="font-size:3.5rem;vertical-align:middle;margin-left:12px;">'+esc(d.image_url)+'</span>':''));
 	 dl.innerHTML+='<div class="list-group-item '+blindBoxClass+'"><div class="dish-info"><div class="dish-details flex-grow-1"><h5>'+(i+1)+'. '+tagBadges+orderedBadge+(d.type==='盲盒尝鲜'?'<span class="badge bg-info me-1">'+(menuLang==='en'?'Blind box':'盲盒')+'</span>':'')+esc(dishNameOf(d))+img+'</h5>'+'<p class="mb-1">'+esc(catNameOf(d.category))+' · '+esc(menuLang==='en'?(SPICE_EN[d.spiciness]||d.spiciness):d.spiciness)+' · '+esc(formatPrice(d))+(tags?' · '+esc(tags):'')+'</p><p class="dish-reason">'+esc(menuLang==='en'&&d.reason?reasonZhToEn(d.reason):d.reason)+'</p>'+(menuLang==='en'&&isFinite(d.matchIndex)?'<p class="text-muted small">Match: '+d.matchIndex.toFixed(2)+' (taste '+(d.matchDetails?.taste||0)+' + signature '+(d.matchDetails?.cuisine||0)+' + calories '+(d.matchDetails?.calorie||0)+' + price '+(d.matchDetails?.price||0)+' + rating '+(d.matchDetails?.rating||0)+')</p>':((d.type!=='盲盒尝鲜'||(d.type==='盲盒尝鲜'&&d.blindMode==='smart'))&&isFinite(d.matchIndex)?'<p class="text-muted small">匹配指数：'+d.matchIndex.toFixed(2)+'（口味'+(d.matchDetails?.taste||0)+'+招牌'+(d.matchDetails?.cuisine||0)+'+热量'+(d.matchDetails?.calorie||0)+'+价格'+(d.matchDetails?.price||0)+'+评分'+(d.matchDetails?.rating||0)+'）</p>':'<p class="text-muted small">匹配指数：— —</p>'))+'<div class="dish-actions mt-2">'+renderRecipeCartBtn(d,cart)+'<button class="btn btn-sm '+(isFav?'btn-success':'btn-outline-success')+' me-2" onclick="addToFavorites('+d.id+')"'+(isFav?' disabled':'')+'><i class="bi bi-heart'+(isFav?'-fill':'')+'"></i> '+(isFav?(menuLang==='en'?'Favorited':'已收藏'):(menuLang==='en'?'Favorite':'收藏'))+'</button><button class="btn btn-sm '+(isBlk?'btn-dark':'btn-outline-dark')+'" onclick="addToBlacklist('+d.id+')"'+(isBlk?' disabled':'')+'><i class="bi bi-x-circle'+(isBlk?'-fill':'')+'"></i> '+(isBlk?(menuLang==='en'?'Blocked':'已拉黑'):(menuLang==='en'?'Block':'拉黑'))+'</button><button class="btn btn-sm btn-outline-warning ms-2" onclick="openStarFeedback(currentRecommendations['+i+'])" style="border-color:#f1c40f;color:#f39c12;"><i class="bi bi-star"></i> '+(menuLang==='en'?'Rate':'评分')+'</button></div></div><div class="dish-score text-center ms-3">'+(d.type==='盲盒尝鲜'&&d.blindMode==='random'?'<div class="badge badge-blind rounded-pill mb-2">🎁</div><div class="text-muted small" style="font-size:0.7rem;">'+(menuLang==='en'?'Try your luck':'试试手气')+'</div>':'<div class="badge bg-danger rounded-pill mb-2">'+matchRatePct+'%</div><div class="text-muted small">'+(menuLang==='en'?'Match':'匹配度')+'</div>')+'</div></div></div>';
  });
- loading.classList.add('d-none');result.classList.remove('d-none');
+ if(window.TangCatIntro)TangCatIntro.stop();loading.classList.add('d-none');result.classList.remove('d-none');
 }
 
 
