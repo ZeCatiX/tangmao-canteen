@@ -156,3 +156,22 @@ test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖�
   assert.ok(c.includes("removeItem('savedPrefs')"), '退出登录应清 savedPrefs 偏好痕迹标记');
   assert.ok(/localStorage\.removeItem\('savedPrefs'\);[\s\S]{0,120}resetPreferenceForm\(\)/.test(c), '退出登录应同步重置偏好表单DOM');
 });
+
+// ═══ 推荐卡双bug修复（2026-10-07 用户实测EN推荐页发现）═══
+// bug1: 评分按钮重复渲染两次(背靠背两个openStarFeedback按钮)
+// bug2: 无口味声明用户显示"80.9%匹配度"——未声明维度给中性分,菜品质量分冒充个性匹配分,语义误导
+test('推荐卡修复①: 评分按钮去重(只渲染一个)', () => {
+  const r = read('js/recommendation.js');
+  const m = r.match(/Rating按钮段/);
+  const row = r.split('\n').find(l => l.includes("dish-actions mt-2"));
+  const btnCount = (row.match(/openStarFeedback\(currentRecommendations/g) || []).length;
+  assert.ok(btnCount === 1, '评分按钮应只出现1次, 实际' + btnCount);
+});
+
+test('推荐卡修复②: 无口味声明不显示匹配度%, 改显本店推荐徽标', () => {
+  const r = read('js/recommendation.js');
+  assert.ok(r.includes('hasTasteSignal'), '应有口味信号判定');
+  assert.ok(r.includes('House pick') || r.includes('本店推荐'), '无信号应显本店推荐徽标');
+  // processML 里声明数判定存在
+  assert.ok(r.includes("v&&v!=='无'&&v!=='无特殊要求'&&v!=='不限'"), '声明判定条件应存在');
+});
