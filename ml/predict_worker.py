@@ -27,7 +27,6 @@ def json_print(obj):
 
 # 预编译正则表达式
 import re
-import pandas as pd
 NUM_PATTERN = re.compile(r'[\d.]+')
 
 # 模型缓存（只加载一次）
@@ -162,6 +161,7 @@ def encode_features_batch(user_prefs, dishes, model_data):
     
     num_features = np.column_stack([calorie, protein, price])
     # 使用 DataFrame 以消除 sklearn 警告
+    import pandas as pd  # 延迟import: 仅旧25维模型分支需要(当前12维模型不经过此处)
     num_df = pd.DataFrame(num_features, columns=['热量_kcal', '蛋白质_g', '价格_元'])
     num_scaled = scaler.transform(num_df)
     
