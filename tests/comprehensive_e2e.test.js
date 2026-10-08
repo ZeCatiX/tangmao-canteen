@@ -405,7 +405,7 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 多菜品+桌号', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: 5 }),
+      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: 'MT' + Date.now().toString().slice(-6) }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId);
@@ -679,7 +679,7 @@ describe('45. recommendation.js DOM null 保护', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(content.includes('isFinite(d.matchRate)'), '应有 isFinite 检查');
+    assert.ok(content.includes('isFinite(d.matchRateDisplay'), '应有 isFinite 检查(量尺校准后守卫对象为 matchRateDisplay/matchRate 三元形态);');
   });
 
   it('script.js 构建产物包含 null 保护', () => {
