@@ -1054,7 +1054,7 @@ function showTableBill(){
  if(!t){showMessage('提示','请扫描餐桌上的二维码');return;}
  const box=document.getElementById('table-bill-body');
  const title=document.getElementById('table-bill-title');
- if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">加载中...</div>';
+ if(box)box.innerHTML='<div class="text-center py-4" style="color:var(--text-light);">'+(menuLang==='en'?'Loading...':'加载中...')+'</div>';
  const m=document.getElementById('table-bill-modal');
  if(m){m.inert=false;m.removeAttribute('aria-hidden');bootstrap.Modal.getOrCreateInstance(m).show();}
  safeFetch('/api/table-view?t='+encodeURIComponent(t)).then(r=>r.json()).then(d=>{
