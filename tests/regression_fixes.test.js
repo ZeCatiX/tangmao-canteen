@@ -150,6 +150,12 @@ describe('前端修复回归', () => {
     assert.ok(/isUser\s*\?\s*'#b83a2a'/.test(s), '用户口味维应红色加粗区分');
     assert.ok(s.includes('EN_NAME'), 'EN 模式应有词表');
   });
+  it('开幕动画时钟用逐帧累加防后台跳帧（2026-10-08 回归）', () => {
+    const s = read('js/logo-intro.js');
+    // 墙钟时钟在后台标签加载时被 raf 节流,恢复瞬间整段动画被跳过("一闪而过")
+    assert.ok(s.includes('acc += Math.min(now - last, 50)'), '动画时钟应逐帧累加且单帧封顶50ms');
+    assert.ok(!s.includes('t0 = performance.now()'), '不应再用墙钟差值驱动动画');
+  });
 });
 
 // ================================================================
