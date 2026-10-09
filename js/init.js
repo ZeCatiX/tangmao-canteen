@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded',function(){
  (function(){
    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
    if (reduce || sessionStorage.getItem('logoIntroShown') || typeof TangCatIntro === 'undefined') return;
-   sessionStorage.setItem('logoIntroShown', '1');
    var ov = document.getElementById('logo-intro-overlay'), stage = document.getElementById('logo-intro-stage');
    if (!ov || !stage) return;
+   sessionStorage.setItem('logoIntroShown', '1');
    ov.style.display = 'flex';
    var done = false;
    function close(){ if (done) return; done = true; TangCatIntro.stop(); ov.style.transition = 'opacity .5s'; ov.style.opacity = '0'; setTimeout(function(){ ov.style.display = 'none'; }, 520); }

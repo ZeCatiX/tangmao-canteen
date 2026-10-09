@@ -185,15 +185,18 @@ var TangCatIntro = (function () {
     _host = host; _stopped = false;
     build(host);
     var DUR = opts.duration || 5400;
-    var t0 = performance.now(), lastMs = -1;
+    /* 动画时钟用逐帧累加(单帧最多计50ms)而非墙钟——页面在后台加载/切走时 raf 节流,
+       墙钟会在恢复瞬间跳过整段动画(表现为"一闪而过"),累加时钟保证完整播完 */
+    var acc = 0, last = null;
     function raf(now) {
       if (_stopped || _host !== host) return;
-      var ms = Math.min(DUR, now - t0);
-      if (ms === lastMs) { setTimeout(function () { requestAnimationFrame(raf); }, 16); return; }
-      lastMs = ms;
+      if (last === null) last = now;
+      acc += Math.min(now - last, 50);
+      last = now;
+      var ms = Math.min(DUR, acc);
       try { frame(ms); } catch (e) { /* 单帧异常不终止 */ }
       if (ms < DUR) requestAnimationFrame(raf);
-      else if (opts.loop) { t0 = now; requestAnimationFrame(raf); }
+      else if (opts.loop) { acc = 0; requestAnimationFrame(raf); }
       else if (opts.onDone) opts.onDone();
     }
     requestAnimationFrame(raf);
