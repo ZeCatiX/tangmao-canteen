@@ -159,14 +159,8 @@ var TangCatIntro = (function () {
     g.gP2.setAttribute('opacity', k2.toFixed(2));
   }
   function frame(ms) {
-    /* 标签: 变形期间淡出(画面只留轮廓飞行),猫头定格后淡回(radar.html 同款时序) */
-    var lv;
-    if (ms < 900) lv = 1;
-    else if (ms < 1400) lv = 1 - smooth((ms - 900) / 500);
-    else if (ms < 3400) lv = 0;
-    else if (ms < 4100) lv = smooth((ms - 3400) / 700);
-    else lv = 1;
-    if (g.labelEls) g.labelEls.forEach(function (t) { t.setAttribute('opacity', lv.toFixed(2)); });
+    /* 标签钉在表盘全程可见(2026-10-08 用户反馈: 表盘刻度不应淡出)—— radar.html 的
+       变形期淡出是为顶点跟随版设计的防遮挡逻辑,标签固定后无碰撞不再需要 */
     if (ms < 2800) setFace(0, 0);
     if (ms < 900) { updateData(0, 0, 0); }
     else if (ms < 3400) {
