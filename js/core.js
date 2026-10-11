@@ -419,11 +419,19 @@ function showDishDetail(id){
   +specs
   +(alTags?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">'+(menuLang==='en'?'Allergens':'含过敏源')+'</div>'+alTags+'</div>':'')
   +'<div style="margin-top:10px;font-size:0.8rem;color:#8b7a6a;">'+(d.is_sold_out===true?(menuLang==='en'?'⚠ Sold out today':'⚠ 今日已售罄'):(menuLang==='en'?'✅ Orderable now':'✅ 可正常点餐'))+(d.serving?' · '+esc(specLang(d.serving)):'')+'</div>'
+  +'<div style="margin-top:12px;"><button class="btn add-to-cart-btn w-100" data-id="'+d.id+'"'+(d.is_sold_out===true?' disabled style="background:#ccc;color:#888;border:none;border-radius:8px;padding:10px;font-weight:600;"':` style="background:var(--primary-accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;letter-spacing:2px;"`)+'>'+(d.is_sold_out===true?(menuLang==='en'?'Sold out':'已售罄'):(menuLang==='en'?'Add to cart':'加入购物车'))+'</button></div>'
   +'</div></div></div></div>';
  document.body.appendChild(modal);
  const el=modal.querySelector('.modal');
  let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el);
  el.addEventListener('hidden.bs.modal',function(){modal.remove();},{once:true});
+ // 弹窗内加购后自动收起,让用户看到菜单页的加购反馈(数量+与浮条),不挡视线
+ el.addEventListener('click',function(e){
+  if(e.target.closest('.add-to-cart-btn')&&!e.target.disabled){
+   const inst=bootstrap.Modal.getInstance(el);
+   setTimeout(function(){inst&&inst.hide();},350);
+  }
+ });
  m.show();
 }
 
@@ -505,7 +513,7 @@ function renderMenuTable(){
   const ci=cart.find(c=>c.id===d.id);
   const qty=ci?(ci.qty||1):0;
   const defaultImg='/assets/illustrations/missing-dish-cat.webp';
-  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?(function(){const src=esc(d.image_url);const thumb=d.image_url.startsWith('/uploads/')&&!d.image_url.includes('thumbs/')?('/uploads/thumbs/'+d.image_url.split('/').pop().replace(/\.[^.]+$/,'')+'.webp'):src;return '<img src="'+thumb+'" style="width:100%;height:160px;border-radius:10px;object-fit:cover;" alt="'+esc(d.name)+'" loading="lazy" onerror="if(this.src.indexOf(\'/thumbs/\')>-1){this.src=\''+src+'\';}else{this.onerror=null;this.src=\''+defaultImg+'\';}">';})():(d.image_url?'<span class="dish-emoji" style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
+  const imgUrl=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?(function(){const src=esc(d.image_url);const thumb=d.image_url.startsWith('/uploads/')&&!d.image_url.includes('thumbs/')?('/uploads/thumbs/'+d.image_url.split('/').pop().replace(/\.[^.]+$/,'')+'.webp'):src;return '<img src="'+thumb+'" onclick="showDishDetail('+d.id+')" style="width:100%;height:160px;border-radius:10px;object-fit:cover;cursor:pointer;" title="'+(menuLang==='en'?'View photo':'查看大图')+'" alt="'+esc(d.name)+'" loading="lazy" onerror="if(this.src.indexOf(\'/thumbs/\')>-1){this.src=\''+src+'\';}else{this.onerror=null;this.src=\''+defaultImg+'\';}">';})():(d.image_url?'<span class="dish-emoji" style="font-size:4rem;display:flex;align-items:center;justify-content:center;height:160px;">'+esc(d.image_url)+'</span>':'');
   const star=d.tags&&d.tags.includes('招牌')?'<span class="badge" style="background:var(--primary-accent);color:#fff;font-size:0.65rem;">'+(menuLang==='en'?'Signature':'招牌')+'</span> ':'';
   // 价格+加购区: 有规格变体时逐规格一行(各带加购), 否则单行
   const unitLabel=d=>{const u=(d.price_unit||'/份').replace(/^\//,'');return menuLang==='en'?((UNIT_EN['/'+u]||('/'+u)).replace(/^\//,'')):u;};
