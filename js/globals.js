@@ -244,7 +244,7 @@ var ZH_EN = {
   // 推荐页
   '为您推荐':'Recommended for You','推荐菜品':'Recommended Dishes','猫掌柜正在后厨为你挑选...':'The butler is picking dishes for you...','换一批':'Refresh','选好了':'Done','退出':'Exit','加一碗米饭':'Add a bowl of rice','饮料酒水':'Drinks','搭配更尽兴':'Better together','操作':'Actions','收藏':'Favorite','已收藏':'Favorited','拉黑':'Block','已拉黑':'Blocked','评分':'Rate','匹配度':'Match','试试手气':'Try your luck','盲盒':'Blind box','本店人气招牌，最近大家都在点':'House signature, trending lately','去补全 →':'Complete them →','换口味':'Change taste',
   // 购物车
-  '菜品':'Dish','数量':'Qty','单价':'Price','小计':'Subtotal','去结算':'Checkout','清空':'Clear','合计：':'Total:','购物车是空的':'Your cart is empty','去推荐菜品页面添加你喜欢的菜吧':'Open recommendations to add dishes','待加菜':'To add','查看订单':'View order','已结算':'Settled','✕ 关闭':'✕ Close',
+  '菜品':'Dish','数量':'Qty','单价':'Price','小计':'Subtotal','去结算':'Checkout','清空':'Clear','合计：':'Total:','购物车是空的':'Your cart is empty','去推荐菜品页面添加你喜欢的菜吧':'Open recommendations to add dishes','待加菜':'To add','查看订单':'View order','已下单':'Ordered','✕ 关闭':'✕ Close',
   // 完成页
   '点餐完成':'Order Placed','菜品已记录，厨房正在为您准备':'Recorded — the kitchen is on it','本次点餐':'This order','下单成功':'Placed','当前轮':'current','本轮推荐':'This round','本轮未启用 AI — 普通点餐，无推荐分析':'AI off this round — plain order, no match stats','模型评估':'Model quality','决定系数':'R² score','均方误差':'MSE','均方根误差':'RMSE','平均绝对误差':'MAE','对这次推荐满意吗？':'How were the picks?','点击选择满意度':'Tap to rate','提交评价':'Submit','影响推荐的关键因素':'What shaped this','加菜 / 继续点餐':'Add more','重新点餐':'Start over','结束用餐，退出':'Finish & exit',
   // 个人中心
