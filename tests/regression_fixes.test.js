@@ -179,6 +179,13 @@ describe('前端修复回归', () => {
     assert.ok(idx.includes('已下单') && !idx.includes('>已结算<'), '时间线徽标应为已下单(取消/完成状态不可知,不预设已结算)');
     assert.ok(read('js/globals.js').includes("'已下单':'Ordered'"), 'EN 映射同步');
   });
+  it('席面卡手机端换行布局（2026-10-08 回归）', () => {
+    // 412px 视口下固定宽度控件组曾把菜名列挤压成一字一行竖排
+    const rec = read('js/recommendation.js');
+    assert.ok((rec.match(/tsc-row/g) || []).length >= 3 && (rec.match(/tsc-controls/g) || []).length >= 3, '三类席面行(主菜/配饭/饮品)都应有 tsc 结构');
+    const css = read('styles.css');
+    assert.ok(/@media \(max-width: 576px\)[\s\S]*\.table-set-card \.tsc-row \{ flex-wrap: wrap/.test(css), '窄屏媒体查询应有换行规则');
+  });
 });
 
 // ================================================================

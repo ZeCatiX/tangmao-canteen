@@ -1145,6 +1145,13 @@ html.dark-mode .table-total { color: var(--gold-light); }
 .dish-name-serif { font-family: 'Noto Serif SC', serif; font-size: 0.98rem; letter-spacing: 0.5px; }
 /* 套卡头是 space-between 布局，全局 ◇◇ 装饰会成为隐形 flex 项把徽标推向中间——禁用 */
 .table-set-card .card-header::before, .table-set-card .card-header::after { content: none !important; }
+/* 手机端席面行换行:固定宽度控件组(价格/步进器/换/加≈300px)曾把菜名列挤压成一字一行竖排,
+   窄屏时菜名独占首行、控件组第二行右对齐(桌面不受影响,控件组 ms-auto 原位) */
+@media (max-width: 576px) {
+  .table-set-card .tsc-row { flex-wrap: wrap; }
+  .table-set-card .tsc-name { flex: 1 1 auto; }
+  .table-set-card .tsc-controls { width: 100%; justify-content: flex-end; padding-left: 64px; }
+}
 
 /* 矮视口（≤860px 高的桌面窗口）：压缩首页 hero 与间距，保证关键按钮在首屏 */
 @media (max-height: 860px) {

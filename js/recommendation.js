@@ -317,31 +317,35 @@ async function submitTableBuilder(){
     +'<span style="min-width:34px;text-align:center;font-size:0.95rem;font-weight:600;">'+q+'</span>'
     +'<button class="btn btn-sm table-qty-plus" data-set="'+si+'" data-id="'+d.id+'" title="增加" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:var(--gold);border:none;color:#fff;font-size:0.95rem;">＋</button>'
     +'</div>';
-   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
+   return '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
-    +'<div class="flex-grow-1" style="min-width:0;">'
+    +'<div class="flex-grow-1 tsc-name" style="min-width:0;">'
      +'<div class="dish-name-serif">'+esc(dishNameOf(d))+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">'+esc(catNameOf(d.category))+' · '+esc(d.spiciness)+(d.serving?' · '+esc(d.serving):'')+'</span></div>'
      +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+esc(d.reason)+'</div>'
     +'</div>'
+    +'<div class="tsc-controls d-flex align-items-center gap-2" style="margin-left:auto;">'
     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+'</div>'
     +stepper
     +'<button class="btn btn-sm table-swap-btn" data-set="'+si+'" data-id="'+d.id+'" data-pool="'+esc(d.pool)+'" title="换一道" style="background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-arrow-repeat"></i> 换</button>'
     +'<button class="btn btn-sm table-addone-btn" data-set="'+si+'" data-id="'+d.id+'" title="单点加购" style="background:transparent;border:1px solid rgba(201,169,110,0.5);color:var(--text);border-radius:14px;padding:2px 10px;font-size:0.78rem;white-space:nowrap;"><i class="bi bi-plus-lg"></i> 加</button>'
+    +'</div>'
    +'</div>';
   }).join('');
   var overTag=s.overBudget?'<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>':'';
   var autoRows=(s.autoItems||[]).map(function(d){
-   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
+   return '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(d.image_url,52,d.name)
-    +'<div class="flex-grow-1" style="min-width:0;">'
+    +'<div class="flex-grow-1 tsc-name" style="min-width:0;">'
      +'<div class="dish-name-serif">'+esc(dishNameOf(d))+'<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">默认按人数 · 可自由加减</span></div>'
      +'<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">'+(d.qty===0?'本套不加米饭':'配饭不参与推荐，已计入总价')+'，加购后仍可在购物车增减</div>'
     +'</div>'
+    +'<div class="tsc-controls d-flex align-items-center gap-2" style="margin-left:auto;">'
     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(d))+'×'+d.qty+'</div>'
     +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:126px;">'
      +'<button class="btn btn-sm table-rice-minus" data-set="'+si+'"'+(d.qty<=0?' disabled':'')+' style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:1rem;">−</button>'
      +'<span style="min-width:26px;text-align:center;font-size:0.95rem;">'+d.qty+'</span>'
      +'<button class="btn btn-sm table-rice-plus" data-set="'+si+'" style="width:30px;height:30px;line-height:1;padding:0;border-radius:50%;background:linear-gradient(135deg,var(--primary-accent),var(--primary-dark));border:none;color:#fff;font-size:1rem;">＋</button>'
+    +'</div>'
     +'</div>'
    +'</div>';
   }).join('');
@@ -352,16 +356,18 @@ async function submitTableBuilder(){
    var q=c.qty||1;
    var _cd=null;for(var _ci=0;_ci<dishData.length;_ci++){if(dishData[_ci].id===c.id){_cd=dishData[_ci];break;}}
    var _cn=_cd?dishNameOf(_cd):c.name;
-   return '<div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
+   return '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">'
     +dishImg(c.image,52,c.name)
-    +'<div class="flex-grow-1" style="min-width:0;">'
+    +'<div class="flex-grow-1 tsc-name" style="min-width:0;">'
      +'<div class="dish-name-serif">🍹 '+esc(_cn)+'<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">已选饮品</span></div>'
     +'</div>'
+    +'<div class="tsc-controls d-flex align-items-center gap-2" style="margin-left:auto;">'
     +'<div class="text-nowrap dish-name-serif" style="font-size:0.95rem;color:var(--primary-accent);">'+esc(formatPrice(c.price))+'</div>'
     +'<div class="d-flex align-items-center justify-content-end gap-1" style="width:96px;">'
      +'<button class="btn btn-sm table-drink-minus" data-id="'+c.id+'" title="减少" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:transparent;border:1px solid var(--gold);color:var(--gold);font-size:0.95rem;">−</button>'
      +'<span style="min-width:34px;text-align:center;font-size:0.95rem;font-weight:600;">'+q+'</span>'
      +'<button class="btn btn-sm table-drink-plus" data-id="'+c.id+'" title="增加" style="width:28px;height:28px;line-height:1;padding:0;border-radius:50%;background:var(--gold);border:none;color:#fff;font-size:0.95rem;">＋</button>'
+    +'</div>'
     +'</div>'
    +'</div>';
   }).join('');
