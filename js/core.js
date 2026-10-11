@@ -1125,11 +1125,11 @@ function showGiftReceipt(table){
 function showCart(){
  // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
  const clo0=document.getElementById('cart-loading');if(clo0)clo0.style.display='none';
- // 进行中订单提示条（跳走后回来的入口）
- const ltB=ssGet('lockedTable')||'',loB=ssGet('lastOrderId')||'';
+ // 进行中订单提示条（跳走后回来的入口）——必须与会话桌号同桌才显示,防跨桌残留会话误挂他桌订单
+ const ltB=ssGet('lockedTable')||'',loB=ssGet('lastOrderId')||'',lotB=ssGet('lastOrderTable')||'';
  const banner=document.getElementById('cart-order-banner');
  if(banner){
-  if(ltB&&loB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
+  if(ltB&&loB&&lotB===ltB){banner.style.display='flex';const bt=document.getElementById('banner-table');if(bt)bt.textContent=ltB;const bo=document.getElementById('banner-oid');if(bo)bo.textContent='#'+loB;}
   else banner.style.display='none';
   // 赠菜模式提示:给别桌加菜进行中,明确告知目标桌号(2026-09-17)
   const gfb=document.getElementById('gift-mode-banner');
