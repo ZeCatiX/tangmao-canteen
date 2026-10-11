@@ -192,6 +192,13 @@ describe('前端修复回归', () => {
     assert.ok(/\.table-total \{ color: #ffe1b8; \}/.test(css), '亮色 .table-total 应为暖金 #ffe1b8');
     assert.ok(/html\.dark-mode \.table-total \{ color: var\(--gold-light\); \}/.test(css), '暗色保持 gold-light');
   });
+  it('偏好页不再清空推荐数组+评分入口防御（2026-10-08 回归）', () => {
+    const s = read('js/core.js');
+    // 生成推荐→逛偏好页→返回点评分曾报"请先选择评分":数组被清而旧卡片仍可点
+    const prefBlock = s.split("if(sectionId==='preference-section')")[1]?.split('showSection')[0] || '';
+    assert.ok(!prefBlock.includes('resetRecommendation()'), '进入偏好页不应清空 currentRecommendation(数组与卡片须同步)');
+    assert.ok(/function openStarFeedback\(dish\)\{\s*if\(!dish\)/.test(s), '评分入口应对空引用防御提示');
+  });
 });
 
 // ================================================================

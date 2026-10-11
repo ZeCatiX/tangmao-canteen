@@ -280,7 +280,8 @@ function showSection(sectionId,skipScroll){
  document.querySelectorAll('.navbar-nav .nav-link').forEach(l=>{l.classList.remove('active');l.removeAttribute('aria-current');});
  if(nid){const l=document.getElementById(nid);if(l){l.classList.add('active');l.setAttribute('aria-current','page');}}
  if(sectionId==='preference-section'){
-  resetRecommendation();
+  // 2026-10-08: 不再在此 resetRecommendation——清数组却留旧卡片,用户返回推荐页点评分/收藏会
+  // 引用已清空的数组而报错;新提交会整体重建推荐,旧结果在提交前保持与数组同步
   const sel=document.getElementById('recommendation-mode');
   if(sel){
    if(sel.options.length===0)sel.innerHTML='<option value="auto" selected>自动选择（优先API）</option><option value="api">后端API推荐（更智能）</option><option value="local">本地推荐（更快速）</option>';
@@ -719,6 +720,7 @@ function submitStarFeedback(){
  .then(r=>r.json()).then(d=>{if(!d.success){showMessage('评价失败',d.error||'提交失败，请重试');return;}showMessage('评价成功','感谢您对'+dish.name+'的评价！',function(){starRatingDish=null;starRatingValue=0;document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});const h=document.getElementById('star-hint');if(h)h.textContent='点击星星评分';const sb=document.getElementById('star-submit-btn');if(sb)sb.disabled=true;showSection(ratingReturnTo||'recommendation-section');});}).catch(()=>showMessage('评价失败','网络错误，请稍后重试'));
 }
 function openStarFeedback(dish){
+ if(!dish){showMessage('提示','推荐已刷新，请重新生成后再评分');return;}
  starRatingDish=dish;starRatingValue=0;ratingReturnTo='recommendation-section';
  const fd=document.getElementById('star-feedback-dish');if(fd)fd.textContent='给「'+dish.name+'」评分';
  document.querySelectorAll('.star').forEach(s=>{s.textContent='☆';s.style.color='#ddd';});
