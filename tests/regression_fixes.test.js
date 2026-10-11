@@ -156,6 +156,17 @@ describe('前端修复回归', () => {
     assert.ok(s.includes('acc += Math.min(now - last, 50)'), '动画时钟应逐帧累加且单帧封顶50ms');
     assert.ok(!s.includes('t0 = performance.now()'), '不应再用墙钟差值驱动动画');
   });
+  it('菜品大图入口可发现+详情弹窗可加购（2026-10-08 回归）', () => {
+    const s = read('js/core.js');
+    // 用户反馈"不知道怎么打开大图":卡片图片必须可点开详情,带光标与悬浮提示
+    assert.ok(/cursor:pointer;\s*"?\s*title=/.test(s) && s.includes('查看大图'), '卡片图片应可点(光标+查看大图提示)');
+    // 详情弹窗内应有加购按钮(复用全局事件委托 data-id),售罄禁用
+    const modalPart = s.split('function showDishDetail')[1]?.split('function renderMenuTable')[0] || '';
+    assert.ok(modalPart.includes('add-to-cart-btn') && modalPart.includes('data-id'), '详情弹窗应有加购按钮且走事件委托');
+    assert.ok(modalPart.includes('disabled') && modalPart.includes('已售罄'), '售罄菜在详情弹窗应禁用加购');
+    // 加购后自动收起弹窗
+    assert.ok(modalPart.includes('inst&&inst.hide()') || modalPart.includes('inst && inst.hide()'), '弹窗内加购后应自动收起');
+  });
 });
 
 // ================================================================
