@@ -160,6 +160,10 @@ describe('前端修复回归', () => {
     const s = read('js/core.js');
     // 用户反馈"不知道怎么打开大图":卡片图片必须可点开详情,带光标与悬浮提示
     assert.ok(/cursor:pointer;\s*"?\s*title=/.test(s) && s.includes('查看大图'), '卡片图片应可点(光标+查看大图提示)');
+    // 用户反馈"emoji点了没有用":emoji占位分支(全库65/130道)同样必须可点
+    assert.ok(/dish-emoji[^>]*onclick="showDishDetail/.test(s), '菜单emoji占位也应可点开详情');
+    const rec = read('js/recommendation.js');
+    assert.ok((rec.match(/onclick="showDishDetail/g) || []).length >= 2, '推荐列表实拍图与emoji都应可点开详情');
     // 详情弹窗内应有加购按钮(复用全局事件委托 data-id),售罄禁用
     const modalPart = s.split('function showDishDetail')[1]?.split('function renderMenuTable')[0] || '';
     assert.ok(modalPart.includes('add-to-cart-btn') && modalPart.includes('data-id'), '详情弹窗应有加购按钮且走事件委托');
