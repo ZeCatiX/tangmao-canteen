@@ -186,6 +186,12 @@ describe('前端修复回归', () => {
     const css = read('styles.css');
     assert.ok(/@media \(max-width: 576px\)[\s\S]*\.table-set-card \.tsc-row \{ flex-wrap: wrap/.test(css), '窄屏媒体查询应有换行规则');
   });
+  it('席面总计价签在红渐变头图上用暖金（2026-10-08 回归）', () => {
+    const css = read('styles.css');
+    // 亮色曾用 --primary-accent 红字压红渐变头图(对比度≈1.2),用户反馈刺眼
+    assert.ok(/\.table-total \{ color: #ffe1b8; \}/.test(css), '亮色 .table-total 应为暖金 #ffe1b8');
+    assert.ok(/html\.dark-mode \.table-total \{ color: var\(--gold-light\); \}/.test(css), '暗色保持 gold-light');
+  });
 });
 
 // ================================================================

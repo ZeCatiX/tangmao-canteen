@@ -1129,7 +1129,8 @@ body.modal-open { padding-right: 0 !important; }
 }
 
 /* 一桌菜总价数字：亮色用唐红；暗色卡头被全局红渐变覆盖，改亮金保证对比（styles.css:932） */
-.table-total { color: var(--primary-accent); }
+/* 席面总计价签位于红渐变卡头上(全局card-header即红底白字),亮色用暖金而非红——红压红曾刺眼;对比度≈4.6:1 */
+.table-total { color: #ffe1b8; }
 html.dark-mode .table-total { color: var(--gold-light); }
 
 /* ═══ 一桌菜 · 唐风典雅 ═══ */
