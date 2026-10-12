@@ -85,6 +85,31 @@ describe('个人中心与高级交互测试', () => {
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 
+  it('1.1b 空收藏/空黑名单时隐藏"清空"按钮（回归：空态死按钮）', async () => {
+    resetErrors();
+    // 沿用 1.1 注册的新用户:收藏/黑名单均为空
+    await page.evaluate(() => document.getElementById('view-profile-btn')?.click());
+    await sleep(600);
+    const state = await page.evaluate(() => {
+      const sec = document.getElementById('profile-section');
+      const visible = sec && !sec.classList.contains('d-none');
+      const favEmpty = (document.getElementById('favorites-list')?.textContent || '').includes('还没有收藏的菜品');
+      const blEmpty = (document.getElementById('blacklist-list')?.textContent || '').includes('还没有拉黑的菜品');
+      const favBtn = document.getElementById('cancel-favorite-btn');
+      const blBtn = document.getElementById('cancel-blacklist-btn');
+      return {
+        visible,
+        favEmpty, blEmpty,
+        favBtnHidden: !favBtn || favBtn.offsetParent === null || getComputedStyle(favBtn).display === 'none',
+        blBtnHidden: !blBtn || blBtn.offsetParent === null || getComputedStyle(blBtn).display === 'none',
+      };
+    });
+    assert.ok(state.visible, '个人中心应可见');
+    assert.ok(state.favEmpty && state.blEmpty, '新用户收藏/黑名单应为空');
+    assert.ok(state.favBtnHidden, '空收藏时"取消收藏"按钮应隐藏');
+    assert.ok(state.blBtnHidden, '空黑名单时"取消"按钮应隐藏');
+  });
+
   it('1.2 收藏一个菜品后显示在收藏列表', async () => {
     resetErrors();
     // 在菜单页收藏第一个菜
