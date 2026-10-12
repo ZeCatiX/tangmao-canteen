@@ -2007,6 +2007,16 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
     const allAllergyKeys = new Set(params.allergyKeys);
     profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
     const { pools, excluded } = tableRecommend.buildPools(dishData || [], [...allAllergyKeys]);
+    // 宗教饮食硬排除（2026-10-08）：清真→猪肉系剔除；素食→荤菜+海鲜剔除。
+    // 宗教饮食是硬约束非打分偏好——曾只进 ML 打分特征，清真实测被推猪肉菜
+    const religionEff = (params.religion && params.religion !== '无特殊要求') ? params.religion
+      : ((profile && profile.religion && profile.religion !== '无特殊要求') ? profile.religion : '');
+    let religionExcluded = 0;
+    let effPools = pools;
+    if (religionEff) {
+      effPools = tableRecommend.filterByReligion(pools, religionEff);
+      religionExcluded = TABLE_POOL_KEYS.reduce((s, k) => s + ((pools[k].length || 0) - (effPools[k].length || 0)), 0);
+    }
     // 已点菜排除：仅登录用户提供（游客无身份，不做已点排除——换桌/新客不继承他人记录）
     // 登录用户：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
     const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
@@ -2019,7 +2029,7 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
     const union = [];
     const seen = new Set();
     for (const key of TABLE_POOL_KEYS) {
-      for (const d of pools[key]) if (!seen.has(d.id)) { seen.add(d.id); union.push({ ...d }); }
+      for (const d of effPools[key]) if (!seen.has(d.id)) { seen.add(d.id); union.push({ ...d }); }
     }
     let excludedOrdered = 0;
     const candidates = union.filter(d => {
@@ -2032,13 +2042,13 @@ app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
     }
     const source = await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
     const byId = new Map(candidates.map(d => [d.id, d]));
-    for (const key of TABLE_POOL_KEYS) pools[key] = pools[key].filter(d => byId.has(d.id)).map(d => byId.get(d.id));
+    for (const key of TABLE_POOL_KEYS) effPools[key] = effPools[key].filter(d => byId.has(d.id)).map(d => byId.get(d.id));
     // 米饭按人数自动配：预算先预留米饭钱，保证含饭人均仍在所选档位内
     const riceDish = (dishData || []).find(d => d && d.is_active !== false && d.category === '主食'
       && typeof d.name === 'string' && d.name.includes('米饭'));
     const riceReserve = riceDish ? (Number(riceDish.price) || 0) * params.partySize : 0;
     const sets = tableRecommend.buildTableSets({
-      pools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson, reservedExtras: riceReserve,
+      pools: effPools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson, reservedExtras: riceReserve,
     }).map(s => ({
       key: s.key, style: s.style,
       dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
