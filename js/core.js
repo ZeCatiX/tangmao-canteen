@@ -445,6 +445,11 @@ function showDishDetail(id){
  document.body.appendChild(modal);
  const el=modal.querySelector('.modal');
  let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el);
+ // 弹窗开关时背景页滚动会跳(bootstrap焦点管理+浏览器滚动锚定),显式钉住滚动位置
+ const _sy=window.scrollY;
+ const pinScroll=()=>window.scrollTo(0,_sy);
+ el.addEventListener('shown.bs.modal',pinScroll);
+ el.addEventListener('hidden.bs.modal',pinScroll);
  el.addEventListener('hidden.bs.modal',function(){modal.remove();},{once:true});
  // 规格行点击=选中SKU:高亮+底部大按钮切到该规格(含售罄禁用)
  el.addEventListener('click',function(e){
