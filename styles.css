@@ -634,6 +634,10 @@ html.dark-mode .dish-sub-sep { color: var(--text-light); border-color: var(--gol
    规格名独占一行,价格+按钮第二行右对齐;宽卡一行放得下时 flex-wrap 不生效 */
 .dish-card .spec-row { flex-wrap: wrap; row-gap: 2px; }
 .dish-card .spec-row > span:last-child { margin-left: auto; }
+/* 详情弹窗规格选择行: 选中态全部由 .selected 类驱动(禁止内联样式——内联优先级高于类,会导致选中高亮无法随点击迁移) */
+.dish-detail-spec { cursor: pointer; }
+.dish-detail-spec:hover { background: rgba(201,169,110,0.08); }
+.dish-detail-spec.selected { background: rgba(201,169,110,0.14); box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 8px; }
 html.dark-mode .dish-card { background: #1a1a1a; border-color: #2a2a2a; }
 html.dark-mode .dish-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 @media (max-width: 576px) { .dish-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .dish-card-body { padding: 8px; } }
