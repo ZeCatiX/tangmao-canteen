@@ -1682,21 +1682,22 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
 
   // 加载用户列表
   var usersCache = [];
-  function loadUsers() {
+  function loadUsers(q) {
     const token = localStorage.getItem('adminToken');
     document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载中...</td></tr>';
-    fetch('/api/admin/users', {
+    fetch('/api/admin/users' + (q ? '?q=' + encodeURIComponent(q) : ''), {
       headers: { 'Authorization': 'Bearer ' + token }
     })
       .then(r => r.json()).then(d => {
         if (!d.success) return;
         usersCache = d.users;
-        renderUserRows(d.users);
+        renderUserRows(d.users, d.total);
       }).catch(() => { document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载失败</td></tr>'; });
   }
-  function renderUserRows(users) {
+  function renderUserRows(users, total) {
     if (!users.length) { document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">无匹配用户</td></tr>'; return; }
-    document.querySelector('#user-table-body').innerHTML = users.map(u =>
+    const hint = (total && total > users.length) ? '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:8px;background:#fdfaf5;font-size:0.8rem;">共 ' + esc(total) + ' 位用户 · 当前显示最新 ' + esc(users.length) + ' 位 · 顶部搜索框可按用户名查找</td></tr>' : '';
+    document.querySelector('#user-table-body').innerHTML = hint + users.map(u =>
       '<tr><td>' + esc(u.id) + '</td><td>' + esc(u.username) + '</td><td>' + (u.created_at ? new Date(u.created_at).toLocaleString() : '-') + '</td><td>' + (u.last_login ? new Date(u.last_login).toLocaleString() : '从未登录') + '</td>'
       + '<td><button class="btn btn-sm btn-outline-secondary text-body" onclick="toggleUserDetail(' + esc(u.id) + ', this)" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;">详情</button>'
       + '<button class="btn btn-sm btn-outline-secondary text-body" onclick="openResetPwd(' + esc(u.id) + ', \'' + esc(u.username).replace(/'/g, "\\'") + '\')" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;">重置密码</button>'
@@ -1728,7 +1729,13 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     }
   }
   // 用户搜索（客户端过滤用户名）
-  (function(){ var s=document.getElementById('user-search'); if(s) s.addEventListener('input', function(){ var q=this.value.trim().toLowerCase(); renderUserRows((usersCache||[]).filter(u => (u.username||'').toLowerCase().includes(q))); }); })();
+  // 用户搜索：300ms 防抖走服务端 ILIKE 查询(可搜全库)，空串回到最新 200 位
+  (function(){ var s=document.getElementById('user-search'); if(!s) return; var t=null;
+    s.addEventListener('input', function(){ var q=this.value.trim();
+      renderUserRows((usersCache||[]).filter(u => (u.username||'').toLowerCase().includes(q.toLowerCase())));
+      clearTimeout(t); t=setTimeout(function(){ loadUsers(q || undefined); }, 300);
+    });
+  })();
 
   // ─── 重置用户密码（顾客忘记密码时店主线下核实后操作）───
   var resetPwdUserId = null, resetPwdUsername = '';

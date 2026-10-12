@@ -598,7 +598,7 @@ app.get('/api/admin/feedback-summary', async (req, res) => {
   try {
     const pool = db;
     const result = await pool.query(
-      "SELECT f.id, f.dish_id, d.name as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC LIMIT 50"
+      "SELECT f.id, f.dish_id, COALESCE(d.name, '已删除菜品(#' || f.dish_id || ')') as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC LIMIT 50"
     );
     const dist = await pool.query("SELECT rating, COUNT(*) FROM feedback GROUP BY rating ORDER BY rating");
     res.json({ success: true, feedbacks: result.rows, distribution: dist.rows });
@@ -2444,8 +2444,17 @@ app.post('/api/admin/dish/batch-delete', async (req, res) => {
 app.get('/api/admin/users', async (req, res) => {
   try {
     const pool = db;
-    const result = await pool.query("SELECT id, username, created_at, last_login FROM users ORDER BY last_login DESC NULLS LAST");
-    res.json({ success: true, users: result.rows });
+    // 分页+服务端搜索：全量渲染曾一次性拉 5000+ 测试账号拖垮用户管理页
+    const q = String(req.query.q || '').trim();
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 1000);
+    const params = [];
+    let where = '';
+    if (q) { where = ' WHERE username ILIKE $1'; params.push('%' + q + '%'); }
+    const totalR = await pool.query('SELECT COUNT(*)::int AS n FROM users' + where, params);
+    params.push(limit);
+    // created_at DESC:刚注册的用户必须排最前(管理端即时可见;last_login 会把未登录新用户沉底且被分页截断)
+    const result = await pool.query('SELECT id, username, created_at, last_login FROM users' + where + ' ORDER BY created_at DESC LIMIT $' + params.length, params);
+    res.json({ success: true, users: result.rows, total: totalR.rows[0].n, limit });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
