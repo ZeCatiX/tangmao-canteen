@@ -422,7 +422,10 @@ function showDishDetail(id){
  const al=d.allergies||{};
  const alTags=[['seafood','海鲜'],['peanut','花生'],['egg','鸡蛋'],['soy','大豆'],['gluten','麸质']].filter(a=>al[a[0]]).map(a=>'<span style="background:rgba(192,57,43,0.12);color:#c0392b;font-size:0.72rem;padding:2px 8px;border-radius:10px;margin-right:4px;">⚠ '+a[1]+'</span>').join('');
  const imgHtml=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;" alt="'+esc(d.name)+'" onerror="this.style.display=\'none\'">':(d.image_url?'<div style="font-size:5rem;text-align:center;">'+esc(d.image_url)+'</div>':'');
- const specs=(specList.length>1||specList[0]!==d)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+specList.map(v=>'<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:3px 0;border-bottom:1px dashed #eee;gap:6px;"><span>'+esc(v._flavorLabel||'标准')+'</span><span style="display:inline-flex;align-items:center;gap:8px;">'+esc(formatPrice(v))+'<button class="btn btn-sm add-to-cart-btn" data-id="'+v.id+'"'+(v.is_sold_out===true?' disabled style="background:#ccc;color:#888;border:none;border-radius:6px;padding:1px 10px;"':' style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:1px 10px;font-weight:600;"')+'>＋</button></span></div>').join('')+'</div>':'';
+ /* 规格行=可点选的选项(选中高亮),底部大按钮加"选中的"规格——标准电商SKU选择交互 */
+ const selId0=specList[0].id;
+ const specs=(specList.length>1||specList[0]!==d)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+specList.map(v=>'<div class="dish-detail-spec'+(v.id===selId0?' selected':'')+'" data-sel-id="'+v.id+'" style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:5px 8px;border-bottom:1px dashed #eee;gap:6px;cursor:pointer;'+(v.id===selId0?'background:rgba(201,169,110,0.14);box-shadow:inset 0 0 0 1.5px var(--gold);border-radius:8px;':'')+'"><span>'+esc(v._flavorLabel||'标准')+'</span><span style="display:inline-flex;align-items:center;gap:8px;">'+esc(formatPrice(v))+'</span></div>').join('')+'<div style="font-size:0.75rem;color:#8b7a6a;margin-top:4px;">点击规格选择后加入购物车</div></div>':'';
+ let selId=selId0;
  const modal=document.createElement('div');
  modal.id='dish-detail-modal';
  modal.innerHTML='<div class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="border-radius:14px;overflow:hidden;">'
@@ -437,14 +440,23 @@ function showDishDetail(id){
   +specs
   +(alTags?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">'+(menuLang==='en'?'Allergens':'含过敏源')+'</div>'+alTags+'</div>':'')
   +'<div style="margin-top:10px;font-size:0.8rem;color:#8b7a6a;">'+(d.is_sold_out===true?(menuLang==='en'?'⚠ Sold out today':'⚠ 今日已售罄'):(menuLang==='en'?'✅ Orderable now':'✅ 可正常点餐'))+(d.serving?' · '+esc(specLang(d.serving)):'')+'</div>'
-  +'<div style="margin-top:12px;"><button class="btn add-to-cart-btn w-100" data-id="'+d.id+'"'+(d.is_sold_out===true?' disabled style="background:#ccc;color:#888;border:none;border-radius:8px;padding:10px;font-weight:600;"':` style="background:var(--primary-accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;letter-spacing:2px;"`)+'>'+(d.is_sold_out===true?(menuLang==='en'?'Sold out':'已售罄'):(menuLang==='en'?'Add to cart':'加入购物车'))+'</button></div>'
+  +'<div style="margin-top:12px;"><button class="btn add-to-cart-btn w-100" data-id="'+selId+'"'+((specList[0]&&specList[0].is_sold_out===true)||d.is_sold_out===true?' disabled style="background:#ccc;color:#888;border:none;border-radius:8px;padding:10px;font-weight:600;"':` style="background:var(--primary-accent);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:600;letter-spacing:2px;"`)+'>'+(d.is_sold_out===true?(menuLang==='en'?'Sold out':'已售罄'):(menuLang==='en'?'Add to cart':'加入购物车'))+'</button></div>'
   +'</div></div></div></div>';
  document.body.appendChild(modal);
  const el=modal.querySelector('.modal');
  let m=bootstrap.Modal.getInstance(el);if(!m)m=new bootstrap.Modal(el);
  el.addEventListener('hidden.bs.modal',function(){modal.remove();},{once:true});
- // 弹窗内加购后自动收起,让用户看到菜单页的加购反馈(数量+与浮条),不挡视线
+ // 规格行点击=选中SKU:高亮+底部大按钮切到该规格(含售罄禁用)
  el.addEventListener('click',function(e){
+  const spec=e.target.closest('.dish-detail-spec');
+  if(spec&&spec.dataset.selId){
+   selId=parseInt(spec.dataset.selId,10);
+   modal.querySelectorAll('.dish-detail-spec').forEach(x=>x.classList.toggle('selected',x===spec));
+   const sp=specList.find(v=>v.id===selId);
+   const big=el.querySelector('.add-to-cart-btn.w-100');
+   if(big&&sp){const so=sp.is_sold_out===true;big.dataset.id=String(selId);big.disabled=so;big.style.background=so?'#ccc':'var(--primary-accent)';big.style.color=so?'#888':'#fff';}
+   return;
+  }
   if(e.target.closest('.add-to-cart-btn')&&!e.target.disabled){
    const inst=bootstrap.Modal.getInstance(el);
    setTimeout(function(){inst&&inst.hide();},350);
