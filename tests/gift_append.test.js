@@ -68,3 +68,14 @@ test('赠菜追加：取消单不能加菜（状态拦截回归）', async () =>
   assert.equal(add.status, 400, '取消单加菜应被拒');
   assert.match(add.body.error || '', /取消/, '错误信息应说明订单已取消');
 });
+
+test('席面生成：人均不得超所选预算档 6% 以上（预算硬上限回归）', async () => {
+  const exclude = [2071, 2130, 2129, 2094, 2075, 2111, 2104, 2079, 2122, 2128, 2101, 2117, 2103, 2107, 2076, 2069, 2137];
+  for (const budget of [49, 60, 80, 89]) {
+    const r = await api('/api/recommend/table', { method: 'POST', body: { partySize: 4, budgetPerPerson: budget, excludeIds: exclude } });
+    assert.equal(r.body.success, true);
+    for (const s of r.body.sets || []) {
+      assert.ok(s.perPerson <= budget * 1.06, `${s.style} 人均 ${s.perPerson} 超出预算档 ${budget} 的 6% 容差`);
+    }
+  }
+});
