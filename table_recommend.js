@@ -98,6 +98,24 @@ function isMeaty(d) {
   return /鱼|虾|蟹|鳝|肚|牛|羊|排骨|肘子|海鲜|鸡(?!蛋)|鸭(?!蛋)|肉/.test(d.name || '');
 }
 
+// 宗教/饮食硬排除（2026-10-08 用户指正：清真实测曾出猪肉系菜——宗教饮食是硬约束,
+// 只进 ML 打分特征不做池级排除 = 给清真实客推猪肉菜,严重违规）
+// 清真：剔除猪肉系菜名(猪/肉夹馍/小酥肉/肘子/腊肉/香肠/狮子头/蒸盆子/烧三鲜等,模糊混合肉菜一律宁严勿漏)
+// 素食：剔除全部荤菜与海鲜
+// 局限：菜名关键词匹配非万全,长期应为菜品增加 halal/vegetarian 数据位(店家录入时标记)
+function filterByReligion(pools, religion) {
+  if (religion !== '清真' && religion !== '素食') return pools;
+  const out = {};
+  for (const k of Object.keys(pools)) {
+    out[k] = pools[k].filter(d => {
+      const name = String(d.name || '');
+      if (religion === '清真') return !/猪|肉夹馍|小酥肉|肘子|腊肉|香肠|狮子头|蒸盆子|烧三鲜/.test(name);
+      return !isMeaty(d) && !(d.allergies && d.allergies.seafood);
+    });
+  }
+  return out;
+}
+
 // 变体排序分（三套哲学）：家常=吃饱（平价优先，同预算吃更多道）；
 // 宴请=吃好（贵菜硬菜往前，撑得起排场）；打卡=吃特色（招牌/传承陕菜/江湖海鲜优先，人气仅弱参考）。
 // prevPenalty：跨套差异化——前几套已选过的菜按次数降权（降权不排除，保留少量重叠）。
@@ -481,6 +499,7 @@ module.exports = {
   ingredientOf,
   normalizeAllergies,
   isMeaty,
+  filterByReligion,
   buildPools,
   quotasFor,
   pickFromPool,
