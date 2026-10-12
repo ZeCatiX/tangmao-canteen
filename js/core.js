@@ -401,18 +401,35 @@ function buildCategoryUI(){
 function showDishDetail(id){
  const d=dishData.find(x=>x.id===id);
  if(!d)return;
+ // 规格组重聚: 虚拟主卡(同基础名规格互并)的 _variants 挂在渲染期克隆上,详情按同一规则重聚,
+ // 否则弹窗丢规格(如一口脆虾球原味/芥末味、华山论剑年份、八宝茶壶)
+ const nm=String(d.name||'');
+ const vm=nm.match(/^(.+)\(([^()]+)\)$/);
+ let specList,h4Name;
+ if(vm){
+  const base=vm[1];
+  const group=dishData.filter(x=>x.is_active!==false&&String(x.name||'').indexOf(base+'(')===0).sort((a,b)=>a.id-b.id);
+  specList=group.map(x=>Object.assign({},x,{name:base,_flavorLabel:(String(x.name).match(/\(([^()]+)\)$/)||[])[1]}));
+  h4Name=base;
+ } else if(d._variants&&d._variants.length){
+  specList=[d].concat(d._variants);
+  h4Name=dishNameOf(d);
+ } else {
+  specList=[d];
+  h4Name=dishNameOf(d);
+ }
  const old=document.getElementById('dish-detail-modal');if(old)old.remove();
  const al=d.allergies||{};
  const alTags=[['seafood','海鲜'],['peanut','花生'],['egg','鸡蛋'],['soy','大豆'],['gluten','麸质']].filter(a=>al[a[0]]).map(a=>'<span style="background:rgba(192,57,43,0.12);color:#c0392b;font-size:0.72rem;padding:2px 8px;border-radius:10px;margin-right:4px;">⚠ '+a[1]+'</span>').join('');
  const imgHtml=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;" alt="'+esc(d.name)+'" onerror="this.style.display=\'none\'">':(d.image_url?'<div style="font-size:5rem;text-align:center;">'+esc(d.image_url)+'</div>':'');
- const specs=(d._variants&&d._variants.length)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+[d].concat(d._variants).map(v=>'<div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:3px 0;border-bottom:1px dashed #eee;"><span>'+esc((v._flavorLabel||(String(v.name).match(/\\(([^()]+)\\)$/)||[,''])[1])||'标准')+'</span><span>'+esc(formatPrice(v))+'</span></div>').join('')+'</div>':'';
+ const specs=(specList.length>1||specList[0]!==d)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+specList.map(v=>'<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:3px 0;border-bottom:1px dashed #eee;gap:6px;"><span>'+esc(v._flavorLabel||'标准')+'</span><span style="display:inline-flex;align-items:center;gap:8px;">'+esc(formatPrice(v))+'<button class="btn btn-sm add-to-cart-btn" data-id="'+v.id+'"'+(v.is_sold_out===true?' disabled style="background:#ccc;color:#888;border:none;border-radius:6px;padding:1px 10px;"':' style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:1px 10px;font-weight:600;"')+'>＋</button></span></div>').join('')+'</div>':'';
  const modal=document.createElement('div');
  modal.id='dish-detail-modal';
  modal.innerHTML='<div class="modal fade" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="border-radius:14px;overflow:hidden;">'
   +'<button type="button" class="btn-close" data-bs-dismiss="modal" style="position:absolute;top:10px;right:10px;z-index:10;background-color:rgba(255,255,255,0.9);border-radius:50%;padding:8px;"></button>'
   +imgHtml
   +'<div class="modal-body" style="padding:16px 20px;">'
-  +'<h4 style="font-family:\'Noto Serif SC\',serif;font-weight:700;">'+esc(dishNameOf(d))+(d.tags&&d.tags.includes('招牌')?' <span style="background:var(--primary-accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:10px;vertical-align:middle;">招牌</span>':'')+'</h4>'
+  +'<h4 style="font-family:\'Noto Serif SC\',serif;font-weight:700;">'+esc(h4Name)+(d.tags&&d.tags.includes('招牌')?' <span style="background:var(--primary-accent);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:10px;vertical-align:middle;">招牌</span>':'')+'</h4>'
   +'<p style="color:#8b7a6a;font-size:0.85rem;">'+esc(catNameOf(d.category))+' · '+esc(menuLang==='en'?(SPICE_EN[d.spiciness]||d.spiciness):d.spiciness)+' · '+(menuLang==='en'?('Salt '+(SALT_EN[d.saltiness]||d.saltiness)+' · Sweet-sour '+(SWEET_EN[d.sweetness]||d.sweetness)+' · Calories '+(CAL_EN[d.calorie]||d.calorie||'Unknown')):('咸淡'+esc(d.saltiness)+' · 甜酸'+esc(d.sweetness)+' · 热量'+esc(d.calorie||'未知')))+'</p>'
   +(menuLang==='en'&&d.description_en?'<p style="font-size:0.9rem;color:var(--text);">'+esc(d.description_en)+'</p>':'')
   +(d.description?'<p style="font-size:0.9rem;">'+esc(d.description)+'</p>':'')
@@ -524,7 +541,7 @@ function renderMenuTable(){
    const c2=cart.find(c=>c.id===d2.id);const q2=c2?(c2.qty||1):0;
    const so=d2.is_sold_out===true;
    const ctrl=so?'<span style="font-size:0.8rem;color:#b3261e;background:rgba(179,38,30,0.08);padding:3px 10px;border-radius:10px;white-space:nowrap;">已售罄</span>':(q2>0?'<span class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+q2+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+d2.id+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></span>':'<button class="btn btn-sm add-to-cart-btn" data-id="'+d2.id+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 12px;font-weight:600;white-space:nowrap;">＋ 加入</button>');
-   return '<div class="d-flex justify-content-between align-items-center" style="margin-top:4px;gap:6px;'+(so?'opacity:0.65;':'')+'"><span style="font-size:0.85rem;color:var(--text-light);white-space:nowrap;">'+esc(specLang(specLabel(d2)))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;white-space:nowrap;'+(so?'text-decoration:line-through;':'')+'">'+esc(formatPrice(d2))+'</strong>'+ctrl+'</span></div>';
+   return '<div class="d-flex justify-content-between align-items-center spec-row" style="margin-top:4px;gap:6px;'+(so?'opacity:0.65;':'')+'"><span style="font-size:0.85rem;color:var(--text-light);white-space:nowrap;">'+esc(specLang(specLabel(d2)))+'</span><span style="display:inline-flex;align-items:center;gap:8px;"><strong style="color:var(--primary);font-size:1rem;white-space:nowrap;'+(so?'text-decoration:line-through;':'')+'">'+esc(formatPrice(d2))+'</strong>'+ctrl+'</span></div>';
   };
   let priceBlock;
   if(d._variants&&d._variants.length){
