@@ -169,4 +169,23 @@ describe('排版与无障碍检查', () => {
     assert.ok(overflow <= 0, '平板端不应水平溢出，溢出量: ' + overflow + 'px');
     await page.setViewport({ width: 1280, height: 800 });
   });
+
+  it('导航栏吸顶:深滚后仍固定在视口顶部（回归：长列表失联）', async () => {
+    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await sleep(400);
+    // 进入全部菜单(最长列表),深滚
+    await page.evaluate(() => document.getElementById('nav-dataset')?.click());
+    await sleep(600);
+    await page.evaluate(() => window.scrollTo(0, 1500));
+    await sleep(400);
+    const nav = await page.evaluate(() => {
+      const el = document.querySelector('nav.navbar');
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return { position: cs.position, viewportTop: Math.round(r.top) };
+    });
+    assert.ok(nav.position === 'sticky', 'navbar 应为 sticky 定位，实际: ' + nav.position);
+    assert.ok(Math.abs(nav.viewportTop) <= 2, '深滚后 navbar 应贴视口顶部，实际 top: ' + nav.viewportTop);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  });
 });
