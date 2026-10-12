@@ -1274,9 +1274,10 @@ async function checkoutCart(){
     backup.lastOrderRounds=JSON.stringify(rounds);
     // 保存被赠桌小票（本地只读视图：0元+原价）
     ssSet('giftReceipt_'+tableNumber,JSON.stringify({id:d.orderId,table:tableNumber,from:myTableForGift,items:items}));
-    // 追加到本桌订单（本桌计费，标记 giftTo）
-    safeFetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems})})
-     .then(()=>{}).catch(()=>{showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
+    // 追加到本桌订单（本桌计费，标记 giftTo）——必须带 tableNumber:游客无登录态,桌号即归属凭证,缺失会被 /add 的归属校验 404 且被静默吞掉
+    safeFetch('/api/order/'+backup.lastOrderId+'/add',{method:'POST',headers:{'Content-Type':'application/json',...authHeaders()},body:JSON.stringify({items:giftPayItems,tableNumber:backup.lastOrderTable})})
+     .then(d2=>{if(!d2.success)showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
+     .catch(()=>{showMessage('提示','赠菜已下单，但计入本桌账单失败，请告知服务员',null,4000);})
      .finally(finishSide);
     return;
    }
