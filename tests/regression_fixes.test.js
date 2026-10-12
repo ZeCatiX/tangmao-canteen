@@ -199,6 +199,24 @@ describe('前端修复回归', () => {
     assert.ok(!prefBlock.includes('resetRecommendation()'), '进入偏好页不应清空 currentRecommendation(数组与卡片须同步)');
     assert.ok(/function openStarFeedback\(dish\)\{\s*if\(!dish\)/.test(s), '评分入口应对空引用防御提示');
   });
+  it('admin.html 内联脚本语法有效（2026-10-08 回归：重复赋值行曾致整个script块瘫痪）', () => {
+    const html = read('admin.html');
+    const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(s => s.trim());
+    assert.ok(blocks.length >= 1, '应存在内联脚本块');
+    blocks.forEach((code, i) => {
+      let err = null;
+      try { new Function(code); } catch (e) { err = e.message; }
+      assert.ok(!err, '内联脚本块 #' + (i + 1) + ' 语法错误: ' + err);
+    });
+  });
+  it('用户管理分页与服务端搜索（2026-10-08 回归）', () => {
+    const server = read('server.js');
+    assert.ok(server.includes("WHERE username ILIKE $1"), '用户接口应支持服务端 ILIKE 搜索');
+    assert.ok(/LIMIT \$/.test(server.split("app.get('/api/admin/users'")[1]?.split('app.get')[0] || ''), '用户接口应有分页上限');
+    const admin = read('admin.html');
+    assert.ok(admin.includes("renderUserRows(d.users, d.total)"), '客户端应传 total 供提示行');
+    assert.ok(admin.includes('位用户 · 当前显示最新'), '应有总量提示行');
+  });
 });
 
 // ================================================================
