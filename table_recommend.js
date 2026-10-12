@@ -362,6 +362,22 @@ function buildTableSets({ pools, partySize, budgetPerPerson, reservedExtras }) {
         }
       }
     }
+    // 预算硬上限兜底：无论哪条路径超支(招牌非严格破例/荤菜地板价/强填槽)，
+    // 最终菜品总价必须收敛到 (目标人均×人数)×1.05 以内——超限从 _score 最低的菜开始移除
+    // (保席面骨架,最多保留 3 道；米饭钱在 reservedExtras 已预留,不受此约束)
+    const hardDishTotal = targetPerPerson * partySize * 1.05;
+    if (state.total > hardDishTotal) {
+      const byWorst = picked.slice().sort((a, b) =>
+        ((a.dish._score || 0) - (b.dish._score || 0)) || ((Number(b.dish.price) || 0) - (Number(a.dish.price) || 0)));
+      for (const p of byWorst) {
+        if (state.total <= hardDishTotal || picked.length <= 3) break;
+        const price = Number(p.dish.price) || 0;
+        if (price <= 0) continue;
+        state.total -= price;
+        picked.splice(picked.indexOf(p), 1);
+      }
+      overBudget = state.total > hardDishTotal;
+    }
     // 本套已选菜计入跨套惩罚，下一套排序时让位给没上过的菜；
     // 热菜池惩罚减半——若全額惩罚，荤热菜会在后几套被素菜挤出（打卡全素教训）
     for (const p of picked) {
