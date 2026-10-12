@@ -630,6 +630,10 @@ html.dark-mode .dish-sub-sep { color: var(--text-light); border-color: var(--gol
 .dish-card { background: #fff; border: 1px solid rgba(201,169,110,0.45); border-radius: 12px; overflow: hidden; transition: all 0.3s; }
 .dish-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.1); transform: translateY(-2px); }
 .dish-card-body { padding: 10px 12px 12px; }
+/* 多规格行(原味/芥末味各带加购按钮≈170px)在卡片宽度(157px起)内必然换行:
+   规格名独占一行,价格+按钮第二行右对齐;宽卡一行放得下时 flex-wrap 不生效 */
+.dish-card .spec-row { flex-wrap: wrap; row-gap: 2px; }
+.dish-card .spec-row > span:last-child { margin-left: auto; }
 html.dark-mode .dish-card { background: #1a1a1a; border-color: #2a2a2a; }
 html.dark-mode .dish-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
 @media (max-width: 576px) { .dish-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .dish-card-body { padding: 8px; } }
