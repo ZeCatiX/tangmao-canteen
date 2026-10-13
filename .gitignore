@@ -96,3 +96,6 @@ logo-preview-full.png
 
 # AI 生图产物(sensenova-image skill 输出,可随时重新生成)
 gen_images/
+
+# 前端构建产物(部署脚本/构建命令生成,不入库)
+script.js
