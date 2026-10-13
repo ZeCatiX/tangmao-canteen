@@ -411,35 +411,9 @@ app.get('/api/dishes/:id', (req, res) => {
   res.json({ success: true, dish });
 });
 
-// ─── 本桌账单（免登录，凭签名桌码）───
-// 桌码 = <桌号>.<HMAC前16位>：没有签名密钥无法伪造，避免"随便输桌号就能看别人账单"
-const TABLE_SECRET = process.env.TABLE_SECRET || process.env.JWT_SECRET || 'tangmao-table-secret';
-function tableSig(n) { return require('crypto').createHmac('sha256', TABLE_SECRET).update(String(n)).digest('hex').slice(0, 16); }
-// 常量时间比较：避免字符串 !== 逐字符短路产生的计时侧信道（与 admin 登录同一套路）
-function tableSigEq(expect, got) {
-  const a = Buffer.from(String(expect)), b = Buffer.from(String(got));
-  return a.length === b.length && require('crypto').timingSafeEqual(a, b);
-}
-app.get('/api/table-view', async (req, res) => {
-  try {
-    const t = String(req.query.t || '');
-    const idx = t.lastIndexOf('.');
-    const rawNum = idx > 0 ? t.slice(0, idx) : '';
-    const sig = idx > 0 ? t.slice(idx + 1) : '';
-    const num = /^\d{1,2}$/.test(rawNum) ? String(parseInt(rawNum, 10)).padStart(2, '0') : '';
-    // 兼容旧版一位桌号链接：签名按原样或补零后匹配均可
-    if (!num || !sig || !(tableSigEq(tableSig(num), sig) || tableSigEq(tableSig(rawNum), sig))) {
-      return res.status(403).json({ success: false, error: '无效的桌码' });
-    }
-    const pool = db;
-    const r = await pool.query(
-      "SELECT id, items, total_price, dish_count, status, created_at FROM orders WHERE table_number = $1 AND status <> 'cancelled' ORDER BY id DESC LIMIT 20",
-      [num]
-    );
-    res.json({ success: true, tableNumber: num, orders: r.rows });
-  } catch (e) { logger.error('桌码查询失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
+// ─── 本桌账单(免登录,凭签名桌码)─── 拆分至 server/routes/table-view.js(2026-10-13 改造4)
+const { register: registerTableView, tableSig } = require('./server/routes/table-view');
+registerTableView(app, { db, logger });
 // ═══════════════════════════════════════════════
 // 管理后台认证
 // ═══════════════════════════════════════════════
@@ -700,124 +674,8 @@ app.delete('/api/admin/dish/:id/permanent', async (req, res) => {
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
-// 用户注册
-app.post('/api/user/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, error: '用户名和密码不能为空' });
-    if (username.trim().length < 2) return res.status(400).json({ success: false, error: '用户名至少2个字符' });
-    if (username.trim().length > 20) return res.status(400).json({ success: false, error: '用户名不能超过20个字符' });
-    if (!/^[一-龥A-Za-z0-9_-]{2,20}$/.test(username.trim())) return res.status(400).json({ success: false, error: '用户名只能包含中英文、数字、下划线、短横线' });
-    if (password.length < 8) return res.status(400).json({ success: false, error: '密码至少8个字符' });
-    if (password.length > 128) return res.status(400).json({ success: false, error: '密码不能超过20个字符' });
-    if (!/[A-Z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含大写字母' });
-    if (!/[a-z]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含小写字母' });
-    if (!/[0-9]/.test(password)) return res.status(400).json({ success: false, error: '密码必须包含数字' });
-    const existing = await userStorage.findUserByUsername(username);
-    if (existing) return res.status(400).json({ success: false, error: '用户名已存在' });
-    const newUser = await userStorage.createUser(username, password);
-    if (newUser) {
-      logger.info(`新用户注册：${username}`);
-      const token = generateToken({ username: newUser.username, id: newUser.id });
-      res.json({ success: true, message: '注册成功', token, user: { username: newUser.username } });
-    } else {
-      res.status(500).json({ success: false, error: '注册失败' });
-    }
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-// 用户登录
-app.post('/api/user/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, error: '用户名和密码不能为空' });
-    const user = await userStorage.validateLogin(username, password);
-    if (!user) return res.status(401).json({ success: false, error: '用户名或密码错误' });
-    const token = generateToken(user);
-    logger.info(`用户登录：${username}`);
-    res.json({ success: true, message: '登录成功', token, user: { username: user.username, preferences: user.preferences || {}, favorites: user.favorites || [], blacklist: user.blacklist || [] } });
-  } catch (e) { logger.error('登录失败:', e.message); res.status(500).json({ success: false, error: '服务器错误' }); }
-});
-
-// 用户偏好保存（软身份验证，有token则校验所有权，无token也放行）
-app.post('/api/user-preferences', authMiddleware, async (req, res) => {
-  try {
-    const { preferences } = req.body;
-    const username = req.user.username;
-    if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    const updated = await userStorage.updateUser(username, { preferences: preferences || {} });
-    if (updated) {
-      res.json({ success: true, message: '偏好已保存' });
-    } else {
-      res.status(404).json({ success: false, error: '用户不存在' });
-    }
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-// 用户收藏同步（强制认证，使用 token 中的用户名，防止越权篡改他人数据）
-app.post('/api/user-favorites', authMiddleware, async (req, res) => {
-  try {
-    const { favorites } = req.body;
-    const username = req.user.username;
-    if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    // 只接受正整数菜品 ID：这些值会进前端渲染，放开任意字符串 = 存储型 XSS 的入口
-    const list = Array.isArray(favorites)
-      ? favorites.map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 500)
-      : [];
-    await userStorage.updateUser(username, { favorites: list });
-    res.json({ success: true, message: '收藏已同步' });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-app.post('/api/user-blacklist', authMiddleware, async (req, res) => {
-  try {
-    const { blacklist } = req.body;
-    const username = req.user.username;
-    if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    // 同收藏：只接受正整数菜品 ID
-    const list = Array.isArray(blacklist)
-      ? blacklist.map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 500)
-      : [];
-    await userStorage.updateUser(username, { blacklist: list });
-    res.json({ success: true, message: '黑名单已同步' });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-// 退出登录（吊销当前 token）
-app.post('/api/user/logout', authMiddleware, async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      const revoked = await require('./auth').revokeToken(token);
-      if (!revoked) {
-        logger.warn('退出登录：token 吊销失败');
-      }
-    }
-    res.json({ success: true, message: '已退出登录' });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-// 注销账号（需要JWT认证，且只能注销自己的账号；需密码二次确认防误触）
-app.post('/api/user/delete', authMiddleware, async (req, res) => {
-  try {
-    const username = req.user.username;
-    if (!username) return res.status(400).json({ success: false, error: '缺少用户名' });
-    const { password } = req.body || {};
-    if (!password) return res.status(400).json({ success: false, error: '请输入登录密码确认注销' });
-    const valid = await userStorage.validateLogin(username, password);
-    if (!valid) return res.status(400).json({ success: false, error: '密码验证失败，账号未注销' });
-    // 吊销当前token，防止删除后token仍可用
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
-      try { await require('./auth').revokeToken(token); } catch (e) { logger.warn('注销账号：token 吊销失败:', e.message); }
-    }
-    await userStorage.removeUser(username);
-    res.json({ success: true, message: '账号已注销' });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
+// 用户域(注册/登录/偏好/收藏/黑名单/登出/注销)拆分至 server/routes/users.js(2026-10-13 改造4)
+require('./server/routes/users').register(app, { userStorage, generateToken, authMiddleware, logger });
 // 偏好记录
 app.post('/api/preference-log', softAuth, async (req, res) => {
   try {
