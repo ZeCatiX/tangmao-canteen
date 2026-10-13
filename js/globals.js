@@ -23,6 +23,31 @@ var _initialized = false;
 // 页面初始查询串（showSection 的 pushState 会抹掉它，桌码解析需要提前捕获）
 var __initialSearch = (typeof location !== 'undefined' && location.search) || '';
 const API_CACHE_DURATION = 30000;
+
+// ═══════════════ 本地存储键注册表（唯一登记处，2026-10-13） ═══════════════
+// 新增键必须先在此注册（名称/用途/存储区/写入方）；历史模块仍用字面量，增量迁移为 STORE_KEYS.* 引用。
+// 会话键（页面关闭即失效）标注 [SS]，其余为 localStorage 持久键。
+const STORE_KEYS = {
+  // —— 会话与身份 ——
+  userToken: 'userToken', // 登录用户 JWT；登录/登出与带鉴权请求写入
+  currentUser: 'currentUser', // 当前登录用户名
+  users: 'users', // 客户端用户资料缓存（favorites/blacklist/preferences），与服务端双写
+  // —— 点餐 ——
+  cart: 'cart', // 购物车 [{id,name,price,qty,note?}]；加购/结算流程写入
+  orderedDishes: 'orderedDishes', // 本桌已点菜品 id（重复点单提示用）
+  lastOrderRounds: 'lastOrderRounds', // 最近订单轮次快照
+  dishDataCache: 'dishDataCache', // 菜品全量缓存（二次进店加速，注意会滞后于 DB）
+  // —— 偏好与界面 ——
+  savedPrefs: 'savedPrefs', // 口味偏好已保存标记
+  tasteFilled: 'tasteFilled', // 口味补全向导完成标记
+  prefCompletenessDismissed: 'prefCompletenessDismissed', // 偏好补全横幅关闭标记
+  darkMode: 'darkMode', // 'true'/'false'；缺省跟随系统
+  menuLang: 'menuLang', // 'zh'/'en'
+  datasetScrollY: 'datasetScrollY', // 离开菜单区时的滚动位置 [SS]
+  // —— 品牌动效 ——
+  logoIntroShown: 'logoIntroShown', // 开幕动画本会话已播标记 [SS]
+};
+
 const $ = (id) => document.getElementById(id);
 // HTML 转义，防止 XSS
 function esc(str) {
@@ -67,7 +92,7 @@ function formatPrice(d) {
 }
 // 获取用户认证头
 function authHeaders() {
-  const t = localStorage.getItem('userToken');
+  const t = localStorage.getItem(STORE_KEYS.userToken);
   return t ? { Authorization: 'Bearer ' + t } : {};
 }
 const DEFAULT_DISH_IMG =
@@ -114,9 +139,9 @@ function safeFetch(url, opts) {
   const fetcher = opts?.method ? fetch(url, opts) : typeof url === 'string' ? fetch(url, opts) : url;
   return fetcher
     .then((r) => {
-      if (r.status === 401 && localStorage.getItem('userToken')) {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('currentUser');
+      if (r.status === 401 && localStorage.getItem(STORE_KEYS.userToken)) {
+        localStorage.removeItem(STORE_KEYS.userToken);
+        localStorage.removeItem(STORE_KEYS.currentUser);
         showMessage('登录已过期', '请重新登录');
       }
       return r;
@@ -132,14 +157,14 @@ function safeFetch(url, opts) {
 // ═══════════════ 购物车功能 ═══════════════
 function getCart() {
   try {
-    return JSON.parse(localStorage.getItem('cart') || '[]');
+    return JSON.parse(localStorage.getItem(STORE_KEYS.cart) || '[]');
   } catch (e) {
     return [];
   }
 }
 function saveCart(c) {
   try {
-    localStorage.setItem('cart', JSON.stringify(c));
+    localStorage.setItem(STORE_KEYS.cart, JSON.stringify(c));
   } catch (e) {}
   if (typeof updateCartBadge === 'function') updateCartBadge();
 }
@@ -293,7 +318,7 @@ function updateFloatBar() {
 }
 
 // ═══ 中英双语（C11）：菜名/分类/描述按语言显示，切换记忆在 localStorage ═══
-var menuLang = localStorage.getItem('menuLang') || 'zh';
+var menuLang = localStorage.getItem(STORE_KEYS.menuLang) || 'zh';
 var CAT_EN = {
   主食: 'Staples',
   招牌与游西安必打卡: 'Must-Try Signatures',
@@ -884,7 +909,7 @@ function applyUiLangGuarded() {
 }
 function toggleMenuLang() {
   menuLang = menuLang === 'zh' ? 'en' : 'zh';
-  localStorage.setItem('menuLang', menuLang);
+  localStorage.setItem(STORE_KEYS.menuLang, menuLang);
   applyUiLang();
   const sec = document.querySelector('.section.active');
   if (!sec) return;

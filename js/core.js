@@ -906,6 +906,18 @@ function showDishDetail(id) {
   m.show();
 }
 
+// 数量步进器统一渲染(菜单普通卡/规格行/局部刷新共用唯一副本——改样式只改这里)
+function qtyStepperHtml(id, qty) {
+  return (
+    '<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="' +
+    id +
+    '" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">' +
+    qty +
+    '</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="' +
+    id +
+    '" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>'
+  );
+}
 // 局部刷新:菜单里受影响菜品卡的数量控件原地更新,不做全表重绘(根治加购闪烁,2026-10-12)。
 // 返回 true=已局部更新;false=形态超出局部能力(如售罄态),调用方回退 renderMenuTable() 全量重绘。
 function refreshMenuCardCtrl(id) {
@@ -927,14 +939,7 @@ function refreshMenuCardCtrl(id) {
     // 首次加入:＋加入按钮原位换步进器
     const join = card.querySelector('.add-to-cart-btn[data-id="' + idStr + '"]');
     if (join) {
-      join.outerHTML =
-        '<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="' +
-        idStr +
-        '" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">' +
-        qty +
-        '</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="' +
-        idStr +
-        '" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>';
+      join.outerHTML = qtyStepperHtml(idStr, qty);
       return true;
     }
     return false;
@@ -1124,13 +1129,7 @@ function renderMenuTable() {
       const ctrl = so
         ? '<span style="font-size:0.8rem;color:#b3261e;background:rgba(179,38,30,0.08);padding:3px 10px;border-radius:10px;white-space:nowrap;">已售罄</span>'
         : q2 > 0
-          ? '<span class="d-inline-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="' +
-            d2.id +
-            '" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">' +
-            q2 +
-            '</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="' +
-            d2.id +
-            '" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></span>'
+          ? '<span class="d-inline-flex align-items-center gap-1">' + qtyStepperHtml(d2.id, q2) + '</span>'
           : '<button class="btn btn-sm add-to-cart-btn" data-id="' +
             d2.id +
             '" title="' +
@@ -1165,13 +1164,7 @@ function renderMenuTable() {
         esc(formatPrice(d)) +
         '</strong>' +
         (qty > 0
-          ? '<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="' +
-            d.id +
-            '" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">' +
-            qty +
-            '</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="' +
-            d.id +
-            '" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>'
+          ? qtyStepperHtml(d.id, qty)
           : '<button class="btn btn-sm add-to-cart-btn" data-id="' +
             d.id +
             '" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋ 加入</button>') +
