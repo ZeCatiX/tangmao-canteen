@@ -8,8 +8,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const RECOMMENDATION_EFFECT_PATH = path.join(ROOT, 'recommendation_effect.json'); // 项目根(拆出前的 server.js __dirname)
 
 function register(app, deps) {
-  const { adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken, loadModelInfo, getModelInfo, getWorkerReady, getPendingRequestsSize, getErrorStats, toCSV, getFeatureImportanceCache } = deps;
-const runtimeSettings = { autoRetrain: false };
+  const { adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken, loadModelInfo, getModelInfo, getWorkerReady, getPendingRequestsSize, getErrorStats, toCSV, getFeatureImportanceCache, runtimeSettings, saveRuntimeSettings } = deps;
 app.get('/api/admin/table-qrcodes', (req, res) => {
   try {
     const from = Math.max(1, parseInt(req.query.from, 10) || 1);

@@ -2,21 +2,25 @@
 // 唐猫庭院 · Python worker 子系统与 ML 推理路由——从 server.js 整体搬移(2026-10-13 可维护性改造4)
 // 对外: register(app,{logger,state}) 挂载 /api/worker-health 与 /api/predict-rf;
 //       startPythonWorker()/dispatchToWorker() 供席面打分等内部调用。
+const fs = require('fs');
 const path = require('path');
 const logger = require('../logger');
 
-// 项目根(拆出前的 server.js __dirname)
-const ROOT = path.join(__dirname, '..', '..');
+// 项目根(拆出前的 server.js __dirname)。本文件在 server/ 一层深,只回退一级;
+// 曾误抄 routes 子目录的 '../..' 指到 worktree 外,worker spawn 即退(退出码2)
+const ROOT = path.join(__dirname, '..');
 
 let pythonWorker = null;
 let workerReady = false;
 let workerSpawnAt = Date.now();
+// 值必须是 Map:兜底打分(histgbNodeScoreDish/predict-rf 降级)用 .get(key, 默认值) 取序数,
+// 曾误存普通对象导致 Python worker 不可用时兜底路径连环 TypeError
 const ORD_MAPPINGS_CACHE = {
-  '辣度': { '无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4 },
-  '咸淡': { '无': 0, '清淡': 1, '适中': 2, '偏咸': 3 },
-  '甜酸': { '无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4 },
-  '热量': { '无': 0, '低': 1, '中': 2, '高': 3 },
-  '价格区间': { '经济型（<12元）': 0, '标准型（12-20元）': 1, '品质型（20元以上）': 2, '经济': 1, '适中': 2, '品质': 3, '无': 0, '不限': 0 }
+  '辣度': new Map([['无', 0], ['不辣', 1], ['微辣', 2], ['中辣', 3], ['重辣', 4]]),
+  '咸淡': new Map([['无', 0], ['清淡', 1], ['适中', 2], ['偏咸', 3]]),
+  '甜酸': new Map([['无', 0], ['无味', 1], ['偏甜', 2], ['偏酸', 3], ['甜酸', 4]]),
+  '热量': new Map([['无', 0], ['低', 1], ['中', 2], ['高', 3]]),
+  '价格区间': new Map([['经济型（<12元）', 0], ['标准型（12-20元）', 1], ['品质型（20元以上）', 2], ['经济', 1], ['适中', 2], ['品质', 3], ['无', 0], ['不限', 0]])
 };
 
 // ═══ Node 端 HistGB 兜底打分器: Python worker 不可用(重启窗口/崩溃)时的同模型降级 ═══
@@ -198,7 +202,16 @@ function getHealth() {
 function register(app, deps) {
   const { logger: _logger, state } = deps;
 
-  app.get('/api/worker-health', (req, res) => res.json(getHealth()));
+  app.get('/api/worker-health', (req, res) => {
+    const status = getHealth();
+    // 每隔 10 分钟记录一次健康检查日志(与拆分前 server.js 内联版行为一致)
+    const now = Date.now();
+    if (!global._lastHealthLog || now - global._lastHealthLog > 600000) {
+      global._lastHealthLog = now;
+      logger.info(`健康检查: alive=${status.alive} ready=${status.ready} pending=${status.pendingRequests} restarts=${status.restartAttempts}`);
+    }
+    res.json(status);
+  });
 
   app.post('/api/predict-rf', (req, res) => {
     const { userPrefs, dishes } = req.body;
@@ -265,4 +278,18 @@ function register(app, deps) {
   });
 }
 
-module.exports = { register, startPythonWorker, dispatchToWorker, getHealth };
+// 优雅停机:清空待处理请求(503)并杀掉 Python worker——server.js gracefulShutdown 调用
+function shutdown() {
+  try {
+    if (pythonWorker && pythonWorker.exitCode === null) {
+      for (const [, pr] of pendingRequests) {
+        if (pr && pr.res && !pr.res.headersSent) pr.res.status(503).json({ success: false, error: '服务器正在关闭，请稍后重试' });
+      }
+      pendingRequests.clear();
+      pythonWorker.kill();
+      logger.info('Python Worker 已关闭');
+    }
+  } catch (e) { logger.warn('关闭 Python Worker 失败: ' + (e?.message || String(e))); }
+}
+
+module.exports = { register, startPythonWorker, dispatchToWorker, getHealth, shutdown };

@@ -903,7 +903,8 @@ describe('8. 页面元素完整性审计', () => {
 // ================================================================
 describe('9. 后端逻辑健壮性审计', () => {
   it('Python Worker有重启次数限制', () => {
-    const server = read('server.js');
+    // worker 子系统已拆至 server/ml-worker.js(改造4)
+    const server = read('server/ml-worker.js');
     assert.ok(server.includes('MAX_RESTART_ATTEMPTS'), '应有最大重启次数限制');
     assert.ok(server.includes('restartAttempts < MAX_RESTART_ATTEMPTS'), '应检查重启次数');
   });
@@ -1091,7 +1092,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('订单支持桌号参数', () => {
-    const server = read('server.js');
+    // 一桌菜 tableNumber 参数已随席面域拆至 server/routes/recommend.js(改造4)
+    const server = read('server/routes/recommend.js');
     assert.ok(server.includes('tableNumber'), '订单支持桌号参数');
   });
 
@@ -1116,7 +1118,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('推荐预测有worker状态检查', () => {
-    const server = read('server.js');
+    // predict-rf 已拆至 server/ml-worker.js(改造4)
+    const server = read('server/ml-worker.js');
     assert.ok(server.includes('workerReady'), '预测路由检查worker状态');
     assert.ok(server.includes('pendingRequests.size >= 100'), '预测路由有请求队列限制');
     assert.ok(server.includes('Worker未就绪'), 'worker未就绪时有提示');
@@ -1247,7 +1250,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('请求队列和指标历史有内存上限', () => {
-    const server = read('server.js');
+    // 请求队列在 server/ml-worker.js,指标历史/错误统计仍在 server.js(改造4)
+    const server = ['server.js', 'server/ml-worker.js'].map(read).join('\n');
     assert.ok(server.includes('pendingRequests.size >= 100'), '请求队列上限100');
     assert.ok(server.includes('history.length > 60'), '指标历史保留60条');
     assert.ok(server.includes('errorStats.hourly.filter'), '错误统计按时间过滤');
@@ -1348,7 +1352,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('特征重要性有缓存', () => {
-    const server = read('server.js');
+    // 特征重要性缓存已拆至 server/routes/recommend.js(改造4)
+    const server = read('server/routes/recommend.js');
     assert.ok(server.includes('FEATURE_IMPORTANCE_CACHE_DURATION'), '特征重要性有缓存时长');
     assert.ok(server.includes('86400000'), '缓存时长24小时');
   });
@@ -1446,7 +1451,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('predict-rf限制菜品数量', () => {
-    const server = read('server.js');
+    // predict-rf 已拆至 server/ml-worker.js(改造4)
+    const server = read('server/ml-worker.js');
     assert.ok(server.includes('dishes.length === 0'), '拒绝空数组');
     const js = read('js/recommendation.js');
     assert.ok(js.includes('slice(0,100)'), '限制最多100个菜品');
@@ -1492,7 +1498,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('Python Worker变量完整', () => {
-    const server = read('server.js');
+    // worker 子系统已拆至 server/ml-worker.js(改造4)
+    const server = read('server/ml-worker.js');
     assert.ok(server.includes('pythonWorker'), 'Worker变量存在');
     assert.ok(server.includes('workerReady'), '就绪状态变量存在');
     assert.ok(server.includes('pendingRequests'), '请求队列变量存在');
@@ -1522,7 +1529,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('predict-rf有请求队列上限', () => {
-    const server = read('server.js');
+    // predict-rf 已拆至 server/ml-worker.js(改造4)
+    const server = read('server/ml-worker.js');
     assert.ok(server.includes('pendingRequests.size >= 100'), '请求队列上限100');
     assert.ok(server.includes('Worker未就绪'), 'worker未就绪提示');
   });

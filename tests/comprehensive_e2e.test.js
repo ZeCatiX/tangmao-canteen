@@ -1242,7 +1242,8 @@ describe('69. 无 spawnSync 阻塞', () => {
   it('server.js 中所有重训练均为异步', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+    // 重训练路由已拆至 server/routes/admin.js(改造4),与 server.js 联合读取
+    const content = ['server.js', 'server/routes/admin.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
     // 手动重训练区域
     const manualBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
     assert.ok(manualBlock.includes('spawn('), '手动重训练应为异步');
@@ -1259,7 +1260,8 @@ describe('70. spawn stdout 泄漏防范', () => {
   it('手动重训练 spawn 使用 stdio 防止 stdout 泄漏', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+    // 重训练路由已拆至 server/routes/admin.js(改造4),与 server.js 联合读取
+    const content = ['server.js', 'server/routes/admin.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
     const manualBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
     assert.ok(manualBlock.includes('stdio: [\'ignore\', \'ignore\', \'pipe\']'), '应使用 stdio 防止 stdout 泄漏');
   });
