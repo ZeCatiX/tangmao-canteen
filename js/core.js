@@ -421,7 +421,7 @@ function showDishDetail(id){
  const old=document.getElementById('dish-detail-modal');if(old)old.remove();
  const al=d.allergies||{};
  const alTags=[['seafood','海鲜'],['peanut','花生'],['egg','鸡蛋'],['soy','大豆'],['gluten','麸质']].filter(a=>al[a[0]]).map(a=>'<span style="background:rgba(192,57,43,0.12);color:#c0392b;font-size:0.72rem;padding:2px 8px;border-radius:10px;margin-right:4px;">⚠ '+a[1]+'</span>').join('');
- const imgHtml=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;" alt="'+esc(d.name)+'" onerror="this.style.display=\'none\'">':(d.image_url?'<div style="font-size:5rem;text-align:center;">'+esc(d.image_url)+'</div>':'');
+ const imgHtml=d.image_url&&(d.image_url.startsWith('/')||d.image_url.startsWith('http'))?'<img src="'+esc(d.image_url)+'" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px;" alt="'+esc(d.name)+'" loading="lazy" onerror="this.style.display=\'none\'">':(d.image_url?'<div style="font-size:5rem;text-align:center;">'+esc(d.image_url)+'</div>':'');
  /* 规格行=可点选的选项(选中高亮),底部大按钮加"选中的"规格——标准电商SKU选择交互 */
  const selId0=specList[0].id;
  const specs=(specList.length>1||specList[0]!==d)?'<div style="margin:10px 0;"><div style="font-size:0.8rem;color:#8b7a6a;margin-bottom:4px;">可选规格</div>'+specList.map(v=>'<div class="dish-detail-spec'+(v.id===selId0?' selected':'')+'" data-sel-id="'+v.id+'" style="display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;padding:5px 8px;border-bottom:1px dashed #eee;gap:6px;cursor:pointer;"><span>'+esc(v._flavorLabel||'标准')+'</span><span style="display:inline-flex;align-items:center;gap:8px;">'+esc(formatPrice(v))+'</span></div>').join('')+'<div style="font-size:0.75rem;color:#8b7a6a;margin-top:4px;">点击规格选择后加入购物车</div></div>':'';
@@ -470,6 +470,35 @@ function showDishDetail(id){
  m.show();
 }
 
+// 局部刷新:菜单里受影响菜品卡的数量控件原地更新,不做全表重绘(根治加购闪烁,2026-10-12)。
+// 返回 true=已局部更新;false=形态超出局部能力(如售罄态),调用方回退 renderMenuTable() 全量重绘。
+function refreshMenuCardCtrl(id){
+ const idStr=String(id);
+ const card=(document.querySelector('#dataset-table-body .cart-qty-plus[data-id="'+idStr+'"]')||
+             document.querySelector('#dataset-table-body .cart-qty-minus[data-id="'+idStr+'"]')||
+             document.querySelector('#dataset-table-body .add-to-cart-btn[data-id="'+idStr+'"]'))?.closest('.dish-card');
+ if(!card)return false;
+ const qty=(getCart().find(c=>c.id===id)||{}).qty||0;
+ if(qty>0){
+  // 已有步进器:数量文本原地改(最高频路径,零重排)
+  const span=card.querySelector('.cart-qty-minus[data-id="'+idStr+'"] + span');
+  if(span){span.textContent=String(qty);return true;}
+  // 首次加入:＋加入按钮原位换步进器
+  const join=card.querySelector('.add-to-cart-btn[data-id="'+idStr+'"]');
+  if(join){
+   join.outerHTML='<div class="d-flex align-items-center gap-1"><button class="btn btn-sm btn-outline-secondary cart-qty-minus" data-id="'+idStr+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">－</button><span style="font-weight:700;min-width:20px;text-align:center;">'+qty+'</span><button class="btn btn-sm btn-outline-success cart-qty-plus add-to-cart-btn" data-id="'+idStr+'" style="padding:2px 8px;border-radius:6px;font-weight:700;">＋</button></div>';
+   return true;
+  }
+  return false;
+ }
+ // 数量归零(规格下限触发移除):步进器原位换回＋加入
+ const minus=card.querySelector('.cart-qty-minus[data-id="'+idStr+'"]');
+ if(minus){
+  minus.parentElement.outerHTML='<button class="btn btn-sm add-to-cart-btn" data-id="'+idStr+'" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-weight:600;">＋<span class="add-txt"> 加入</span></button>';
+  return true;
+ }
+ return false;
+}
 function renderMenuTable(){
  const container=document.getElementById('dataset-table-body');if(!container)return;
  // 如果 dishData 为空，最多重试 3 次
@@ -575,7 +604,7 @@ function renderMenuTable(){
   const kw=q?esc(q):'';
   const hint=q?(menuLang==='en'?('The cat looked everywhere — no "'+kw+'" on the menu'):'唐猫找了一圈，没有找到「'+kw+'」'):(menuLang==='en'?'No dishes match the current filters':'当前筛选条件下没有菜品');
   container.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--text-light);">'
-   +'<img src="/assets/illustrations/search-empty-cat.webp" alt="唐猫拿着放大镜在菜单里寻找" style="width:240px;display:block;margin:0 auto 10px;border-radius:12px;">'
+   +'<img src="/assets/illustrations/search-empty-cat.webp" alt="唐猫拿着放大镜在菜单里寻找" loading="lazy" style="width:240px;display:block;margin:0 auto 10px;border-radius:12px;">'
    +'<p style="font-size:1.05rem;color:var(--ink);margin:0 0 6px;">'+hint+'</p>'
    +'<p style="font-size:0.85rem;margin:0;">'+(menuLang==='en'?'Try another keyword, or reset the filters':'换个关键词，或清除筛选条件再试试')+'</p>'
    +'</div>';
@@ -1202,7 +1231,7 @@ function showCart(){
    const unit=dish&&dish.price_unit?'<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">'+esc(menuLang==='en'?(UNIT_EN[dish.price_unit]||dish.price_unit):dish.price_unit)+'</span>':'';
    const price=parseFloat(x.price)||0;
    const subtotal=price*qtyVal;
-   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span class="dish-emoji" style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'<div style="margin-top:4px;"><input class="form-control form-control-sm cart-note-input" data-id="'+esc(String(x.id))+'" value="'+esc(x.note||'')+'" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;max-width:220px;" aria-label="菜品备注"></div></td>'
+   return '<tr><td>'+(dish&&dish.image_url?(dish.image_url.startsWith('/')||dish.image_url.startsWith('http')?'<img src="'+esc(dish.image_url||'')+'" alt="'+esc(dish.name||'菜品')+'" loading="lazy" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">':'<span class="dish-emoji" style="font-size:2rem;margin-right:8px;vertical-align:middle;">'+esc(dish.image_url)+'</span>'):'')+name+unit+'<div style="margin-top:4px;"><input class="form-control form-control-sm cart-note-input" data-id="'+esc(String(x.id))+'" value="'+esc(x.note||'')+'" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;max-width:220px;" aria-label="菜品备注"></div></td>'
     +'<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>'
     +'<input type="text" class="form-control text-center cart-qty-input" data-id="'+esc(String(x.id))+'" value="'+esc(String(qtyVal))+'" style="width:38px;height:30px;font-size:0.82rem;font-weight:600;padding:0;border-radius:0;border-left:1px solid #dee2e6;border-right:1px solid #dee2e6;text-align:center;display:flex;align-items:center;justify-content:center;">'
     +'<button class="btn btn-outline-secondary cart-qty-plus" data-id="'+esc(String(x.id))+'" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div></td>'

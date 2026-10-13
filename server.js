@@ -22,6 +22,11 @@ function readJSON(filePath) {
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
 
+// 信任一层反向代理(cloudflared 隧道/HTTPS 反代):req.ip 取 X-Forwarded-For 真实客户端,
+// 否则 express-rate-limit 按 X-Forwarded-For 判 IP 失真(ERR_ERL_UNEXPECTED_X_FORWARDED_FOR,2026-10-11 隧道实测)。
+// 生产部署仅经隧道/反代访问,不存在直连伪造面;本地开发无 XFF 头不受影响。
+app.set('trust proxy', 1);
+
 // ⚠️ 安全警告：检查 JWT_SECRET 是否使用默认值
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'tangmao_cat_court_jwt_secret_2026' || process.env.JWT_SECRET === 'tangmao_jwt_secret_2026_prod_replace_me' || process.env.JWT_SECRET === 'tm_jwt_8a3f9c2e7b1d4f6a0c8e2b4d6f0a1c3e5b7d9f0a2c4e6b8d0a2c4e6f8a0b2c4d6' || process.env.JWT_SECRET.length < 16) {
   console.error('❌ 安全错误: JWT_SECRET 使用默认值，请在 .env 中设置强随机密钥！');
