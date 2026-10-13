@@ -9,7 +9,7 @@
     "build": "node build.js",
     "test": "node --test tests/api.test.js",
     "posttest": "node scripts/cleanup_test_orders.js",
-    "test:all": "node --test --test-concurrency=2 tests/api.test.js tests/e2e.test.js tests/comprehensive_e2e.test.js tests/enhanced_e2e.test.js tests/admin_auth_test.js tests/gift_append.test.js",
+    "test:all": "node --test --test-concurrency=2 tests/api.test.js tests/e2e.test.js tests/comprehensive_e2e.test.js tests/enhanced_e2e.test.js tests/admin_auth_test.js tests/gift_append.test.js tests/trust_proxy_e2e.test.js",
     "posttest:all": "node scripts/cleanup_test_orders.js",
     "test:watch": "node --test --watch tests/api.test.js",
     "test:e2e": "node --test tests/e2e.test.js",
