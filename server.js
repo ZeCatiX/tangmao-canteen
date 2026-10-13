@@ -481,17 +481,21 @@ async function adminAuth(req, res, next) {
 // 所有 /api/admin/* 路由需要认证
 app.use('/api/admin', adminAuth);
 
+// 共享运行时开关:admin 域(settings POST/retrain 守卫)与本文件 checkAndRetrain 定时器读写同一份。
+// 拆分时曾丢此声明——rs 块的 Object.assign 被 try/catch 吞掉,30 分钟后的 checkAndRetrain 触发未处理 rejection 崩进程
+const runtimeSettings = { autoRetrain: false };
+
 // 桌码管理（A2）：批量生成签名桌码链接（协议/域名取自请求头，支持反代与隧道）
 // /api/admin/* 业务域拆分至 server/routes/admin.js(登录/上传图/认证中间件仍在本文件)(2026-10-13 改造4)
 require('./server/routes/admin').register(app, {
   adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken,
-  loadModelInfo,
+  loadModelInfo, toCSV, runtimeSettings, saveRuntimeSettings,
   getModelInfo: () => modelInfo,
-  getWorkerReady: () => workerReady,
-  getPendingRequestsSize: () => pendingRequests.size,
+  // worker/特征重要性状态已迁至 ml-worker/recommend 模块,getter 延迟取值(与 modelInfo 同一防 TDZ 手法)
+  getWorkerReady: () => mlworker.getHealth().ready,
+  getPendingRequestsSize: () => mlworker.getHealth().pendingRequests,
   getErrorStats: () => errorStats,
-  toCSV,
-  getFeatureImportanceCache: () => featureImportanceCache,
+  getFeatureImportanceCache: () => recommendDomain.getFeatureImportanceCache(),
 });
 
 // 营业日报（A3）：按日聚合单量/金额/动销/退单/时段分布
@@ -508,37 +512,7 @@ require('./server/routes/admin').register(app, {
 
 // 用户域(注册/登录/偏好/收藏/黑名单/登出/注销)拆分至 server/routes/users.js(2026-10-13 改造4)
 require('./server/routes/users').register(app, { userStorage, generateToken, authMiddleware, logger });
-// 偏好记录
-app.post('/api/preference-log', softAuth, async (req, res) => {
-  try {
-    const { spiciness, saltiness, sweetness, price, calorie, religion, allergies, recommendationMode } = req.body;
-    // userId 取自 JWT，拒绝客户端伪造（与 /api/feedback、/api/order 一致）
-    const effectiveUserId = req.user?.username || 'guest';
-    const pool = db;
-    await pool.query(
-      "INSERT INTO preference_log (spiciness, saltiness, sweetness, price, calorie, religion, allergies, user_id, recommendation_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
-      [spiciness||null, saltiness||null, sweetness||null, price||null, calorie||null, religion||null, allergies||[], effectiveUserId, recommendationMode||'auto']
-    );
-    res.json({ success: true });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
-
-// 推荐次数记录
-app.post('/api/recommendation-log', softAuth, async (req, res) => {
-  try {
-    // userType / userId 取自 JWT，拒绝客户端伪造
-    const effectiveUserId = req.user?.username || 'guest';
-    const effectiveUserType = req.user ? 'user' : 'guest';
-    // mode 区分推荐形态（单菜推荐/一桌菜组合/一桌菜换菜），截断防脏数据
-    let mode = '单菜推荐';
-    if (req.body && typeof req.body.mode === 'string' && req.body.mode.trim()) {
-      mode = req.body.mode.trim().slice(0, 30);
-    }
-    const pool = db;
-    await pool.query('INSERT INTO recommendation_log (user_type, user_id, mode) VALUES ($1,$2,$3)', [effectiveUserType, effectiveUserId, mode]);
-    res.json({ success: true });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
-});
+// 偏好/推荐埋点(preference-log/recommendation-log)拆分至 server/routes/recommend.js(2026-10-13 改造4)
 
 // 偏好统计 API
 
@@ -554,636 +528,17 @@ app.post('/api/recommendation-log', softAuth, async (req, res) => {
 
 // 模型训练历史
 
-// 运行时开关读写（目前只有 autoRetrain：是否按用户反馈自动重训）
+// 运行时开关读写/推荐效果报告/重训练/不佳菜品/模型对比/点击率统计 → server/routes/admin.js(2026-10-13 改造4)
 
-// 推荐效果报告：ML vs 规则（回答「ML 有没有打过规则」）
-// GET 读缓存文件；POST 触发重新生成（跑 Python，几秒钟）
-const RECOMMENDATION_EFFECT_PATH = path.join(__dirname, 'recommendation_effect.json');
-
-// 一键触发重训练（异步执行，不阻塞服务器）
-
-// 推荐效果不佳的菜品分析
-
-// 模型版本对比
-
-// 推荐点击率统计
+// 推荐与 ML 域拆分至 server/routes/recommend.js + server/ml-worker.js(2026-10-13 改造4)
+// mlworker 挂 /api/worker-health + /api/predict-rf;recommend 挂埋点/指标/特征重要性/一桌菜,经注入的 mlworker 分发打分
+const mlworker = require('./server/ml-worker');
+const recommendDomain = require('./server/routes/recommend');
+mlworker.register(app, { logger, state });
+recommendDomain.register(app, { db, logger, softAuth, state, readJSON, mlworker });
 
 // 点餐与反馈域拆分至 server/routes/orders.js(2026-10-13 改造4)
 require('./server/routes/orders').register(app, { db, logger, softAuth, authMiddleware });
-// 模型指标
-app.get('/api/model-metrics', (req, res) => {
-  try {
-    const metricsPath = path.join(__dirname, 'model_metrics.json');
-    if (fs.existsSync(metricsPath)) {
-      const metrics = readJSON(metricsPath);
-      return res.json({ success: true, metrics });
-    }
-    // 缓存文件不存在时返回空指标，不阻塞事件循环、不返回误导性假数据
-    res.json({ success: false, metrics: null, error: '模型指标暂未生成，请触发重训练后重试' });
-  } catch (e) { res.json({ success: false, metrics: null, error: '模型指标读取失败' }); }
-});
-
-// 特征重要性（启动时预加载，长时间缓存）
-let featureImportanceCache = null;
-let featureImportanceCacheTime = 0;
-const FEATURE_IMPORTANCE_CACHE_DURATION = 86400000; // 24小时（模型很少变化）
-
-// 启动时异步预加载特征重要性
-function preloadFeatureImportance() {
-  try {
-    const staticPath = path.join(__dirname, 'feature_importance.json');
-    if (!fs.existsSync(staticPath)) {
-      logger.warn('特征重要性静态文件不存在，跳过预加载');
-      return;
-    }
-    const data = readJSON(staticPath);
-    if (data.success && data.importance) {
-      featureImportanceCache = {
-        success: true,
-        importance: data.importance,
-        explanation: '模型基于以下12个维度预测您对菜品的喜好程度：菜品辣度、咸淡、甜酸、热量，价格、评分、是否招牌，以及您的个人口味偏好（辣度/咸淡/甜酸/价格区间/热量）。',
-        key_factors: [
-          '1. 用户口味偏好（咸淡/辣度/甜酸）是影响推荐的首要因素',
-          '2. 辣度特征（菜品辣度 + 您的口味偏好）影响显著',
-          '3. 您的甜酸和咸淡偏好也有重要影响',
-          '4. 评分和招牌属性作为辅助参考'
-        ]
-      };
-      featureImportanceCacheTime = Date.now();
-      logger.info('特征重要性预加载成功');
-    }
-  } catch(e) { logger.warn('特征重要性预加载失败: ' + (e?.message || '')); }
-}
-
-// 服务器启动后异步预加载
-setTimeout(preloadFeatureImportance, 5000);
-
-app.get('/api/feature-importance', (req, res) => {
-  try {
-    const now = Date.now();
-    if (featureImportanceCache && (now - featureImportanceCacheTime < FEATURE_IMPORTANCE_CACHE_DURATION)) {
-      return res.json(featureImportanceCache);
-    }
-    // 从静态 JSON 文件读取（避免每次启动 Python 进程，耗时 8-10 秒）
-    const staticPath = path.join(__dirname, 'feature_importance.json');
-    if (fs.existsSync(staticPath)) {
-      const data = readJSON(staticPath);
-      if (data.success && data.importance) {
-        const response = {
-          success: true,
-          importance: data.importance,
-          explanation: '模型基于以下12个维度预测您对菜品的喜好程度：菜品辣度、咸淡、甜酸、热量，价格、评分、是否招牌，以及您的个人口味偏好（辣度/咸淡/甜酸/价格区间/热量）。',
-          key_factors: [
-            '1. 用户口味偏好（咸淡/辣度/甜酸）是影响推荐的首要因素',
-            '2. 辣度特征（菜品辣度 + 您的口味偏好）影响显著',
-            '3. 您的甜酸和咸淡偏好也有重要影响',
-            '4. 评分和招牌属性作为辅助参考'
-          ]
-        };
-        featureImportanceCache = response;
-        featureImportanceCacheTime = now;
-        return res.json(response);
-      }
-    }
-    throw new Error('特征重要性数据文件不存在');
-  } catch (e) {
-    logger.error('获取特征重要性失败: ' + (e?.message || ''));
-    if (featureImportanceCache) {
-      return res.json(featureImportanceCache);
-    }
-    // 最后的备用方案：硬编码的默认值
-    const fallback = {
-      success: true,
-      importance: [
-        { feature: '招牌', importance: 0.2108 },
-        { feature: '用户辣度', importance: 0.1616 },
-        { feature: '用户甜酸', importance: 0.13 },
-        { feature: '辣度', importance: 0.1279 },
-        { feature: '甜酸', importance: 0.114 },
-        { feature: '用户咸淡', importance: 0.0878 },
-        { feature: '咸淡', importance: 0.0843 },
-        { feature: '价格', importance: 0.0728 },
-        { feature: '评分', importance: 0.0106 }
-      ],
-      explanation: '模型基于以下12个维度预测您对菜品的喜好程度：菜品辣度、咸淡、甜酸、热量，价格、评分、是否招牌，以及您的个人口味偏好（辣度/咸淡/甜酸/价格区间/热量）。',
-      key_factors: [
-        '1. 是否招牌菜对推荐影响最大',
-        '2. 您的个人口味偏好（辣度、甜酸、咸淡）非常重要',
-        '3. 菜品本身的口味特征（辣度、甜酸、咸淡）也有影响',
-        '4. 价格和评分作为辅助参考因素'
-      ]
-    };
-    res.json(fallback);
-  }
-});
-
-// ═══════════════════════════════════════════════
-// Python Worker
-// ═══════════════════════════════════════════════
-let pythonWorker = null;
-let workerReady = false;
-let workerSpawnAt = Date.now();
-const ORD_MAPPINGS_CACHE = {
-  '辣度': { '无': 0, '不辣': 1, '微辣': 2, '中辣': 3, '重辣': 4 },
-  '咸淡': { '无': 0, '清淡': 1, '适中': 2, '偏咸': 3 },
-  '甜酸': { '无': 0, '无味': 1, '偏甜': 2, '偏酸': 3, '甜酸': 4 },
-  '热量': { '无': 0, '低': 1, '中': 2, '高': 3 },
-  '价格区间': { '经济型（<12元）': 0, '标准型（12-20元）': 1, '品质型（20元以上）': 2, '经济': 1, '适中': 2, '品质': 3, '无': 0, '不限': 0 }
-};
-
-// ═══ Node 端 HistGB 兜底打分器: Python worker 不可用(重启窗口/崩溃)时的同模型降级 ═══
-// 模型 JSON 由 ml/export_histgb_to_js.py 从生产 pkl 导出, 与 Python predict 偏差<1e-4分(实用精度)
-// 与 predict_worker.py 的区分: worker 走 Python 原生推理(主路径); 此处为 Node 纯 JS 推理(兜底路径)
-let histgbFallback = null;
-try {
-  histgbFallback = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'ml', 'histgb_model.json'), 'utf8'));
-  logger.info('Node 端 HistGB 兜底模型已加载: ' + histgbFallback.n + ' 棵树');
-} catch (e) { logger.warn('HistGB 兜底模型加载失败(仅影响降级路径质量): ' + e.message); }
-function histgbNodeScoreDish(d, up) {
-  const M = ORD_MAPPINGS_CACHE;
-  const f = [
-    M['辣度'].get(d.spiciness, 1),
-    M['咸淡'].get(d.saltiness, 1),
-    M['甜酸'].get(d.sweetness, 1),
-    M['热量'].get(d.calorie, 2),
-    (parseFloat(d.price) || 0) / 100,
-    (d.tags && d.tags.includes('招牌')) ? 1 : 0,
-    (parseFloat(d.rating) || 3.5) / 5,
-    M['辣度'].get(up['辣度'], 1),
-    M['咸淡'].get(up['咸淡'], 1),
-    M['甜酸'].get(up['甜酸'], 1),
-    M['价格区间'].get(up['价格区间'], 1),
-    M['热量'].get(up['calorie'], 1),
-  ];
-  return Math.max(0, Math.min(5, histgbNodePredict(f)));
-}
-function histgbNodePredict(features) {
-  let sum = histgbFallback.baseline;
-  for (const tree of histgbFallback.trees) {
-    let ni = 0;
-    for (;;) {
-      const n = tree[ni];
-      if (n.leaf) { sum += n.v; break; }
-      ni = features[n.f] <= n.t ? n.l : n.r;
-    }
-  }
-  return sum;
-}
-let workerStartTime = 0;
-let pendingRequests = new Map();
-let pendingRequestIdCounter = 0;
-let restartAttempts = 0;
-const MAX_RESTART_ATTEMPTS = 3;
-
-function startPythonWorker() {
-  if (pythonWorker) { try { pythonWorker.kill(); } catch(e) {} pythonWorker = null; }
-  const { spawn } = require('child_process');
-  workerSpawnAt = Date.now();
-  logger.info('ML Worker 启动中(加载模型约需1-2秒, 期间推荐自动降级本地规则)');
-  pythonWorker = spawn('python', ['-u', path.join(__dirname, 'ml', 'predict_worker.py')], {
-    cwd: __dirname,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-    windowsHide: true
-  });
-  workerReady = false;
-  workerStartTime = Date.now();
-  let buffer = '';
-  pythonWorker.stdout.on('data', (data) => {
-    buffer += data.toString('utf8');
-    let newlineIndex;
-    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-      const line = buffer.substring(0, newlineIndex);
-      buffer = buffer.substring(newlineIndex + 1);
-      if (line.trim()) {
-        try {
-          const result = JSON.parse(line);
-          if (result.ready) { if (!workerReady) logger.info(`ML 模型加载完成(${Date.now() - (workerSpawnAt || Date.now())}ms), 推荐服务就绪`); workerReady = true; restartAttempts = 0; }
-          else if (pendingRequests.size > 0) {
-            // 使用 Map 的迭代器获取第一个待处理请求，保证 FIFO 顺序
-            const firstEntry = pendingRequests.entries().next();
-            if (!firstEntry.done) {
-              const [reqId, entry] = firstEntry.value;
-              pendingRequests.delete(reqId);
-              if (entry.timeoutId) clearTimeout(entry.timeoutId);
-              // 两种消费者：HTTP 请求（res 直写）与内部 Promise（/api/recommend/table 打分）
-              if (entry.onResult) entry.onResult(result);
-              else if (!entry.res.headersSent) entry.res.json(result);
-            }
-          }
-        } catch(e) { logger.info('Python日志: ' + line); }
-      }
-    }
-  });
-  pythonWorker.stderr.on('data', (data) => {
-    const msg = data.toString('utf8');
-    if (msg.includes('[错误]')) logger.error('Python worker错误: ' + msg);
-    else if (msg.includes('[信息]') || msg.includes('Worker')) logger.info('Python worker日志: ' + msg.trim());
-  });
-  pythonWorker.on('close', (code) => {
-    logger.info('Python worker关闭，退出码: ' + code);
-    pythonWorker = null; workerReady = false;
-    for (const [reqId, pr] of pendingRequests.entries()) {
-      if (!pr) continue;
-      if (pr.timeoutId) clearTimeout(pr.timeoutId);
-      if (pr.onError) pr.onError(503, '服务不可用，请重试');
-      else if (pr.res && !pr.res.headersSent) pr.res.status(503).json({ success: false, error: '服务不可用，请重试' });
-    }
-    if (restartAttempts < MAX_RESTART_ATTEMPTS) {
-      restartAttempts++;
-      logger.info('将在2秒后重启Worker（第' + restartAttempts + '次尝试）...');
-      setTimeout(startPythonWorker, 2000);
-    }
-  });
-  pythonWorker.on('error', (err) => { logger.error('启动Python worker失败: ' + err.message); pythonWorker = null; workerReady = false; });
-  logger.info('[信息] Python Worker启动中...');
-}
-
-// 统一的 worker 请求分发：/api/predict-rf 与 /api/recommend/table 共用同一条 FIFO 队列，
-// worker 单行进单行出，谁先入队谁先拿到响应。
-// handlers: { onResult(result), onError(status, message) }，二者只会被调用一次。
-function dispatchToWorker(inputData, handlers) {
-  let settled = false;
-  const settleResult = (r) => { if (!settled) { settled = true; handlers.onResult(r); } };
-  const settleError = (status, msg) => {
-    if (settled) return;
-    settled = true;
-    // 兜底: Python worker 不可用时, Node 端用导出的 HistGB 同模型打分
-    // 保证 ML 推荐可用性——降级的是推理引擎(Python→Node), 不是模型质量
-    try {
-      if (histgbFallback && inputData) {
-        const input = JSON.parse(inputData);
-        const up = input.userPrefs || {};
-        const predictions = (input.dishes || []).map(d => ({
-          id: d.id, name: d.name,
-          score: Math.max(0, Math.min(5, histgbNodeScoreDish(d, up))),
-        }));
-        logger.warn(`ML降级: Python worker不可用(${msg}), Node端HistGB兜底打分 ${predictions.length} 道`);
-        handlers.onResult({ success: true, predictions, degraded: 'node-histgb' });
-        return;
-      }
-    } catch (e) { logger.error('Node HistGB 兜底失败: ' + e.message); }
-    handlers.onError(status, msg);
-  };
-  const requestId = ++pendingRequestIdCounter;
-  const timeoutId = setTimeout(() => {
-    pendingRequests.delete(requestId);
-    logger.warn('ML打分请求超时(50s), 可能模型过载');
-    settleError(504, '请求超时，请重试');
-  }, 50000);
-  const addPendingRequest = () => {
-    if (pendingRequests.size >= 100) { clearTimeout(timeoutId); settleError(503, '服务器繁忙，请稍后重试'); return; }
-    pendingRequests.set(requestId, { timeoutId, onResult: settleResult, onError: settleError });
-    pythonWorker.stdin.write(inputData + '\n');
-  };
-  if (!pythonWorker) {
-    startPythonWorker();
-    setTimeout(() => {
-      if (workerReady && pythonWorker && pythonWorker.stdin.writable) addPendingRequest();
-      else { clearTimeout(timeoutId); settleError(503, 'Worker未就绪，请重试'); }
-    }, 3000);
-  } else if (!workerReady) {
-    let checkCount = 0;
-    const checkReady = setInterval(() => {
-      checkCount++;
-      if (workerReady && pythonWorker && pythonWorker.stdin.writable) { clearInterval(checkReady); addPendingRequest(); }
-      else if (checkCount >= 10 || !pythonWorker) { clearInterval(checkReady); clearTimeout(timeoutId); settleError(503, 'Worker未就绪，请重试'); }
-    }, 500);
-  } else if (pythonWorker.stdin.writable) { addPendingRequest(); }
-  else { clearTimeout(timeoutId); settleError(500, 'Worker不可用'); }
-  return { abort: () => { clearTimeout(timeoutId); pendingRequests.delete(requestId); } };
-}
-
-app.get('/api/worker-health', (req, res) => {
-  const status = {
-    success: true,
-    alive: pythonWorker !== null,
-    ready: workerReady,
-    uptime: pythonWorker ? Date.now() - workerStartTime : 0,
-    pendingRequests: pendingRequests.size,
-    restartAttempts: restartAttempts,
-    timestamp: new Date().toISOString()
-  };
-  // 每隔 10 分钟记录一次健康检查日志
-  const now = Date.now();
-  if (!global._lastHealthLog || now - global._lastHealthLog > 600000) {
-    global._lastHealthLog = now;
-    logger.info(`健康检查: alive=${status.alive} ready=${status.ready} pending=${status.pendingRequests} restarts=${status.restartAttempts}`);
-  }
-  res.json(status);
-});
-
-app.post('/api/predict-rf', (req, res) => {
-  const { userPrefs, dishes } = req.body;
-  if (!userPrefs || !dishes) return res.status(400).json({ success: false, error: '缺少必要参数 userPrefs 和 dishes' });
-  if (!Array.isArray(dishes)) return res.status(400).json({ success: false, error: 'dishes 必须为数组' });
-  if (dishes.length === 0) return res.status(400).json({ success: false, error: 'dishes 不能为空' });
-  // 兼容不同参数格式：如果 dishes 是整数数组，从 state.dishData 查找完整对象
-  let processedDishes = dishes;
-  if (typeof dishes[0] === 'number') {
-    processedDishes = dishes.map(id => state.dishData.find(d => d.id === id)).filter(Boolean);
-    // 数字 id 全部未命中(展开为空)时立即 400:空载荷曾让 worker 挂满 50s 硬超时,占住 FIFO 队列拖垮并发
-    if (processedDishes.length === 0) return res.status(400).json({ success: false, error: 'dishes 中的菜品 ID 均不存在' });
-  }
-  // 兼容 userPrefs 字段名：将英文名映射为中文名
-  let processedPrefs = userPrefs;
-  const fieldMap = { spiciness: '辣度', saltiness: '咸淡', sweetness: '甜酸', price: '价格区间', religion: '饮食_宗教', calorie: '热量' };
-  const hasEnglish = Object.keys(fieldMap).some(k => userPrefs[k] !== undefined);
-  const hasChinese = Object.values(fieldMap).some(v => userPrefs[v] !== undefined);
-  if (hasEnglish && !hasChinese) {
-    processedPrefs = { ...userPrefs };
-    for (const [en, cn] of Object.entries(fieldMap)) {
-      if (userPrefs[en] !== undefined) {
-        processedPrefs[cn] = userPrefs[en];
-        delete processedPrefs[en];
-      }
-    }
-  }
-  const inputData = JSON.stringify({ userPrefs: processedPrefs, dishes: processedDishes });
-  let responseSent = false;
-  const sendResponse = (status, data) => { if (!responseSent && !res.headersSent) { responseSent = true; res.status(status).json(data); } };
-  const dispatch = dispatchToWorker(inputData, {
-    onResult: (result) => sendResponse(200, result),
-    onError: (status, msg) => {
-      // 兜底: Python worker 不可用(重启窗口/崩溃)时, Node 端用导出的 HistGB 同模型打分
-      // 保证 ML 推荐可用性——降级的是推理引擎, 不是模型质量
-      try {
-        if (!histgbFallback) throw new Error('Node 兜底模型未加载');
-        const predictions = processedDishes.map(d => {
-          const f = [
-            ORD_MAPPINGS_CACHE['辣度'].get(d.spiciness, 1),
-            ORD_MAPPINGS_CACHE['咸淡'].get(d.saltiness, 1),
-            ORD_MAPPINGS_CACHE['甜酸'].get(d.sweetness, 1),
-            ORD_MAPPINGS_CACHE['热量'].get(d.calorie, 2),
-            (parseFloat(d.price) || 0) / 100,
-            (d.tags && d.tags.includes('招牌')) ? 1 : 0,
-            (parseFloat(d.rating) || 3.5) / 5,
-            ORD_MAPPINGS_CACHE['辣度'].get(userPrefs['辣度'], 1),
-            ORD_MAPPINGS_CACHE['咸淡'].get(userPrefs['咸淡'], 1),
-            ORD_MAPPINGS_CACHE['甜酸'].get(userPrefs['甜酸'], 1),
-            ORD_MAPPINGS_CACHE['价格区间'].get(userPrefs['价格区间'], 1),
-            ORD_MAPPINGS_CACHE['热量'].get(userPrefs['calorie'], 1),
-          ];
-          return { id: d.id, name: d.name, score: Math.max(0, Math.min(5, histgbNodePredict(f))) };
-        });
-        logger.warn(`predict-rf 降级: Python worker 不可用(${msg}), 已用 Node 端 HistGB 兜底打分`);
-        sendResponse(200, { success: true, predictions, degraded: 'node-histgb' });
-      } catch (e) {
-        logger.error('predict-rf Node 兜底也失败: ' + e.message);
-        sendResponse(status, { success: false, error: msg });
-      }
-    },
-  });
-  req.on('aborted', () => dispatch.abort());
-});
-
-// ═══════════════════════════════════════════════
-// 一桌菜组合推荐（路线图 8.4 · MVP）：规则引擎组合 + worker 批量打分
-// ═══════════════════════════════════════════════
-const tableRecommend = require('./table_recommend');
-
-// 组合推荐要过一遍 worker 批量打分，比普通查询贵，单独限流（env 可覆盖）。
-// 默认 100 次/15 分钟：店内 WiFi 下顾客共享出口 IP，整店共享额度，不宜过低。
-const TABLE_RATE_LIMIT_RAW = parseInt(process.env.TABLE_RATE_LIMIT_MAX || '100');
-const TABLE_RATE_LIMIT_MAX = (Number.isFinite(TABLE_RATE_LIMIT_RAW) && TABLE_RATE_LIMIT_RAW >= 1) ? TABLE_RATE_LIMIT_RAW : 30;
-const tableLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: TABLE_RATE_LIMIT_MAX,
-  message: { success: false, error: '一桌菜生成过于频繁，请稍后再试' },
-});
-
-const TABLE_SPICY_LEVELS = ['无', '不辣', '微辣', '中辣', '重辣'];
-const TABLE_POOL_KEYS = ['cold', 'hot', 'signature', 'staple'];
-
-function parseTableParams(body) {
-  const partySize = parseInt(body.partySize, 10);
-  if (!Number.isFinite(partySize) || partySize < 1 || partySize > 20) {
-    return { error: 'partySize 必须为 1-20 的整数' };
-  }
-  let budget = 80;
-  if (body.budgetPerPerson !== undefined && body.budgetPerPerson !== null && body.budgetPerPerson !== '') {
-    budget = Number(body.budgetPerPerson);
-    if (!Number.isFinite(budget) || budget < 10 || budget > 1000) {
-      return { error: 'budgetPerPerson 必须为 10-1000 的数字' };
-    }
-  }
-  const spiciness = TABLE_SPICY_LEVELS.includes(body.spiciness) ? body.spiciness : '无';
-  const religion = ['无特殊要求', '素食', '清真'].includes(body.religion) ? body.religion : '无特殊要求';
-  const V = tableRecommend.PREF_VOCABS;
-  const saltiness = V.saltiness.includes(body.saltiness) ? body.saltiness : '无';
-  const sweetness = V.sweetness.includes(body.sweetness) ? body.sweetness : '无';
-  const calorie = V.calorie.includes(body.calorie) ? body.calorie : '无';
-  // 已点菜排除入参：excludeIds 是客户端补充（本会话各轮+购物车），tableNumber 由服务端查本桌进行中订单
-  const excludeIds = (Array.isArray(body.excludeIds) ? body.excludeIds : [])
-    .map(n => parseInt(n, 10)).filter(Number.isFinite).slice(0, 500);
-  let tableNumber = null;
-  if (body.tableNumber !== undefined && body.tableNumber !== null && body.tableNumber !== '') {
-    const t = String(body.tableNumber);
-    if (!/^\d{1,2}$/.test(t) && t !== '打包') return { error: 'tableNumber 格式不正确' };
-    tableNumber = t;
-  }
-  let avoidRecentDays = 0;
-  if (body.avoidRecentDays !== undefined && body.avoidRecentDays !== null && body.avoidRecentDays !== '') {
-    avoidRecentDays = parseInt(body.avoidRecentDays, 10);
-    if (!Number.isFinite(avoidRecentDays) || avoidRecentDays < 1 || avoidRecentDays > 30) {
-      return { error: 'avoidRecentDays 必须为 1-30 的整数' };
-    }
-  }
-  return { partySize, budgetPerPerson: budget, spiciness, saltiness, sweetness, calorie, religion, allergyKeys: tableRecommend.normalizeAllergies(body.allergies), excludeIds, tableNumber, avoidRecentDays };
-}
-
-// 登录用户口味档案（路线图 8.4 二期：忌口/口味从档案带出；档案只作默认值，请求显式选择优先）
-async function getProfilePrefs(req) {
-  if (!req.user || !req.user.id) return { allergyKeys: [], profile: null };
-  try {
-    const r = await db.query('SELECT preferences FROM users WHERE id = $1', [req.user.id]);
-    const prefs = r.rows[0] && r.rows[0].preferences;
-    const profile = (prefs && typeof prefs === 'object' && !Array.isArray(prefs)) ? prefs : null;
-    return { allergyKeys: tableRecommend.normalizeAllergies(profile && profile.allergies), profile };
-  } catch (e) {
-    logger.error('读取用户口味档案失败: ' + e.message);
-    return { allergyKeys: [], profile: null };
-  }
-}
-
-// 已点菜排除：本桌进行中订单必避（消灭加菜轮重复推荐）；登录用户可选避开近 N 天吃过的（会所版防重复）
-async function collectOrderedDishIds({ tableNumber, avoidRecentDays, req }) {
-  const ids = new Set();
-  if (tableNumber) {
-    try {
-      const r = await db.query(
-        `SELECT (e->>'id')::int AS dish_id FROM orders o, jsonb_array_elements(o.items) e
-         WHERE o.table_number = $1 AND o.status IN ('pending','confirmed')`,
-        [tableNumber]
-      );
-      r.rows.forEach(row => { if (Number.isFinite(row.dish_id)) ids.add(row.dish_id); });
-    } catch (e) { logger.error('查询本桌已点菜品失败: ' + e.message); }
-  }
-  if (avoidRecentDays > 0 && req.user && req.user.username) {
-    try {
-      const r = await db.query(
-        `SELECT (e->>'id')::int AS dish_id FROM orders o, jsonb_array_elements(o.items) e
-         WHERE o.user_id = $1 AND o.status <> 'cancelled' AND o.created_at > NOW() - make_interval(days => $2::int)`,
-        [req.user.username, avoidRecentDays]
-      );
-      r.rows.forEach(row => { if (Number.isFinite(row.dish_id)) ids.add(row.dish_id); });
-    } catch (e) { logger.error('查询近期吃过菜品失败: ' + e.message); }
-  }
-  return ids;
-}
-
-// 埋点：一次推荐动作=一行（mode 列由启动迁移保证；写入失败仅记日志，不影响主流程）
-function logRecommendationMode(req, mode) {
-  const userId = (req.user && req.user.username) || 'guest';
-  const userType = req.user ? 'user' : 'guest';
-  db.query('INSERT INTO recommendation_log (user_type, user_id, mode) VALUES ($1, $2, $3)', [userType, userId, mode])
-    .catch(e => logger.error('推荐埋点写入失败: ' + e.message));
-}
-
-// 批量打分：worker 可用走 ML，不可用降级本地规则分（接口不 5xx）
-async function scoreTableCandidates(userPrefs, dishes) {
-  try {
-    const preds = await new Promise((resolve, reject) => {
-      dispatchToWorker(JSON.stringify({ userPrefs, dishes }), {
-        onResult: (result) => {
-          if (result && result.success && Array.isArray(result.predictions)) resolve(result.predictions);
-          else reject(new Error((result && result.error) || 'worker 返回异常'));
-        },
-        onError: (status, msg) => { const err = new Error(msg); err.status = status; reject(err); },
-      });
-    });
-    const byId = new Map(preds.map(p => [p.id, Number(p.score) || 0]));
-    dishes.forEach(d => { d._score = byId.has(d.id) ? byId.get(d.id) : tableRecommend.fallbackScore(d, userPrefs); });
-    return 'worker';
-  } catch (e) {
-    logger.info('一桌菜 worker 打分不可用，本地规则分兜底: ' + e.message);
-    dishes.forEach(d => { d._score = tableRecommend.fallbackScore(d, userPrefs); });
-    return 'fallback';
-  }
-}
-
-function dishToResult(d, pool) {
-  return {
-    id: d.id, name: d.name, category: d.category, spiciness: d.spiciness,
-    price: Math.round((Number(d.price) || 0) * 100) / 100,
-    price_unit: d.price_unit || '', serving: d.serving || '',
-    image_url: d.image_url || '', qty: 1, pool,
-    matchPct: Math.min(100, Math.max(0, Math.round((d._score || 0) / 5 * 100))),
-  };
-}
-
-app.post('/api/recommend/table', tableLimiter, softAuth, async (req, res) => {
-  const params = parseTableParams(req.body || {});
-  if (params.error) return res.status(400).json({ success: false, error: params.error });
-  try {
-    const { allergyKeys: profileAllergyKeys, profile } = await getProfilePrefs(req);
-    const allAllergyKeys = new Set(params.allergyKeys);
-    profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
-    const { pools, excluded } = tableRecommend.buildPools(state.dishData || [], [...allAllergyKeys]);
-    // 宗教饮食硬排除（2026-10-08）：清真→猪肉系剔除；素食→荤菜+海鲜剔除。
-    // 宗教饮食是硬约束非打分偏好——曾只进 ML 打分特征，清真实测被推猪肉菜
-    const religionEff = (params.religion && params.religion !== '无特殊要求') ? params.religion
-      : ((profile && profile.religion && profile.religion !== '无特殊要求') ? profile.religion : '');
-    let religionExcluded = 0;
-    let effPools = pools;
-    if (religionEff) {
-      effPools = tableRecommend.filterByReligion(pools, religionEff);
-      religionExcluded = TABLE_POOL_KEYS.reduce((s, k) => s + ((pools[k].length || 0) - (effPools[k].length || 0)), 0);
-    }
-    // 已点菜排除：仅登录用户提供（游客无身份，不做已点排除——换桌/新客不继承他人记录）
-    // 登录用户：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
-    const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
-    const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
-    if (isLoggedIn) {
-      (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
-        .forEach(id => orderedIds.add(id));
-    }
-    // 跨池按 id 去重后浅克隆打分（不污染共享缓存 state.dishData）
-    const union = [];
-    const seen = new Set();
-    for (const key of TABLE_POOL_KEYS) {
-      for (const d of effPools[key]) if (!seen.has(d.id)) { seen.add(d.id); union.push({ ...d }); }
-    }
-    let excludedOrdered = 0;
-    const candidates = union.filter(d => {
-      if (orderedIds.has(d.id)) { excludedOrdered++; return false; }
-      return true;
-    });
-    if (!candidates.length) {
-      const msg = excludedOrdered > 0 ? '候选菜品都被忌口或已点排除，请调整条件后重试' : '当前没有可推荐的菜品，请稍后再试';
-      return res.status(503).json({ success: false, error: msg });
-    }
-    const source = await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
-    const byId = new Map(candidates.map(d => [d.id, d]));
-    for (const key of TABLE_POOL_KEYS) effPools[key] = effPools[key].filter(d => byId.has(d.id)).map(d => byId.get(d.id));
-    // 米饭按人数自动配：预算先预留米饭钱，保证含饭人均仍在所选档位内
-    const riceDish = (state.dishData || []).find(d => d && d.is_active !== false && d.category === '主食'
-      && typeof d.name === 'string' && d.name.includes('米饭'));
-    const riceReserve = riceDish ? (Number(riceDish.price) || 0) * params.partySize : 0;
-    const sets = tableRecommend.buildTableSets({
-      pools: effPools, partySize: params.partySize, budgetPerPerson: params.budgetPerPerson, reservedExtras: riceReserve,
-    }).map(s => ({
-      key: s.key, style: s.style,
-      dishes: s.dishes.map(x => ({ ...dishToResult(x.dish, x.pool), reason: x.reason })),
-      totalPrice: s.totalPrice, perPerson: s.perPerson, overBudget: s.overBudget,
-    }));
-    const finalSets = tableRecommend.withAutoRice(sets, riceDish, params.partySize);
-    logRecommendationMode(req, '一桌菜组合');
-    logger.info(`一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded} 已点排除=${excludedOrdered}`);
-    res.json({ success: true, sets: finalSets, excludedAllergy: excluded, excludedOrdered, usedProfile: !!profile });
-  } catch (e) {
-    logger.error('一桌菜推荐API错误: ' + e.message);
-    res.status(500).json({ success: false, error: '服务器内部错误' });
-  }
-});
-
-// 单道更换：同池重新打分，排除桌上已有的菜，返回最高分的替代
-app.post('/api/recommend/table/swap', tableLimiter, softAuth, async (req, res) => {
-  const params = parseTableParams(req.body || {});
-  if (params.error) return res.status(400).json({ success: false, error: params.error });
-  const poolKey = req.body.pool;
-  if (!TABLE_POOL_KEYS.includes(poolKey)) {
-    return res.status(400).json({ success: false, error: 'pool 必须为 cold/hot/signature/staple' });
-  }
-  try {
-    const { allergyKeys: profileAllergyKeys, profile } = await getProfilePrefs(req);
-    const allAllergyKeys = new Set(params.allergyKeys);
-    profileAllergyKeys.forEach(k => allAllergyKeys.add(k));
-    const { pools } = tableRecommend.buildPools(state.dishData || [], [...allAllergyKeys]);
-    // 已点排除仅登录用户(与主接口同规——游客无身份,不继承他人记录); 换菜本体 outId 任何身份都必须排除,防"换出同款"
-    const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
-    const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
-    const outId = parseInt(req.body.outId, 10);
-    if (Number.isFinite(outId)) orderedIds.add(outId);
-    if (isLoggedIn) {
-      (await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req }))
-        .forEach(id => orderedIds.add(id));
-    }
-    const candidates = pools[poolKey].filter(d => !orderedIds.has(d.id)).map(d => ({ ...d }));
-    if (!candidates.length) return res.status(404).json({ success: false, error: '这个位置已经没有可换的菜了' });
-    await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
-    candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
-    // 预算感知: 同价位段优先——优先换入"换完人均仍在本档位内"的候选;档内无候选才回退全局最高分(前端以"略超预算"角标提示)
-    let top = candidates[0];
-    const planTotal = Number(req.body.planTotal);
-    const outPrice = Number(req.body.outPrice);
-    if (Number.isFinite(planTotal) && Number.isFinite(outPrice) && planTotal >= 0) {
-      const budgetCap = params.budgetPerPerson * params.partySize;
-      const maxSwapIn = outPrice + (budgetCap - planTotal);
-      const inBudget = candidates.filter(c => (Number(c.price) || 0) <= maxSwapIn + 0.001);
-      if (inBudget.length) top = inBudget[0];
-    }
-    const styleKey = ['home', 'banquet', 'checkin'].includes(req.body.style) ? req.body.style : 'home';
-    const variant = tableRecommend.VARIANTS.find(v => v.key === styleKey);
-    logRecommendationMode(req, '一桌菜换菜');
-    logger.info(`一桌菜换菜: 池=${poolKey} 排除${orderedIds.size}道`);
-    res.json({ success: true, dish: { ...dishToResult(top, poolKey), reason: tableRecommend.reasonFor(top, poolKey, variant, params.partySize) } });
-  } catch (e) {
-    logger.error('一桌菜换菜API错误: ' + e.message);
-    res.status(500).json({ success: false, error: '服务器内部错误' });
-  }
-});
-
 // ═══════════════════════════════════════════════
 // 运行时开关（持久化到 runtime_settings.json）
 // ───────────────────────────────────────────────
@@ -1448,7 +803,7 @@ const httpServer = http.createServer(app);
 
 httpServer.listen(PORT, () => {
   logger.info(`服务器运行在 http://localhost:${PORT}`);
-  startPythonWorker();
+  mlworker.startPythonWorker();
   loadModelInfo();
   setTimeout(trackMetrics, 10000);
   setInterval(checkAndRetrain, 1800000);
@@ -1468,6 +823,12 @@ db.query(`ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(5
 db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ`)
   .then(() => logger.info('orders.completed_at 列就绪'))
   .catch(e => logger.error('orders.completed_at 迁移失败: ' + e.message));
+
+// 幂等迁移：preference_log.price 放宽到 VARCHAR(20)——价格档全称「标准型（12-20元）」11 字符
+// 曾超 VARCHAR(10)，选标准型/品质型的用户一存偏好就 500
+db.query(`ALTER TABLE preference_log ALTER COLUMN price TYPE VARCHAR(20)`)
+  .then(() => logger.info('preference_log.price 列宽就绪'))
+  .catch(e => logger.error('preference_log.price 迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
@@ -1525,22 +886,8 @@ async function gracefulShutdown(signal) {
     }, 10000).unref();
   }
 
-  // 2. 关闭 Python Worker 进程
-  try {
-    if (typeof pythonWorker !== 'undefined' && pythonWorker && pythonWorker.exitCode === null) {
-      // 清理所有待处理请求
-      if (typeof pendingRequests !== 'undefined' && pendingRequests) {
-        for (const [, req] of pendingRequests) {
-          if (req.res) req.res.status(503).json({ success: false, error: '服务器正在关闭，请稍后重试' });
-        }
-        pendingRequests.clear();
-      }
-      pythonWorker.kill();
-      logger.info('Python Worker 已关闭');
-    }
-  } catch (e) {
-    logger.warn('关闭 Python Worker 失败: ' + (e?.message || String(e)));
-  }
+  // 2. 关闭 Python Worker 进程(子系统已拆至 server/ml-worker.js,清空待处理请求+杀进程)
+  mlworker.shutdown();
 
   // 3. 关闭数据库连接池
   try {

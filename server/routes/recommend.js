@@ -8,6 +8,11 @@ const tableRecommend = require('../../table_recommend');
 
 const ROOT = path.join(__dirname, '..', '..');
 
+// 特征重要性缓存放模块级:admin 域的 model-compare 经 getFeatureImportanceCache() 共享同一份
+let featureImportanceCache = null;
+let featureImportanceCacheTime = 0;
+const FEATURE_IMPORTANCE_CACHE_DURATION = 86400000; // 24小时（模型很少变化）
+
 function register(app, deps) {
   const { db, logger, softAuth, state, readJSON, mlworker } = deps;
 
@@ -57,10 +62,6 @@ function register(app, deps) {
   });
 
   // ─── 特征重要性(启动时预加载，长时间缓存) ───
-  let featureImportanceCache = null;
-  let featureImportanceCacheTime = 0;
-  const FEATURE_IMPORTANCE_CACHE_DURATION = 86400000; // 24小时（模型很少变化）
-
   // 启动后异步预加载
   function preloadFeatureImportance() {
     try {
@@ -393,8 +394,10 @@ function register(app, deps) {
     }
   });
 
-  // ─── worker 健康薄路由(状态取自 ml-worker,由 server.js 注入) ───
-  app.get('/api/worker-health', (req, res) => res.json(mlworker.getHealth()));
+  // /api/worker-health 由 server/ml-worker.js 的 register 挂载(唯一实现,此处不再重复)
 }
 
-module.exports = { register, preloadFeatureImportance };
+module.exports = {
+  register,
+  getFeatureImportanceCache: () => featureImportanceCache,
+};
