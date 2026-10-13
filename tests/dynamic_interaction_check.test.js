@@ -46,7 +46,7 @@ describe('动态交互行为验证', () => {
   // ===== 1. 菜单实时搜索过滤 =====
   it('1.1 菜单搜索框输入文字后结果实时变化', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(500);
     // 进入全部菜单
     await page.evaluate(() => {
@@ -96,7 +96,7 @@ describe('动态交互行为验证', () => {
   // ===== 2. 推荐结果加购按钮联动购物车 =====
   it('2.1 推荐结果"加购"按钮点击后购物车数量增加', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     // 清除购物车
     await page.evaluate(() => localStorage.removeItem('cart'));
@@ -113,7 +113,12 @@ describe('动态交互行为验证', () => {
       if (btn) btn.click();
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
+    // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
+    await page.waitForFunction(() => {
+      const el = document.getElementById('recommendation-result');
+      return el && !el.classList.contains('d-none');
+    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
     // 查找加购按钮并点击
     const clicked = await page.evaluate(() => {
       const btn = document.querySelector('#dish-list .add-to-cart, #dish-list [onclick*="addToCart"], #dish-list [class*="add"]');
@@ -149,7 +154,7 @@ describe('动态交互行为验证', () => {
   // ===== 3. 隐私政策链接弹出模态框 =====
   it('3.1 隐私政策链接点击弹出内容', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(300);
     // 进入注册页面
     await page.evaluate(() => document.getElementById('register-btn')?.click());
@@ -180,7 +185,7 @@ describe('动态交互行为验证', () => {
   // ===== 4. 菜品详情信息完整显示 =====
   it('4.1 菜单表格菜品详情信息完整', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
@@ -208,7 +213,7 @@ describe('动态交互行为验证', () => {
   // ===== 5. 偏好设置选择后推荐模式显示 =====
   it('5.1 偏好设置提交后显示当前推荐模式', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
@@ -225,7 +230,12 @@ describe('动态交互行为验证', () => {
       if (btn) btn.click();
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
+    // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
+    await page.waitForFunction(() => {
+      const el = document.getElementById('recommendation-result');
+      return el && !el.classList.contains('d-none');
+    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
     // 检查推荐结果区域显示
     const recoVisible = await page.evaluate(() => {
       const section = document.getElementById('recommendation-section');
@@ -239,7 +249,7 @@ describe('动态交互行为验证', () => {
   // ===== 6. 购物车关闭后状态保持 =====
   it('6.1 购物车关闭后购物车数据保留（不丢失）', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     // 写入购物车数据
     await page.evaluate(() => {
@@ -273,7 +283,7 @@ describe('动态交互行为验证', () => {
   // ===== 7. 模态框关闭按钮真实关闭 =====
   it('7.1 模态框显示后关闭按钮真实隐藏模态框', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     // 显示模态框
     await page.evaluate(() => {
@@ -302,7 +312,7 @@ describe('动态交互行为验证', () => {
   // ===== 8. 评分星星点击选择 =====
   it('8.1 评分页星星点击可选择评分', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
@@ -316,7 +326,12 @@ describe('动态交互行为验证', () => {
       if (btn) btn.click();
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
+    // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
+    await page.waitForFunction(() => {
+      const el = document.getElementById('recommendation-result');
+      return el && !el.classList.contains('d-none');
+    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
     // 找到评分星星区域（可能在推荐的菜品项中）
     const starClicked = await page.evaluate(() => {
       // 尝试找到评分入口
@@ -353,7 +368,7 @@ describe('动态交互行为验证', () => {
   // ===== 9. 数据集页面返回按钮 =====
   it('9.1 全部菜单页面返回按钮回到首页', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
@@ -377,7 +392,7 @@ describe('动态交互行为验证', () => {
   // ===== 10. 关于本店返回按钮 =====
   it('10.1 关于本店返回按钮回到首页', async () => {
     resetErrors();
-    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 20000 });
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-about');

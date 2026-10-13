@@ -10,6 +10,10 @@ const ROOT = path.join(__dirname, '..');
 
 function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
 
+// 改造1 后 js/ 源码经 prettier 格式化,历史上的紧凑断言串(如 if(!u||!p))需空白归一化后比较
+const sq = (s) => String(s).replace(/\s+/g, '');
+const readSq = (f) => sq(read(f));
+
 function extractButtonIds(html) {
   const ids = [];
   const regex = /<button[^>]*\sid="([^"]+)"[^>]*>/g;
@@ -72,7 +76,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('首页表单提交有事件绑定', () => {
-    const init = read('js/init.js');
+    const init = readSq('js/init.js');
     assert.ok(init.includes("submit('login-form',login)"), 'login-form 缺少提交绑定');
     assert.ok(init.includes("submit('register-form',register)"), 'register-form 缺少提交绑定');
     assert.ok(init.includes("submit('preference-form',submitPreference)"), 'preference-form 缺少提交绑定');
@@ -120,7 +124,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('首页多标签同步购物车', () => {
-    const init = read('js/init.js');
+    const init = readSq('js/init.js');
     assert.ok(init.includes("e.key==='cart'"), '购物车变化监听');
   });
 
@@ -308,7 +312,7 @@ describe('2. 崩溃风险与边界情况审计', () => {
   });
 
   it('核心函数有null保护', () => {
-    const core = read('js/core.js');
+    const core = readSq('js/core.js');
     assert.ok(core.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     assert.ok(core.includes('if(!el)'), 'showSection 应有 null 保护');
     assert.ok(core.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
@@ -736,8 +740,8 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('updateUserNavbar 函数正确处理三种用户状态', () => {
-    const js = read('js/core.js');
-    assert.ok(js.includes('function updateUserNavbar'), 'updateUserNavbar 函数存在');
+    const js = readSq('js/core.js');
+    assert.ok(js.includes('functionupdateUserNavbar'), 'updateUserNavbar 函数存在');
     assert.ok(js.includes("currentUser==='guest'"), '处理游客状态');
     assert.ok(js.includes('nav-profile-item'), '处理登录用户状态');
     assert.ok(js.includes('d-none'), '使用d-none控制显示');
@@ -749,7 +753,8 @@ describe('6. 工具函数完整性审计', () => {
 // ================================================================
 describe('7. 后端API验证审计', () => {
   it('batch-status 端点接受数字和字符串ID', () => {
-    const server = read('server.js');
+    // 批量操作已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     const batchStatusBlock = server.substring(
       server.indexOf('batch-status'),
       server.indexOf('batch-status') + 500
@@ -759,7 +764,8 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('batch-delete 端点接受数字和字符串ID', () => {
-    const server = read('server.js');
+    // 批量操作已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     const batchDeleteBlock = server.substring(
       server.indexOf('batch-delete'),
       server.indexOf('batch-delete') + 500
@@ -769,7 +775,8 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('所有管理后台路由有adminAuth保护', () => {
-    const server = read('server.js');
+    // /api/admin/* 业务路由已拆至 server/routes/admin.js(改造4),登录路由仍留 server.js
+    const server = read('server/routes/admin.js');
     const adminRoutes = server.match(/app\.(get|post|put|delete)\('\/api\/admin\//g) || [];
     // 排除登录路由（不需要认证）
     const protectedRoutes = adminRoutes.filter(r => !r.includes('/login'));
@@ -777,7 +784,8 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('用户注册有密码复杂度验证', () => {
-    const server = read('server.js');
+    // 用户域已拆至 server/routes/users.js(改造4)
+    const server = read('server/routes/users.js');
     assert.ok(server.includes('password.length < 8'), '密码最小长度8位');
     assert.ok(server.includes('password.length > 128'), '密码最大长度128位');
     assert.ok(server.includes('/[A-Z]/'), '密码必须包含大写字母');
@@ -910,7 +918,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('订单创建有幂等性检查', () => {
-    const server = read('server.js');
+    // 点餐域已拆至 server/routes/orders.js(改造4)
+    const server = read('server/routes/orders.js');
     const orderIdx = server.indexOf('同一用户');
     assert.ok(orderIdx > 0, '应有幂等性检查注释');
     const orderBlock = server.substring(orderIdx, orderIdx + 450);  // 2026-09-19: 窗口300→450,容下幂等注释+SQL(含status条件)
@@ -918,7 +927,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('添加菜品有完整字段验证', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes("name.trim().length < 2"), '菜名至少2个字符');
     assert.ok(server.includes("name.trim().length > 100"), '菜名最多100个字符');
     assert.ok(server.includes("priceNum < 0"), '价格非负验证');
@@ -926,23 +936,28 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('更新菜品有字段验证', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes("name.trim().length < 2"), '更新菜名至少2个字符');
     assert.ok(server.includes("p < 0"), '更新价格非负验证');
     assert.ok(server.includes("r > 5"), '更新评分上限5');
   });
 
-  it('用户列表按最后登录排序', () => {
-    const server = read('server.js');
+  it('用户列表按注册时间倒序', () => {
+    // 用户列表已拆至 server/routes/admin.js(改造4);2026-10 排序刻意从 last_login 改为
+    // created_at DESC——未登录新用户 last_login 为空会沉底且被分页截断,管理端必须即时可见
+    const server = read('server/routes/admin.js');
+    // 取本路由完整函数体(到下一个 users/:id 路由为止),窗口截断曾漏掉深处的 ORDER BY
     const usersRoute = server.substring(
       server.indexOf("app.get('/api/admin/users'"),
-      server.indexOf("app.get('/api/admin/users'") + 300
+      server.indexOf("app.get('/api/admin/users/:id'")
     );
-    assert.ok(usersRoute.includes('ORDER BY last_login DESC'), '用户列表按最后登录排序');
+    assert.ok(usersRoute.includes('ORDER BY created_at DESC'), '用户列表按注册时间倒序(新用户排最前)');
   });
 
   it('监控系统返回完整数据', () => {
-    const server = read('server.js');
+    // monitor 路由已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes('r2Trend'), '监控包含R2趋势');
     assert.ok(server.includes('errorLog'), '监控包含错误日志');
     assert.ok(server.includes('uptime'), '监控包含运行时间');
@@ -978,7 +993,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('服务端正确清理tags中的空格', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes("t.trim()"), '服务端应清理tags空格');
   });
 
@@ -1001,7 +1017,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('用户注册有用户名唯一性检查', () => {
-    const server = read('server.js');
+    // 用户域已拆至 server/routes/users.js(改造4)
+    const server = read('server/routes/users.js');
     assert.ok(server.includes('username.trim().length < 2'), '用户名至少2个字符');
     assert.ok(server.includes('username.trim().length > 20'), '用户名最多20个字符');  // 2026-09-17: 上限已收紧
     assert.ok(server.includes('用户名已存在'), '有用户名唯一性检查');
@@ -1028,7 +1045,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('订单支持多状态过滤', () => {
-    const server = read('server.js');
+    // 订单查询已拆至 server/routes/orders.js(改造4)
+    const server = read('server/routes/orders.js');
     assert.ok(server.includes("status = ANY($"), '订单支持多状态过滤');
   });
 
@@ -1039,7 +1057,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('过敏源复选框互斥逻辑完整', () => {
-    const init = read('js/init.js');
+    const init = readSq('js/init.js');
     assert.ok(init.includes('allergy-none'), '有无过敏选项');
     assert.ok(init.includes('cb.checked=false'), '选择无时清除其他');
     assert.ok(init.includes('cb.disabled=this.checked'), '选择无时禁用其他');
@@ -1083,7 +1101,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('永久删除菜品后刷新缓存', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     const permDeleteBlock = server.substring(
       server.indexOf("app.delete('/api/admin/dish/:id/permanent'"),
       server.indexOf("app.delete('/api/admin/dish/:id/permanent'") + 400
@@ -1104,13 +1123,14 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('注册有密码确认验证', () => {
     const html = read('index.html');
-    const js = read('js/core.js');
+    const js = readSq('js/core.js');
     assert.ok(html.includes('register-confirm'), '确认密码输入框存在');
-    assert.ok(js.includes("p!==c"), '密码确认验证逻辑存在');
+    assert.ok(js.includes('p!==c'), '密码确认验证逻辑存在');
   });
 
   it('菜品名称有前后端长度验证', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     const html = read('admin.html');
     assert.ok(server.includes("name.trim().length < 2"), '服务端有菜名最小长度验证');
     assert.ok(server.includes("name.trim().length > 100"), '服务端有菜名最大长度验证');
@@ -1127,15 +1147,16 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('登录表单有必填验证', () => {
     const html = read('index.html');
-    const js = read('js/core.js');
+    const js = readSq('js/core.js');
     assert.ok(html.includes('login-username'), '用户名输入框存在');
     assert.ok(html.includes('login-password'), '密码输入框存在');
-    assert.ok(js.includes("if(!u||!p)"), '登录函数有非空验证');
+    assert.ok(js.includes('if(!u||!p)'), '登录函数有非空验证');
   });
 
   it('整体满意度dishId为0', () => {
-    const server = read('server.js');
-    assert.ok(server.includes('dishId 为 0 表示整体满意度'), '支持整体满意度');
+    // 推荐统计已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
+    assert.ok(server.includes('WHERE dish_id = 0 OR dish_id IS NULL'), '支持整体满意度');
   });
 
   it('菜品编辑时过敏源复选框正确初始化', () => {
@@ -1148,9 +1169,9 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('登录和注册函数trim用户名', () => {
-    const js = read('js/core.js');
-    assert.ok(js.includes("u=uEl.value.trim()"), '登录函数trim用户名');
-    assert.ok(js.includes("u=uEl.value.trim()"), '注册函数trim用户名');
+    const js = readSq('js/core.js');
+    assert.ok(js.includes('u=uEl.value.trim()'), '登录函数trim用户名');
+    assert.ok(js.includes('u=uEl.value.trim()'), '注册函数trim用户名');
   });
 
   it('管理后台菜品列表图片有onerror处理', () => {
@@ -1174,8 +1195,9 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('模型历史API返回完整', () => {
-    const server = read('server.js');
-    assert.ok(server.includes('modelInfo.version'), '历史包含版本');
+    // 模型历史已拆至 server/routes/admin.js(改造4);版本经 getModelInfo() getter 取
+    const server = read('server/routes/admin.js');
+    assert.ok(server.includes('getModelInfo().version'), '历史包含版本');
     assert.ok(server.includes('trainedAt'), '历史包含训练时间');
     assert.ok(server.includes('isCurrent'), '历史包含当前标记');
   });
@@ -1208,7 +1230,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('菜品描述有长度限制', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes("description.length > 500"), '描述最多500字符');
   });
 
@@ -1275,7 +1298,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('所有评分端点有0-5范围验证', () => {
-    const server = read('server.js');
+    // 反馈评分在 orders.js、菜品评分在 admin.js(改造4 拆分)
+    const server = ['server/routes/orders.js', 'server/routes/admin.js'].map(read).join('\n');
     assert.ok(server.includes("scoreNum < 0 || scoreNum > 5"), '反馈评分范围验证');
     assert.ok(server.includes("ratingNum < 0 || ratingNum > 5"), '菜品评分范围验证');
   });
@@ -1297,7 +1321,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('登录注册按钮有防重复提交', () => {
-    const js = read('js/core.js');
+    const js = readSq('js/core.js');
     assert.ok(js.includes('bEl.disabled=true'), '登录时禁用按钮');
     assert.ok(js.includes('bEl.disabled=false'), '登录后恢复按钮');
   });
@@ -1309,7 +1333,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('错误响应不泄露敏感信息', () => {
-    const server = read('server.js');
+    // 统一错误消息随域拆分分布于 server.js 与各路由模块(改造4)
+    const server = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js', 'server/routes/users.js', 'server/routes/recommend.js', 'server/ml-worker.js'].map(read).join('\n');
     // 确认所有catch块使用统一错误消息（不泄露堆栈）
     const internalError = server.match(/服务器内部错误/g) || [];
     assert.ok(internalError.length >= 20, '应有至少20处统一错误消息');
@@ -1365,7 +1390,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('HTTP方法使用合理', () => {
-    const server = read('server.js');
+    // 路由随域拆分分布于 server.js/orders.js/admin.js(改造4)
+    const server = ['server.js', 'server/routes/orders.js', 'server/routes/admin.js'].map(read).join('\n');
     // 写操作使用POST/PUT/DELETE
     assert.ok(server.includes("app.post('/api/order'"), '下单使用POST');
     assert.ok(server.includes("app.put('/api/orders/:id/status'"), '更新订单状态使用PUT');
@@ -1376,7 +1402,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('导航栏正确处理三种用户状态', () => {
-    const js = read('js/core.js');
+    const js = readSq('js/core.js');
     assert.ok(js.includes("currentUser&&currentUser!=='guest'"), '已登录用户状态');
     assert.ok(js.includes("currentUser==='guest'"), '游客状态');
     assert.ok(js.includes('nav-profile-item'), '我的导航项');
@@ -1454,7 +1480,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     // predict-rf 已拆至 server/ml-worker.js(改造4)
     const server = read('server/ml-worker.js');
     assert.ok(server.includes('dishes.length === 0'), '拒绝空数组');
-    const js = read('js/recommendation.js');
+    const js = readSq('js/recommendation.js');
     assert.ok(js.includes('slice(0,100)'), '限制最多100个菜品');
   });
 
@@ -1477,7 +1503,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('添加菜品字段有默认值保护', () => {
-    const server = read('server.js');
+    // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     const addDishBlock = server.substring(
       server.indexOf("app.post('/api/admin/dish', async"),
       server.indexOf("app.post('/api/admin/dish', async") + 200
@@ -1491,7 +1518,8 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('订单商品价格有验证', () => {
-    const server = read('server.js');
+    // 点餐域已拆至 server/routes/orders.js(改造4)
+    const server = read('server/routes/orders.js');
     // 2026-09-17: 价格校验已改为服务端重算(recomputeOrderItems 按 DB 单价,不信任客户端)
     assert.ok(server.includes('async function recomputeOrderItems'), '订单价格有服务端重算验证');
     assert.ok(server.includes('priceMap[did] === undefined'), '无效菜品被拒绝');
@@ -1536,11 +1564,13 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('推荐日志和偏好日志有默认值保护', () => {
-    const server = read('server.js');
+    // 埋点路由已拆至 server/routes/recommend.js(改造4)
+    const server = read('server/routes/recommend.js');
     // 2026-09-17: userType/userId 已改为取自 JWT 拒绝客户端伪造(比默认值兜底更强)
     assert.ok(server.includes("req.user?.username || 'guest'"), '推荐日志userId默认值');
     assert.ok(server.includes("req.user ? 'user' : 'guest'"), '推荐日志userType取自登录态');
-    assert.ok(server.includes("allergies ? JSON.stringify(allergies) : '{}'"), '偏好日志allergies默认值');
+    // allergies 经参数化查询直接传数组(pg 对 jsonb 列自动转换),不再手工 JSON.stringify
+    assert.ok(server.includes("allergies||[]"), '偏好日志allergies默认值');
     assert.ok(server.includes("recommendationMode||'auto'") || server.includes("recommendationMode || 'auto'"), '偏好日志mode默认值');
   });
 
