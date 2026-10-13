@@ -17,6 +17,8 @@ before(async () => {
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
+// prettier 鲁棒匹配:去全部空白后再比对子串
+const squashWS = (s) => String(s).replace(/\s+/g, '');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
@@ -581,8 +583,8 @@ describe('42. 用户删除数据清理', () => {
   it('server.js 用户删除时清理反馈和推荐日志', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf('// 3.4 通知'));
+    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf("app.get('/api/admin/notifications'"));
     assert.ok(toggleBlock.includes('DELETE FROM feedback'), '应清理用户反馈');
     assert.ok(toggleBlock.includes('DELETE FROM recommendation_log'), '应清理推荐日志');
     assert.ok(toggleBlock.includes('SELECT id, username'), '应先获取用户名');
@@ -591,8 +593,8 @@ describe('42. 用户删除数据清理', () => {
   it('server.js 用户删除清理逻辑正确', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf('// 3.4 通知'));
+    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf("app.get('/api/admin/notifications'"));
     // 确保不是先删除用户再查询（会导致查询不到）
     assert.ok(toggleBlock.indexOf('SELECT id, username') > toggleBlock.indexOf('DELETE FROM users WHERE') === false ||
       toggleBlock.indexOf('SELECT id, username') < toggleBlock.indexOf('DELETE FROM users WHERE'),
@@ -625,7 +627,7 @@ describe('43. 前端 null 安全保护', () => {
     const path = require('path');
     // esbuild 压缩会改写局部变量名(rl/rr/$s),精确断言读模块源码
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(content.includes('if(!rl||!rr)'),
+    assert.ok(squashWS(content).includes('if(!rl||!rr)'),
       '推荐入口应有 null 保护');
   });
 });
@@ -664,15 +666,15 @@ describe('45. recommendation.js DOM null 保护', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(content.includes('if(!rl||!rr)'), '应有 rl 和 rr 的 null 检查');
-    assert.ok(content.includes('if($(\'recommendation-loading\'))'), '应有 loading 元素的 null 检查');
+    assert.ok(squashWS(content).includes('if(!rl||!rr)'), '应有 rl 和 rr 的 null 检查');
+    assert.ok(squashWS(content).includes("rl=$('recommendation-loading')"), '应有 loading 元素的 null 检查(prettier 后为 const rl 形态)');
   });
 
   it('displayRecommendations 有 dish-list null 保护', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(content.includes('if(!dl)'), '应有 dl 的 null 检查');
+    assert.ok(squashWS(content).includes('if(!dl)'), '应有 dl 的 null 检查');
   });
 
   it('matchRate 显示有 NaN 保护', () => {
@@ -689,7 +691,7 @@ describe('45. recommendation.js DOM null 保护', () => {
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
     assert.ok(bundle.includes('isFinite('), '构建产物应有 isFinite 保护(函数名全局保留)');
     const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(src.includes('if(!rl||!rr)'), '源码应有 rl/rr null 保护');
+    assert.ok(squashWS(src).includes('if(!rl||!rr)'), '源码应有 rl/rr null 保护');
   });
 });
 
@@ -702,7 +704,7 @@ describe('46. checkoutCart 修复验证', () => {
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
     assert.ok(content.includes('authHeaders()'), 'core.js 应包含 authHeaders 调用');
-    assert.ok(content.includes('clearCart()') && content.includes('then(d=>{'), 'clearCart 应在成功回调中');
+    assert.ok(content.includes('clearCart()') && squashWS(content).includes('then((d)=>{'), 'clearCart 应在成功回调中');
   });
 
   it('endRecommendation 使用 authHeaders', () => {
@@ -733,8 +735,8 @@ describe('47. submitStarFeedback null 保护', () => {
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
     const block = content.substring(content.indexOf('function submitStarFeedback'), content.indexOf('function openStarFeedback'));
     assert.ok(block.includes('authHeaders()'), '评分反馈应有认证头');
-    assert.ok(block.includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
-    assert.ok(block.includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
+    assert.ok(squashWS(block).includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
+    assert.ok(squashWS(block).includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
   });
 
   it('openStarFeedback 有 DOM null 保护', () => {
@@ -743,9 +745,9 @@ describe('47. submitStarFeedback null 保护', () => {
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
     const idx = content.indexOf('function openStarFeedback');
     const slice = content.substring(idx, idx + 800);
-    assert.ok(slice.includes('if(fd)fd.textContent'), 'star-feedback-dish 应有 null 检查');
-    assert.ok(slice.includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
-    assert.ok(slice.includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(fd)fd.textContent'), 'star-feedback-dish 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
   });
 
   it('script.js 构建产物包含评分安全保护', () => {
@@ -755,7 +757,7 @@ describe('47. submitStarFeedback null 保护', () => {
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
     assert.ok(bundle.includes('function submitStarFeedback'), '构建产物应保留 submitStarFeedback');
     const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
-    assert.ok(src.includes('if(h)h.textContent'), '源码应有 star-hint 保护');
+    assert.ok(squashWS(src).includes('if(h)h.textContent'), '源码应有 star-hint 保护');
   });
 });
 
@@ -1049,8 +1051,8 @@ describe('61. 管理员查看所有订单', () => {
   it('server.js 中 admin 可查看所有订单', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-    assert.ok(content.includes("req.user?.role === 'admin'"), '应识别 admin 角色');
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+    assert.ok(content.includes("req.user?.role === 'admin'") || content.includes("req.user?.role==='admin'"), '应识别 admin 角色(拆分后可能无空格)');
     assert.ok(content.includes('queryUserId'), '应支持 userId 查询参数');
   });
 
@@ -1126,7 +1128,8 @@ describe('64. 重训练异步执行', () => {
   it('手动重训练使用异步 spawn 而非 spawnSync', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+    // retrain 路由已拆分至 server/routes/admin.js(2026-10-13 改造4)
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
     const retrainBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
     assert.ok(retrainBlock.includes('const { spawn } = require'), '应使用异步 spawn');
     assert.ok(retrainBlock.includes("proc.on('close', async (code)"), '应有 close 事件处理');
@@ -1192,7 +1195,7 @@ describe('67. 自动重训练异步', () => {
   it('checkAndRetrain 使用异步 spawn 而非 spawnSync', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join(String.fromCharCode(10))
     const block = content.substring(content.indexOf('async function checkAndRetrain'), content.indexOf('// 模型版本信息'));
     assert.ok(block.includes('const { spawn } = require'), '自动重训练应使用异步 spawn');
     assert.ok(block.includes("proc.on('close', async (code)"), '应有 close 事件处理');
@@ -1223,7 +1226,7 @@ describe('68. 服务器端代码质量', () => {
   it('checkAndRetrain 函数结构正确', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join(String.fromCharCode(10))
     const block = content.substring(content.indexOf('async function checkAndRetrain'), content.indexOf('// 模型版本信息'));
     // 验证函数结构：if-newCount-branch（异步训练）和 else-branch（立即重置）
     assert.ok(block.includes('if (newCount >= 50'), '应有 newCount 检查');
