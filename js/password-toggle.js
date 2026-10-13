@@ -16,12 +16,12 @@
       '.pwd-toggle-wrap{position:relative;display:flex;align-items:center;width:100%;}' +
       '.pwd-toggle-wrap>input{flex:1 1 auto;min-width:0;padding-right:2.6rem;box-sizing:border-box;}' +
       '.pwd-toggle-wrap .pwd-toggle-btn{' +
-        'position:absolute;right:0.4rem;top:50%;transform:translateY(-50%);' +
-        'width:auto;height:auto;margin:0;padding:0.35rem;' +
-        'background:transparent;border:0;border-radius:0;' +
-        'font-size:1rem;font-weight:400;line-height:1;cursor:pointer;' +
-        'color:var(--text-light,#999);z-index:5;' +
-        'display:inline-flex;align-items:center;justify-content:center;' +
+      'position:absolute;right:0.4rem;top:50%;transform:translateY(-50%);' +
+      'width:auto;height:auto;margin:0;padding:0.35rem;' +
+      'background:transparent;border:0;border-radius:0;' +
+      'font-size:1rem;font-weight:400;line-height:1;cursor:pointer;' +
+      'color:var(--text-light,#999);z-index:5;' +
+      'display:inline-flex;align-items:center;justify-content:center;' +
       '}' +
       '.pwd-toggle-wrap .pwd-toggle-btn:hover{color:var(--primary-accent,#b83a2a);background:transparent;}' +
       '.pwd-toggle-wrap .pwd-toggle-btn:focus-visible{outline:2px solid var(--primary-accent,#b83a2a);outline-offset:1px;border-radius:4px;}' +
@@ -29,8 +29,8 @@
     document.head.appendChild(style);
   }
 
-  var ICON_HIDDEN = 'bi-eye';        // 密码当前隐藏 → 点击显示
-  var ICON_SHOWN  = 'bi-eye-slash';  // 密码当前显示 → 点击隐藏
+  var ICON_HIDDEN = 'bi-eye'; // 密码当前隐藏 → 点击显示
+  var ICON_SHOWN = 'bi-eye-slash'; // 密码当前显示 → 点击隐藏
 
   function setState(input, btn, shown) {
     input.type = shown ? 'text' : 'password';
@@ -73,7 +73,9 @@
   // 对外暴露，供动态插入表单后重新调用
   window.enhancePasswordInputs = enhance;
 
-  function init() { enhance(document); }
+  function init() {
+    enhance(document);
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
