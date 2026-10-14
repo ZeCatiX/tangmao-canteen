@@ -126,8 +126,9 @@ app.post('/api/admin/dish', async (req, res) => {
       `INSERT INTO dishes (name, category, spiciness, saltiness, sweetness, price, rating, tags, allergies, is_halal, is_vegetarian, is_active, description, price_unit, serving) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
       [name, category||null, spiciness||'不辣', saltiness||'适中', sweetness||'无味', priceNum, ratingNum, Array.isArray(tags) ? `{${tags.join(',')}}` : (tags ? `{${String(tags).split(',').map(t => t.trim()).filter(Boolean).join(',')}}` : '{}'), allergies ? JSON.stringify(allergies) : '{}', isHalal||false, isVegetarian||false, activeFlag, description||null, unitNorm, servingNorm]
     );
-    res.json({ success: true, message: '添加成功', id: result.rows[0].id });
+    // 先刷缓存再应答（2026-10-14：响应先行的竞态让客户端紧随的读拿到旧菜名/单位，GUI 电池实测复现）
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+    res.json({ success: true, message: '添加成功', id: result.rows[0].id });
   } catch (e) { logger.error('添加菜品失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
@@ -167,8 +168,8 @@ app.put('/api/admin/dish/:id', async (req, res) => {
     if (!sets.length) return res.status(400).json({ success: false, error: '没有要更新的字段' });
     vals.push(dishId);
     await pool.query(`UPDATE dishes SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
-    res.json({ success: true, message: '更新成功' });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+    res.json({ success: true, message: '更新成功' });
   } catch (e) { logger.error('更新菜品失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
@@ -178,8 +179,8 @@ app.delete('/api/admin/dish/:id', async (req, res) => {
     if (isNaN(id) || id <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
     const pool = db;
     await pool.query('UPDATE dishes SET is_active = NOT is_active WHERE id = $1', [id]);
-    res.json({ success: true, message: '状态已切换' });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+    res.json({ success: true, message: '状态已切换' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
@@ -189,8 +190,8 @@ app.delete('/api/admin/dish/:id/permanent', async (req, res) => {
     if (isNaN(id) || id <= 0) return res.status(400).json({ success: false, error: '无效的菜品ID' });
     const pool = db;
     await pool.query('DELETE FROM dishes WHERE id = $1', [id]);
-    res.json({ success: true, message: '已永久删除' });
     try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+    res.json({ success: true, message: '已永久删除' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
