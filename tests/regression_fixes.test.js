@@ -19,6 +19,8 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const ROOT = path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+// 改造1 后 js/ 源码经 prettier 格式化,历史紧凑断言串需空白归一化后比较
+const sq = s => String(s).replace(/\s+/g, '');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
@@ -38,7 +40,8 @@ async function adminToken() {
 // ================================================================
 describe('安全修复回归', () => {
   it('server.js 不使用客户端 userId 冒充（IDOR）', () => {
-    const s = read('server.js');
+    // 订单/反馈域已拆至 server/routes/orders.js(改造4)
+    const s = read('server/routes/orders.js');
     assert.ok(s.includes("const effectiveUserId = req.user?.username || 'guest';"), 'order/feedback 应使用 guest 而非客户端 userId');
     assert.ok(!s.includes("req.user?.username || userId || 'guest';"), '不应残留 userId 冒充逻辑');
   });
@@ -103,28 +106,28 @@ describe('前端修复回归', () => {
     assert.ok(!s.includes("'\\api\\user\\register'"), '不应有反斜杠路径');
   });
   it('renderMenuTable 动态标签安全（白名单+转义）防存储型 XSS', () => {
-    const s = read('js/core.js');
+    const s = sq(read('js/core.js'));
     // 模块化重构后 tags 不再整体拼接:只渲染 SUBS 白名单二级分隔(且 esc)与固定文案角标
     // 2026-10-08: i18n 改造把 esc(sub) 升级为 esc(EN 查表||sub),白名单+转义性质不变,断言随行
-    assert.ok(s.includes('const SUBS=['), '二级分隔应走 SUBS 白名单');
-    assert.ok(/SUBS\.includes\(t\)/.test(s), '标签必须先过白名单才上屏');
-    assert.ok(s.includes("esc(menuLang==='en'?(SUB_EN[sub]||sub):sub)"), '白名单标签仍应 esc 转义');
+    assert.ok(s.includes('constSUBS=['), '二级分隔应走 SUBS 白名单');
+    assert.ok(s.includes('SUBS.includes(t)'), '标签必须先过白名单才上屏');
+    assert.ok(s.includes("esc(menuLang==='en'?SUB_EN[sub]||sub:sub)"), '白名单标签仍应 esc 转义');
   });
   it('checkoutCart 发送原始 name 非双重转义', () => {
-    const s = read('js/core.js');
+    const s = sq(read('js/core.js'));
     assert.ok(s.includes('name:x.name'), '应发送原始 name');
     assert.ok(!s.includes('name:esc(x.name)'), '不应双重转义');
   });
   it('fetchRecommendations userProfile 空值保护', () => {
-    const s = read('js/recommendation.js');
-    assert.ok(s.includes('const up=userProfile||{}'), '应有 userProfile 空值保护');
+    const s = sq(read('js/recommendation.js'));
+    assert.ok(s.includes('constup=userProfile||{}'), '应有 userProfile 空值保护');
   });
   it('localStorage setItem 有 try-catch', () => {
-    const s = read('js/core.js');
+    const s = sq(read('js/core.js'));
     assert.ok(s.includes("try{localStorage.setItem('orderedDishes'"), 'setItem 应有 try-catch 防隐私模式崩溃');
   });
   it('fetchRecommendations 推荐池排除售罄菜（2026-10-06 回归）', () => {
-    const s = read('js/recommendation.js');
+    const s = sq(read('js/recommendation.js'));
     // 售罄菜不进偏好推荐池:与菜单灰化/冷启动过滤/结算拦截构成完整售罄链路
     assert.ok(s.includes('is_sold_out===true'), '推荐池应过滤 is_sold_out');
   });
@@ -134,12 +137,12 @@ describe('前端修复回归', () => {
     assert.ok(/html\.dark-mode #table-status-card\s*{[^}]*background:\s*#1a1a1a\s*!important/.test(s), '暗色模式应有 #table-status-card 深底覆盖');
   });
   it('推荐模式词表统一为枚举,消费端兼容旧中文标签（2026-10-08 回归）', () => {
-    const core = read('js/core.js');
+    const core = sq(read('js/core.js'));
     // 冷启动曾写入中文标签'本地推荐（更快速）',消费端只认枚举 → "本地"语义静默失效
     assert.ok(core.includes("recommendationMode:'local',blindBoxMode:'smart',coldStart:true"), '冷启动 userProfile 应写枚举');
     // 恢复链路曾静默拒绝旧中文值 → 保存过"本地"的老用户下拉被重置回 auto
     assert.ok(core.includes("m.indexOf('本地')>=0?'local'"), 'loadUserPreferences 应把旧中文标签归一化为枚举');
-    const rec = read('js/recommendation.js');
+    const rec = sq(read('js/recommendation.js'));
     assert.ok(rec.includes("rawMode.indexOf('本地')>=0?'local'"), 'fetchRecommendations 消费端应兼容旧中文标签');
   });
   it('logo-intro 十二维雷达带维度标签（2026-10-08 回归）', () => {
@@ -172,12 +175,12 @@ describe('前端修复回归', () => {
     assert.ok(modalPart.includes('inst&&inst.hide()') || modalPart.includes('inst && inst.hide()'), '弹窗内加购后应自动收起');
   });
   it('加菜横幅必须同桌才显示+已结算措辞改已下单（2026-10-08 回归）', () => {
-    const s = read('js/core.js');
+    const s = sq(read('js/core.js'));
     // 跨桌残留会话曾把 09 桌已取消订单挂到 08 桌会话横幅上
     assert.ok(/ltB&&loB&&lotB===ltB/.test(s), '加菜横幅应校验 lastOrderTable===lockedTable');
     const idx = read('index.html');
     assert.ok(idx.includes('已下单') && !idx.includes('>已结算<'), '时间线徽标应为已下单(取消/完成状态不可知,不预设已结算)');
-    assert.ok(read('js/globals.js').includes("'已下单':'Ordered'"), 'EN 映射同步');
+    assert.ok(/已下单:\s*'Ordered'/.test(read('js/globals.js')), 'EN 映射同步');
   });
   it('席面卡手机端换行布局（2026-10-08 回归）', () => {
     // 412px 视口下固定宽度控件组曾把菜名列挤压成一字一行竖排
@@ -193,11 +196,11 @@ describe('前端修复回归', () => {
     assert.ok(/html\.dark-mode \.table-total \{ color: var\(--gold-light\); \}/.test(css), '暗色保持 gold-light');
   });
   it('偏好页不再清空推荐数组+评分入口防御（2026-10-08 回归）', () => {
-    const s = read('js/core.js');
+    const s = sq(read('js/core.js'));
     // 生成推荐→逛偏好页→返回点评分曾报"请先选择评分":数组被清而旧卡片仍可点
     const prefBlock = s.split("if(sectionId==='preference-section')")[1]?.split('showSection')[0] || '';
     assert.ok(!prefBlock.includes('resetRecommendation()'), '进入偏好页不应清空 currentRecommendation(数组与卡片须同步)');
-    assert.ok(/function openStarFeedback\(dish\)\{\s*if\(!dish\)/.test(s), '评分入口应对空引用防御提示');
+    assert.ok(s.includes('functionopenStarFeedback(dish){if(!dish)'), '评分入口应对空引用防御提示');
   });
   it('admin.html 内联脚本语法有效（2026-10-08 回归：重复赋值行曾致整个script块瘫痪）', () => {
     const html = read('admin.html');
@@ -210,7 +213,8 @@ describe('前端修复回归', () => {
     });
   });
   it('用户管理分页与服务端搜索（2026-10-08 回归）', () => {
-    const server = read('server.js');
+    // 用户管理接口已拆至 server/routes/admin.js(改造4)
+    const server = read('server/routes/admin.js');
     assert.ok(server.includes("WHERE username ILIKE $1"), '用户接口应支持服务端 ILIKE 搜索');
     assert.ok(/LIMIT \$/.test(server.split("app.get('/api/admin/users'")[1]?.split('app.get')[0] || ''), '用户接口应有分页上限');
     const admin = read('admin.html');
@@ -248,7 +252,8 @@ describe('暗色模式对比度回归', () => {
 // ================================================================
 describe('日志路径修复回归', () => {
   it('监控 API combined 日志使用日期文件名', () => {
-    const s = read('server.js');
+    // 监控路由已拆至 server/routes/admin.js(改造4)
+    const s = read('server/routes/admin.js');
     assert.ok(s.includes("combined-'+today+'.log"), '应使用 combined-{today}.log 而非 combined.log');
     assert.ok(!s.includes("'logs', 'combined.log'"), '不应残留无日期的 combined.log');
   });
