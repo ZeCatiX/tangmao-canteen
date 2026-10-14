@@ -22,7 +22,8 @@ describe('ML模型与PythonWorker深度检查', () => {
 
   // ===== 2. 训练脚本存在 =====
   it('2.1 ML训练脚本存在', () => {
-    const scripts = ['train_restaurant_model.py', 'train_restaurant_model.py', 'retrain_from_feedback.py'];
+    // 训练脚本已归档至 ml/ 子目录（与 server 端 spawn 路径一致）
+    const scripts = ['ml/train_restaurant_model.py', 'ml/train_restaurant_model.py', 'ml/retrain_from_feedback.py'];
     for (const s of scripts) {
       const p = path.join(ROOT, s);
       assert.ok(fs.existsSync(p), `${s}应存在`);
