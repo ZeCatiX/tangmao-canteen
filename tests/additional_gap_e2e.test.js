@@ -10,6 +10,9 @@ const BASE = 'http://localhost:3000';
 
 function readFile(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
 
+// 改造1 后 js/ 源码经 prettier 格式化,紧凑断言串需空白归一化后比较
+const sq = (s) => String(s).replace(/\s+/g, '');
+
 // 点2: 盲盒/换一批/选好了/退出按钮
 describe('点2 盲盒/换一批/选好了/退出按钮', () => {
   it('推荐页面有"换一批"按钮', () => {
@@ -28,20 +31,20 @@ describe('点2 盲盒/换一批/选好了/退出按钮', () => {
     assert.ok(js.includes('退出'), '缺少退出文字');
   });
   it('换一批按钮调用 fetchRecommendations', () => {
-    const js = readFile('js/recommendation.js');  // 2026-09-17: 按钮委托绑定已迁至 recommendation.js,且带参数
+    const js = sq(readFile('js/recommendation.js'));  // 2026-09-17: 按钮委托绑定已迁至 recommendation.js,且带参数
     assert.ok(js.includes("'refresh-recommendations':()=>fetchRecommendations("), '换一批按钮应绑定推荐刷新');
   });
   it('选好了按钮调用 endRecommendation', () => {
-    const js = readFile('js/recommendation.js');
+    const js = sq(readFile('js/recommendation.js'));
     assert.ok(js.includes("'end-recommendation':()=>endRecommendation("), '选好了按钮应绑定结束推荐');
   });
   it('退出按钮调用 resetRecommendation', () => {
-    const js = readFile('js/recommendation.js');
+    const js = sq(readFile('js/recommendation.js'));
     assert.ok(js.includes("'end-logout-btn':()=>{resetRecommendation();showSection('home-section')}") ||
               js.includes("'end-logout-btn':()=>{resetRecommendation()"), '退出按钮应绑定重置并返回首页');
   });
   it('盲盒推荐显示"盲盒尝鲜"标签', () => {
-    const js = readFile('js/core.js');
+    const js = sq(readFile('js/core.js'));
     assert.ok(js.includes("type:'盲盒尝鲜'"), '盲盒应标记为盲盒尝鲜');
   });
   it('盲盒推荐不在已推荐列表', () => {
@@ -106,7 +109,8 @@ describe('点117 fix_error_leak修复检查', () => {
     assert.ok(!matches || matches.length === 0, '不应有泄露e.message的catch块，发现：' + (matches ? matches.length : 0));
   });
   it('server.js catch块统一使用服务器内部错误', () => {
-    const server = readFile('server.js');
+    // catch 块随域拆分分布于 server.js 与各路由模块(改造4)
+    const server = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js', 'server/routes/users.js', 'server/routes/recommend.js', 'server/ml-worker.js'].map(readFile).join('\n');
     const safePattern = /catch\s*\(e\)[\s\S]*?res\.status\(\d+\)\.json\(\{[\s\S]*?error:\s*'服务器内部错误'\s*\}/g;
     const matches = server.match(safePattern);
     assert.ok(matches && matches.length >= 20, '应有至少20处安全catch块，实际：' + (matches ? matches.length : 0));
@@ -152,7 +156,8 @@ describe('点119 JWT黑名单机制', () => {
     assert.ok(auth.includes('blacklisted'), 'authMiddleware 应检查 blacklisted 状态');
   });
   it('server.js 有 /api/user/logout 端点', () => {
-    const server = readFile('server.js');
+    // 用户域(含 logout)已拆至 server/routes/users.js(改造4)
+    const server = readFile('server/routes/users.js');
     assert.ok(server.includes('/api/user/logout'), 'server.js 应有 /api/user/logout 端点');
     assert.ok(server.includes('revokeToken'), 'logout 端点应调用 revokeToken');
   });

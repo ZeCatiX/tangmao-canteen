@@ -47,6 +47,13 @@ describe('深度点击测试 - 全流程用户交互', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
+    // 品牌开幕动画(logo-intro-overlay,fixed+inset:0+z-index3000)每会话首访播放约5.6s,
+    // 期间盖住导航栏——真实鼠标点击(page.click 有命中测试)会被遮挡判 not clickable;
+    // 等动画收场再点(套件只有首个 goto 承担该窗口,后续用例 sessionStorage 已跳过)
+    await page.waitForFunction(() => {
+      const ov = document.getElementById('logo-intro-overlay');
+      return !ov || ov.style.display === 'none';
+    }, { timeout: 8000, polling: 300 }).catch(() => { /* 动画未播(reduced-motion/已播会话)直接过 */ });
     await page.click('#nav-about');
     await sleep(400);
     const visible = await page.evaluate(() => {
