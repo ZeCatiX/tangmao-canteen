@@ -227,16 +227,22 @@
       }
       delete _armedCompletes[id];
       const token = getToken();
-      if (!token) return;
+      if (!token) { showToast('⚠ 登录已过期，请刷新页面后重新登录'); return; }
+      if (btn) btn.disabled = true;
       fetch('/api/orders/' + id + '/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
         body: JSON.stringify({ status: 'completed' })
       }).then(r => r.json()).then(d => {
         if (d.success) loadOrders();
+        else {
+          // 业务失败也要可见（2026-10-14：此前静默，点击"没反应"无从排查）
+          showToast('⚠ ' + (d.error || '完成失败，请重试'));
+          if (btn) { btn.textContent = '完成'; btn.style.background = ''; btn.disabled = false; }
+        }
       }).catch(() => {
         showToast('⚠ 完成失败，请重试');
-        if (btn) { btn.textContent = '完成'; btn.style.background = ''; }
+        if (btn) { btn.textContent = '完成'; btn.style.background = ''; btn.disabled = false; }
       });
     }
 

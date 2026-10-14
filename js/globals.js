@@ -832,11 +832,47 @@ function applyUiLang() {
       }
     });
     __zhTranslated = [];
+    // 元素级翻译的还原（菜单筛选控件——option 文本不走路径②的文本节点清单）
+    __zhElTranslated.forEach((el) => {
+      if (el.__zhOrigEl !== undefined) {
+        el.textContent = el.__zhOrigEl;
+        delete el.__zhOrigEl;
+      }
+    });
+    __zhElTranslated = [];
     document.querySelectorAll('input[data-zh-ph], textarea[data-zh-ph]').forEach((el) => {
       el.placeholder = el.getAttribute('data-zh-ph');
       el.removeAttribute('data-zh-ph');
     });
   } else {
+    // ②-b 菜单筛选控件显式翻译：这些 option/按钮会被动态重渲染，文本节点不保证在路径②扫描时机内
+    // （EN 模式曾出现 "All categories" 与 "全部辣度/默认排序" 中英混排）
+    ['menu-filter-cat', 'menu-filter-spice', 'menu-filter-price', 'menu-sort', 'menu-reset-filter', 'menu-search'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.tagName === 'INPUT') {
+        // 搜索框 placeholder：重渲染后路径③的时机同样不保证，这里按 PH_EN 兜底
+        // （placeholder 可能带 emoji 前缀，用包含式命中替换）
+        if (el.placeholder) {
+          const hit = Object.keys(PH_EN).find((k) => el.placeholder.indexOf(k) >= 0);
+          if (hit) {
+            if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder);
+            el.placeholder = el.placeholder.replace(hit, PH_EN[hit]);
+          }
+        }
+        return;
+      }
+      const texts = el.tagName === 'SELECT' ? Array.from(el.options) : [el];
+      texts.forEach((o) => {
+        const key = (o.textContent || '').trim();
+        const en = ZH_EN[key];
+        if (en) {
+          if (o.__zhOrigEl === undefined) o.__zhOrigEl = o.textContent;
+          o.textContent = en;
+          if (__zhElTranslated.indexOf(o) < 0) __zhElTranslated.push(o);
+        }
+      });
+    });
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: (n) =>
         n.nodeName === 'SCRIPT' || n.nodeName === 'STYLE' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
@@ -887,6 +923,7 @@ function applyUiLang() {
   });
 }
 var __zhTranslated = [];
+var __zhElTranslated = []; // 菜单筛选控件等元素级翻译清单（option 文本不走路径②）
 var _uiLangApplying = false,
   _uiLangPending = false;
 function applyUiLangGuarded() {
