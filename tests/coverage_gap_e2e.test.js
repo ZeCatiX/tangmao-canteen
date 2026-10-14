@@ -163,14 +163,15 @@ describe('E2E 覆盖缺口补充测试', () => {
   // ── 检查点 63/64: ML 训练脚本 ──
   describe('63/64. ML 训练脚本独立运行', () => {
     it('train_restaurant_model.py 存在且可被 Python 编译', (t) => {
-      const file = path.join(__dirname, '..', 'train_restaurant_model.py');
+      // 训练脚本已归档至 ml/ 子目录
+      const file = path.join(__dirname, '..', 'ml', 'train_restaurant_model.py');
       assert.ok(fs.existsSync(file), 'train_restaurant_model.py 应存在');
       // 语法检查通过 py_compile（标注为手动验证，此处仅确认存在）
       assert.ok(fs.readFileSync(file, 'utf8').length > 0, '文件不应为空');
     });
 
     it('retrain_from_feedback.py 存在且非空', () => {
-      const file = path.join(__dirname, '..', 'retrain_from_feedback.py');
+      const file = path.join(__dirname, '..', 'ml', 'retrain_from_feedback.py');
       assert.ok(fs.existsSync(file), 'retrain_from_feedback.py 应存在');
       assert.ok(fs.readFileSync(file, 'utf8').length > 0, '文件不应为空');
     });

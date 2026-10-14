@@ -223,7 +223,7 @@ describe('深层边界与特殊场景测试', () => {
   });
 
   // ===== 7. 推荐结果中收藏按钮状态变化 =====
-  it('7.1 收藏后推荐列表刷新保持收藏状态', async () => {
+  it('7.1 游客推荐渲染评分/加购按钮且不渲染收藏拉黑', async () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
@@ -235,8 +235,9 @@ describe('深层边界与特殊场景测试', () => {
     await page.evaluate(() => {
       document.getElementById('preference-form').querySelector('button[type="submit"]').click();
     });
-    await sleep(5000);
-    // 检查推荐结果中的收藏和拉黑按钮
+    // 有界等待推荐卡片渲染(ML冷启动时盲等5秒不够)
+    await page.waitForFunction(() => document.querySelectorAll('#dish-list button').length > 0, { timeout: 30000, polling: 1000 }).catch(() => { /* 超时交给下方断言报错 */ });
+    // 2026-10-08 产品决策:游客态隐藏收藏/拉黑按钮(消除"请先登录"弹窗误触),仅登录用户渲染
     const btnCount = await page.evaluate(() => {
       return {
         fav: document.querySelectorAll('#dish-list button[onclick*="addToFavorites"]').length,
@@ -245,8 +246,8 @@ describe('深层边界与特殊场景测试', () => {
         cart: document.querySelectorAll('#dish-list .add-to-cart-btn').length
       };
     });
-    assert.ok(btnCount.fav > 0, '应有收藏按钮');
-    assert.ok(btnCount.blk > 0, '应有拉黑按钮');
+    assert.equal(btnCount.fav, 0, '游客态不应渲染收藏按钮(游客隐藏设计)');
+    assert.equal(btnCount.blk, 0, '游客态不应渲染拉黑按钮(游客隐藏设计)');
     assert.ok(btnCount.star > 0, '应有评分按钮');
     assert.ok(btnCount.cart > 0, '应有加购按钮');
     assert.equal(realErrors().length, 0, '推荐结果按钮不应有错误');

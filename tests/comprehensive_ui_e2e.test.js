@@ -10,6 +10,9 @@ const ROOT = path.join(__dirname, '..');
 
 function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
 
+// 改造1 后 js/ 源码经 prettier 格式化,紧凑断言串需空白归一化后比较
+const sq = (s) => String(s).replace(/\s+/g, '');
+
 // 从HTML中提取所有带id的按钮
 function extractButtonIds(html) {
   const ids = [];
@@ -56,17 +59,17 @@ describe('深度UI检查 - 按钮可用性', () => {
   });
 
   it('登录表单提交有事件绑定', () => {
-    const init = read('js/init.js');
+    const init = sq(read('js/init.js'));
     assert.ok(init.includes("submit('login-form',login)"), 'login-form 缺少提交绑定');
   });
 
   it('注册表单提交有事件绑定', () => {
-    const init = read('js/init.js');
+    const init = sq(read('js/init.js'));
     assert.ok(init.includes("submit('register-form',register)"), 'register-form 缺少提交绑定');
   });
 
   it('偏好表单提交有事件绑定', () => {
-    const init = read('js/init.js');
+    const init = sq(read('js/init.js'));
     assert.ok(init.includes("submit('preference-form',submitPreference)"), 'preference-form 缺少提交绑定');
   });
 
@@ -225,7 +228,7 @@ describe('深度UI检查 - 崩溃风险', () => {
   });
 
   it('核心函数有null保护', () => {
-    const js = read('js/core.js');
+    const js = sq(read('js/core.js'));
     // showMessage
     assert.ok(js.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     // showSection
@@ -274,16 +277,16 @@ describe('深度UI检查 - 崩溃风险', () => {
   });
 
   it('fetchRecommendations 有菜品数据加载超时保护', () => {
-    const js = read('js/recommendation.js');
+    const js = sq(read('js/recommendation.js'));
     assert.ok(js.includes('if(!dishData.length)'), 'fetchRecommendations 应有菜品数据检查');
-    assert.ok(js.includes('await new Promise(r=>setTimeout(r,100))'), 'fetchRecommendations 应有等待机制');
+    assert.ok(js.includes('awaitnewPromise((r)=>setTimeout(r,100))'), 'fetchRecommendations 应有等待机制');
     assert.ok(js.includes('showMessage'), 'fetchRecommendations 应有错误提示');
   });
 
   it('displayRecommendations 有null保护', () => {
-    const js = read('js/recommendation.js');
+    const js = sq(read('js/recommendation.js'));
     assert.ok(js.includes('if(!loading||!result)return'), 'displayRecommendations 应有 null 保护');
-    assert.ok(js.includes("if(!dl)"), 'displayRecommendations 应有 dish-list null 保护');
+    assert.ok(js.includes('if(!dl)'), 'displayRecommendations 应有 dish-list null 保护');
   });
 
   it('购物车函数有null保护', () => {
