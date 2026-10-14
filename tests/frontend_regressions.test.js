@@ -12,6 +12,10 @@ const fs = require('fs');
 const path = require('path');
 
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+// 改造1 后 js/ 源码经 prettier 格式化,历史紧凑断言串需空白归一化后比较
+const sq = (s) => String(s).replace(/\s+/g, '');
+// ZH_EN 词典键有带引号/不带引号两种书写形态,断言需双形态兼容
+const hasDictKey = (g, k) => g.includes("'" + k + "':") || new RegExp('^\\s*' + k + ':', 'm').test(g);
 
 test('回归-BUG1: 选桌后AI入口走 openAIRecommend 冷启动判定, 不再硬编码跳偏好表单', () => {
   const core = read('js/core.js');
@@ -22,12 +26,12 @@ test('回归-BUG1: 选桌后AI入口走 openAIRecommend 冷启动判定, 不再�
   assert.ok(fnBody.includes('coldStartHotRecommend'), 'openAIRecommend 必须含冷启动分支');
   assert.ok(fnBody.includes("showSection('preference-section')"), 'openAIRecommend 必须含偏好表单分支');
   // 选桌后续路由的 ai 分支必须走判定源, 不允许硬编码
-  const pick = core.slice(core.indexOf('function applyTableChoice'), core.indexOf('function showTableBill'));
+  const pick = sq(core.slice(core.indexOf('function applyTableChoice'), core.indexOf('function showTableBill')));
   assert.ok(pick.includes("intent==='ai')openAIRecommend()"), 'applyTableChoice 的 ai 分支必须调 openAIRecommend');
   assert.ok(!pick.includes("intent==='ai')showSection('preference-section')"), 'ai 分支禁止硬编码跳偏好表单(会绕过冷启动)');
   // 首页按钮 handler 也走同一判定源
   const init = read('js/init.js');
-  assert.ok(/ai-recommend-btn[\s\S]*?openAIRecommend\(\)/.test(init), '首页 AI 按钮必须调 openAIRecommend');
+  assert.ok(/ai-recommend-btn[\s\S]*?openAIRecommend\(\)/.test(sq(init)), '首页 AI 按钮必须调 openAIRecommend');
 });
 
 test('回归-BUG2: 厨房完成按钮的二次确认状态按订单id记录, 重渲染后可恢复', () => {
@@ -48,8 +52,8 @@ test('回归-看板稳定: 订单数据无变化时跳过整表重建(不重绘/
 });
 
 test('回归-BUG3: 购物车行菜名走 dishNameOf(随英文菜单切换)', () => {
-  const core = read('js/core.js');
-  assert.ok(core.includes('const name=dish?esc(dishNameOf(dish)):esc(x.name)'), 'showCart 行名必须优先 dishNameOf(dish), 仅无匹配菜品时回退快照名');
+  const core = sq(read('js/core.js'));
+  assert.ok(core.includes('constname=dish?esc(dishNameOf(dish)):esc(x.name)'), 'showCart 行名必须优先 dishNameOf(dish), 仅无匹配菜品时回退快照名');
 });
 
 // ═══ 备注保存三重防线（2026-10-07 内置浏览器实测发现备注静默丢失）═══
@@ -100,7 +104,7 @@ test('UI骨架i18n②: 字典/应用函数/切换与初始加载接线', () => {
 test('遍历式翻译①: ZH_EN 字典覆盖扫描出的残留串', () => {
   const g = read('js/globals.js');
   const must = ['全部分类','全部辣度','全部价格','默认排序','按人气','请选择桌号','🥡 打包带走','浏览本店全部菜品，共','购物车是空的','去结算','家常版','宴请版','打卡版','壹用餐人数','避开最近吃过的菜（7 天内点过的不再推荐）','生成席面 · 三套方案','再来一单','退出登录','注销账号','去注册'];
-  for (const k of must) assert.ok(g.includes("'" + k + "':"), 'ZH_EN 缺: ' + k);
+  for (const k of must) assert.ok(hasDictKey(g, k), 'ZH_EN 缺: ' + k);
   assert.ok(g.includes('var PH_EN') && g.includes('搜索菜品名称'), 'placeholder 映射应存在');
   assert.ok(g.includes('createTreeWalker'), '应有遍历器');
   assert.ok(g.includes('REASON_EN') && g.includes('function reasonZhToEn'), '理由话术映射应存在');
@@ -120,7 +124,7 @@ test('遍历式翻译②: 动态渲染接入(下拉/meta/匹配指数/轮次/观
 test('品牌面英译: hero诗句/口号/关于本店/页脚双语并列', () => {
   const g = read('js/globals.js');
   for (const k of ['— 唐风雅韵 · 猫趣悠然 —', '梦回大唐 · 品味长安', '宫廷御膳 · 匠心呈现', '唐猫庭院 · 千年陕菜', '本地人的待客小宴', '大众点评收藏打卡关注门店送小挂件或冰峰']) {
-    assert.ok(g.includes("'" + k + "':"), 'ZH_EN 缺品牌条目: ' + k);
+    assert.ok(hasDictKey(g, k), 'ZH_EN 缺品牌条目: ' + k);
   }
   assert.ok(g.includes('addr-en') && g.includes('Grand Tang Mall Branch'), '页脚地址应中英并列注入');
   // 品牌名"唐猫庭院"与地址原文不得作为 key(保留中文/并列而非替换)
@@ -162,14 +166,13 @@ test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖�
 // bug2: 无口味声明用户显示"80.9%匹配度"——未声明维度给中性分,菜品质量分冒充个性匹配分,语义误导
 test('推荐卡修复①: 评分按钮去重(只渲染一个)', () => {
   const r = read('js/recommendation.js');
-  const m = r.match(/Rating按钮段/);
-  const row = r.split('\n').find(l => l.includes("dish-actions mt-2"));
-  const btnCount = (row.match(/openStarFeedback\(currentRecommendations/g) || []).length;
+  // prettier 后 dish-actions 行可能被拆分,直接全文统计评分按钮的渲染出现次数
+  const btnCount = (r.match(/openStarFeedback\(currentRecommendations/g) || []).length;
   assert.ok(btnCount === 1, '评分按钮应只出现1次, 实际' + btnCount);
 });
 
 test('推荐卡修复②: 无口味声明不显示匹配度%, 改显本店推荐徽标', () => {
-  const r = read('js/recommendation.js');
+  const r = sq(read('js/recommendation.js'));
   assert.ok(r.includes('hasTasteSignal'), '应有口味信号判定');
   assert.ok(r.includes('House pick') || r.includes('本店推荐'), '无信号应显本店推荐徽标');
   // processML 里声明数判定存在
