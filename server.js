@@ -443,7 +443,8 @@ app.post('/api/admin/login', (req, res) => {
       } catch(e2) { matched = false; }
     }
     if (matched) {
-      const token = generateToken({ id: 0, username: ADMIN_USER, role: 'admin' });
+      // 管理端短会话（默认12小时，可用 ADMIN_TOKEN_EXPIRES_IN 覆盖）：共享电脑的残留 token 不能长期有效
+      const token = generateToken({ id: 0, username: ADMIN_USER, role: 'admin' }, { expiresIn: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h' });
       return res.json({ success: true, message: '管理员登录成功', token });
     }
   }
@@ -460,7 +461,8 @@ async function adminAuth(req, res, next) {
     return res.status(401).json({ success: false, error: '请先登录管理后台' });
   }
   try {
-    const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+    // maxAge 与签发端 12h 对齐：历史上无 exp 的管理 token（iat 超龄）也一并拒绝
+    const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET, { maxAge: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h' });
     if (decoded.role !== 'admin') {
       return res.status(403).json({ success: false, error: '无管理权限' });
     }

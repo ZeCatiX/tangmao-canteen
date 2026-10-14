@@ -6,12 +6,12 @@ const pool = require('./db');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-// 生成令牌（含 jti 唯一标识，支持吊销）
-function generateToken(user) {
+// 生成令牌（含 jti 唯一标识，支持吊销）；opts.expiresIn 可覆盖默认时长（管理端用短会话）
+function generateToken(user, opts) {
   return jwt.sign(
     { id: user.id, username: user.username, role: user.role || 'user', jti: crypto.randomBytes(16).toString('hex') },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: (opts && opts.expiresIn) || JWT_EXPIRES_IN }
   );
 }
 

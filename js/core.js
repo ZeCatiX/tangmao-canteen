@@ -681,7 +681,8 @@ function buildCategoryUI() {
   const cats = [...new Set(dishData.map((d) => d.category).filter(Boolean))].sort(
     (a, b) => catOrderOf(a) - catOrderOf(b) || a.localeCompare(b, 'zh')
   );
-  const key = cats.join('|');
+  // 签名含语言：切换中英时分类 chips/select 也要按新语言重建（曾只比对分类集合，切语言后 chips 残留中文）
+  const key = cats.join('|') + '|' + menuLang;
   const tabs = document.getElementById('category-tabs');
   if (tabs && tabs.dataset.cats !== key) {
     const cur = (tabs.querySelector('.cat-tab.active') || { dataset: {} }).dataset.cat || '';
@@ -1818,6 +1819,8 @@ function logout() {
   const vcbG = document.getElementById('view-cached-btn');
   if (vcbG) vcbG.classList.add('d-none');
   if (window.updateHomeButtons) window.updateHomeButtons();
+  // 立即回首页（2026-10-14：仅靠弹窗关闭回调曾出现退出后主区空白、需手动刷新）
+  showSection('home-section');
   showMessage('已退出', msg, function () {
     showSection('home-section');
   });
@@ -2199,6 +2202,8 @@ function deleteAccount() {
           localStorage.removeItem('currentUser');
           localStorage.removeItem('userToken');
           resetRecommendation();
+          // 立即回首页（2026-10-14：仅靠弹窗关闭回调曾出现注销后主区空白、需手动刷新）
+          showSection('home-section');
           const m = bootstrap.Modal.getInstance(el);
           if (m) m.hide();
           cleanup();
