@@ -402,7 +402,7 @@ ensureTokenBlacklistTable();
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'kitchen.html')));
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'assets', 'brand', 'favicon-64.png')));
 app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: state.dishData }));
 app.get('/api/dishes/:id', (req, res) => {
   const id = parseInt(req.params.id);
