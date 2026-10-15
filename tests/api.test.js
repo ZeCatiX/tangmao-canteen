@@ -1131,9 +1131,10 @@ describe('边缘情况测试', () => {
 // 新增：favicon、图片上传、重训练测试
 // ─────────────────────────────────────────────
 describe('其他端点测试', () => {
-  it('GET /favicon.ico 返回204', async () => {
+  it('GET /favicon.ico 返回真实图标(2026-10-15: 空204改为真图标)', async () => {
     const res = await fetch(BASE + '/favicon.ico');
-    assert.equal(res.status, 204);
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type') || '', /image\/png/, '应返回 PNG 图标');
   });
 
   it('GET /api/worker-health 返回success字段', async () => {

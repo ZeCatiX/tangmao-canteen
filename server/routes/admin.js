@@ -87,10 +87,14 @@ const [today, guest, user, totalRec, totalFb, avgRating, totalUsers, totalDishes
 app.get('/api/admin/popular-dishes', async (req, res) => {
   try {
     const pool = db;
+    // 饮品与主食不参与菜品排行(与推荐系统口径一致,2026-10-15);饮品经 scope=drink 单独成榜
+    const where = req.query.scope === 'drink'
+      ? "d.category = '飲品与酒水'"
+      : "d.category NOT IN ('飲品与酒水', '主食')";
     const result = await pool.query(
-      "SELECT d.id, d.name, d.category, d.price, d.rating, COUNT(f.id) as feedback_count, ROUND(AVG(f.rating),2) as avg_rating FROM dishes d LEFT JOIN feedback f ON d.id = f.dish_id WHERE d.is_active = TRUE GROUP BY d.id ORDER BY feedback_count DESC, avg_rating DESC NULLS LAST LIMIT 62"
+      `SELECT d.id, d.name, d.category, d.price, d.rating, COUNT(f.id) as feedback_count, ROUND(AVG(f.rating),2) as avg_rating FROM dishes d LEFT JOIN feedback f ON d.id = f.dish_id WHERE d.is_active = TRUE AND ${where} GROUP BY d.id ORDER BY feedback_count DESC, avg_rating DESC NULLS LAST LIMIT 62`
     );
-    res.json({ success: true, dishes: result.rows });
+    res.json({ success: true, dishes: result.rows, scope: req.query.scope === 'drink' ? 'drink' : 'dish' });
   } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
 });
 
