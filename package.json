@@ -8,9 +8,9 @@
     "dev": "nodemon server.js",
     "build": "node build.js",
     "test": "node --test tests/api.test.js",
-    "posttest": "node scripts/cleanup_test_orders.js",
+    "posttest": "node scripts/cleanup_test_orders.js && node scripts/cleanup_test_dishes.js",
     "test:all": "node --test --test-concurrency=2 tests/api.test.js tests/e2e.test.js tests/comprehensive_e2e.test.js tests/enhanced_e2e.test.js tests/admin_auth_test.js tests/gift_append.test.js tests/trust_proxy_e2e.test.js",
-    "posttest:all": "node scripts/cleanup_test_orders.js",
+    "posttest:all": "node scripts/cleanup_test_orders.js && node scripts/cleanup_test_dishes.js",
     "test:watch": "node --test --watch tests/api.test.js",
     "test:e2e": "node --test tests/e2e.test.js",
     "test:comprehensive": "node --test tests/comprehensive_e2e.test.js",
@@ -28,7 +28,8 @@
     "vision:ocr": "node -e \"const T=require('tesseract.js');const img=process.argv[2]&&!process.argv[2].startsWith('-')?process.argv[2]:'uploads/tangmao_锅子鱼.jpg';(async()=>{const{data}=await T.recognize(img,'chi_sim');console.log(data.text)})()\"",
     "pretest": "node build.js",
     "vision:pipeline": "node vision_pipeline.js",
-    "test:full": "node --test --test-concurrency=1 tests/*.test.js"
+    "test:full": "node --test --test-concurrency=1 tests/*.test.js",
+    "posttest:full": "node scripts/cleanup_test_orders.js && node scripts/cleanup_test_dishes.js"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.0",
