@@ -2773,7 +2773,7 @@ function showCart() {
             esc(String(x.id)) +
             '" value="' +
             esc(x.note || '') +
-            '" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;max-width:220px;" aria-label="菜品备注"></div></td>' +
+            '" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;width:100%;max-width:220px;box-sizing:border-box;" aria-label="菜品备注"></div></td>' +
             '<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="' +
             esc(String(x.id)) +
             '" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>' +
