@@ -195,8 +195,19 @@ describe('全面丰富 E2E 测试', () => {
     it('前端购物车使用 localStorage 存储', async () => {
       const resp = await fetch(BASE + '/script.js');
       const js = await resp.text();
-      assert.ok(js.includes("localStorage.setItem('cart'") || js.includes('localStorage.setItem("cart"'), 'script.js 应使用 localStorage.setItem("cart") 存储购物车');
-      assert.ok(js.includes("localStorage.getItem('cart'") || js.includes('localStorage.getItem("cart"'), 'script.js 应使用 localStorage.getItem("cart") 读取购物车');
+      // 2026-10-16: 改造3 键注册表后构建产物为 setItem(STORE_KEYS.cart,…) 形状,字面量断言扩充接受
+      assert.ok(
+        js.includes("localStorage.setItem('cart'") ||
+          js.includes('localStorage.setItem("cart"') ||
+          js.includes('localStorage.setItem(STORE_KEYS.cart'),
+        'script.js 应使用 localStorage.setItem("cart") 存储购物车'
+      );
+      assert.ok(
+        js.includes("localStorage.getItem('cart'") ||
+          js.includes('localStorage.getItem("cart"') ||
+          js.includes('localStorage.getItem(STORE_KEYS.cart'),
+        'script.js 应使用 localStorage.getItem("cart") 读取购物车'
+      );
     });
 
     it('结算金额计算函数存在', async () => {

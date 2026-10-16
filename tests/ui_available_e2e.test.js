@@ -105,7 +105,8 @@ describe('按钮可用性与显示检查', () => {
     const init = read('js/init.js');
     // dish-list 渲染有 null 保护
     // 2026-09-17: 实现为 if(!dl){...warn;return;}(块语句),不是 return 同行
-    assert.ok(js.includes('if(!dl)'), 'displayRecommendations 应有 dish-list null 保护');
+    // 2026-10-16: prettier 改造后为 if (!dl)(带空格),两种形状都接受
+    assert.ok(js.includes('if(!dl)') || js.includes('if (!dl)'), 'displayRecommendations 应有 dish-list null 保护');
     // profile 页面元素有 null 保护
     assert.ok(js.includes("if(pu)") || js.includes("if (pu)"), 'profile-username 应有 null 保护');
     assert.ok(js.includes("if(pl)") || js.includes("if (pl)"), 'profile-last-login 应有 null 保护');
