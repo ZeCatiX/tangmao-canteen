@@ -195,15 +195,19 @@ function generateDishReason(prefs, dish) {
     return (valEn[k] && valEn[k][v]) || v;
   };
   ['辣度', '咸淡', '甜酸'].forEach((k) => {
+    const declared = prefs[k] !== undefined && prefs[k] !== null && prefs[k] !== '无';
     const match = dish[keyMap[k]] === prefs[k];
-    if (en)
-      p.push(
-        keyEn[k] +
-          ': ' +
-          prefEn(k, dish[keyMap[k]]) +
-          (match ? ' ✓' : ' ✗ (you prefer ' + prefEn(k, prefs[k]) + ')')
-      );
-    else if (prefs[k] !== '无')
+    if (en) {
+      // 无声明偏好=什么都合(✓),只有真声明了才允许 ✗——上轮误把 any 也打 ✗,语义反了
+      if (!declared) p.push(keyEn[k] + ': ' + prefEn(k, dish[keyMap[k]]) + ' ✓');
+      else
+        p.push(
+          keyEn[k] +
+            ': ' +
+            prefEn(k, dish[keyMap[k]]) +
+            (match ? ' ✓' : ' ✗ (you prefer ' + prefEn(k, prefs[k]) + ')')
+        );
+    } else if (prefs[k] !== '无')
       p.push(
         k +
           '：' +
@@ -283,7 +287,7 @@ function selectBlindBoxDish(prefs, top, blk) {
       const m = computeDishMatch(prefs, d);
       return {
         ...d,
-        reason: '🔮 盲盒推荐：试试这个吧，说不定有惊喜！',
+        reason: L('🔮 盲盒推荐：试试这个吧，说不定有惊喜！', '🔮 Blind box: try this one — you might be in for a surprise!'),
         type: '盲盒尝鲜',
         blindMode: 'smart',
         matchIndex: Math.round(m.matchRate * 100) / 100,
@@ -297,7 +301,7 @@ function selectBlindBoxDish(prefs, top, blk) {
   const m = computeDishMatch(prefs, d);
   return {
     ...d,
-    reason: '🔮 盲盒推荐：试试这个吧，说不定有惊喜！',
+    reason: L('🔮 盲盒推荐：试试这个吧，说不定有惊喜！', '🔮 Blind box: try this one — you might be in for a surprise!'),
     type: '盲盒尝鲜',
     blindMode: 'smart',
     matchIndex: Math.round(m.matchRate * 100) / 100,

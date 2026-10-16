@@ -523,7 +523,7 @@ function displayRecommendations() {
       tagBadges +
       orderedBadge +
       (d.type === '盲盒尝鲜'
-        ? '<span class="badge bg-info me-1">' + (menuLang === 'en' ? 'Blind box' : '盲盒') + '</span>'
+        ? '<span class="badge bg-info me-1">' + (menuLang === 'en' ? 'Blind box ' : '盲盒 ') + '</span>'
         : '') +
       esc(dishNameOf(d)) +
       img +
