@@ -823,6 +823,7 @@ function applyUiLang() {
   const t = document.getElementById('lang-toggle-text');
   if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
+  if (typeof window.renderCartLangAware === 'function') window.renderCartLangAware(); // 购物车参数化横幅/回执头(遍历式翻译够不着的模板)
   // ② 遍历式：en 全页面扫描翻译；zh 只还原已翻译清单（免全文档扫描——中文模式每次按键渲染都会触发本函数）
   if (menuLang !== 'en') {
     __zhTranslated.forEach((n) => {

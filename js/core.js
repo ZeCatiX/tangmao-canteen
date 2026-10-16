@@ -2247,6 +2247,51 @@ function deleteAccount() {
 }
 
 // ═══════════════ 购物车功能 ═══════════════
+// 购物车三处参数化文案(加菜横幅/赠菜横幅/回执头)的语言感知渲染——遍历式翻译只做整节点精确匹配,够不着带动态值的模板,须渲染路径自理
+// showCart 与 applyUiLang(切语言)都会调用;2026-10-16 修复 EN 模式残留中文(A4 同类)
+window.renderCartLangAware = function () {
+  const en = menuLang === 'en';
+  const ltB = ssGet('lockedTable') || '',
+    loB = ssGet('lastOrderId') || '',
+    lotB = ssGet('lastOrderTable') || '';
+  const banner = document.getElementById('cart-order-banner');
+  if (banner) {
+    if (ltB && loB && lotB === ltB) {
+      banner.style.display = 'flex';
+      const bSpan = document.getElementById('banner-table') ? document.getElementById('banner-table').parentElement : null;
+      if (bSpan)
+        bSpan.innerHTML = en
+          ? 'Adding to <strong id="banner-table" style="color:var(--primary-accent);">' + esc(tableLabel(ltB)) + '</strong> · Order <span id="banner-oid" style="color:var(--primary-accent);">#' + esc(loB) + '</span>'
+          : '正在为 <strong id="banner-table" style="color:var(--primary-accent);">' + esc(ltB) + '</strong> 号桌加菜 · 订单 <span id="banner-oid" style="color:var(--primary-accent);">#' + esc(loB) + '</span>';
+    } else banner.style.display = 'none';
+    // 赠菜模式提示:给别桌加菜进行中,明确告知目标桌号(2026-09-17)
+    const gfb = document.getElementById('gift-mode-banner');
+    if (gfb) {
+      const sideOn = ssGet('sideOrder') === '1',
+        pending = ssGet('sidePendingTable') || '';
+      const target = pending || (sideOn ? ssGet('lockedTable') || ssGet('tableNumber') || '' : '');
+      if (sideOn && target) {
+        gfb.style.display = 'flex';
+        gfb.innerHTML = en
+          ? '🍱 Gifting mode: picking for <strong id="gift-mode-table" style="color:var(--primary-accent);font-size:1rem;">' + esc(tableLabel(target)) + '</strong> — will be billed to your own table'
+          : '🍱 赠菜模式:正在为 <strong id="gift-mode-table" style="color:var(--primary-accent);font-size:1rem;">' + esc(target) + '</strong> 号桌选菜,结算后计入你本桌账单';
+      } else gfb.style.display = 'none';
+    }
+  }
+  // 已结算回执头
+  let rounds = [];
+  try {
+    rounds = JSON.parse(ssGet('lastOrderRounds') || '[]');
+  } catch (e) {}
+  const si = document.getElementById('settled-order-info');
+  if (si && rounds.length) {
+    const totalItems = rounds.reduce((s, r) => s + r.items.reduce((a, x) => a + (x.qty || 1), 0), 0);
+    const totalYuan = rounds.reduce((s, r) => s + (parseFloat(r.total) || 0), 0).toFixed(2);
+    si.textContent = en
+      ? 'Order #' + (loB || '-') + ' · ' + tableLabel(lotB || '-') + ' · ' + totalItems + ' items · ¥' + totalYuan
+      : '订单 #' + (loB || '-') + ' · 桌号 ' + (lotB || '-') + ' · 共 ' + totalItems + ' 件 · ' + totalYuan + ' 元';
+  }
+};
 function renderRoundsHTML(rounds) {
   if (!rounds || !rounds.length) return '';
   const lastIdx = rounds.length - 1;
@@ -2638,32 +2683,8 @@ function showCart() {
   // 每次进入购物车强制隐藏提交过渡层（治本：不管上次结算状态如何都干净）
   const clo0 = document.getElementById('cart-loading');
   if (clo0) clo0.style.display = 'none';
-  // 进行中订单提示条（跳走后回来的入口）——必须与会话桌号同桌才显示,防跨桌残留会话误挂他桌订单
-  const ltB = ssGet('lockedTable') || '',
-    loB = ssGet('lastOrderId') || '',
-    lotB = ssGet('lastOrderTable') || '';
-  const banner = document.getElementById('cart-order-banner');
-  if (banner) {
-    if (ltB && loB && lotB === ltB) {
-      banner.style.display = 'flex';
-      const bt = document.getElementById('banner-table');
-      if (bt) bt.textContent = ltB;
-      const bo = document.getElementById('banner-oid');
-      if (bo) bo.textContent = '#' + loB;
-    } else banner.style.display = 'none';
-    // 赠菜模式提示:给别桌加菜进行中,明确告知目标桌号(2026-09-17)
-    const gfb = document.getElementById('gift-mode-banner');
-    if (gfb) {
-      const sideOn = ssGet('sideOrder') === '1',
-        pending = ssGet('sidePendingTable') || '';
-      const target = pending || (sideOn ? ssGet('lockedTable') || ssGet('tableNumber') || '' : '');
-      if (sideOn && target) {
-        gfb.style.display = 'flex';
-        const gt = document.getElementById('gift-mode-table');
-        if (gt) gt.textContent = target;
-      } else gfb.style.display = 'none';
-    }
-  }
+  // 进行中订单提示条/赠菜横幅/回执头文案 → renderCartLangAware(语言感知;applyUiLang 切语言时亦调用)
+  window.renderCartLangAware();
   // 桌号展示（选桌后只读，点击可更换/挪桌）
   updateTableStatusCard();
   window._prevScrollY = window.scrollY;
@@ -2686,18 +2707,7 @@ function showCart() {
   if (rounds.length) {
     if (sSec) sSec.style.display = 'block';
     if (sDiv) sDiv.classList.remove('d-none');
-    const si = document.getElementById('settled-order-info');
-    if (si)
-      si.textContent =
-        '订单 #' +
-        (ssGet('lastOrderId') || '-') +
-        ' · 桌号 ' +
-        (ssGet('lastOrderTable') || '-') +
-        ' · 共 ' +
-        rounds.reduce((s, r) => s + r.items.reduce((a, x) => a + (x.qty || 1), 0), 0) +
-        ' 件 · ' +
-        rounds.reduce((s, r) => s + (parseFloat(r.total) || 0), 0).toFixed(2) +
-        ' 元';
+    // 回执头文案由 renderCartLangAware 语言感知渲染(此处只管可见性)
     const sl = document.getElementById('settled-list');
     if (sl) sl.innerHTML = renderRoundsHTML(rounds);
   } else {
