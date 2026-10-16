@@ -186,30 +186,45 @@ function computeDishMatch(prefs, dish) {
 
 function generateDishReason(prefs, dish) {
   const p = [];
+  const en = menuLang === 'en';
   const keyMap = { 辣度: 'spiciness', 咸淡: 'saltiness', 甜酸: 'sweetness' };
+  const keyEn = { 辣度: 'Spice', 咸淡: 'Salt', 甜酸: 'Sweet-sour' };
+  const valEn = { 辣度: SPICE_EN, 咸淡: SALT_EN, 甜酸: SWEET_EN };
+  const prefEn = function (k, v) {
+    if (v === '无') return 'any';
+    return (valEn[k] && valEn[k][v]) || v;
+  };
   ['辣度', '咸淡', '甜酸'].forEach((k) => {
-    if (prefs[k] !== '无')
+    const match = dish[keyMap[k]] === prefs[k];
+    if (en)
+      p.push(
+        keyEn[k] +
+          ': ' +
+          prefEn(k, dish[keyMap[k]]) +
+          (match ? ' ✓' : ' ✗ (you prefer ' + prefEn(k, prefs[k]) + ')')
+      );
+    else if (prefs[k] !== '无')
       p.push(
         k +
           '：' +
           dish[keyMap[k]] +
-          (dish[keyMap[k]] === prefs[k] ? ' ✓' : ' ✗') +
-          (dish[keyMap[k]] === prefs[k] ? '' : '偏好' + prefs[k])
+          (match ? ' ✓' : ' ✗') +
+          (match ? '' : '偏好' + prefs[k])
       );
     else p.push(k + '：' + dish[keyMap[k]] + ' ✓');
   });
-  if (dish.tags && dish.tags.includes('招牌')) p.push('⭐ 本店招牌');
-  if (dish.tags && dish.tags.includes('中辣')) p.push('🌶️ 中辣');
-  if (dish.tags && dish.tags.includes('重辣')) p.push('🌶️🌶️ 重辣');
+  if (dish.tags && dish.tags.includes('招牌')) p.push(en ? '⭐ House signature' : '⭐ 本店招牌');
+  if (dish.tags && dish.tags.includes('中辣')) p.push(en ? '🌶️ Medium spice' : '🌶️ 中辣');
+  if (dish.tags && dish.tags.includes('重辣')) p.push(en ? '🌶️🌶️ Hot' : '🌶️🌶️ 重辣');
   const pr = parseFloat(dish.price);
   if (!isNaN(pr)) {
-    if (pr < 30) p.push('💰 经济实惠');
-    else if (pr < 60) p.push('💰 价格适中');
-    else p.push('💰 品质之选');
+    if (pr < 30) p.push(en ? '💰 Great value' : '💰 经济实惠');
+    else if (pr < 60) p.push(en ? '💰 Mid-range' : '💰 价格适中');
+    else p.push(en ? '💰 Premium pick' : '💰 品质之选');
   }
   const r = parseFloat(dish.rating);
-  if (!isNaN(r) && r >= 4.5) p.push('⭐ 高分推荐(' + r.toFixed(1) + '分)');
-  return '推荐理由：' + p.join(' | ');
+  if (!isNaN(r) && r >= 4.5) p.push(en ? '⭐ High rating (' + r.toFixed(1) + ')' : '⭐ 高分推荐(' + r.toFixed(1) + '分)');
+  return en ? 'Why this dish: ' + p.join(' | ') : '推荐理由：' + p.join(' | ');
 }
 
 function selectBlindBoxDish(prefs, top, blk) {
@@ -1271,7 +1286,7 @@ function login() {
         if (d.user?.preferences) users[i].preferences = d.user.preferences;
       }
       saveUsers(users);
-      showMessage('登录成功', '欢迎回来，' + u + '！', function () {
+      showMessage(L('登录成功', 'Signed in'), L('欢迎回来，' + u + '！', 'Welcome back, ' + u + '!'), function () {
         const pi = document.getElementById('nav-profile-item'),
           nu = document.getElementById('nav-user');
         if (pi) pi.classList.remove('d-none');
@@ -1396,7 +1411,7 @@ function register() {
           preferences: {},
         });
       saveUsers(users);
-      showMessage('注册成功', '欢迎，' + u + '！', function () {
+      showMessage(L('注册成功', 'Registered'), L('欢迎，' + u + '！', 'Welcome, ' + u + '!'), function () {
         const pi = document.getElementById('nav-profile-item'),
           nu = document.getElementById('nav-user');
         if (pi) pi.classList.remove('d-none');
@@ -1619,7 +1634,7 @@ function submitStarFeedback() {
         showMessage('评价失败', d.error || '提交失败，请重试');
         return;
       }
-      showMessage('评价成功', '感谢您对' + dish.name + '的评价！', function () {
+      showMessage(L('评价成功', 'Review submitted'), L('感谢您对' + dish.name + '的评价！', 'Thanks for reviewing ' + dish.name + '!'), function () {
         starRatingDish = null;
         starRatingValue = 0;
         document.querySelectorAll('.star').forEach((s) => {
@@ -1644,7 +1659,7 @@ function openStarFeedback(dish) {
   starRatingValue = 0;
   ratingReturnTo = 'recommendation-section';
   const fd = document.getElementById('star-feedback-dish');
-  if (fd) fd.textContent = '给「' + dish.name + '」评分';
+  if (fd) fd.textContent = L('给「' + dish.name + '」评分', 'Rate "' + dish.name + '"');
   document.querySelectorAll('.star').forEach((s) => {
     s.textContent = '☆';
     s.style.color = '#ddd';
@@ -1850,7 +1865,7 @@ function showProfile() {
               '<div class="d-flex justify-content-between align-items-center mb-2"><span>' +
               (i + 1) +
               '. ' +
-              (d ? esc(dishNameOf(d)) : '菜品' + esc(String(id))) +
+              (d ? esc(dishNameOf(d)) : L('菜品', 'Dish #') + esc(String(id))) +
               '</span><button class="btn btn-sm btn-danger cancel-favorite" data-id="' +
               esc(String(id)) +
               '">取消</button></div>'
@@ -1950,9 +1965,9 @@ function showProfile() {
               '<span><button class="btn btn-sm reorder-btn" data-oi="' +
               oi +
               '" style="font-size:0.72rem;padding:1px 8px;border-radius:4px;border-color:var(--gold);color:var(--primary);margin-right:4px;" title="把这一单的菜重新加入购物车">🔁 再来一单</button>' +
-              '<span style="color:#b83a2a;font-weight:600;">共' +
-              dishList.length +
-              '道</span></span>' +
+              '<span style="color:#b83a2a;font-weight:600;">' +
+              L('共' + dishList.length + '道', dishList.length + ' dishes') +
+              '</span></span>' +
               '</div>' +
               dishRows +
               '</div>'
@@ -1980,7 +1995,7 @@ function showProfile() {
             items.forEach((i) => {
               const dish = dishData.find((d) => d.id === parseInt(i.id));
               if (!dish || dish.is_active === false || dish.is_sold_out === true) {
-                skipped.push(i.name || '菜品' + i.id);
+                skipped.push(i.name || L('菜品', 'Dish #') + i.id);
                 return;
               }
               const min = minQtyOf(dish);
@@ -1991,7 +2006,7 @@ function showProfile() {
               );
               added++;
             });
-            if (skipped.length) showMessage('部分菜品已加入', '以下菜品今日已售罄，已跳过：' + skipped.join('、'));
+            if (skipped.length) showMessage(L('部分菜品已加入', 'Some items added'), L('以下菜品今日已售罄，已跳过：' + skipped.join('、'), 'Sold out today, skipped: ' + skipped.join(', ')));
             else
               showMessage('已加入购物车', added + ' 件商品已重新加入，去结算或继续加菜', function () {
                 showSection('cart-section');
@@ -2008,7 +2023,7 @@ function showProfile() {
             starRatingDish = { id: dishId, name: dishName };
             starRatingValue = 0;
             ratingReturnTo = 'profile-section';
-            document.getElementById('star-feedback-dish').textContent = '给「' + dishName + '」评分';
+            document.getElementById('star-feedback-dish').textContent = L('给「' + dishName + '」评分', 'Rate "' + dishName + '"');
             document.querySelectorAll('.star').forEach((s) => {
               s.textContent = '☆';
               s.style.color = '#ddd';
@@ -2121,7 +2136,7 @@ function addToFavorites(dishId) {
   user.favorites.push(dishId);
   updateUserData(currentUser, { favorites: user.favorites });
   const dish = dishData.find((d) => d.id === dishId);
-  showMessage('成功', '已收藏' + (dish ? dish.name : ''));
+  showMessage(L('成功', 'Done'), L('已收藏' + (dish ? dish.name : ''), 'Favorited ' + (dish ? dish.name : '')));
   safeFetch('/api/user-favorites', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -2156,7 +2171,7 @@ function addToBlacklist(dishId) {
   user.blacklist.push(dishId);
   updateUserData(currentUser, { blacklist: user.blacklist });
   const dish = dishData.find((d) => d.id === dishId);
-  showMessage('成功', '已拉黑' + (dish ? dish.name : ''));
+  showMessage(L('成功', 'Done'), L('已拉黑' + (dish ? dish.name : ''), 'Blocked ' + (dish ? dish.name : '')));
   safeFetch('/api/user-blacklist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
