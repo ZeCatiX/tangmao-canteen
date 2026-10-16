@@ -256,7 +256,7 @@ function selectBlindBoxDish(prefs, top, blk) {
     const d = eligible[Math.floor(Math.random() * eligible.length)];
     return {
       ...d,
-      reason: '🔮 盲盒推荐：纯随机惊喜，试试这个吧！',
+      reason: L('🔮 盲盒推荐：纯随机惊喜，试试这个吧！', '🔮 Blind box: pure random surprise — give it a try!'),
       type: '盲盒尝鲜',
       blindMode: 'random',
       matchIndex: 0,
@@ -2335,7 +2335,7 @@ function renderRoundsHTML(rounds) {
           .map(
             (x) =>
               '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">' +
-              esc(x.name) +
+              esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })()) +
               '</span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×' +
               (x.qty || 1) +
               '</strong> · ' +
@@ -2375,7 +2375,7 @@ function renderRoundsHTML(rounds) {
         .map(
           (x) =>
             '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:var(--cream-dark);border-radius:6px;margin-top:3px;"><span style="font-size:0.85rem;">' +
-            esc(x.name) +
+            esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })()) +
             ' <span style="font-size:0.7rem;color:var(--gold);">→' +
             esc(String(x.giftTo)) +
             '号桌</span></span><span style="font-size:0.8rem;color:var(--text-light);"><strong style="color:var(--text);">×' +
@@ -2587,7 +2587,7 @@ function showTableBill() {
                 if (x.giftFrom) {
                   return (
                     '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">🎁 ' +
-                    esc(x.name) +
+                    esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })()) +
                     ' <span style="font-size:0.7rem;color:var(--gold);">×' +
                     qty +
                     '（' +
@@ -2599,7 +2599,7 @@ function showTableBill() {
                 }
                 return (
                   '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;background:var(--cream-dark);border-radius:6px;margin-top:4px;"><span style="font-size:0.86rem;">' +
-                  esc(x.name) +
+                  esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })()) +
                   ' <span style="font-size:0.72rem;color:var(--text-light);">×' +
                   qty +
                   '</span></span><span style="font-size:0.86rem;color:var(--text-light);">' +
@@ -2679,7 +2679,7 @@ function showGiftReceipt(table) {
         (x) =>
           '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--cream-dark);border-radius:8px;margin-bottom:6px;">' +
           '<span style="font-size:0.9rem;">🎁 ' +
-          esc(x.name) +
+          esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })()) +
           ' <span style="font-size:0.75rem;color:var(--gold);">×' +
           (x.qty || 1) +
           '</span></span>' +
@@ -2745,7 +2745,7 @@ function showCart() {
         .map((x) => {
           const dish = dishData.find((d) => d.id === x.id);
           const qtyVal = x.qty || 1;
-          const name = dish ? esc(dishNameOf(dish)) : esc(x.name);
+          const name = dish ? esc(dishNameOf(dish)) : esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })());
           const unit =
             dish && dish.price_unit
               ? '<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">' +
@@ -2798,6 +2798,17 @@ function showCart() {
         .join('');
     if (ti) ti.textContent = getCartCount();
     if (tp) tp.textContent = getCartTotal().toFixed(2);
+    // 底栏合计标签(共N件/合计:X元)语言感知
+    if (ti && ti.parentElement) {
+      var nodes = ti.parentElement.childNodes;
+      if (nodes[0]) nodes[0].textContent = L('共 ', '');
+      if (nodes[nodes.length - 1]) nodes[nodes.length - 1].textContent = L(' 件', ' items');
+    }
+    if (tp && tp.parentElement) {
+      var nodes2 = tp.parentElement.childNodes;
+      if (nodes2[0]) nodes2[0].textContent = L('合计：', 'Total: ');
+      if (nodes2[nodes2.length - 1]) nodes2[nodes2.length - 1].textContent = L(' 元', '');
+    }
   }
   showSection('cart-section');
 }
@@ -2956,18 +2967,43 @@ async function checkoutCart() {
     .then((r) => r.json())
     .then((d) => {
       if (!d.success) {
-        // 订单已被厨房完成后，清掉本地订单状态，允许同桌下新单（避免永远被拒）
-        if ((d.error || '').includes('不能加菜')) {
-          ssRemove('lastOrderId');
-          ssRemove('lastOrderTable');
-          ssRemove('lastOrderItems');
-          ssRemove('lastOrderRounds');
-          ssRemove('lockedTable');
-          ssRemove('lastOrderAI');
-          ssRemove('lastOrderStats');
-          ssRemove('tableNumber');
+        // F3: 加菜时订单已完结(完成/取消)或会话与订单失同步(404) → 清绑定并自动降级新建重试一次
+        // 幂等闸在(同内容合并)+服务端重算价格,不会重复下单;重试仍失败才报错
+        const staleErr =
+          (d.error || '').indexOf('不能加菜') >= 0 ||
+          (isAddMore && (d.error || '').indexOf('订单不存在或无权操作') >= 0);
+        if (isAddMore && staleErr) {
+          ['lastOrderId', 'lastOrderTable', 'lastOrderItems', 'lastOrderRounds', 'lockedTable', 'lastOrderAI', 'lastOrderStats', 'tableNumber'].forEach(function (k) {
+            ssRemove(k);
+          });
+          return safeFetch('/api/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify({ userId: uid, items, totalPrice: total, tableNumber }),
+          })
+            .then((r2) => r2.json())
+            .then((d2) => {
+              if (!d2.success) {
+                showMessage(L('下单失败', 'Order failed'), d2.error || L('服务器错误', 'Server error'));
+                showCart();
+                return;
+              }
+              if (d2.orderId) {
+                ssSet('lastOrderId', d2.orderId);
+                ssSet('lastOrderTable', tableNumber);
+                ssSet('lockedTable', tableNumber);
+              }
+              if (clo) clo.style.display = 'none';
+              showMessage(L('上一单已结束', 'Previous order closed'), L('已为你新建订单 #' + (d2.orderId || ''), 'Created new order #' + (d2.orderId || '')), null, 3500);
+              clearCart();
+              rebuildEndView();
+            })
+            .catch(() => {
+              showMessage(L('下单失败', 'Order failed'), L('网络错误，请重试', 'Network error, please retry'));
+              showCart();
+            });
         }
-        showMessage(isAddMore ? '加菜失败' : '下单失败', d.error || '服务器错误');
+        showMessage(L(isAddMore ? '加菜失败' : '下单失败', isAddMore ? 'Add-on failed' : 'Order failed'), d.error || L('服务器错误', 'Server error'));
         showCart();
         return;
       }

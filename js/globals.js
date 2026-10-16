@@ -280,6 +280,12 @@ function updateFloatBar() {
     bar.style.display = 'flex';
     document.getElementById('float-cart-count').textContent = c;
     document.getElementById('float-cart-total').textContent = getCartTotal();
+    var unitEl = document.getElementById('float-cart-unit');
+    if (unitEl) unitEl.textContent = menuLang === 'en' ? 'items' : '件';
+    var fpre = document.getElementById('float-cart-pre');
+    if (fpre) fpre.textContent = menuLang === 'en' ? 'Total ' : '合计 ';
+    var fsuf = document.getElementById('float-cart-suf');
+    if (fsuf) fsuf.textContent = menuLang === 'en' ? '' : ' 元';
     // 一席成宴选饮品模式：仅在菜单页可见时（选饮品现场）显示提示与返回席面按钮
     const drinksBack = document.getElementById('float-drinks-back');
     const dsEl = document.getElementById('dataset-section');
@@ -487,6 +493,10 @@ var ZH_EN = {
   返回: 'Back',
   关闭: 'Close',
   确定: 'OK',
+  加菜失败: 'Add-on failed',
+  下单失败: 'Order failed',
+  订单不存在或无权操作: 'Order not found or no permission',
+  提示: 'Notice',
   取消: 'Cancel',
   '加载中...': 'Loading...',
   '正在提交订单...': 'Submitting your order...',
@@ -827,6 +837,7 @@ function applyUiLang() {
   if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
   if (typeof window.renderCartLangAware === 'function') window.renderCartLangAware(); // 购物车参数化横幅/回执头(遍历式翻译够不着的模板)
+  if (typeof updateCartBadge === 'function') updateCartBadge(); // 悬浮条单位/合计标签
   // ② 遍历式：en 全页面扫描翻译；zh 只还原已翻译清单（免全文档扫描——中文模式每次按键渲染都会触发本函数）
   if (menuLang !== 'en') {
     __zhTranslated.forEach((n) => {
