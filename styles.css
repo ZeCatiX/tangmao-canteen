@@ -1176,3 +1176,10 @@ html.dark-mode .table-total { color: var(--gold-light); }
   .dish-card .spec-row .add-txt { display: none; }
   .dish-card .spec-row .add-to-cart-btn { padding: 2px 10px; }
 }
+
+/* 竖窄比例下购物车备注框保底可用宽度:菜名列最小 220px,不足时 table-responsive 横向滚动(2026-10-16 用户实测 104px 显示不全) */
+@media (max-width: 767.98px) {
+  #cart-table-body td:first-child {
+    min-width: 220px;
+  }
+}
