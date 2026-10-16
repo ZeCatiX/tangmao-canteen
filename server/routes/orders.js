@@ -203,6 +203,26 @@ function register(app, deps) {
     } catch (e) { logger.error('改桌号API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
   });
 
+  // 订单存活校验(F3类收尾,2026-10-16): 前端会话绑定横幅/结算前自查,防对已完结订单宣称"正在加菜"
+  // 授权与 /add 同口径(本人/管理员/同桌凭证);无权视同不存在(不泄露订单存在性)
+  app.get('/api/order/:id/status-check', softAuth, async (req, res) => {
+    try {
+      const pool = db;
+      const orderId = parseInt(req.params.id);
+      if (!orderId || isNaN(orderId) || orderId <= 0) return res.status(400).json({ success: false, error: '参数无效' });
+      const tableNumber = req.query.tableNumber || '';
+      const r = await pool.query('SELECT status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
+      if (r.rows.length === 0) return res.json({ success: true, exists: false });
+      const row = r.rows[0];
+      const effectiveUserId = req.user?.username || 'guest';
+      const isAdmin = req.user?.role === 'admin';
+      const isOwner = effectiveUserId !== 'guest' && row.user_id === effectiveUserId;
+      const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
+      if (!isAdmin && !isOwner && !isTableMatch) return res.json({ success: true, exists: false });
+      res.json({ success: true, exists: true, status: row.status, table_number: row.table_number });
+    } catch (e) { logger.error('订单存活校验API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+  });
+
   app.get('/api/orders', authMiddleware, async (req, res) => {
     try {
       const { status } = req.query;
