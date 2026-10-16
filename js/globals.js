@@ -82,13 +82,12 @@ var UNIT_EN = {
 };
 function formatPrice(d) {
   const p = d && typeof d === 'object' ? d.price : d;
-  if (p === null || p === undefined || p === '') return '未知';
+  if (p === null || p === undefined || p === '') return menuLang === 'en' ? 'Unknown' : '未知';
   const unit = (d && d.price_unit) || '';
-  return (
-    parseFloat(p).toFixed(0) +
-    (menuLang === 'en' ? '¥' : '元') +
-    (unit ? (menuLang === 'en' ? UNIT_EN[unit] || unit : unit) : '')
-  );
+  // EN 货币符前置(¥6/pc,国际惯例);zh 沿用 6元
+  return menuLang === 'en'
+    ? '¥' + parseFloat(p).toFixed(0) + (unit ? UNIT_EN[unit] || unit : '')
+    : parseFloat(p).toFixed(0) + '元' + (unit || '');
 }
 // 获取用户认证头
 function authHeaders() {
@@ -384,7 +383,7 @@ var TAB_EN = {
 };
 var SPICE_EN = { 不辣: 'Mild', 微辣: 'Mildly spicy', 中辣: 'Medium spicy', 重辣: 'Extra spicy' };
 var SALT_EN = { 清淡: 'Light', 适中: 'Just right', 偏咸: 'Salty' };
-var SWEET_EN = { 无味: 'Neither', 甜味: 'Sweet', 酸味: 'Sour', 酸甜: 'Sweet & sour' };
+var SWEET_EN = { 无味: 'Neither', 甜味: 'Sweet', 酸味: 'Sour', 酸甜: 'Sweet & sour', 偏甜: 'Sweet-ish', 偏酸: 'Sour-ish' };
 var CAL_EN = { 高: 'Hearty', 中: 'Medium', 低: 'Light', 适中: 'Medium', 未知: 'Unknown' };
 // 规格数据级枚举（116 道菜固定值，DB serving/flavor 为中文）：英文模式渲染时转写，数据不动
 var SPEC_EN = {
