@@ -469,6 +469,10 @@ function uiText(key) {
   const v = UI_STR[key];
   return v ? (menuLang === 'en' ? v[1] : v[0]) : '';
 }
+// 参数化模板的行内双语助手(遍历式翻译只认整节点精确匹配,带插值的字符串须调用点自理)
+function L(zh, en) {
+  return menuLang === 'en' ? en : zh;
+}
 // ═══ 遍历式 UI 翻译：精确匹配文本节点（trim 后），en 替换并记忆原文，zh 还原 ═══
 // 背景：data-i18n 只盖了骨架，筛选下拉/表单选项/按钮/动态渲染仍残留中文——用户实测"切了没变化"
 var ZH_EN = {

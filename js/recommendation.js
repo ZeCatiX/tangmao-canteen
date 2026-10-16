@@ -344,25 +344,22 @@ function renderDrinksModeBanner() {
   ban.id = 'drinks-mode-banner';
   ban.style.cssText =
     'margin:10px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(201,169,110,0.15),rgba(201,169,110,0.05));border:1px solid rgba(201,169,110,0.5);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;';
+  var styleDisp = menuLang === 'en' ? { '家常版': 'Home-style', '宴请版': 'Banquet', '打卡版': 'Check-in' }[s.style] || s.style : s.style;
   ban.innerHTML =
-    '<span style="color:var(--text);font-size:0.9rem;">🍹 正在为「' +
-    esc(s.style) +
-    '」选饮品 · 已选 <strong style="color:var(--primary-accent);">' +
-    chosen.length +
-    '</strong> 件' +
-    (chosen.length
-      ? '（' +
-        esc(
-          chosen
-            .map(function (c) {
-              return c.name + '×' + (c.qty || 1);
-            })
-            .join('、')
-        ) +
-        '）'
-      : '') +
+    '<span style="color:var(--text);font-size:0.9rem;">🍹 ' +
+    (menuLang === 'en'
+      ? 'Picking drinks for "' + esc(styleDisp) + '" · <strong style="color:var(--primary-accent);">' + chosen.length + '</strong> selected' +
+        (chosen.length
+          ? ' (' + esc(chosen.map(function (c) { return c.name + '×' + (c.qty || 1); }).join(', ')) + ')'
+          : '')
+      : '正在为「' + esc(s.style) + '」选饮品 · 已选 <strong style="color:var(--primary-accent);">' + chosen.length + '</strong> 件' +
+        (chosen.length
+          ? '（' + esc(chosen.map(function (c) { return c.name + '×' + (c.qty || 1); }).join('、')) + '）'
+          : '')) +
     '</span>' +
-    '<button class="btn btn-sm" id="drinks-back-btn" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;">返回席面</button>';
+    '<button class="btn btn-sm" id="drinks-back-btn" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;">' +
+    (menuLang === 'en' ? 'Back to feast' : '返回席面') +
+    '</button>';
   ds.insertBefore(ban, ds.firstChild);
   document.getElementById('drinks-back-btn').addEventListener('click', function () {
     showSection('table-result-section');
@@ -954,15 +951,13 @@ function renderTableSets() {
           '<span class="badge tang-tag" style="background:' +
           color +
           ';font-size:0.85rem;">' +
-          esc(s.style) +
+          (menuLang === 'en' ? { '家常版': 'Home-style', '宴请版': 'Banquet', '打卡版': 'Check-in' }[s.style] || s.style : esc(s.style)) +
           '</span>' +
           overTag +
-          '<span style="font-size:0.85rem;letter-spacing:0.5px;">共 ' +
-          s.dishes.length +
-          ' 道 · 席面总计 <strong class="table-total">' +
-          esc(formatPrice(s.totalPrice)) +
-          '</strong> · 人均 ' +
-          esc(formatPrice(s.perPerson)) +
+          '<span style="font-size:0.85rem;letter-spacing:0.5px;">' +
+          (menuLang === 'en'
+            ? s.dishes.length + ' dishes · Feast total <strong class="table-total">' + esc(formatPrice(s.totalPrice)) + '</strong> · ' + esc(formatPrice(s.perPerson)) + ' per person'
+            : '共 ' + s.dishes.length + ' 道 · 席面总计 <strong class="table-total">' + esc(formatPrice(s.totalPrice)) + '</strong> · 人均 ' + esc(formatPrice(s.perPerson))) +
           '</span></div>' +
           '<div class="d-flex gap-2">' +
           '<button class="btn btn-sm table-drinks-btn" data-set="' +
