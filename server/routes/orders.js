@@ -82,6 +82,10 @@ function register(app, deps) {
     try {
       const { items, tableNumber } = req.body;  // userId 取 JWT、totalPrice 服务端重算，均不信任客户端
       if (!items || !items.length) return res.status(400).json({ success: false, error: '订单不能为空' });
+      // F2 收尾(2026-10-16): 桌号格式服务端校验(与 recommend.js 同口径)——历史上有乱码桌号直插库的脏数据
+      if (tableNumber !== undefined && tableNumber !== null && tableNumber !== '' && !/^(\d{1,2}|打包)$/.test(String(tableNumber).trim())) {
+        return res.status(400).json({ success: false, error: '桌号格式不正确（1-2 位数字或"打包"）' });
+      }
       if (!orderFreqCheck(tableNumber, req.user?.username || req.ip)) return res.status(429).json({ success: false, error: '下单过于频繁，请稍后再试' });
       const effectiveUserId = req.user?.username || 'guest';
       const pool = db;
@@ -186,6 +190,8 @@ function register(app, deps) {
       const orderId = parseInt(req.params.id);
       const { tableNumber, fromTable } = req.body;
       if (!orderId || !tableNumber) return res.status(400).json({ success: false, error: '参数无效' });
+      // F2 收尾(2026-10-16): 桌号格式校验(与建单同口径)
+      if (!/^(\d{1,2}|打包)$/.test(String(tableNumber).trim())) return res.status(400).json({ success: false, error: '桌号格式不正确（1-2 位数字或"打包"）' });
       // 归属校验：本人、管理员、或同桌（fromTable=订单当前桌号——游客下单后登录挪桌，旧桌号即凭证）
       const effectiveUserId = req.user?.username || 'guest';
       const isAdmin = req.user?.role === 'admin';
