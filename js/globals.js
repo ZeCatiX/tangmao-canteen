@@ -135,9 +135,24 @@ function ssRemovePrefix(prefix) {
 }
 // 安全 fetch 包装器：自动处理 401 登录过期和网络错误
 function safeFetch(url, opts) {
-  const fetcher = opts?.method ? fetch(url, opts) : typeof url === 'string' ? fetch(url, opts) : url;
+  opts = opts || {};
+  // 离线检测(2026-10-16): 断网时立即返回模拟响应,不发无效请求
+  if (typeof navigator.onLine !== 'undefined' && !navigator.onLine) {
+    return Promise.resolve(new Response(
+      JSON.stringify({ success: false, error: L('网络未连接，请检查网络', 'No network connection') }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    ));
+  }
+  // 超时(2026-10-16): GET 15s / 写操作 20s——防请求无限挂住(配合 AbortController)
+  var timeoutMs = (opts.method || 'GET').toUpperCase() === 'GET' ? 15000 : 20000;
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+  opts.signal = controller.signal;
+
+  const fetcher = opts.method ? fetch(url, opts) : typeof url === 'string' ? fetch(url, opts) : url;
   return fetcher
     .then((r) => {
+      clearTimeout(timer);
       if (r.status === 401 && localStorage.getItem(STORE_KEYS.userToken)) {
         localStorage.removeItem(STORE_KEYS.userToken);
         localStorage.removeItem(STORE_KEYS.currentUser);
@@ -146,8 +161,9 @@ function safeFetch(url, opts) {
       return r;
     })
     .catch((e) => {
-      console.warn('网络请求失败:', url, e.message);
-      return new Response(JSON.stringify({ success: false, error: '网络请求失败' }), {
+      clearTimeout(timer);
+      var msg = e.name === 'AbortError' ? L('请求超时', 'Request timeout') : L('网络请求失败', 'Network request failed');
+      return new Response(JSON.stringify({ success: false, error: msg }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' },
       });

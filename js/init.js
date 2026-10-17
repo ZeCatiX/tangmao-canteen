@@ -131,8 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setTimeout(
     () =>
       checkApiAvailability().then((a) => {
-        if (a) console.log('API可用,ML模型已就绪');
-        else console.log('ML模型启动中,暂用本地推荐(稍后自动恢复)');
+        // ML 状态仅用于开发调试,生产环境不输出到控制台
       }),
     100
   );
