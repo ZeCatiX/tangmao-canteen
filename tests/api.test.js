@@ -26,8 +26,13 @@ require('dotenv').config();
 // 管理后台凭据（支持通过环境变量覆盖）
 
 // 2026-10-06 防刷适配:下单按桌号限频(60s/5单),压力类用例每单注入唯一桌号避免互相触发 IP 桶
+// 2026-10-16 F2 校验适配:桌号必须 1-30 或打包,改用循环合法桌号(测试隔离靠 orderId 而非桌号)
 let _uniqSeq = 0;
-function uniqTable(prefix) { return (prefix || 'UT') + Date.now().toString().slice(-6) + (++_uniqSeq); }
+function uniqTable() {
+  _uniqSeq++;
+  var t = 10 + (_uniqSeq % 21); // 循环 10-30
+  return String(t).padStart(2, '0');
+}
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
