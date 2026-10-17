@@ -2283,20 +2283,33 @@ window.renderCartLangAware = function () {
           ? 'Adding to <strong id="banner-table" style="color:var(--primary-accent);">' + esc(tableLabel(ltB)) + '</strong> · Order <span id="banner-oid" style="color:var(--primary-accent);">#' + esc(loB) + '</span>'
           : '正在为 <strong id="banner-table" style="color:var(--primary-accent);">' + esc(ltB) + '</strong> 号桌加菜 · 订单 <span id="banner-oid" style="color:var(--primary-accent);">#' + esc(loB) + '</span>';
         // 订单存活异步校验(F3类收尾,2026-10-16): 已完结/已取消/不存在 → 清绑定+收横幅,防对死订单宣称"正在加菜"
-        // 端点授权与 /add 同口径(同桌凭证),无权视同不存在
-        safeFetch('/api/order/' + encodeURIComponent(loB) + '/status-check?tableNumber=' + encodeURIComponent(ltB), { headers: authHeaders() })
-          .then((r) => r.json())
-          .then((chk) => {
-            if (chk && chk.success && (!chk.exists || ['completed', 'cancelled'].indexOf(chk.status) >= 0)) {
-              ['lastOrderId', 'lastOrderTable', 'lastOrderItems', 'lastOrderRounds', 'lastOrderAI', 'lastOrderStats'].forEach(function (k) {
-                ssRemove(k);
-              });
-              const b2 = document.getElementById('cart-order-banner');
-              if (b2) b2.style.display = 'none';
-            }
-          })
-          .catch(() => {});
-    } else banner.style.display = 'none';
+        // TTL 60s 缓存: renderCartLangAware 会被 MutationObserver 高频回调,不缓存则每变更都发请求 → 风暴
+        var now = Date.now();
+        if (!window._orderChkCache || window._orderChkCache.oid !== loB || now - window._orderChkCache.ts > 60000) {
+          window._orderChkCache = { oid: loB, ts: now, verdict: null };
+          safeFetch('/api/order/' + encodeURIComponent(loB) + '/status-check?tableNumber=' + encodeURIComponent(ltB), { headers: authHeaders() })
+            .then((r) => r.json())
+            .then((chk) => {
+              if (window._orderChkCache && window._orderChkCache.oid === loB) {
+                window._orderChkCache.verdict = chk && chk.success && chk.exists ? chk.status : 'gone';
+              }
+              if (chk && chk.success && (!chk.exists || ['completed', 'cancelled'].indexOf(chk.status) >= 0)) {
+                ['lastOrderId', 'lastOrderTable', 'lastOrderItems', 'lastOrderRounds', 'lastOrderAI', 'lastOrderStats'].forEach(function (k) {
+                  ssRemove(k);
+                });
+                const b2 = document.getElementById('cart-order-banner');
+                if (b2) b2.style.display = 'none';
+              }
+            })
+            .catch(() => { window._orderChkCache = null; });
+        } else if (window._orderChkCache.verdict && ['completed', 'cancelled', 'gone'].indexOf(window._orderChkCache.verdict) >= 0) {
+          // 缓存判定为已死: 收横幅但不重复发请求
+          banner.style.display = 'none';
+        }
+    } else {
+      banner.style.display = 'none';
+      window._orderChkCache = null;
+    }
     // 赠菜模式提示:给别桌加菜进行中,明确告知目标桌号(2026-09-17)
     const gfb = document.getElementById('gift-mode-banner');
     if (gfb) {
