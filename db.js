@@ -13,6 +13,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
   // 连接后立即设置编码，避免 SQL_ASCII 数据库的中文问题
   keepAlive: true,
+  // F2 收尾(2026-10-16): 查询超时 15s——防止慢查询无限挂住请求
+  statement_timeout: 15000,
+  query_timeout: 15000,
 });
 
 pool.on('error', (err) => {
