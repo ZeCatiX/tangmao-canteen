@@ -180,7 +180,6 @@ async function fetchRecommendations(isRefresh) {
 }
 
 async function fallback(prefs, blk, dishes) {
-  console.log('🔄本地推荐(决策树模型)');
   const start = Date.now();
   await loadDecisionTreeModel();
   dishes.forEach((d) => {
@@ -229,15 +228,6 @@ async function fallback(prefs, blk, dishes) {
     if (!recommendedIds.includes(d.id)) recommendedIds.push(d.id);
   });
   currentRecommendationMode = '决策树模型';
-  console.log('🍽️决策树推荐 ' + top.length + '个菜品,耗时' + (Date.now() - start) / 1000 + 's');
-  console.log(
-    '📊排名:',
-    top
-      .slice(0, 5)
-      .map((d, i) => i + 1 + '.' + d.name + '(' + Math.round((d.matchRate || 0) * 100) + '%)')
-      .join('  ')
-  );
-  if (top.find((d) => d.type === '盲盒尝鲜')) console.log('🎁盲盒:' + top.find((d) => d.type === '盲盒尝鲜').name);
   console.groupEnd();
   displayRecommendations();
 }
