@@ -2470,8 +2470,19 @@ function openTablePicker(intent) {
   if (inp) inp.value = '';
   const hint = document.getElementById('table-picker-hint');
   if (hint) {
-    hint.textContent = '桌号为 1-2 位数字：输入 1 或 01 均指 01 号桌';
-    hint.style.color = '';
+    const boundOid = ssGet('lastOrderId') || '';
+    const boundTable = ssGet('lockedTable') || '';
+    if (boundOid && boundTable) {
+      // F1 收尾(2026-10-16): 有进行中订单时警示——选择将把订单一并改桌,不再静默挪单
+      hint.innerHTML = L(
+        '⚠ 有进行中订单 <strong>#' + esc(boundOid) + '</strong>（' + esc(tableLabel(boundTable)) + '）——选择其他桌号会把该订单一并改桌',
+        '⚠ Open order <strong>#' + esc(boundOid) + '</strong> (' + esc(tableLabel(boundTable)) + ') — picking a new table will MOVE it'
+      );
+      hint.style.color = '#c0392b';
+    } else {
+      hint.textContent = '桌号为 1-2 位数字：输入 1 或 01 均指 01 号桌';
+      hint.style.color = '';
+    }
   }
   const m = document.getElementById('table-picker-modal');
   if (m) {
@@ -2759,7 +2770,8 @@ function showCart() {
         .map((x) => {
           const dish = dishData.find((d) => d.id === x.id);
           const qtyVal = x.qty || 1;
-          const name = dish ? esc(dishNameOf(dish)) : esc((function () { var dd = dishData.find(function (d) { return Number(d.id) === Number(x.id); }); return dd ? dishNameOf(dd) : x.name; })());
+          // 回退分支=菜品已从菜单删除,快照名(x.name)是唯一真相,勿改查表(同 id 必查不到,且会踩掉回归-BUG3 内容断言)
+          const name = dish ? esc(dishNameOf(dish)) : esc(x.name);
           const unit =
             dish && dish.price_unit
               ? '<span style="font-size:0.75rem;color:var(--text-light);margin-left:4px;">' +
