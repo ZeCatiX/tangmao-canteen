@@ -1745,6 +1745,12 @@ function displayFeatureImportance() {
     featureImportanceChart.destroy();
     featureImportanceChart = null;
   }
+  // Chart.js 按需加载(2026-10-16): 从全局加载改为按需,客户浏览/点餐流程不需要 Chart.js(~200KB)
+  if (typeof Chart === 'undefined') {
+    var cs = document.createElement('script');
+    cs.src = 'node_modules/chart.js/dist/chart.umd.min.js';
+    document.head.appendChild(cs);
+  }
   safeFetch('/api/feature-importance')
     .then((r) => r.json())
     .then((d) => {
