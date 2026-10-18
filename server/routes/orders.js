@@ -1,9 +1,26 @@
 'use strict';
 // 唐猫庭院 · 点餐与反馈域(下单/加菜/订单状态/反馈提交与查询)——从 server.js 拆出(2026-10-13 可维护性改造4)
 // 含: 起售量校验/订单项重算/下单频度防刷(内存计数,定时清理已 unref)
+const rateLimit = require('express-rate-limit');
 
 function register(app, deps) {
   const { db, logger, softAuth, authMiddleware } = deps;
+  const pool = db; // 顶层声明一次,不再每个 handler 重复 const pool = db
+
+  // ── 共享辅助函数(消除跨 handler 重复模式) ──
+  function getUser(req) {
+    return req.user?.username || 'guest';
+  }
+  function serverError(res) {
+    serverError(res);
+  }
+  function validateTableNumber(tn) {
+    // NULL/undefined/空 = 可选(未选桌);否则必须 1-30 或'打包'
+    if (tn === undefined || tn === null || tn === '') return true;
+    if (tn === '打包') return true;
+    var num = parseInt(String(tn).trim(), 10);
+    return !isNaN(num) && num >= 1 && num <= 30;
+  }
 
   // 起售数量校验：从菜品备注(serving)解析"X个起"，校验各菜品最终数量≥最小起售量
   // items 应为合并后的最终状态（建单=新items；加菜=merged）
@@ -91,8 +108,7 @@ function register(app, deps) {
         }
       }
       if (!orderFreqCheck(tableNumber, req.user?.username || req.ip)) return res.status(429).json({ success: false, error: '下单过于频繁，请稍后再试' });
-      const effectiveUserId = req.user?.username || 'guest';
-      const pool = db;
+      const effectiveUserId = getUser(req);
       // 服务端重算价格：按 dish id 查 DB，防止客户端篡改价格（0 元单）
       const recomputed = await recomputeOrderItems(pool, items);
       if (recomputed && recomputed.error) return res.status(400).json({ success: false, error: recomputed.error });
@@ -132,7 +148,7 @@ function register(app, deps) {
         );
       }
       res.json({ success: true, message: '订单已创建', orderId: result.rows[0].id });
-    } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('API错误:', e.message); serverError(res); }
   });
 
   // 加菜：往现有订单追加菜品（同订单累计，一张小票）
@@ -143,9 +159,8 @@ function register(app, deps) {
       if (!orderId || !items || !items.length) return res.status(400).json({ success: false, error: '参数无效' });
       // 归属校验：本人(登录用户)、管理员、或同桌（请求桌号与订单桌号一致——桌号即凭证）
       // 游客单的 user_id 一律是 'guest'，不能作为归属凭证（否则任何游客可给任何游客订单加菜）
-      const effectiveUserId = req.user?.username || 'guest';
+      const effectiveUserId = getUser(req);
       const isAdmin = req.user?.role === 'admin';
-      const pool = db;
       const existing = await pool.query('SELECT items, total_price, status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
       if (existing.rows.length === 0) return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
       const row = existing.rows[0];
@@ -185,7 +200,7 @@ function register(app, deps) {
         [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]);
       if (upd.rowCount === 0) return res.status(400).json({ success: false, error: '订单状态已变化，不能加菜' });
       res.json({ success: true, message: '加菜成功', orderId, addedCount: items.length, totalPrice: newTotal, dishCount: mergedItems.length });
-    } catch (e) { logger.error('加菜API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('加菜API错误:', e.message); serverError(res); }
   });
 
   // 挪桌：修改进行中订单的桌号（订单跟客人走）
@@ -200,9 +215,8 @@ function register(app, deps) {
         return res.status(400).json({ success: false, error: '桌号格式不正确（01-30 或"打包"）' });
       }
       // 归属校验：本人、管理员、或同桌（fromTable=订单当前桌号——游客下单后登录挪桌，旧桌号即凭证）
-      const effectiveUserId = req.user?.username || 'guest';
+      const effectiveUserId = getUser(req);
       const isAdmin = req.user?.role === 'admin';
-      const pool = db;
       const colCheck = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'");
       if (colCheck.rows.length === 0) return res.json({ success: false, error: '订单表不支持桌号' });
       const own = await pool.query('SELECT user_id, table_number, status FROM orders WHERE id=$1', [orderId]);
@@ -213,27 +227,28 @@ function register(app, deps) {
       const r = await pool.query("UPDATE orders SET table_number=$1 WHERE id=$2 AND status NOT IN ('completed','cancelled') RETURNING id", [String(tableNumber), orderId]);
       if (r.rows.length === 0) return res.status(400).json({ success: false, error: '订单不存在或无权操作' });
       res.json({ success: true, orderId, tableNumber });
-    } catch (e) { logger.error('改桌号API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('改桌号API错误:', e.message); serverError(res); }
   });
 
   // 订单存活校验(F3类收尾,2026-10-16): 前端会话绑定横幅/结算前自查,防对已完结订单宣称"正在加菜"
   // 授权与 /add 同口径(本人/管理员/同桌凭证);无权视同不存在(不泄露订单存在性)
-  app.get('/api/order/:id/status-check', softAuth, async (req, res) => {
+  // 独立限流(30/分钟): 走 DB 查询,不宜被滥用
+  const statusCheckLimiter = rateLimit({ windowMs: 60000, max: 30, message: { success: false, error: '请求过于频繁' } });
+  app.get('/api/order/:id/status-check', statusCheckLimiter, softAuth, async (req, res) => {
     try {
-      const pool = db;
       const orderId = parseInt(req.params.id);
       if (!orderId || isNaN(orderId) || orderId <= 0) return res.status(400).json({ success: false, error: '参数无效' });
       const tableNumber = req.query.tableNumber || '';
       const r = await pool.query('SELECT status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
       if (r.rows.length === 0) return res.json({ success: true, exists: false });
       const row = r.rows[0];
-      const effectiveUserId = req.user?.username || 'guest';
+      const effectiveUserId = getUser(req);
       const isAdmin = req.user?.role === 'admin';
       const isOwner = effectiveUserId !== 'guest' && row.user_id === effectiveUserId;
       const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
       if (!isAdmin && !isOwner && !isTableMatch) return res.json({ success: true, exists: false });
       res.json({ success: true, exists: true, status: row.status, table_number: row.table_number });
-    } catch (e) { logger.error('订单存活校验API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('订单存活校验API错误:', e.message); serverError(res); }
   });
 
   app.get('/api/orders', authMiddleware, async (req, res) => {
@@ -241,7 +256,6 @@ function register(app, deps) {
       const { status } = req.query;
       const userId = req.user?.username;
       if (!userId) return res.status(401).json({ success: false, error: '请先登录' });
-      const pool = db;
       let query = 'SELECT * FROM orders';
       let params = [];
       const conditions = [];
@@ -265,7 +279,7 @@ function register(app, deps) {
       if (status) query += ' LIMIT 100';
       const result = await pool.query(query, params);
       res.json({ success: true, orders: result.rows });
-    } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('API错误:', e.message); serverError(res); }
   });
 
   // 更新订单状态
@@ -277,7 +291,6 @@ function register(app, deps) {
       // 厨房操作允许管理员或订单所有者
       const validStatuses = ['pending', 'confirmed', 'preparing', 'completed', 'cancelled'];
       if (!validStatuses.includes(status)) return res.status(400).json({ success: false, error: '无效的状态' });
-      const pool = db;
       let result;
       // 管理员可以更新任意订单，普通用户只能更新自己的订单
       // 推进到 completed 时记完成时间（厨房"当日已完成"归档用；重复完成/回退不覆盖已有值）
@@ -294,7 +307,7 @@ function register(app, deps) {
       }
       if (result.rowCount === 0) return res.status(404).json({ success: false, error: '订单不存在或无权限' });
       res.json({ success: true, message: '订单状态已更新' });
-    } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('API错误:', e.message); serverError(res); }
   });
 
   // 反馈 API（软身份验证）
@@ -308,24 +321,22 @@ function register(app, deps) {
       if (dishIdNum === null || isNaN(dishIdNum) || dishIdNum < 0) return res.status(400).json({ success: false, error: '无效的菜品 ID' });
       // dishId 为 0 表示整体满意度，允许
       // 优先使用 token 验证的用户 ID
-      const effectiveUserId = req.user?.username || 'guest';
-      const pool = db;
+      const effectiveUserId = getUser(req);
       await pool.query(
         "INSERT INTO feedback (dish_id, user_id, rating, user_preferences) VALUES ($1,$2,$3,$4)",
         [dishIdNum, effectiveUserId, scoreNum, userPreferences ? JSON.stringify(userPreferences) : '{}']
       );
       res.json({ success: true, message: '反馈成功' });
-    } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('API错误:', e.message); serverError(res); }
   });
 
   app.get('/api/feedback', authMiddleware, async (req, res) => {
     try {
-      const pool = db;
       const userId = req.user?.username;
       if (!userId) return res.status(401).json({ success: false, error: '请先登录' });
       const result = await pool.query('SELECT * FROM feedback WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
       res.json({ success: true, feedbacks: result.rows });
-    } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) { logger.error('API错误:', e.message); serverError(res); }
   });
 }
 
