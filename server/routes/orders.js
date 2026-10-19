@@ -12,7 +12,7 @@ function register(app, deps) {
     return req.user?.username || 'guest';
   }
   function serverError(res) {
-    serverError(res);
+    res.status(500).json({ success: false, error: '服务器开小差了，请稍后再试' });
   }
   function validateTableNumber(tn) {
     // NULL/undefined/空 = 可选(未选桌);否则必须 1-30 或'打包'
