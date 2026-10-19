@@ -79,6 +79,7 @@ var UNIT_EN = {
   '/颗': '/pc',
   '/块': '/pc',
   '/笼': '/steamer',
+  '/条': '/whole',
 };
 function formatPrice(d) {
   const p = d && typeof d === 'object' ? d.price : d;
@@ -502,6 +503,7 @@ var ZH_EN = {
   关于本店: 'About Us',
   全部菜单: 'Full Menu',
   隐私政策: 'Privacy',
+  跳转到主要内容: 'Skip to main content',
   我的: 'My Account',
   我的购物车: 'My Cart',
   登录: 'Sign In',
