@@ -352,7 +352,7 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/order 负价格被服务端重算覆盖(不产生负价订单)', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '负价', price: -10 }], totalPrice: -10, tableNumber: 'ET' + Date.now().toString().slice(-6) + 'A' }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '负价', price: -10 }], totalPrice: -10, tableNumber: '30' }),
     });
     // 2026-09-17: 服务端不信任客户端价格(按 DB 单价重算),负价被忽略(200)或被拒绝(400)均安全
     assert.ok(status === 200 || status === 400, '负价应被安全处理,实际: ' + status);
@@ -360,7 +360,7 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/order 非数字价格被安全处理', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 'abc' }], tableNumber: 'ET' + Date.now().toString().slice(-6) + 'B' }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 'abc' }], tableNumber: '23' }),
     });
     // 同上:客户端价格被忽略并重算,不会写入异常价格
     assert.ok(status === 200 || status === 400, '非数字价格应被安全处理,实际: ' + status);
@@ -370,7 +370,7 @@ describe('4. 边界与安全', () => {
     // 2026-09-17 安全修复回归:qty 为负会与正单价相乘产生负价订单(-5 × 3元 = -15元)
     for (const qty of [-5, 0, 1000]) {
       const { status } = await api('/api/order', {
-        method: 'POST', body: JSON.stringify({ userId: 'badqty_test', items: [{ id: dishPool[0].id, name: '测试', qty }], tableNumber: 'ET' + Date.now().toString().slice(-6) + 'Q' + qty }),
+        method: 'POST', body: JSON.stringify({ userId: 'badqty_test', items: [{ id: dishPool[0].id, name: '测试', qty }], tableNumber: '25' }),
       });
       assert.equal(status, 400, `qty=${qty} 应返回 400,实际 ${status}`);
     }
@@ -379,7 +379,7 @@ describe('4. 边界与安全', () => {
   it('POST /api/order 空字符串总价兜底为 0 不崩溃', async () => {
     // 空字符串 totalPrice 应被兜底为 0，订单可正常创建
     const { status, body } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 10 }], totalPrice: '', tableNumber: 'ET' + Date.now().toString().slice(-6) + 'C' }),
+      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 10 }], totalPrice: '', tableNumber: '30' }),
     });
     assert.equal(status, 200, `空字符串总价订单应创建成功，实际 ${status}`);
     assert.ok(body.orderId, '应返回订单ID');

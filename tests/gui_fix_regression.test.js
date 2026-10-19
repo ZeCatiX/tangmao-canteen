@@ -19,14 +19,14 @@ const ADMIN_PASS = process.env.ADMIN_PASS;
 
 describe('①退出/注销后回首页（回归）', () => {
   it('logout() 成功路径直接调用 showSection(home-section)', () => {
-    const core = read('js/core.js');
+    const core = frontSrc();
     const body = core.slice(core.indexOf('function logout()'), core.indexOf('function showProfile'));
     const hits = (body.match(/showSection\('home-section'\)/g) || []).length;
     assert.ok(hits >= 2, 'logout 应含直接回首页调用 + 弹窗回调双保险，实际 ' + hits + ' 处');
   });
 
   it('deleteAccount 成功分支直接调用 showSection(home-section)', () => {
-    const core = read('js/core.js');
+    const core = frontSrc();
     const body = core.slice(core.indexOf('function deleteAccount()'), core.indexOf('function deleteAccount()') + 3600);
     assert.ok(body.includes("showSection('home-section');"), '注销成功分支应有直接回首页调用');
   });
@@ -101,3 +101,10 @@ describe('④EN 模式菜单筛选控件翻译兜底（回归）', () => {
     assert.ok(globals.includes('默认排序:'), '默认排序词条');
   });
 });
+
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}

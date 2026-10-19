@@ -55,7 +55,7 @@ test('赠菜追加：giftTo 行独立成行不被同 id 普通行合并', async 
 test('赠菜追加：取消单不能加菜（状态拦截回归）', async () => {
   const dishR = await api('/api/dishes');
   const dish = dishR.body.dishes[0];
-  const o = await api('/api/order', { method: 'POST', body: { userId: 'guest', tableNumber: '31', items: [{ id: dish.id, name: dish.name, price: dish.price, qty: 1 }], totalPrice: dish.price } });
+  const o = await api('/api/order', { method: 'POST', body: { userId: 'guest', tableNumber: '17', items: [{ id: dish.id, name: dish.name, price: dish.price, qty: 1 }], totalPrice: dish.price } });
   const orderId = o.body.orderId;
   const auth = { Authorization: 'Bearer ' + adminToken };
   const cancel = await api('/api/orders/' + orderId + '/status', { method: 'PUT', headers: auth, body: { status: 'cancelled' } });
@@ -63,7 +63,7 @@ test('赠菜追加：取消单不能加菜（状态拦截回归）', async () =>
   const add = await api('/api/order/' + orderId + '/add', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + adminToken },
-    body: { items: [{ id: dish.id, qty: 1 }], tableNumber: '31' },
+    body: { items: [{ id: dish.id, qty: 1 }], tableNumber: '17' },
   });
   assert.equal(add.status, 400, '取消单加菜应被拒');
   assert.match(add.body.error || '', /取消/, '错误信息应说明订单已取消');

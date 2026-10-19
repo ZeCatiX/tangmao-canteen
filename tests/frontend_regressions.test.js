@@ -18,7 +18,7 @@ const sq = (s) => String(s).replace(/\s+/g, '');
 const hasDictKey = (g, k) => g.includes("'" + k + "':") || new RegExp('^\\s*' + k + ':', 'm').test(g);
 
 test('回归-BUG1: 选桌后AI入口走 openAIRecommend 冷启动判定, 不再硬编码跳偏好表单', () => {
-  const core = read('js/core.js');
+  const core = frontSrc();
   assert.ok(core.includes('function openAIRecommend()'), 'core.js 必须定义唯一判定源 openAIRecommend');
   // openAIRecommend 内部必须包含冷启动判定(偏好已填→偏好表单, 否则热门Top6)
   const fnStart = core.indexOf('function openAIRecommend()');
@@ -52,7 +52,7 @@ test('回归-看板稳定: 订单数据无变化时跳过整表重建(不重绘/
 });
 
 test('回归-BUG3: 购物车行菜名走 dishNameOf(随英文菜单切换)', () => {
-  const core = sq(read('js/core.js'));
+  const core = sq(frontSrc());
   assert.ok(core.includes('constname=dish?esc(dishNameOf(dish)):esc(x.name)'), 'showCart 行名必须优先 dishNameOf(dish), 仅无匹配菜品时回退快照名');
 });
 
@@ -67,7 +67,7 @@ test('备注保存防线①: init.js 同时监听 input 与 change 事件写购�
 });
 
 test('备注保存防线②: 结算前从 .cart-note-input DOM 收口实际值', () => {
-  const src = read('js/core.js');
+  const src = frontSrc();
   const cki = src.indexOf('async function checkoutCart()');
   assert.ok(cki > 0, 'checkoutCart 应存在');
   const body = src.slice(cki, cki + 2000);
@@ -94,7 +94,7 @@ test('UI骨架i18n②: 字典/应用函数/切换与初始加载接线', () => {
   assert.ok(g.includes('function applyUiLang'), 'globals 应有 applyUiLang');
   assert.ok(/function toggleMenuLang\(\)[\s\S]{0,300}applyUiLang\(\)/.test(g), 'toggleMenuLang 应调用 applyUiLang');
   assert.ok(g.includes('var TAB_EN'), '分类 tab 短名应有 TAB_EN 映射');
-  const c = read('js/core.js');
+  const c = frontSrc();
   assert.ok(c.includes("uiText('table_none')") && c.includes("uiText('table_pick')"), '桌号状态卡应走 uiText');
   const i = read('js/init.js');
   assert.ok(i.includes('applyUiLang()'), '初始加载应应用已存语言');
@@ -111,7 +111,7 @@ test('遍历式翻译①: ZH_EN 字典覆盖扫描出的残留串', () => {
 });
 
 test('遍历式翻译②: 动态渲染接入(下拉/meta/匹配指数/轮次/观察器)', () => {
-  const c = read('js/core.js');
+  const c = frontSrc();
   assert.ok(c.includes("catNameOf(c)") && c.includes("All categories"), '分类下拉显示应走 catNameOf');
   assert.ok(c.includes('roundLabelLang'), '轮次条应按语言转写');
   const r = read('js/recommendation.js');
@@ -143,7 +143,7 @@ test('遍历器遮挡修复: 原文记忆挂文本节点自身而非父元素', 
 
 // ═══ 推荐页动态拼接串双语（2026-10-07 用户实测 EN 推荐页残留三处）═══
 test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输出', () => {
-  const c = read('js/core.js');
+  const c = frontSrc();
   assert.ok(c.includes("taste preferences not set"), 'core.js 偏好横幅应双语');
   const r = read('js/recommendation.js');
   assert.ok(r.includes("Currently using: ") && r.includes("MODE_EN"), '当前使用行应双语+mode映射');
@@ -154,7 +154,7 @@ test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输�
 // 根因: 偏好回填三分支漏了 guest——currentUser='guest' 时既不回填账号偏好也不重置表单,
 //       上一登录用户的选项残留给下一顾客(共享平板/扫码设备隐私问题)。
 test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖三分支)', () => {
-  const c = read('js/core.js');
+  const c = frontSrc();
   assert.ok(c.includes("else resetPreferenceForm();"), 'guest/未登录应走 resetPreferenceForm');
   assert.ok(!c.includes("else if(!currentUser)resetPreferenceForm();"), '旧条件(仅null重置)应已移除');
   assert.ok(c.includes("removeItem('savedPrefs')"), '退出登录应清 savedPrefs 偏好痕迹标记');
@@ -178,3 +178,15 @@ test('推荐卡修复②: 无口味声明不显示匹配度%, 改显本店推荐
   // processML 里声明数判定存在
   assert.ok(r.includes("v&&v!=='无'&&v!=='无特殊要求'&&v!=='不限'"), '声明判定条件应存在');
 });
+
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
+
+// sq 语义恢复(2026-10-19): 原 sq(read('js/core.js'))/readSq 调用点需要去空白归一化形态
+function frontSq() {
+  return frontSrc().replace(/\s+/g, '');
+}

@@ -28,7 +28,7 @@ async function placeOrder(dish, qty) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       items: [{ id: dish.id, name: dish.name, price: Number(dish.price), qty, type: '购物车' }],
-      totalPrice: Number(dish.price) * qty, tableNumber: '86',
+      totalPrice: Number(dish.price) * qty, tableNumber: '18',
     }),
   });
   const d = await r.json();

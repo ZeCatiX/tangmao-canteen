@@ -360,7 +360,7 @@ test('API: tableNumber 排除本桌进行中订单的菜', async () => {
       userId: 'guest',
       items: [{ id: dish.id, name: dish.name, price: dish.price, qty: 1 }],
       totalPrice: dish.price,
-      tableNumber: '98',
+      tableNumber: '19',
     }),
   });
   const dOrder = await rOrder.json();
@@ -370,7 +370,7 @@ test('API: tableNumber 排除本桌进行中订单的菜', async () => {
     const token = await getUserToken();
     const r = await fetch(BASE + '/api/recommend/table', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ partySize: 4, tableNumber: '98' }),
+      body: JSON.stringify({ partySize: 4, tableNumber: '19' }),
     });
     const d = await r.json();
     assert.equal(d.success, true);

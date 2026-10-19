@@ -228,7 +228,7 @@ describe('深度UI检查 - 崩溃风险', () => {
   });
 
   it('核心函数有null保护', () => {
-    const js = sq(read('js/core.js'));
+    const js = sq(frontSrc());
     // showMessage
     assert.ok(js.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     // showSection
@@ -304,7 +304,7 @@ describe('深度UI检查 - 功能完整性', () => {
   });
 
   it('推荐显示有匹配指数四维度', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('matchDetails'), '应有匹配详情');
     assert.ok(js.includes('taste'), '应有口味维度');
     assert.ok(js.includes('cuisine'), '应有招牌维度');
@@ -313,7 +313,7 @@ describe('深度UI检查 - 功能完整性', () => {
   });
 
   it('推荐理由生成函数存在', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function generateDishReason'), '应有推荐理由生成函数');
   });
 
@@ -328,13 +328,13 @@ describe('深度UI检查 - 功能完整性', () => {
   });
 
   it('评分功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function submitStarFeedback'), 'submitStarFeedback 函数');
     assert.ok(js.includes('function openStarFeedback'), 'openStarFeedback 函数');
   });
 
   it('收藏/拉黑功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function addToFavorites'), 'addToFavorites 函数');
     assert.ok(js.includes('function addToBlacklist'), 'addToBlacklist 函数');
     assert.ok(js.includes('function cancelFavorite'), 'cancelFavorite 函数');
@@ -342,12 +342,12 @@ describe('深度UI检查 - 功能完整性', () => {
   });
 
   it('用户注销功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function deleteAccount'), 'deleteAccount 函数');
   });
 
   it('菜品搜索筛选功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function renderMenuTable'), 'renderMenuTable 函数');
     assert.ok(js.includes('menu-search'), 'menu-search 搜索框');
     assert.ok(js.includes('menu-filter-cat'), 'menu-filter-cat 分类筛选');
@@ -426,7 +426,7 @@ describe('深度UI检查 - 安全', () => {
   });
 
   it('动态HTML拼接使用esc函数', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     const html = read('admin.html');
     // 检查esc函数被使用
     assert.ok(js.includes('esc('), 'core.js 中使用 esc 转义');
@@ -440,7 +440,7 @@ describe('深度UI检查 - 安全', () => {
   });
 
   it('密码不存储在前端localStorage', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     const init = read('js/init.js');
     // 检查是否有明文密码存储
     const pwdStores = (js + init).match(/localStorage\.setItem\([^)]*password[^)]*\)/gi);
@@ -450,7 +450,7 @@ describe('深度UI检查 - 安全', () => {
 
 describe('深度UI检查 - 空态/加载态/错误态', () => {
   it('购物车有空态显示', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     const html = read('index.html');
     assert.ok(html.includes('cart-empty') || html.includes('购物车是空的'), '购物车应有空态');
     assert.ok(js.includes('cart-empty') || js.includes('空的'), '购物车空态逻辑');
@@ -567,7 +567,8 @@ describe('深度UI检查 - 布局与排版', () => {
   it('首页正确引用JS和CSS', () => {
     const html = read('index.html');
     assert.ok(html.includes('bootstrap.bundle.min.js'), '应引用Bootstrap JS');
-    assert.ok(html.includes('chart.umd.min.js'), '应引用Chart.js');
+    // Chart.js 2026-10-16 改为按需加载(前端源内动态注入),首页不再全局引用
+    assert.ok(frontSrc().includes('chart.umd.min.js'), 'Chart.js应在前端源中按需加载');
     assert.ok(html.includes('script.js'), '应引用script.js');
     assert.ok(html.includes('styles.css'), '应引用styles.css');
   });
@@ -691,3 +692,14 @@ describe('深度UI检查 - 布局与排版', () => {
     assert.ok(html.includes('current-time'), '厨房看板应有时间显示');
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
+
+// sq 语义恢复(2026-10-19): 原 sq(read('js/core.js'))/readSq 调用点需要去空白归一化形态
+function frontSq() {
+  return frontSrc().replace(/\s+/g, '');
+}

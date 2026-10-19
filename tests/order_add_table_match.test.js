@@ -50,7 +50,7 @@ describe('加菜归属：游客单登录后续点（同桌凭证）', () => {
   it('异桌(99)加菜仍应拒绝', async () => {
     const d = await api('/api/order/' + orderId + '/add', { method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ items: [{ id: 2069, name: '五常大米饭', price: 3, qty: 1, type: '购物车' }], tableNumber: '99' }) });
+      body: JSON.stringify({ items: [{ id: 2069, name: '五常大米饭', price: 3, qty: 1, type: '购物车' }], tableNumber: '25' }) });
     assert.equal(d.success, false, '异桌凭证应被拒');
   });
 });

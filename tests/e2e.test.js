@@ -195,7 +195,7 @@ describe('完整用户会话流程', () => {
         userId: testUser,
         items: [{ id: dishPool[0].id, name: 'E2E测试菜品', price: 18 }],
         totalPrice: 18,
-        tableNumber: 'E2E' + Date.now().toString().slice(-6),
+        tableNumber: '27',
       }),
     });
     assert.equal(order.status, 200);
@@ -235,7 +235,7 @@ describe('厨房看板 API 测试', () => {
     const order = await api('/api/order', {
       method: 'POST',
       body: JSON.stringify({
-        userId: 'kitchen_test', items: [{ id: dishPool[0].id, name: '厨房测试', price: 10 }], totalPrice: 10, tableNumber: 'KT' + Date.now().toString().slice(-6),
+        userId: 'kitchen_test', items: [{ id: dishPool[0].id, name: '厨房测试', price: 10 }], totalPrice: 10, tableNumber: '28',
       }),
     });
     assert.equal(order.status, 200);

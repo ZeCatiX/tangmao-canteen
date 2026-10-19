@@ -7,9 +7,9 @@ const assert = require('assert/strict');
 const BASE = 'http://localhost:3000';
 
 let adminToken = '';
-// F2 校验后桌号必须合法(1-2位数字),随机取 10-89 段避让常用测试桌
+// F2 校验后桌号必须合法(1-30),固定 24 避让常用测试桌(随机10-89会踩F2雷,2026-10-19修复)
 let orderId = '';
-const tableId = String(10 + Math.floor(Math.random() * 80)).padStart(2, '0');
+const tableId = '24';
 
 async function api(path, opt = {}) {
   const r = await fetch(BASE + path, {

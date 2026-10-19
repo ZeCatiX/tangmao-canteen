@@ -67,7 +67,7 @@ describe('基础设施核心文件语法检查', () => {
   // ===== 7. build.js 脚本检查 =====
   it('7.1 build.js 合并所有JS文件', () => {
     const content = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
-    const files = ['js/globals.js', 'js/core.js', 'js/recommendation.js', 'js/init.js'];
+    const files = ['js/globals.js', 'js/menu.js', 'js/cart.js', 'js/core.js', 'js/recommendation.js', 'js/init.js'];
     for (const f of files) {
       assert.ok(content.includes(f), `build.js应包含${f}`);
     }
@@ -159,7 +159,7 @@ describe('基础设施核心文件语法检查', () => {
 
   // ===== 16. 前端JS文件字符编码检查 =====
   it('16.1 前端JS文件无BOM头', () => {
-    const jsFiles = ['js/core.js', 'js/init.js', 'js/globals.js', 'js/recommendation.js'];
+    const jsFiles = ['js/globals.js', 'js/menu.js', 'js/cart.js', 'js/core.js', 'js/recommendation.js', 'js/init.js'];
     for (const f of jsFiles) {
       const p = path.join(ROOT, f);
       if (!fs.existsSync(p)) continue;
@@ -180,3 +180,9 @@ describe('基础设施核心文件语法检查', () => {
     }
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}

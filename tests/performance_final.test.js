@@ -137,3 +137,9 @@ describe('性能基准测试', () => {
     console.log(`100菜品推荐响应: ${elapsed}ms`);
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}

@@ -44,11 +44,11 @@ describe('点2 盲盒/换一批/选好了/退出按钮', () => {
               js.includes("'end-logout-btn':()=>{resetRecommendation()"), '退出按钮应绑定重置并返回首页');
   });
   it('盲盒推荐显示"盲盒尝鲜"标签', () => {
-    const js = sq(readFile('js/core.js'));
+    const js = sq(frontSrc());
     assert.ok(js.includes("type:'盲盒尝鲜'"), '盲盒应标记为盲盒尝鲜');
   });
   it('盲盒推荐不在已推荐列表', () => {
-    const js = readFile('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('recommendedIds.includes(d.id)'), '盲盒排除已推荐菜品');
   });
 });
@@ -72,11 +72,11 @@ describe('点8 用户profile', () => {
     assert.ok(html.includes('delete-account'), '删除账户按钮应存在');
   });
   it('showProfile函数存在', () => {
-    const js = readFile('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function showProfile'), 'showProfile函数应存在');
   });
   it('注销功能存在', () => {
-    const js = readFile('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function logout') || js.includes('function deleteAccount'), '注销/删除账户功能应存在');
   });
 });
@@ -84,7 +84,7 @@ describe('点8 用户profile', () => {
 // 点110: 浏览器title动态更新
 describe('点110 浏览器title动态更新', () => {
   it('showSection 更新 document.title', () => {
-    const js = readFile('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('document.title'), 'showSection 应更新 document.title');
     assert.ok(js.includes('titleMap'), '应有标题映射表');
   });
@@ -162,7 +162,7 @@ describe('点119 JWT黑名单机制', () => {
     assert.ok(server.includes('revokeToken'), 'logout 端点应调用 revokeToken');
   });
   it('前端 logout 调用 /api/user/logout', () => {
-    const js = readFile('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('/api/user/logout'), '前端 logout 应调用 /api/user/logout');
   });
   it('sample_data.sql 包含 token_blacklist 表', () => {
@@ -187,3 +187,9 @@ describe('点106 测试数据清理', () => {
     assert.ok(test.includes('清理') || test.includes('delete'), '应有数据清理逻辑');
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}

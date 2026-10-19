@@ -312,7 +312,7 @@ describe('2. 崩溃风险与边界情况审计', () => {
   });
 
   it('核心函数有null保护', () => {
-    const core = readSq('js/core.js');
+    const core = frontSq();
     assert.ok(core.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     assert.ok(core.includes('if(!el)'), 'showSection 应有 null 保护');
     assert.ok(core.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
@@ -535,7 +535,8 @@ describe('3. 显示排版与字符编码审计', () => {
   it('首页正确引用JS和CSS', () => {
     const html = read('index.html');
     assert.ok(html.includes('bootstrap.bundle.min.js'), '应引用Bootstrap JS');
-    assert.ok(html.includes('chart.umd.min.js'), '应引用Chart.js');
+    // Chart.js 2026-10-16 改为按需加载(前端源内动态注入),首页不再全局引用
+    assert.ok(frontSrc().includes('chart.umd.min.js'), 'Chart.js应在前端源中按需加载');
     assert.ok(html.includes('script.js'), '应引用script.js');
     assert.ok(html.includes('styles.css'), '应引用styles.css');
   });
@@ -554,7 +555,7 @@ describe('4. 功能完整性审计', () => {
   });
 
   it('推荐显示有匹配指数四维度', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('taste'), '应有口味维度');
     assert.ok(js.includes('cuisine'), '应有招牌维度');
     assert.ok(js.includes('calorie'), '应有营养维度');  // 2026-09-17: 字段已更名 calorie
@@ -574,13 +575,13 @@ describe('4. 功能完整性审计', () => {
   });
 
   it('评分功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function submitStarFeedback'), 'submitStarFeedback 函数');
     assert.ok(js.includes('function openStarFeedback'), 'openStarFeedback 函数');
   });
 
   it('收藏/拉黑功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function addToFavorites'), 'addToFavorites 函数');
     assert.ok(js.includes('function addToBlacklist'), 'addToBlacklist 函数');
     assert.ok(js.includes('function cancelFavorite'), 'cancelFavorite 函数');
@@ -588,12 +589,12 @@ describe('4. 功能完整性审计', () => {
   });
 
   it('用户注销功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function deleteAccount'), 'deleteAccount 函数');
   });
 
   it('菜品搜索筛选功能完整', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function renderMenuTable'), 'renderMenuTable 函数');
     assert.ok(js.includes('menu-search'), 'menu-search 搜索框');
     assert.ok(js.includes('menu-filter-cat'), 'menu-filter-cat 分类筛选');
@@ -621,19 +622,19 @@ describe('4. 功能完整性审计', () => {
   });
 
   it('动态HTML拼接使用esc函数', () => {
-    assert.ok(read('js/core.js').includes('esc('), 'core.js 中使用 esc 转义');
+    assert.ok(frontSrc().includes('esc('), 'core.js 中使用 esc 转义');
     assert.ok(read('admin.html').includes('esc('), 'admin.html 中使用 esc 转义');
   });
 
   it('密码不存储在前端localStorage', () => {
-    const combined = read('js/core.js') + read('js/init.js');
+    const combined = frontSrc() + read('js/init.js');
     const pwdStores = combined.match(/localStorage\.setItem\([^)]*password[^)]*\)/gi);
     assert.ok(!pwdStores || pwdStores.length === 0, '前端不应存储明文密码到localStorage');
   });
 
   it('购物车有空态显示', () => {
     assert.ok(read('index.html').includes('cart-empty') || read('index.html').includes('购物车是空的'), '购物车应有空态');
-    assert.ok(read('js/core.js').includes('cart-empty') || read('js/core.js').includes('空的'), '购物车空态逻辑');
+    assert.ok(frontSrc().includes('cart-empty') || frontSrc().includes('空的'), '购物车空态逻辑');
   });
 
   it('推荐结果有加载态和空态提示', () => {
@@ -702,7 +703,7 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('generateDishReason 函数存在且包含所有推荐维度', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function generateDishReason'), 'generateDishReason 函数存在');
     assert.ok(js.includes('推荐理由'), '推荐理由包含中文说明');
     assert.ok(js.includes('招牌'), '推荐理由包含招牌信息');
@@ -710,7 +711,7 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('computeDishMatch 函数返回完整匹配详情', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function computeDishMatch'), 'computeDishMatch 函数存在');
     assert.ok(js.includes('matchDetails'), 'computeDishMatch 返回matchDetails');
     assert.ok(js.includes('totalMatch'), 'computeDishMatch 返回totalMatch');
@@ -718,7 +719,7 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('selectBlindBoxDish 函数存在且有权重计算', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function selectBlindBoxDish'), 'selectBlindBoxDish 函数存在');
     assert.ok(js.includes('权重') || js.includes('score'), '盲盒推荐有权重计算');
     assert.ok(js.includes('盲盒推荐'), '盲盒推荐有中文说明');
@@ -732,7 +733,7 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('resetRecommendation 函数重置所有状态', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     assert.ok(js.includes('function resetRecommendation'), 'resetRecommendation 函数存在');
     assert.ok(js.includes('currentRecommendations'), '重置推荐列表');
     assert.ok(js.includes('recommendedIds'), '重置推荐ID列表');
@@ -740,7 +741,7 @@ describe('6. 工具函数完整性审计', () => {
   });
 
   it('updateUserNavbar 函数正确处理三种用户状态', () => {
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(js.includes('functionupdateUserNavbar'), 'updateUserNavbar 函数存在');
     assert.ok(js.includes("currentUser==='guest'"), '处理游客状态');
     assert.ok(js.includes('nav-profile-item'), '处理登录用户状态');
@@ -1123,7 +1124,7 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('注册有密码确认验证', () => {
     const html = read('index.html');
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(html.includes('register-confirm'), '确认密码输入框存在');
     assert.ok(js.includes('p!==c'), '密码确认验证逻辑存在');
   });
@@ -1147,7 +1148,7 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('登录表单有必填验证', () => {
     const html = read('index.html');
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(html.includes('login-username'), '用户名输入框存在');
     assert.ok(html.includes('login-password'), '密码输入框存在');
     assert.ok(js.includes('if(!u||!p)'), '登录函数有非空验证');
@@ -1169,7 +1170,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('登录和注册函数trim用户名', () => {
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(js.includes('u=uEl.value.trim()'), '登录函数trim用户名');
     assert.ok(js.includes('u=uEl.value.trim()'), '注册函数trim用户名');
   });
@@ -1321,7 +1322,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('登录注册按钮有防重复提交', () => {
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(js.includes('bEl.disabled=true'), '登录时禁用按钮');
     assert.ok(js.includes('bEl.disabled=false'), '登录后恢复按钮');
   });
@@ -1402,7 +1403,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('导航栏正确处理三种用户状态', () => {
-    const js = readSq('js/core.js');
+    const js = frontSq();
     assert.ok(js.includes("currentUser&&currentUser!=='guest'"), '已登录用户状态');
     assert.ok(js.includes("currentUser==='guest'"), '游客状态');
     assert.ok(js.includes('nav-profile-item'), '我的导航项');
@@ -1424,7 +1425,7 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('前端事件绑定函数完整', () => {
     const init = read('js/init.js');
-    const core = read('js/core.js') + read('js/recommendation.js');  // 2026-09-17: fetchRecommendations 等已迁至 recommendation.js
+    const core = frontSrc() + read('js/recommendation.js');  // 2026-09-17: fetchRecommendations 等已迁至 recommendation.js
     // 通过click/submit绑定的函数应存在于core.js
     const boundFuncs = ['showProfile', 'cancelFavorite', 'cancelBlacklist',
       'deleteAccount', 'logout', 'login', 'register', 'submitPreference',
@@ -1604,3 +1605,14 @@ describe('9. 后端逻辑健壮性审计', () => {
     assert.ok(storage.includes("console.error('读取用户数据失败:'"), 'user_storage.js使用console.error');
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
+
+// sq 语义恢复(2026-10-19): 原 sq(read('js/core.js'))/readSq 调用点需要去空白归一化形态
+function frontSq() {
+  return frontSrc().replace(/\s+/g, '');
+}
