@@ -102,7 +102,8 @@ describe('点111 打印样式', () => {
 // 点117: fix_error_leak修复检查
 describe('点117 fix_error_leak修复检查', () => {
   it('server.js catch块不泄露e.message给客户端', () => {
-    const server = readFile('server.js');
+    // catch 块随域拆分分布于 server.js 与各路由模块(2026-10-19 扩面:此前只扫 server.js,模块化后泄露会漏检)
+    const server = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js', 'server/routes/users.js', 'server/routes/recommend.js', 'server/routes/table-view.js', 'server/ml-worker.js'].map(readFile).join('\n');
     // 查找所有 catch 块中直接返回 e.message 的模式
     const leakPattern = /catch\s*\(e\)[\s\S]*?res\.status\(\d+\)\.json\(\{[\s\S]*?error:\s*e\.message\s*\}/g;
     const matches = server.match(leakPattern);

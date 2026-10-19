@@ -1207,8 +1207,11 @@ describe('67. 自动重训练异步', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-    // 手动重训练和自动重训练都不应使用 spawnSync
-    assert.ok(!content.includes('retrain.from_feedback.py'), '确认重训练脚本不再被 spawnSync 引用');
+    // 手动重训练和自动重训练都不应使用 spawnSync(2026-10-19 修复空洞锚:原字符串 retrain.from_feedback.py 与现路径 retrain_from_feedback.py 永不匹配)
+    assert.ok(!content.includes('spawnSync'), 'server.js 不应存在任何阻塞的 spawnSync');
+    const admin = fs.readFileSync(path.join(__dirname, '..', 'server', 'routes', 'admin.js'), 'utf8');
+    assert.ok(admin.includes("spawn('python'"), '重训练应存在于 routes/admin.js 且走异步 spawn');
+    assert.ok(!admin.includes('spawnSync'), 'routes/admin.js 不应使用阻塞的 spawnSync');
   });
 });
 
