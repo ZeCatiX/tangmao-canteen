@@ -537,7 +537,7 @@ const s_navMap = {
   'profile-section': 'nav-profile',
 };
 
-function showSection(sectionId, skipScroll) {
+function showSection(sectionId, skipScroll, skipPush) {
   const el = document.getElementById(sectionId);
   if (!el) {
     console.warn('showSection: 未找到元素', sectionId);
@@ -550,8 +550,8 @@ function showSection(sectionId, skipScroll) {
   el.classList.add('active');
   // 切换section时平滑滚动到顶部，提升浏览体验（购物车返回时跳过，恢复原位置）
   if (!skipScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
-  // 记录导航历史（用于浏览器前进/后退）
-  try {
+  // 记录导航历史（用于浏览器前进/后退）；popstate 恢复时不可再 push——否则会清掉前进栈，后退后永远无法前进(2026-10-19 修复)
+  if (!skipPush) try {
     history.pushState({ section: sectionId }, '', window.location.pathname);
   } catch (e) {}
   updateUserNavbar();

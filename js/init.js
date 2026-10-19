@@ -1026,11 +1026,20 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     { passive: true }
   );
+  // 窄屏汉堡菜单: 点任一导航项后自动收起,不收起会遮挡下方内容(2026-10-19 真点测试发现)
+  document.addEventListener('click', function (e) {
+    const link = e.target.closest('.navbar-nav .nav-link, .navbar-nav a');
+    if (!link) return;
+    const collapseEl = document.querySelector('.navbar-collapse.show');
+    if (collapseEl && typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+      bootstrap.Collapse.getOrCreateInstance(collapseEl).hide();
+    }
+  });
   // 浏览器前进/后退按钮导航
   window.addEventListener('popstate', function (e) {
     const section = e.state && e.state.section ? e.state.section : 'home-section';
     const el = document.getElementById(section);
-    if (el) showSection(section);
+    if (el) showSection(section, false, true); // skipPush: popstate 恢复不得再入栈,否则清掉前进栈(2026-10-19 修复)
   });
   // 回到顶部按钮：滚动超过200px时显示
   const backToTopBtn = document.getElementById('back-to-top');
