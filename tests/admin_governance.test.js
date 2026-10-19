@@ -108,7 +108,7 @@ test('管理员订单列表: 桌号模糊搜索生效', async () => {
 });
 
 test('下单频度防刷: 同桌 60 秒内第 6 单应 429', async () => {
-  // 用独占桌号 '981' 避免影响其他测试; 用不同 qty 产生不同 items 绕过 10 秒幂等去重
+  // 用独占桌号 '20' 避免影响其他测试; 用不同 qty 产生不同 items 绕过 10 秒幂等去重
   const H = { 'Content-Type': 'application/json' };
   const statuses = [];
   for (let i = 1; i <= 6; i++) {
@@ -116,12 +116,12 @@ test('下单频度防刷: 同桌 60 秒内第 6 单应 429', async () => {
       method: 'POST', headers: H,
       body: JSON.stringify({
         items: [{ id: 2069, name: '五常大米饭', price: 3, qty: i }],
-        totalPrice: 3 * i, tableNumber: '981',
+        totalPrice: 3 * i, tableNumber: '20',
       }),
     });
     statuses.push(r.status);
   }
-  const created = await api('/api/admin/orders?table=981&limit=50', {
+  const created = await api('/api/admin/orders?table=20&limit=50', {
     headers: { Authorization: 'Bearer ' + adminToken },
   });
   createdOrderIds.push(...created.body.orders.map(o => o.id));

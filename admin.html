@@ -909,6 +909,7 @@ function loadFeedback() {
 }
 
 function renderRatingChart(distribution) {
+  if (typeof Chart === 'undefined') return ensureChartJs(function() { renderRatingChart(distribution); });
   const ctx = document.getElementById('rating-chart');
   if (!ctx) return;
   if (ctx.offsetWidth === 0 || ctx.offsetHeight === 0) {
@@ -981,6 +982,7 @@ function renderRatingChart(distribution) {
 // ═══════════════════════════════════════════
 
 function loadDailyTrend() {
+  if (typeof Chart === 'undefined') return ensureChartJs(loadDailyTrend);
   fetch('/api/admin/daily-recommendations').then(r => r.json()).then(d => {
     if (!d.success || !d.data.length) return;
     const labels = d.data.map(x => x.day ? x.day.substring(5,10) : '');
@@ -1007,6 +1009,7 @@ function loadDailyTrend() {
 }
 
 function loadAnalyticsPrefs() {
+  if (typeof Chart === 'undefined') return ensureChartJs(loadAnalyticsPrefs);
   fetch('/api/admin/preference-stats').then(r => r.json()).then(d => {
     if (!d.success) return;
     // 合并所有偏好到饼图
@@ -1034,6 +1037,7 @@ function loadAnalyticsPrefs() {
 }
 
 function loadUserActivity() {
+  if (typeof Chart === 'undefined') return ensureChartJs(loadUserActivity);
   fetch('/api/admin/user-activity').then(r => r.json()).then(d => {
     if (!d.success) return;
     document.getElementById('analytics-total-users').textContent = d.stats.totalUsers;
@@ -1854,10 +1858,23 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   setTimeout(loadNotifications, 500);
   
 </script>
-<script src="node_modules/chart.js/dist/chart.umd.min.js"></script>
 <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/vendor/qrcode.min.js"></script>
 <script src="js/password-toggle.js?v=20260910"></script>
+<script>
+// ═══ 第三方重库按需加载（2026-10-19 性能改造）═══
+// Chart.js 208KB / qrcode 57KB 不再全局加载，首次真正用到时注入——后台日常管理页省 265KB
+function loadScriptOnce(src, cb) {
+  loadScriptOnce.done = loadScriptOnce.done || {};
+  if (loadScriptOnce.done[src]) { cb && cb(); return; }
+  const s = document.createElement('script');
+  s.src = src;
+  s.onload = function() { loadScriptOnce.done[src] = true; cb && cb(); };
+  s.onerror = function() { showToast('组件加载失败，请刷新重试', 'error'); };
+  document.head.appendChild(s);
+}
+function ensureChartJs(cb) { loadScriptOnce('node_modules/chart.js/dist/chart.umd.min.js', cb); }
+function ensureQrcodeJs(cb) { loadScriptOnce('js/vendor/qrcode.min.js', cb); }
+</script>
     </main>
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
 </body>
@@ -1873,6 +1890,7 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
 <script>
 // ═══ 桌码管理（A2）：签名桌码链接批量生成二维码 ═══
 document.getElementById('qr-gen-btn').addEventListener('click', async function() {
+  if (typeof qrcode === 'undefined') { const b = this; ensureQrcodeJs(function() { b.click(); }); return; }
   const btn = this;
   const from = parseInt(document.getElementById('qr-from').value, 10);
   const to = parseInt(document.getElementById('qr-to').value, 10);

@@ -407,7 +407,7 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 多菜品+桌号', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: 'MT' + Date.now().toString().slice(-6) }),
+      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: '29' }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId);
@@ -502,7 +502,7 @@ describe('38. showProfile 认证头修复', () => {
   it('js/core.js 中 /api/orders fetch 包含 authHeaders', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     // 2026-09-17: 实现已改用 safeFetch 封装,断言放宽为"/api/orders 调用携带 authHeaders()"
     const ordersLine = content.split('\n').find(l => l.includes('/api/orders?userId=') && l.includes('authHeaders()'));
     assert.ok(ordersLine, 'showProfile 的 /api/orders 请求应包含认证头');
@@ -524,7 +524,7 @@ describe('39. 明文密码移除验证', () => {
   it('js/core.js 中无 localStorage 明文密码存储', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     // 不应在 localStorage 中存储 password 字段（API 请求体中使用 password:p 是正常的）
     assert.ok(!content.includes('password:p,created_at'), '不应在 localStorage 存储密码');
     assert.ok(!content.includes('password:p,preferences'), '不应在 localStorage 存储密码');
@@ -534,7 +534,7 @@ describe('39. 明文密码移除验证', () => {
   it('js/core.js 登录失败时不再本地回退明文比较', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     assert.ok(!content.includes('user.password===p'), '不应使用明文密码比较');
   });
 
@@ -554,7 +554,7 @@ describe('40. 拉黑虚假反馈移除', () => {
   it('js/core.js 中 addToBlacklist 不自动提交低分反馈', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     // 拉黑后不应自动提交 score:2.0 的反馈
     const blacklistBlock = content.substring(content.indexOf('function addToBlacklist'), content.indexOf('function deleteAccount'));
     assert.ok(!blacklistBlock.includes('score:2.0'), '拉黑不应自动提交低分反馈');
@@ -702,7 +702,7 @@ describe('46. checkoutCart 修复验证', () => {
   it('checkoutCart 使用 authHeaders', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     assert.ok(content.includes('authHeaders()'), 'core.js 应包含 authHeaders 调用');
     assert.ok(content.includes('clearCart()') && squashWS(content).includes('then((d)=>{'), 'clearCart 应在成功回调中');
   });
@@ -710,7 +710,7 @@ describe('46. checkoutCart 修复验证', () => {
   it('endRecommendation 使用 authHeaders', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     const block = content.substring(content.indexOf('function endRecommendation'), content.indexOf('function displayRecommendations'));
     assert.ok(block.includes('authHeaders()'), 'endRecommendation 应包含认证头');
   });
@@ -732,7 +732,7 @@ describe('47. submitStarFeedback null 保护', () => {
   it('submitStarFeedback 有 DOM null 保护和认证头', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     const block = content.substring(content.indexOf('function submitStarFeedback'), content.indexOf('function openStarFeedback'));
     assert.ok(block.includes('authHeaders()'), '评分反馈应有认证头');
     assert.ok(squashWS(block).includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
@@ -742,7 +742,7 @@ describe('47. submitStarFeedback null 保护', () => {
   it('openStarFeedback 有 DOM null 保护', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     const idx = content.indexOf('function openStarFeedback');
     const slice = content.substring(idx, idx + 800);
     assert.ok(squashWS(slice).includes('if(fd)fd.textContent'), 'star-feedback-dish 应有 null 检查');
@@ -756,7 +756,7 @@ describe('47. submitStarFeedback null 保护', () => {
     // h 是函数内局部变量,压缩后形态不定;产物级断言函数名级别特征,精确断言由源码用例覆盖
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
     assert.ok(bundle.includes('function submitStarFeedback'), '构建产物应保留 submitStarFeedback');
-    const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const src = frontSrc();
     assert.ok(squashWS(src).includes('if(h)h.textContent'), '源码应有 star-hint 保护');
   });
 });
@@ -1011,7 +1011,7 @@ describe('59. 菜品图片懒加载', () => {
   it('js/core.js 单菜单图片加载 lazy', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'core.js'), 'utf8');
+    const content = frontSrc();
     assert.ok(content.includes('loading=\"lazy\"'), '菜单图片应加载 lazy');
   });
 
@@ -1289,3 +1289,9 @@ describe('71. admin.html 空 catch 修复', () => {
 });
 
 console.log('✅ 全面E2E测试增强版 v12 加载完成，共 380+ 测试用例');
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}

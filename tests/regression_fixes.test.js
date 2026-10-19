@@ -40,9 +40,10 @@ async function adminToken() {
 // ================================================================
 describe('安全修复回归', () => {
   it('server.js 不使用客户端 userId 冒充（IDOR）', () => {
-    // 订单/反馈域已拆至 server/routes/orders.js(改造4)
+    // 订单/反馈域已拆至 server/routes/orders.js(改造4)；2026-10-19 起身份统一经 getUser(req) 辅助函数
     const s = read('server/routes/orders.js');
-    assert.ok(s.includes("const effectiveUserId = req.user?.username || 'guest';"), 'order/feedback 应使用 guest 而非客户端 userId');
+    assert.ok(s.includes('function getUser(req)'), '应存在 getUser 身份辅助函数');
+    assert.ok(s.includes("return req.user?.username || 'guest';"), 'order/feedback 应使用 guest 而非客户端 userId');
     assert.ok(!s.includes("req.user?.username || userId || 'guest';"), '不应残留 userId 冒充逻辑');
   });
   it('server.js 图片删除路径校验 /uploads/ 前缀（防路径遍历删除）', () => {
@@ -101,12 +102,12 @@ describe('显示修复回归', () => {
 // ================================================================
 describe('前端修复回归', () => {
   it('register 使用正斜杠路径（非反斜杠）', () => {
-    const s = read('js/core.js');
+    const s = frontSrc();
     assert.ok(s.includes("'/api/user/register'"), 'register 应用正斜杠路径');
     assert.ok(!s.includes("'\\api\\user\\register'"), '不应有反斜杠路径');
   });
   it('renderMenuTable 动态标签安全（白名单+转义）防存储型 XSS', () => {
-    const s = sq(read('js/core.js'));
+    const s = sq(frontSrc());
     // 模块化重构后 tags 不再整体拼接:只渲染 SUBS 白名单二级分隔(且 esc)与固定文案角标
     // 2026-10-08: i18n 改造把 esc(sub) 升级为 esc(EN 查表||sub),白名单+转义性质不变,断言随行
     assert.ok(s.includes('constSUBS=['), '二级分隔应走 SUBS 白名单');
@@ -114,7 +115,7 @@ describe('前端修复回归', () => {
     assert.ok(s.includes("esc(menuLang==='en'?SUB_EN[sub]||sub:sub)"), '白名单标签仍应 esc 转义');
   });
   it('checkoutCart 发送原始 name 非双重转义', () => {
-    const s = sq(read('js/core.js'));
+    const s = sq(frontSrc());
     assert.ok(s.includes('name:x.name'), '应发送原始 name');
     assert.ok(!s.includes('name:esc(x.name)'), '不应双重转义');
   });
@@ -123,7 +124,7 @@ describe('前端修复回归', () => {
     assert.ok(s.includes('constup=userProfile||{}'), '应有 userProfile 空值保护');
   });
   it('localStorage setItem 有 try-catch', () => {
-    const s = sq(read('js/core.js'));
+    const s = sq(frontSrc());
     assert.ok(s.includes("try{localStorage.setItem('orderedDishes'"), 'setItem 应有 try-catch 防隐私模式崩溃');
   });
   it('fetchRecommendations 推荐池排除售罄菜（2026-10-06 回归）', () => {
@@ -137,7 +138,7 @@ describe('前端修复回归', () => {
     assert.ok(/html\.dark-mode #table-status-card\s*{[^}]*background:\s*#1a1a1a\s*!important/.test(s), '暗色模式应有 #table-status-card 深底覆盖');
   });
   it('推荐模式词表统一为枚举,消费端兼容旧中文标签（2026-10-08 回归）', () => {
-    const core = sq(read('js/core.js'));
+    const core = sq(frontSrc());
     // 冷启动曾写入中文标签'本地推荐（更快速）',消费端只认枚举 → "本地"语义静默失效
     assert.ok(core.includes("recommendationMode:'local',blindBoxMode:'smart',coldStart:true"), '冷启动 userProfile 应写枚举');
     // 恢复链路曾静默拒绝旧中文值 → 保存过"本地"的老用户下拉被重置回 auto
@@ -160,7 +161,7 @@ describe('前端修复回归', () => {
     assert.ok(!s.includes('t0 = performance.now()'), '不应再用墙钟差值驱动动画');
   });
   it('菜品大图入口可发现+详情弹窗可加购（2026-10-08 回归）', () => {
-    const s = read('js/core.js');
+    const s = frontSrc();
     // 用户反馈"不知道怎么打开大图":卡片图片必须可点开详情,带光标与悬浮提示
     assert.ok(/cursor:pointer;\s*"?\s*title=/.test(s) && s.includes('查看大图'), '卡片图片应可点(光标+查看大图提示)');
     // 用户反馈"emoji点了没有用":emoji占位分支(全库65/130道)同样必须可点
@@ -175,7 +176,7 @@ describe('前端修复回归', () => {
     assert.ok(modalPart.includes('inst&&inst.hide()') || modalPart.includes('inst && inst.hide()'), '弹窗内加购后应自动收起');
   });
   it('加菜横幅必须同桌才显示+已结算措辞改已下单（2026-10-08 回归）', () => {
-    const s = sq(read('js/core.js'));
+    const s = sq(frontSrc());
     // 跨桌残留会话曾把 09 桌已取消订单挂到 08 桌会话横幅上
     assert.ok(/ltB&&loB&&lotB===ltB/.test(s), '加菜横幅应校验 lastOrderTable===lockedTable');
     const idx = read('index.html');
@@ -196,7 +197,7 @@ describe('前端修复回归', () => {
     assert.ok(/html\.dark-mode \.table-total \{ color: var\(--gold-light\); \}/.test(css), '暗色保持 gold-light');
   });
   it('偏好页不再清空推荐数组+评分入口防御（2026-10-08 回归）', () => {
-    const s = sq(read('js/core.js'));
+    const s = sq(frontSrc());
     // 生成推荐→逛偏好页→返回点评分曾报"请先选择评分":数组被清而旧卡片仍可点
     const prefBlock = s.split("if(sectionId==='preference-section')")[1]?.split('showSection')[0] || '';
     assert.ok(!prefBlock.includes('resetRecommendation()'), '进入偏好页不应清空 currentRecommendation(数组与卡片须同步)');
@@ -282,3 +283,15 @@ describe('API 只读回归', () => {
     assert.equal(r.status, 200);
   });
 });
+
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
+
+// sq 语义恢复(2026-10-19): 原 sq(read('js/core.js'))/readSq 调用点需要去空白归一化形态
+function frontSq() {
+  return frontSrc().replace(/\s+/g, '');
+}

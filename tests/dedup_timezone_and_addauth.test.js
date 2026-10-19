@@ -46,7 +46,7 @@ after(async () => {
 test('幂等窗口限时: 超10秒后同内容不同桌不得并单(时区错位回归)', async () => {
   const a = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '91' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '11' }),
   });
   assert.equal(a.body.success, true);
   createdOrderIds.push(a.body.orderId);
@@ -54,7 +54,7 @@ test('幂等窗口限时: 超10秒后同内容不同桌不得并单(时区错位
   await new Promise(r => setTimeout(r, 11000));
   const b = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '92' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '12' }),
   });
   assert.equal(b.body.success, true);
   createdOrderIds.push(b.body.orderId);
@@ -65,13 +65,13 @@ test('幂等窗口限时: 超10秒后同内容不同桌不得并单(时区错位
 test('幂等窗口内同桌重复提交仍防重(保留原有防双击能力)', async () => {
   const a = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '93' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '13' }),
   });
   assert.equal(a.body.success, true);
   createdOrderIds.push(a.body.orderId);
   const b = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '93' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '13' }),
   });
   assert.equal(b.body.success, true);
   assert.equal(b.body.orderId, a.body.orderId, '10秒内同桌同内容应视为重复提交返回原单');
@@ -81,14 +81,14 @@ test('幂等窗口内同桌重复提交仍防重(保留原有防双击能力)', 
 test('游客不能给别桌游客单加菜(归属洞回归)', async () => {
   const a = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '94' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '14' }),
   });
   assert.equal(a.body.success, true);
   createdOrderIds.push(a.body.orderId);
   // 桌号对不上 → 既非本人(游客无身份)也非同桌 → 必须拒绝
   const cross = await api('/api/order/' + a.body.orderId + '/add', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, tableNumber: '95' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, tableNumber: '15' }),
   });
   assert.equal(cross.status, 404, '跨桌游客加菜必须被拒');
 });
@@ -96,13 +96,13 @@ test('游客不能给别桌游客单加菜(归属洞回归)', async () => {
 test('同桌游客续单仍可用(桌号即凭证不误伤)', async () => {
   const a = await api('/api/order', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '96' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '16' }),
   });
   assert.equal(a.body.success, true);
   createdOrderIds.push(a.body.orderId);
   const same = await api('/api/order/' + a.body.orderId + '/add', {
     method: 'POST',
-    body: JSON.stringify({ userId: 'guest', items: RICE, tableNumber: '96' }),
+    body: JSON.stringify({ userId: 'guest', items: RICE, tableNumber: '16' }),
   });
   assert.equal(same.status, 200);
   assert.equal(same.body.success, true, '同桌游客凭桌号续单必须放行');

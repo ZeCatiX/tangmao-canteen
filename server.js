@@ -268,10 +268,17 @@ app.use((req, res, next) => {
 app.use(express.static(__dirname, { setHeaders: (res, p) => {
   // HTML 不缓存（防止 Edge 等浏览器缓存旧版，导致版本号更新不生效）
   if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  // CSS/JS 不缓存（版本号 v= 防缓存，但 setHeader 双重保险）
-  if (p.endsWith('.css') || p.endsWith('.js')) res.setHeader('Cache-Control', 'no-cache, must-revalidate, max-age=0');
-  // 图片缓存7天
-  if (p.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) res.setHeader('Cache-Control', 'public, max-age=604800');
+  // 带 ?v=20xxxxx 版本参数的资源走 immutable 一年长缓存：版本号一变 URL 即变，零旧版风险，
+  // 免掉每次访问的 304 重验证；纪律——改了 js/css/插画必须同步改版本号，否则用户最长一年拿旧文件
+  const ver = res.req.originalUrl && /[?&]v=20\d{5}\w*/.test(res.req.originalUrl);
+  // CSS/JS：带版本号 → immutable；不带 → no-cache + etag 重验证兜底（双重保险）
+  if (p.endsWith('.css') || p.endsWith('.js')) {
+    res.setHeader('Cache-Control', ver ? 'public, max-age=31536000, immutable' : 'no-cache, must-revalidate, max-age=0');
+  }
+  // 图片：带版本号 → immutable；不带 → 缓存7天
+  if (p.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
+    res.setHeader('Cache-Control', ver ? 'public, max-age=31536000, immutable' : 'public, max-age=604800');
+  }
 } }));
 // node_modules 中的前端库文件（在拦截中间件之后注册，敏感文件已被阻止）
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules'), { maxAge: '7d' }));

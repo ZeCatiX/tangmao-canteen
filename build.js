@@ -9,6 +9,8 @@ const esbuild = require('esbuild');
 
 const files = [
   'js/globals.js',
+  'js/menu.js',      // 菜单渲染域(2026-10-19 自 core.js 拆出)
+  'js/cart.js',      // 购物车与结算域(2026-10-19 自 core.js 拆出)
   'js/core.js',
   'js/recommendation.js',
   'js/logo-intro.js',

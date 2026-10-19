@@ -15,7 +15,7 @@ describe('按钮可用性与显示检查', () => {
   // ========== 首页按钮 ==========
   it('首页核心按钮存在且有绑定', () => {
     const html = read('index.html');
-    const js = read('js/core.js');
+    const js = frontSrc();
     // 开始点餐按钮
     assert.ok(html.includes('开始点餐'), '应有开始点餐按钮');
     // 登录/注册按钮
@@ -27,7 +27,7 @@ describe('按钮可用性与显示检查', () => {
 
   it('message-modal 弹窗有确定按钮且支持自动关闭（遮罩问题修复）', () => {
     const html = read('index.html');
-    const js = read('js/core.js');
+    const js = frontSrc();
     // 确信弹窗有确定按钮
     assert.ok(html.includes('modal-confirm-btn'), '弹窗应有确定按钮');
     // showMessage 使用 Bootstrap Modal 且可隐藏
@@ -52,7 +52,7 @@ describe('按钮可用性与显示检查', () => {
 
   // ========== 推荐页面按钮 ==========
   it('推荐卡片有加入/收藏/拉黑/评分按钮', () => {
-    const js = read('js/core.js') + read('script.js');
+    const js = frontSrc() + read('script.js');
     assert.ok(js.includes('加入'), '应有加入购物车按钮');
     assert.ok(js.includes('收藏'), '应有收藏按钮');
     assert.ok(js.includes('拉黑'), '应有拉黑按钮');
@@ -93,7 +93,7 @@ describe('按钮可用性与显示检查', () => {
   });
 
   it('关键函数有 null 保护防崩溃', () => {
-    const js = read('js/core.js');
+    const js = frontSrc();
     // showMessage 检查元素存在
     assert.ok(js.includes('if(!mt||!mb)') || js.includes('if (!mt || !mb)'), 'showMessage 应有 null 保护');
     // 购物车角标更新有 null 保护
@@ -101,7 +101,7 @@ describe('按钮可用性与显示检查', () => {
   });
 
   it('关键 DOM 操作有 null 保护防崩溃', () => {
-    const js = read('js/core.js') + read('js/recommendation.js');  // 2026-09-17: displayRecommendations 位于 recommendation.js
+    const js = frontSrc() + read('js/recommendation.js');  // 2026-09-17: displayRecommendations 位于 recommendation.js
     const init = read('js/init.js');
     // dish-list 渲染有 null 保护
     // 2026-09-17: 实现为 if(!dl){...warn;return;}(块语句),不是 return 同行
@@ -122,3 +122,9 @@ describe('按钮可用性与显示检查', () => {
     assert.ok(js.includes('!result') || js.includes('if(result)') || js.includes('if (result)'), 'result 应有 null 保护');
   });
 });
+// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
