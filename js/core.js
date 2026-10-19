@@ -502,6 +502,31 @@ const s_titleMap = {
   'table-builder-section': '一席成宴 - 唐猫庭院',
   'table-result-section': '一席成宴 · 三套方案 - 唐猫庭院',
 };
+// EN 标题(品牌名"唐猫庭院"保留中文——品牌名不翻译,2026-10-19 EN残留修复)
+const s_titleMapEn = {
+  'home-section': 'Tang Cat Courtyard - Menu',
+  'login-section': 'Sign In - 唐猫庭院',
+  'register-section': 'Sign Up - 唐猫庭院',
+  'preference-section': 'Taste Preferences - 唐猫庭院',
+  'recommendation-section': 'Recommendations - 唐猫庭院',
+  'feedback-section': 'Dish Rating - 唐猫庭院',
+  'cart-section': 'My Cart - 唐猫庭院',
+  'end-section': 'Order Placed - 唐猫庭院',
+  'about-section': 'About Us - 唐猫庭院',
+  'dataset-section': 'Full Menu - 唐猫庭院',
+  'profile-section': 'My Account - 唐猫庭院',
+  'privacy-section': 'Privacy - 唐猫庭院',
+  'table-builder-section': 'Feast Builder - 唐猫庭院',
+  'table-result-section': 'Feast Plans - 唐猫庭院',
+};
+function syncPageTitle(sectionId) {
+  const id = sectionId || (document.querySelector('[id$="-section"].active') || {}).id;
+  if (menuLang === 'en') {
+    if (s_titleMapEn[id]) document.title = s_titleMapEn[id];
+  } else if (s_titleMap[id]) {
+    document.title = s_titleMap[id];
+  }
+}
 const s_navMap = {
   'home-section': 'nav-home',
   'about-section': 'nav-about',
@@ -531,7 +556,7 @@ function showSection(sectionId, skipScroll) {
   } catch (e) {}
   updateUserNavbar();
   // 更新页面标题
-  if (s_titleMap[sectionId]) document.title = s_titleMap[sectionId];
+  syncPageTitle(sectionId);
   const nid = s_navMap[sectionId];
   document.querySelectorAll('.navbar-nav .nav-link').forEach((l) => {
     l.classList.remove('active');
@@ -1175,7 +1200,13 @@ function displayFeatureImportance() {
     .then((d) => {
       if (d.success && d.importance && d.importance.length) {
         const imp = d.importance.filter((x) => x.importance > 0.005).slice(0, 15);
-        const labels = imp.map((x) => x.feature);
+        const FEATURE_EN = {
+          辣度: 'Spiciness', 咸淡: 'Saltiness', 甜酸: 'Sweet-Sour', 热量: 'Calories',
+          价格: 'Price', 招牌: 'Signature', 评分: 'Rating',
+          用户辣度: 'Your spiciness', 用户咸淡: 'Your saltiness', 用户甜酸: 'Your sweet-sour',
+          用户热量: 'Your calories', 用户价格: 'Your price range',
+        };
+        const labels = imp.map((x) => (menuLang === 'en' && FEATURE_EN[x.feature]) || x.feature);
         const data = imp.map((x) => x.importance);
         const colors = [
           '#8b1a1a',
