@@ -910,6 +910,9 @@ html.dark-mode #home-section .row.g-4 .p-3 h6 { color: var(--gold-light) !import
 html.dark-mode #home-section .row.g-4 .p-3 small { color: var(--text-light) !important; }
 /* 桌号状态卡:内联写死浅米底 #f7efdf,暗色下 var(--text) 翻浅色后浅底浅字看不清 */
 html.dark-mode #table-status-card { background: #1a1a1a !important; border-color: rgba(201,169,110,0.35) !important; }
+/* 选择桌号按钮:金底恒定不随主题,通用翻浅规则 [style*="color:#2c1810"] 会把深字打回浅字(金底浅字1.54:1),
+   ID 特异性压回深字 7.5:1 —— 浅色模式下该按钮本就是深字,无需浅色侧规则 */
+html.dark-mode #table-change-btn { color: #2c1810 !important; }
 /* 品牌红文字暗色提亮:--primary(#d0453a) 对深底只有 3.8:1(<4.5 AA),不能全局提亮变量
    (红底白字按钮会跌到 3.4),只覆盖文字用途 —— 内联样式/样式表文字规则/Bootstrap text-danger */
 html.dark-mode .text-danger { color: #e4605c !important; }
