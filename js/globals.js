@@ -879,6 +879,9 @@ function applyUiLang() {
   });
   const t = document.getElementById('lang-toggle-text');
   if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  // a11y: aria-label 需包含可见文本(EN/中),否则 Lighthouse label-content-name-mismatch(2026-10-19)
+  const lt = document.getElementById('lang-toggle');
+  if (lt) lt.setAttribute('aria-label', menuLang === 'zh' ? '切换到英文 Switch to English EN' : '切换到中文 Switch to Chinese 中');
   if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
   if (typeof syncPageTitle === 'function') syncPageTitle(); // 浏览器标签页标题随语言切换(2026-10-19 EN残留修复)
   if (typeof window.renderCartLangAware === 'function') window.renderCartLangAware(); // 购物车参数化横幅/回执头(遍历式翻译够不着的模板)
