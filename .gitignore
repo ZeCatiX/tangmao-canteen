@@ -55,7 +55,6 @@ __pycache__/
 ssl/
 
 # AI 工具配置
-.retired/
 .ai/
 .playwright-mcp/
 
@@ -88,8 +87,8 @@ _final2.log
 logo-preview-full.png
 
 # AI 客户端本地产物(plan/会话等)
-.ai/
-.aiignore
+.z*/
+.z*ignore
 
 # AI box-agent 运行时任务注册目录
 2026-*/
@@ -102,3 +101,8 @@ script.js
 
 # 工具遗留配置(含本机路径,公开仓库不需要)
 .mcp.json
+
+# AI 协作本地配置(不入库)
+AGENTS.md
+COLLABORATION.md
+.agents/
