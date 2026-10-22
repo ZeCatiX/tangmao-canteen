@@ -59,6 +59,7 @@ jobs:
           PG_USER: postgres
           PG_PASSWORD: testpass
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm test
 
@@ -70,6 +71,7 @@ jobs:
           PG_USER: postgres
           PG_PASSWORD: testpass
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm run test:all
 
