@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS dishes (
   is_vegetarian BOOLEAN DEFAULT FALSE,
   is_active BOOLEAN DEFAULT TRUE,
   image_url VARCHAR(500),
+  price_unit VARCHAR,
+  is_sold_out BOOLEAN DEFAULT FALSE,
+  name_en TEXT,
+  description_en TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -55,6 +59,7 @@ CREATE TABLE IF NOT EXISTS orders (
   dish_count INTEGER DEFAULT 0,
   status VARCHAR(50) DEFAULT 'pending',
   table_number VARCHAR(20),
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -62,7 +67,18 @@ CREATE TABLE IF NOT EXISTS recommendation_log (
   id SERIAL PRIMARY KEY,
   user_type VARCHAR(50) DEFAULT 'guest',
   user_id VARCHAR(100),
+  mode VARCHAR(50) DEFAULT '单菜推荐',
   created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS user_preferences (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(100),
+  taste_preferences JSONB DEFAULT '{}'::JSONB,
+  nutrition_preferences JSONB DEFAULT '{}'::JSONB,
+  price_preference VARCHAR(50),
+  rating_history JSONB DEFAULT '[]'::JSONB,
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS preference_log (
@@ -95,6 +111,14 @@ CREATE INDEX IF NOT EXISTS idx_recommendation_log_user_id ON recommendation_log(
 CREATE INDEX IF NOT EXISTS idx_preference_log_user_id ON preference_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_dishes_category ON dishes(category);
 CREATE INDEX IF NOT EXISTS idx_dishes_is_active ON dishes(is_active);
+
+-- 兼容旧库重跑：补齐后期新增的列（新库由上方 CREATE TABLE 直接建出）
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS price_unit VARCHAR;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_sold_out BOOLEAN DEFAULT FALSE;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS name_en TEXT;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS description_en TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(50) DEFAULT '单菜推荐';
 
 -- 示例用户
 INSERT INTO users (username, password, preferences, created_at) VALUES

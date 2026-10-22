@@ -49,7 +49,35 @@ jobs:
         run: npm run build
 
       - name: Init database
-        run: PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -f sample_data.sql
+        run: |
+          # sample_data.sql 只建表+示例用户；末尾示例 feedback 会因菜品未插入报 FK 错（预期，psql 默认不中断）
+          PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -f sample_data.sql
+          # 116 道正式菜品快照（TRUNCATE CASCADE 顺带清掉空的 feedback 表）
+          PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -v ON_ERROR_STOP=1 -f dishes_seed.sql
+
+      - name: Start server
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DATABASE: tangmao_test
+          PG_USER: postgres
+          PG_PASSWORD: testpass
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
+          TABLE_SECRET: ${{ secrets.TABLE_SECRET || 'ci-table-secret-0123456789abcdef' }}
+          LOGIN_RATE_LIMIT_MAX: 200
+        run: |
+          nohup node server.js > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ > /dev/null; then
+              echo "服务器已就绪（第 ${i} 秒）"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::服务器 30 秒内未就绪"
+          cat server.log
+          exit 1
 
       - name: Run API tests
         env:
@@ -60,6 +88,7 @@ jobs:
           PG_PASSWORD: testpass
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
+          TABLE_SECRET: ${{ secrets.TABLE_SECRET || 'ci-table-secret-0123456789abcdef' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm test
 
@@ -72,6 +101,7 @@ jobs:
           PG_PASSWORD: testpass
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
+          TABLE_SECRET: ${{ secrets.TABLE_SECRET || 'ci-table-secret-0123456789abcdef' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm run test:all
 
