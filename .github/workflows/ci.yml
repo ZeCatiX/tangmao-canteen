@@ -55,6 +55,19 @@ jobs:
           # 116 道正式菜品快照（TRUNCATE CASCADE 顺带清掉空的 feedback 表）
           PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -v ON_ERROR_STOP=1 -f dishes_seed.sql
 
+      - name: Train model (CI fixture)
+        env:
+          PG_HOST: localhost
+          PG_PORT: 5432
+          PG_DATABASE: tangmao_test
+          PG_USER: postgres
+          PG_PASSWORD: testpass
+        run: |
+          # 训练脚本用内置偏好组合×数据库菜品合成训练集，顺带验证训练管线在干净环境可跑通
+          python ml/train_restaurant_model.py
+          # 脚本把 metrics 写在 ml/ 下，server 读根目录——补拷（历史遗留的路径不一致）
+          cp ml/model_metrics.json model_metrics.json
+
       - name: Start server
         env:
           PG_HOST: localhost
@@ -68,14 +81,20 @@ jobs:
           LOGIN_RATE_LIMIT_MAX: 200
         run: |
           nohup node server.js > server.log 2>&1 &
+          # 等 HTTP 活着
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:3000/ > /dev/null; then
-              echo "服务器已就绪（第 ${i} 秒）"
+            curl -sf http://localhost:3000/ > /dev/null && break
+            sleep 1
+          done
+          # 再等 ML worker 加载完 pkl（api.test.js 早期就断言 worker ready）
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/worker-health | grep -q '"ready"[[:space:]]*:[[:space:]]*true'; then
+              echo "服务器与 ML worker 均就绪（第 ${i} 秒）"
               exit 0
             fi
             sleep 1
           done
-          echo "::error::服务器 30 秒内未就绪"
+          echo "::error::ML worker 60 秒内未就绪"
           cat server.log
           exit 1
 

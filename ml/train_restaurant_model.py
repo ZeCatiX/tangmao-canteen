@@ -67,8 +67,11 @@ def load_dishes_from_db():
     """从PostgreSQL加载菜品数据"""
     import psycopg2
     conn = psycopg2.connect(
-        host='localhost', port=5432, database='tangmao',
-        user='postgres', password=os.environ.get('PG_PASSWORD', '')
+        host=os.environ.get('PG_HOST', 'localhost'),
+        port=int(os.environ.get('PG_PORT', '5432')),
+        database=os.environ.get('PG_DATABASE', 'tangmao'),
+        user=os.environ.get('PG_USER', 'postgres'),
+        password=os.environ.get('PG_PASSWORD', '')
     )
     cur = conn.cursor()
     cur.execute('''

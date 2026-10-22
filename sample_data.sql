@@ -101,8 +101,8 @@ CREATE TABLE IF NOT EXISTS token_blacklist (
   expires_at TIMESTAMP NOT NULL
 );
 
--- 添加外键约束和索引（增强数据完整性）
-ALTER TABLE feedback ADD CONSTRAINT fk_feedback_dish FOREIGN KEY (dish_id) REFERENCES dishes(id) ON DELETE CASCADE;
+-- 添加索引（增强数据完整性）
+-- 注意: feedback.dish_id 不加外键——dishId=0 表示"整体满意度"，本就不指向菜品
 CREATE INDEX IF NOT EXISTS idx_feedback_dish_id ON feedback(dish_id);
 CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
