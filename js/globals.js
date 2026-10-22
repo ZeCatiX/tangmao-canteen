@@ -846,8 +846,8 @@ var ZH_EN = {
   '📍 门店信息': '📍 Locations',
   '🏆 招牌必打卡：唐猫酸汤锅子鱼、葫芦鸡、唐僧望塔酥、大唐妃子笑':
     '🏆 Must-try signatures: Tang Cat Sour Soup Fish, Gourd Crispy Chicken, Monk Pagoda Pastry, Imperial Concubine Smile',
-  '🧠 智能推荐：根据口味偏好推荐菜品（随机森林模型）':
-    '🧠 Smart recommendations tuned to your taste (random-forest model)',
+  '🧠 智能推荐：根据口味偏好推荐菜品（梯度提升模型）':
+    '🧠 Smart recommendations tuned to your taste (gradient-boosting model)',
   '👤 个性化定制：辣度、咸淡、甜酸随心选': '👤 Personalize spice, saltiness and sweet-sour to taste',
   '🏮 唐风体验：梦回大唐，品味长安': "🏮 Tang-dynasty dining: dream of the Tang, taste of Chang'an",
   技术栈: 'Tech Stack',

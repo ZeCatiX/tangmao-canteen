@@ -1,13 +1,13 @@
 # 贡献指南
 
-感谢您对唐猫庭院校园食堂推荐系统的关注！
+感谢您对唐猫庭院餐饮店推荐系统的关注！
 
 ## 开发环境搭建
 
 ```bash
 # 1. 克隆仓库
 git clone <repo-url>
-cd 食堂网页
+cd tangmao-canteen
 
 # 2. 安装依赖
 npm install
