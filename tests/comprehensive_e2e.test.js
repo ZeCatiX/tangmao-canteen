@@ -900,12 +900,12 @@ describe('53. migrate_to_pg.js 事务封装', () => {
 // 54. 新增：sample_data.sql 外键和索引验证
 // ================================================================
 describe('54. sample_data.sql 约束', () => {
-  it('包含外键约束', () => {
+  it('feedback 不设 dish 外键(dishId=0整体满意度不指向菜品,2026-10-22移除误加约束)', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'sample_data.sql'), 'utf8');
-    assert.ok(content.includes('fk_feedback_dish'), '应有 feedback 外键');
-    assert.ok(content.includes('ON DELETE CASCADE'), '应有级联删除');
+    assert.ok(!content.includes('fk_feedback_dish'), '不应有 feedback 外键(会压住 dishId=0 整体满意度)');
+    assert.ok(!content.includes('REFERENCES dishes(id) ON DELETE CASCADE'), '不应有 dishes 级联删除');
   });
 
   it('包含性能索引', () => {
@@ -994,12 +994,14 @@ console.log('✅ 全面E2E测试增强版 v7 加载完成，共 290+ 测试用�
 // 58. 新增：ESLint 配置验证
 // ================================================================
 describe('58. ESLint 配置', () => {
-  it('声明 bootstrap 和 Chart 全局变量', () => {
+  it('扁平配置存在且开启 no-undef(2026-10-22迁移eslint.config.js,前端跨文件全局为warn)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', '.eslintrc.json'), 'utf8');
-    assert.ok(content.includes('bootstrap'), '应声明 bootstrap 全局');
-    assert.ok(content.includes('Chart'), '应声明 Chart 全局');
+    const configPath = path.join(__dirname, '..', 'eslint.config.js');
+    assert.ok(fs.existsSync(configPath), '应有 eslint.config.js 扁平配置');
+    assert.ok(!fs.existsSync(path.join(__dirname, '..', '.eslintrc.json')), '旧 .eslintrc.json 应已移除');
+    const content = fs.readFileSync(configPath, 'utf8');
+    assert.ok(content.includes('no-undef'), '应配置 no-undef 规则');
     assert.ok(content.includes('globals'), '应有 globals 配置');
   });
 });

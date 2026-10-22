@@ -412,10 +412,11 @@ app.post('/api/admin/retrain', async (req, res) => {
           const pool = db;
           await pool.query("UPDATE feedback SET processed = TRUE WHERE processed = FALSE OR processed IS NULL");
         } catch(e) { logger.warn('标记反馈已处理失败: ' + (e?.message || String(e))); }
-        modelInfo.version = (parseFloat(modelInfo.version) + 0.1).toFixed(1);
-        modelInfo.trainedAt = new Date().toISOString();
+        const mi = getModelInfo();
+        mi.version = (parseFloat(mi.version) + 0.1).toFixed(1);
+        mi.trainedAt = new Date().toISOString();
         loadModelInfo();
-        logger.info(`手动重训练完成，模型版本: ${modelInfo.version}`);
+        logger.info(`手动重训练完成，模型版本: ${mi.version}`);
         try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
         try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
         refreshRecommendationEffect();
@@ -464,10 +465,11 @@ app.get('/api/admin/model-compare', (req, res) => {
     // 当前模型
     try {
       const data = readJSON(path.join(ROOT, 'model_metrics.json'));
+      const mi = getModelInfo();
       versions.push({
         label: '当前模型',
-        version: modelInfo.version || '1.0',
-        trainedAt: modelInfo.trainedAt || null,
+        version: mi.version || '1.0',
+        trainedAt: mi.trainedAt || null,
         r2: data.r2 || 0,
         mse: data.mse || 0,
         rmse: data.rmse || 0,
