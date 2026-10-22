@@ -58,7 +58,7 @@ jobs:
           PG_DATABASE: tangmao_test
           PG_USER: postgres
           PG_PASSWORD: testpass
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm test
 
@@ -69,7 +69,7 @@ jobs:
           PG_DATABASE: tangmao_test
           PG_USER: postgres
           PG_PASSWORD: testpass
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
           LOGIN_RATE_LIMIT_MAX: 200
         run: npm run test:all
 

@@ -209,7 +209,7 @@ describe('前端修复回归', () => {
     assert.ok(blocks.length >= 1, '应存在内联脚本块');
     blocks.forEach((code, i) => {
       let err = null;
-      try { new Function(code); } catch (e) { err = e.message; }
+      try { new Function(code); } catch (e) { err = e.message; } // eslint-disable-line no-new-func -- 语法校验用途:用 Function 构造器解析 admin.html 内联脚本,非动态执行业务代码
       assert.ok(!err, '内联脚本块 #' + (i + 1) + ' 语法错误: ' + err);
     });
   });
