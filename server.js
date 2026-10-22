@@ -500,6 +500,12 @@ require('./server/routes/admin').register(app, {
   adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken,
   loadModelInfo, toCSV, runtimeSettings, saveRuntimeSettings,
   getModelInfo: () => modelInfo,
+  // 重训锁标志在模块 let 上,经 getter/setter 注入(admin 域不能直接引用本文件作用域)
+  getRetrainingCheck: () => _isRetrainingCheck,
+  setRetrainingCheck: (v) => { _isRetrainingCheck = v; },
+  backupOldModel: () => backupOldModel(),
+  syncDishRatings: () => syncDishRatings(),
+  trackMetrics: () => trackMetrics(),
   // worker/特征重要性状态已迁至 ml-worker/recommend 模块,getter 延迟取值(与 modelInfo 同一防 TDZ 手法)
   getWorkerReady: () => mlworker.getHealth().ready,
   getPendingRequestsSize: () => mlworker.getHealth().pendingRequests,

@@ -8,7 +8,7 @@ const ROOT = path.join(__dirname, '..', '..');
 const RECOMMENDATION_EFFECT_PATH = path.join(ROOT, 'recommendation_effect.json'); // 项目根(拆出前的 server.js __dirname)
 
 function register(app, deps) {
-  const { adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken, loadModelInfo, getModelInfo, getWorkerReady, getPendingRequestsSize, getErrorStats, toCSV, getFeatureImportanceCache, runtimeSettings, saveRuntimeSettings } = deps;
+  const { adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken, loadModelInfo, getModelInfo, getWorkerReady, getPendingRequestsSize, getErrorStats, toCSV, getFeatureImportanceCache, runtimeSettings, saveRuntimeSettings, getRetrainingCheck, setRetrainingCheck, backupOldModel, syncDishRatings, trackMetrics } = deps;
 app.get('/api/admin/table-qrcodes', (req, res) => {
   try {
     const from = Math.max(1, parseInt(req.query.from, 10) || 1);
@@ -383,11 +383,11 @@ app.post('/api/admin/retrain', async (req, res) => {
       return res.status(409).json({ success: false, message: '用户反馈重训已关闭（未上线时反馈都是测试数据）。如需重训，请先打开上方开关。' });
     }
     // 检查是否正在训练
-    if (global._isRetraining || _isRetrainingCheck) {
+    if (global._isRetraining || getRetrainingCheck()) {
       return res.status(409).json({ success: false, message: '模型正在训练中，请稍后' });
     }
     global._isRetraining = true;
-    _isRetrainingCheck = true;
+    setRetrainingCheck(true);
     logger.info('管理员手动触发重训练...');
     backupOldModel();
     // 异步执行训练，不阻塞事件循环
@@ -399,14 +399,14 @@ app.post('/api/admin/retrain', async (req, res) => {
       windowsHide: true
     });
     // 安全超时：30 秒后清除标志，仅当进程挂起时释放锁（防进程挂起导致标志永久锁定）
-    const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; _isRetrainingCheck = false; } }, 30000);
+    const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; setRetrainingCheck(false); } }, 30000);
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
-    proc.on('error', (e) => { clearTimeout(retrainTimeout); logger.error('手动重训练进程错误: ' + e.message); global._isRetraining = false; _isRetrainingCheck = false; });
+    proc.on('error', (e) => { clearTimeout(retrainTimeout); logger.error('手动重训练进程错误: ' + e.message); global._isRetraining = false; setRetrainingCheck(false); });
     proc.on('close', async (code) => {
       clearTimeout(retrainTimeout);
       global._isRetraining = false;
-      _isRetrainingCheck = false;
+      setRetrainingCheck(false);
       if (code === 0) {
         try {
           const pool = db;
@@ -430,7 +430,7 @@ app.post('/api/admin/retrain', async (req, res) => {
     res.json({ success: true, message: '重训练已开始，将在后台进行', training: true });
   } catch (e) {
     global._isRetraining = false;
-    _isRetrainingCheck = false;
+    setRetrainingCheck(false);
     res.status(500).json({ success: false, error: '服务器内部错误' });
   }
 });
