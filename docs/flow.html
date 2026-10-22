@@ -148,28 +148,7 @@ flowchart LR
     STATIC --> IDX & ADM & KIT
 </div>
 
-<h2>五、开发协作流程（单 Agent · AI 唯一维护者，2026-10-06 起）</h2>
-<div class="mermaid">
-flowchart TD
-    Start(["AI 会话开始"]) --> Sync["开工必做<br/>git log master → git merge master<br/>(防主目录被手动改过)"]
-    Sync --> Task{"任务类型"}
-    Task -- "改代码" --> Code["在 worktree 改<br/>dev<br/>(pm2 tangmao 从此目录起服务)"]
-    Task -- "查数据" --> DBQ["node scripts/db_query.js<br/>只读守卫"]
-    Task -- "重训模型" --> RT2["tangmao-retrain 技能<br/>source .env 灌 PG_PASSWORD"]
-    Code --> Verify{"验证"}
-    Verify -- "前端改动" --> Shot["刷新预览面板+截图<br/>视口 412×915 手机 / 1280×720 桌面"]
-    Verify -- "流程改动" --> E2E["浏览器冒烟走全流程<br/>或跑 tests/ 相关用例"]
-    Shot --> Commit
-    E2E --> Commit
-    DBQ --> Commit2["无需提交(只读)"]
-    RT2 --> Commit["git commit 中文一句话<br/>以 git log/reflog 核实落库<br/>feature_importance.json 的 diff 一起提"]
-    Commit --> Merge["主目录 git merge 回 master<br/>小步高频,不攒批次"]
-    Merge --> Done(["同步完成"])
-    Start -.-> Guard["禁令:不在主目录改代码 / 不 cp 复制 /<br/>起服务先探测 3000 / 禁 taskkill /IM node.exe"]
-    Hist["历史:2026-09-16~10-05 曾为 AI+AI 双 agent<br/>AI 退出后规则留档 COLLABORATION.md"] -.-> Sync
-</div>
-
-<h2>六、管理后台流程（admin.html · 侧边栏 11 页面）</h2>
+<h2>五、管理后台流程（admin.html · 侧边栏 11 页面）</h2>
 <div class="mermaid">
 flowchart TD
     AL["admin.html 登录页"] --> ALQ{"POST /api/admin/login"}

@@ -35,7 +35,6 @@ dist/
 
 # 编辑器配置
 .ai/
-.retired/
 
 # 测试文件
 tests/
