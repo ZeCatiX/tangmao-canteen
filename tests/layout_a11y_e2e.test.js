@@ -7,21 +7,26 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 describe('排版与无障碍检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // ===== 首页 =====
   it('首页无水平溢出', async () => {
@@ -42,8 +47,8 @@ describe('排版与无障碍检查', () => {
     const noAlt = await page.evaluate(() => {
       // alt="" 是装饰性图片的规范写法(分类圆徽图标旁有可见文字标签),只揪真正缺失 alt 的
       return Array.from(document.querySelectorAll('img'))
-        .filter(img => img.getAttribute('alt') === null)
-        .map(img => img.src.substring(0, 50));
+        .filter((img) => img.getAttribute('alt') === null)
+        .map((img) => img.src.substring(0, 50));
     });
     assert.equal(noAlt.length, 0, '首页所有图片应有alt属性，缺少: ' + noAlt.join(', '));
   });
@@ -51,13 +56,13 @@ describe('排版与无障碍检查', () => {
   it('首页按钮无空内容（有aria-label或文字或图标）', async () => {
     const emptyButtons = await page.evaluate(() => {
       return Array.from(document.querySelectorAll('button'))
-        .filter(b => {
+        .filter((b) => {
           const text = b.textContent.trim();
           const hasIcon = b.querySelector('i,svg');
           const hasAriaLabel = b.getAttribute('aria-label');
           return !text && !hasIcon && !hasAriaLabel;
         })
-        .map(b => b.id || b.className);
+        .map((b) => b.id || b.className);
     });
     assert.equal(emptyButtons.length, 0, '首页不应有空按钮，空: ' + emptyButtons.join(', '));
   });
@@ -78,15 +83,23 @@ describe('排版与无障碍检查', () => {
     await sleep(5000);
     const check = await page.evaluate(() => {
       const results = [];
-      if (document.body.scrollWidth > window.innerWidth) results.push('溢出: ' + document.body.scrollWidth);
+      if (document.body.scrollWidth > window.innerWidth) {
+        results.push('溢出: ' + document.body.scrollWidth);
+      }
       const text = document.getElementById('recommendation-section')?.innerText || '';
-      if (text.includes('NaN')) results.push('NaN');
-      if (text.includes('undefined')) results.push('undefined');
+      if (text.includes('NaN')) {
+        results.push('NaN');
+      }
+      if (text.includes('undefined')) {
+        results.push('undefined');
+      }
       // 检查匹配度徽章
       const badges = document.querySelectorAll('#dish-list .badge');
-      badges.forEach(b => {
+      badges.forEach((b) => {
         const t = b.textContent.trim();
-        if (t.includes('NaN') || t.includes('undefined')) results.push('匹配度异常: ' + t);
+        if (t.includes('NaN') || t.includes('undefined')) {
+          results.push('匹配度异常: ' + t);
+        }
       });
       return results;
     });
@@ -103,13 +116,22 @@ describe('排版与无障碍检查', () => {
     await sleep(2000);
     const check = await page.evaluate(() => {
       const results = [];
-      if (document.body.scrollWidth > window.innerWidth) results.push('溢出: ' + document.body.scrollWidth);
+      if (document.body.scrollWidth > window.innerWidth) {
+        results.push('溢出: ' + document.body.scrollWidth);
+      }
       const noAltImgs = Array.from(document.querySelectorAll('img'))
-        .filter(img => !img.getAttribute('alt')).map(img => img.id || img.src.substring(0, 30));
-      if (noAltImgs.length > 0) results.push('图片无alt: ' + noAltImgs.join(','));
+        .filter((img) => !img.getAttribute('alt'))
+        .map((img) => img.id || img.src.substring(0, 30));
+      if (noAltImgs.length > 0) {
+        results.push('图片无alt: ' + noAltImgs.join(','));
+      }
       const text = document.body.innerText;
-      if (text.includes('NaN')) results.push('NaN');
-      if (text.includes('undefined')) results.push('undefined');
+      if (text.includes('NaN')) {
+        results.push('NaN');
+      }
+      if (text.includes('undefined')) {
+        results.push('undefined');
+      }
       return results;
     });
     assert.equal(check.length, 0, '管理后台问题: ' + check.join('; '));
@@ -118,15 +140,23 @@ describe('排版与无障碍检查', () => {
   it('管理后台各页面内容非空', async () => {
     const pages = ['dashboard', 'dishes', 'feedback', 'preferences', 'analytics', 'model', 'apidocs', 'users'];
     for (const p of pages) {
-      await page.evaluate(pg => document.querySelector('[data-page="' + pg + '"]')?.click(), p);
+      await page.evaluate((pg) => document.querySelector('[data-page="' + pg + '"]')?.click(), p);
       await sleep(1000);
       const check = await page.evaluate(() => {
         const visible = document.querySelector('[id^="page-"]:not(.d-none)');
-        if (!visible) return '无可见页面';
+        if (!visible) {
+          return '无可见页面';
+        }
         const text = visible.textContent.trim();
-        if (text.length < 5) return '内容过少: 长度=' + text.length;
-        if (text.includes('NaN')) return 'NaN';
-        if (text.includes('undefined')) return 'undefined';
+        if (text.length < 5) {
+          return '内容过少: 长度=' + text.length;
+        }
+        if (text.includes('NaN')) {
+          return 'NaN';
+        }
+        if (text.includes('undefined')) {
+          return 'undefined';
+        }
         return '';
       });
       assert.equal(check, '', '管理后台页面 ' + p + ' 问题: ' + check);
@@ -139,13 +169,23 @@ describe('排版与无障碍检查', () => {
     await sleep(500);
     const check = await page.evaluate(() => {
       const results = [];
-      if (document.body.scrollWidth > window.innerWidth) results.push('溢出: ' + document.body.scrollWidth);
+      if (document.body.scrollWidth > window.innerWidth) {
+        results.push('溢出: ' + document.body.scrollWidth);
+      }
       const time = document.getElementById('current-time')?.textContent.trim() || '';
-      if (!time) results.push('时间未显示');
-      if (time.includes('NaN') || time.includes('undefined')) results.push('时间异常: ' + time);
+      if (!time) {
+        results.push('时间未显示');
+      }
+      if (time.includes('NaN') || time.includes('undefined')) {
+        results.push('时间异常: ' + time);
+      }
       const text = document.body.innerText;
-      if (text.includes('NaN')) results.push('NaN');
-      if (text.includes('undefined')) results.push('undefined');
+      if (text.includes('NaN')) {
+        results.push('NaN');
+      }
+      if (text.includes('undefined')) {
+        results.push('undefined');
+      }
       return results;
     });
     assert.equal(check.length, 0, '厨房看板问题: ' + check.join('; '));

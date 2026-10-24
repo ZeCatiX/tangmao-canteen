@@ -15,15 +15,28 @@ async function makeThumb(src, dst) {
 
 async function main() {
   fs.mkdirSync(thumbs, { recursive: true });
-  let made = 0, skipped = 0;
+  let made = 0,
+    skipped = 0;
   for (const f of fs.readdirSync(uploads)) {
-    if (!/\.(jpe?g|png|webp)$/i.test(f)) continue;
+    if (!/\.(jpe?g|png|webp)$/i.test(f)) {
+      continue;
+    }
     const src = path.join(uploads, f);
     const dst = path.join(thumbs, f.replace(/\.[^.]+$/, '') + '.webp');
-    if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) { skipped++; continue; }
-    try { await makeThumb(src, dst); made++; }
-    catch (e) { console.error('跳过', f, e.message); }
+    if (fs.existsSync(dst) && fs.statSync(dst).mtimeMs >= fs.statSync(src).mtimeMs) {
+      skipped++;
+      continue;
+    }
+    try {
+      await makeThumb(src, dst);
+      made++;
+    } catch (e) {
+      console.error('跳过', f, e.message);
+    }
   }
   console.log(`缩略图完成: 新生成 ${made}，已最新 ${skipped} -> ${thumbs}`);
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

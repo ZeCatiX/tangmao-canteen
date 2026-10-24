@@ -5,6 +5,10 @@
 let dishData = [];
 
 module.exports = {
-  get dishData() { return dishData; },
-  set dishData(v) { dishData = v; },
+  get dishData() {
+    return dishData;
+  },
+  set dishData(v) {
+    dishData = v;
+  },
 };

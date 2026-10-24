@@ -9,7 +9,7 @@ const path = require('path');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ROOT = path.join(__dirname, '..');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
@@ -18,16 +18,18 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     // 收集控制台错误
     page._consoleErrors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') page._consoleErrors.push(msg.text());
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
     // 清理测试残留数据（避免并发测试干扰）
     try {
       const r = await fetch(BASE + '/api/dishes');
@@ -37,20 +39,26 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'tm_admin_f1e2d3c4b5a6978' }),
-      }).then(r => r.json()).then(d => d.token);
+      })
+        .then((r) => r.json())
+        .then((d) => d.token);
       for (const d of dishes) {
         if (d.name === '测试重复菜名' || d.name.startsWith('测试菜品_E2E_')) {
           await fetch(BASE + '/api/admin/dish/' + d.id + '/permanent', {
             method: 'DELETE',
-            headers: { 'Authorization': 'Bearer ' + adminToken },
+            headers: { Authorization: 'Bearer ' + adminToken },
           });
         }
       }
-    } catch (e) { /* ignore cleanup errors */ }
+    } catch (e) {
+      /* ignore cleanup errors */
+    }
   });
 
   after(async () => {
-    if (browser) await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   });
 
   // ===== 1. 首页加载与按钮可见性 =====
@@ -137,10 +145,20 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     // 2026-09-17: AI入口+选桌(偏好页)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     const prefForm = await page.$('#preference-form');
     assert.ok(prefForm, '偏好表单应存在');
@@ -154,10 +172,20 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     // 2026-09-17: AI入口+选桌(偏好页)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     const fields = ['spiciness', 'saltiness', 'sweetness', 'price', 'calorie', 'religion'];
     for (const id of fields) {
@@ -177,7 +205,12 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     // 2026-09-17: AI入口+选桌(偏好页)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(800);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -186,7 +219,10 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     await sleep(3000);
     const pageContent = await page.content();
     // 不应显示崩溃信息
-    assert.ok(!pageContent.includes('崩溃') && !pageContent.toLowerCase().includes('cannot read'), '页面不应显示崩溃信息');
+    assert.ok(
+      !pageContent.includes('崩溃') && !pageContent.toLowerCase().includes('cannot read'),
+      '页面不应显示崩溃信息'
+    );
     // 应有推荐结果或加载中
     const recResult = await page.$('#recommendation-result');
     const loading = await page.$('#recommendation-loading');
@@ -207,19 +243,25 @@ describe('浏览器端到端测试 - 按钮可用性与页面响应', () => {
     // 先清理可能的并发测试残留
     try {
       const adminToken = await fetch(BASE + '/api/admin/login', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'tm_admin_f1e2d3c4b5a6978' }),
-      }).then(r => r.json()).then(d => d.token);
+      })
+        .then((r) => r.json())
+        .then((d) => d.token);
       const r = await fetch(BASE + '/api/dishes');
       const data = await r.json();
-      for (const d of (data.dishes || [])) {
+      for (const d of data.dishes || []) {
         if (d.name === '测试重复菜名' || d.name.startsWith('测试菜品_E2E_')) {
           await fetch(BASE + '/api/admin/dish/' + d.id + '/permanent', {
-            method: 'DELETE', headers: { 'Authorization': 'Bearer ' + adminToken },
+            method: 'DELETE',
+            headers: { Authorization: 'Bearer ' + adminToken },
           });
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      /* ignore */
+    }
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
     await page.click('#nav-dataset');

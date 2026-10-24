@@ -29,16 +29,34 @@ const PORT = parseInt(process.env.PORT || '3000');
 app.set('trust proxy', 1);
 
 // ⚠️ 安全警告：检查 JWT_SECRET 是否使用默认值
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'tangmao_cat_court_jwt_secret_2026' || process.env.JWT_SECRET === 'tangmao_jwt_secret_2026_prod_replace_me' || process.env.JWT_SECRET === 'tm_jwt_8a3f9c2e7b1d4f6a0c8e2b4d6f0a1c3e5b7d9f0a2c4e6b8d0a2c4e6f8a0b2c4d6' || process.env.JWT_SECRET.length < 16) {
+if (
+  !process.env.JWT_SECRET ||
+  process.env.JWT_SECRET === 'tangmao_cat_court_jwt_secret_2026' ||
+  process.env.JWT_SECRET === 'tangmao_jwt_secret_2026_prod_replace_me' ||
+  process.env.JWT_SECRET === 'tm_jwt_8a3f9c2e7b1d4f6a0c8e2b4d6f0a1c3e5b7d9f0a2c4e6b8d0a2c4e6f8a0b2c4d6' ||
+  process.env.JWT_SECRET.length < 16
+) {
   console.error('❌ 安全错误: JWT_SECRET 使用默认值，请在 .env 中设置强随机密钥！');
   process.exit(1);
 }
-if (!process.env.ADMIN_PASS || process.env.ADMIN_PASS === 'admin123' || process.env.ADMIN_PASS === 'TangMaoAdmin2026!' || process.env.ADMIN_PASS === 'TangMaoAdmin2026_ChangeMe!' || process.env.ADMIN_PASS === 'TangMao@2026_Prod' || process.env.ADMIN_PASS === 'tm_admin_9f8a7b6c5d4e3f2a1b0c' || process.env.ADMIN_PASS.length < 8) {
+if (
+  !process.env.ADMIN_PASS ||
+  process.env.ADMIN_PASS === 'admin123' ||
+  process.env.ADMIN_PASS === 'TangMaoAdmin2026!' ||
+  process.env.ADMIN_PASS === 'TangMaoAdmin2026_ChangeMe!' ||
+  process.env.ADMIN_PASS === 'TangMao@2026_Prod' ||
+  process.env.ADMIN_PASS === 'tm_admin_9f8a7b6c5d4e3f2a1b0c' ||
+  process.env.ADMIN_PASS.length < 8
+) {
   console.error('❌ 安全错误: 管理后台使用默认密码或密码强度不足，请在 .env 中设置长度 ≥ 8 位的强密码！');
   process.exit(1);
 }
 // 桌码签名密钥：缺失会退化成源码里公开的常量，任何人都能伪造桌码查看别桌账单
-if (!process.env.TABLE_SECRET || process.env.TABLE_SECRET === 'tangmao-table-secret' || process.env.TABLE_SECRET.length < 16) {
+if (
+  !process.env.TABLE_SECRET ||
+  process.env.TABLE_SECRET === 'tangmao-table-secret' ||
+  process.env.TABLE_SECRET.length < 16
+) {
   console.error('❌ 安全错误: TABLE_SECRET 未设置或强度不足（<16位），桌码可被伪造，请在 .env 中设置强随机密钥！');
   process.exit(1);
 }
@@ -55,14 +73,18 @@ if (process.env.NODE_ENV === 'production') {
   const adminLoginMax = parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '30');
   const registerMax = parseInt(process.env.REGISTER_RATE_LIMIT_MAX || '5');
   if (rlMax > 5000 || loginMax > 60 || adminLoginMax > 60 || registerMax > 60) {
-    console.error(`❌ 安全错误: 生产环境限流阈值过宽（RATE_LIMIT_MAX=${rlMax}, LOGIN_RATE_LIMIT_MAX=${loginMax}, ADMIN_LOGIN_RATE_LIMIT_MAX=${adminLoginMax}, REGISTER_RATE_LIMIT_MAX=${registerMax}）—— 测试用的宽松值不能带到线上，请参考 .env.production.example`);
+    console.error(
+      `❌ 安全错误: 生产环境限流阈值过宽（RATE_LIMIT_MAX=${rlMax}, LOGIN_RATE_LIMIT_MAX=${loginMax}, ADMIN_LOGIN_RATE_LIMIT_MAX=${adminLoginMax}, REGISTER_RATE_LIMIT_MAX=${registerMax}）—— 测试用的宽松值不能带到线上，请参考 .env.production.example`
+    );
     process.exit(1);
   }
   if (!process.env.CORS_ORIGIN || /localhost|127\.0\.0\.1/.test(process.env.CORS_ORIGIN)) {
     console.warn('⚠️  生产环境 CORS_ORIGIN 仍指向 localhost —— 前端与后端同源部署可忽略；跨域部署请改成真实域名');
   }
   if (!process.env.SSL_KEY || !process.env.SSL_CERT || /^\.?\/?ssl[\\/]/.test(process.env.SSL_KEY)) {
-    console.warn('⚠️  生产环境未配置正式 HTTPS 证书（未设置，或仍指向开发用的 ./ssl/ 自签名证书）—— 若前面有 Nginx/CDN 反向代理终止 TLS 可忽略，否则浏览器会拦截、且密码与 token 明文传输');
+    console.warn(
+      '⚠️  生产环境未配置正式 HTTPS 证书（未设置，或仍指向开发用的 ./ssl/ 自签名证书）—— 若前面有 Nginx/CDN 反向代理终止 TLS 可忽略，否则浏览器会拦截、且密码与 token 明文传输'
+    );
   }
 }
 
@@ -71,29 +93,33 @@ if (process.env.NODE_ENV === 'production') {
 // ═══════════════════════════════════════════════
 
 // CORS（允许跨域，方便外网访问）
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  maxAge: 86400
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    maxAge: 86400,
+  })
+);
 
 // 安全 HTTP 头（helmet）
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],  // 移除 unsafe-eval(全库零 eval 调用,2026-10-16 审计)
-      scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      objectSrc: ["'none'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // 移除 unsafe-eval(全库零 eval 调用,2026-10-16 审计)
+        scriptSrcAttr: ["'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        objectSrc: ["'none'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false
-}));
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // 请求限流
 
@@ -125,7 +151,8 @@ app.use('/api/worker-health', healthLimiter);
 
 // 登录接口限流（防暴力破解，生产默认 30 次/分钟，测试可设环境变量 LOGIN_RATE_LIMIT_MAX）
 const LOGIN_RATE_LIMIT_RAW = parseInt(process.env.LOGIN_RATE_LIMIT_MAX || '30');
-const LOGIN_RATE_LIMIT_MAX = (Number.isFinite(LOGIN_RATE_LIMIT_RAW) && LOGIN_RATE_LIMIT_RAW >= 1) ? LOGIN_RATE_LIMIT_RAW : 30;
+const LOGIN_RATE_LIMIT_MAX =
+  Number.isFinite(LOGIN_RATE_LIMIT_RAW) && LOGIN_RATE_LIMIT_RAW >= 1 ? LOGIN_RATE_LIMIT_RAW : 30;
 const loginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
   max: LOGIN_RATE_LIMIT_MAX,
@@ -135,7 +162,8 @@ app.use('/api/user/login', loginLimiter);
 
 // 注册接口限流（测试环境可通过环境变量放宽）
 const REGISTER_RATE_LIMIT_RAW = parseInt(process.env.REGISTER_RATE_LIMIT_MAX || '2000');
-const REGISTER_RATE_LIMIT_MAX = (Number.isFinite(REGISTER_RATE_LIMIT_RAW) && REGISTER_RATE_LIMIT_RAW >= 1) ? REGISTER_RATE_LIMIT_RAW : 2000;
+const REGISTER_RATE_LIMIT_MAX =
+  Number.isFinite(REGISTER_RATE_LIMIT_RAW) && REGISTER_RATE_LIMIT_RAW >= 1 ? REGISTER_RATE_LIMIT_RAW : 2000;
 const registerLimiter = rateLimit({
   windowMs: 3600000, // 1小时
   max: REGISTER_RATE_LIMIT_MAX,
@@ -145,7 +173,8 @@ app.use('/api/user/register', registerLimiter);
 
 // 管理员登录限流（严格限制，防暴力破解，测试环境可通过环境变量放宽）
 const ADMIN_LOGIN_RATE_LIMIT_RAW = parseInt(process.env.ADMIN_LOGIN_RATE_LIMIT_MAX || '30');
-const ADMIN_LOGIN_RATE_LIMIT_MAX = (Number.isFinite(ADMIN_LOGIN_RATE_LIMIT_RAW) && ADMIN_LOGIN_RATE_LIMIT_RAW >= 1) ? ADMIN_LOGIN_RATE_LIMIT_RAW : 30;
+const ADMIN_LOGIN_RATE_LIMIT_MAX =
+  Number.isFinite(ADMIN_LOGIN_RATE_LIMIT_RAW) && ADMIN_LOGIN_RATE_LIMIT_RAW >= 1 ? ADMIN_LOGIN_RATE_LIMIT_RAW : 30;
 const adminLoginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
   max: ADMIN_LOGIN_RATE_LIMIT_MAX,
@@ -170,19 +199,22 @@ app.use((err, req, res, next) => {
     return res.status(413).json({ success: false, error: '请求体过大，最大支持 1MB' });
   }
   if (err.code === 'ECONNRESET' || err.type === 'aborted') {
-    if (!res.headersSent) return res.status(499).json({ success: false, error: '请求中断' });
+    if (!res.headersSent) {
+      return res.status(499).json({ success: false, error: '请求中断' });
+    }
     return;
   }
   if (err.name === 'MulterError' || err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({ success: false, error: err.message || '文件上传错误' });
   }
   logger.error(`服务器错误: ${err.message}`, { stack: err.stack });
-  if (!res.headersSent) res.status(500).json({ success: false, error: '服务器内部错误' });
+  if (!res.headersSent) {
+    res.status(500).json({ success: false, error: '服务器内部错误' });
+  }
   next(err);
 });
 
 // 数据库连接池
-
 
 // ═══════════════════════════════════════════════
 // 菜品图片上传
@@ -200,18 +232,26 @@ const upload = multer({
     } else {
       cb(new Error('仅支持 JPG/PNG/GIF/WebP 格式'));
     }
-  }
+  },
 });
 
 app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ success: false, error: '请选择图片' });
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: '请选择图片' });
+    }
     const dishId = parseInt(req.body.dishId);
-    if (!dishId || isNaN(dishId) || dishId <= 0) return res.status(400).json({ success: false, error: '无效的菜品 ID' });
+    if (!dishId || isNaN(dishId) || dishId <= 0) {
+      return res.status(400).json({ success: false, error: '无效的菜品 ID' });
+    }
     const ext = path.extname(req.file.originalname).toLowerCase();
     // 二次验证扩展名
     if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
-      try { fs.unlinkSync(req.file.path); } catch(e) { /* 忽略清理错误 */ }
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        /* 忽略清理错误 */
+      }
       return res.status(400).json({ success: false, error: '不支持的图片格式' });
     }
     const newName = `dish_${dishId}_${Date.now()}${ext}`;
@@ -221,9 +261,24 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
     const oldDish = await pool.query('SELECT image_url FROM dishes WHERE id = $1', [dishId]);
     if (oldDish.rows.length > 0 && oldDish.rows[0].image_url && oldDish.rows[0].image_url.startsWith('/uploads/')) {
       const oldImagePath = path.join(__dirname, oldDish.rows[0].image_url.replace(/^\//, ''));
-      try { if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath); } catch(e) { /* 忽略旧文件清理错误 */ }
-      const oldThumb = path.join(__dirname, 'uploads', 'thumbs', oldDish.rows[0].image_url.replace(/^\/uploads\//, '').replace(/\.[^.]+$/, '') + '.webp');
-      try { if (fs.existsSync(oldThumb)) fs.unlinkSync(oldThumb); } catch(e) {}
+      try {
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      } catch (e) {
+        /* 忽略旧文件清理错误 */
+      }
+      const oldThumb = path.join(
+        __dirname,
+        'uploads',
+        'thumbs',
+        oldDish.rows[0].image_url.replace(/^\/uploads\//, '').replace(/\.[^.]+$/, '') + '.webp'
+      );
+      try {
+        if (fs.existsSync(oldThumb)) {
+          fs.unlinkSync(oldThumb);
+        }
+      } catch (e) {}
     }
     fs.renameSync(req.file.path, newPath);
     const imageUrl = '/uploads/' + newName;
@@ -232,30 +287,112 @@ app.post('/api/admin/dish/upload-image', adminAuth, upload.single('image'), asyn
       const thumbDir = path.join(__dirname, 'uploads', 'thumbs');
       fs.mkdirSync(thumbDir, { recursive: true });
       const sharp = require('sharp');
-      await sharp(newPath).rotate().resize({ width: 420, withoutEnlargement: true }).webp({ quality: 78 })
+      await sharp(newPath)
+        .rotate()
+        .resize({ width: 420, withoutEnlargement: true })
+        .webp({ quality: 78 })
         .toFile(path.join(thumbDir, newName.replace(/\.[^.]+$/, '') + '.webp'));
-    } catch(e) { logger.error('缩略图生成失败:', e.message); }
+    } catch (e) {
+      logger.error('缩略图生成失败:', e.message);
+    }
     await pool.query('UPDATE dishes SET image_url = $1 WHERE id = $2', [imageUrl, dishId]);
     res.json({ success: true, imageUrl });
-  } catch (e) { logger.error('API错误:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+  } catch (e) {
+    logger.error('API错误:', e.message);
+    res.status(500).json({ success: false, error: '服务器内部错误' });
+  }
 });
 
 // 静态文件服务（只允许前端需要的文件类型，阻止敏感文件泄露）
-const ALLOWED_STATIC_EXTS = ['.html', '.css', '.js', '.json', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'];
-const BLOCKED_STATIC_PATHS = ['.env', 'server.js', 'db.js', 'auth.js', 'user_storage.js', 'logger.js', 'build.js', 'package.json', 'package-lock.json', 'ecosystem.config.js', 'Dockerfile', 'docker-compose.yml', 'deploy.bat', 'deploy.sh', 'install.bat', 'start.bat', 'setup_backup.bat', 'backup_db.js', 'migrate_to_pg.js', 'sample_data.sql', 'ngrok.exe', 'fix_', 'model_metrics.json', 'metrics_history.json', 'runtime_settings.json', 'recommendation_effect.json', 'recommendation_model.pkl', 'feature_importance.json', 'registry.json', 'ml/', 'train_ml_model.py', 'rgzn.py', 'logs/', 'backups/', 'model_backups/', 'tests/', '.ai/', '__pycache__/', '.git/', 'ssl/', 'dist/', 'screenshots/', '.playwright-mcp/', '.github/', '唐猫菜品/', '*.pem', '*.key'];
+const ALLOWED_STATIC_EXTS = [
+  '.html',
+  '.css',
+  '.js',
+  '.json',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+];
+const BLOCKED_STATIC_PATHS = [
+  '.env',
+  'server.js',
+  'db.js',
+  'auth.js',
+  'user_storage.js',
+  'logger.js',
+  'build.js',
+  'package.json',
+  'package-lock.json',
+  'ecosystem.config.js',
+  'Dockerfile',
+  'docker-compose.yml',
+  'deploy.bat',
+  'deploy.sh',
+  'install.bat',
+  'start.bat',
+  'setup_backup.bat',
+  'backup_db.js',
+  'migrate_to_pg.js',
+  'sample_data.sql',
+  'ngrok.exe',
+  'fix_',
+  'model_metrics.json',
+  'metrics_history.json',
+  'runtime_settings.json',
+  'recommendation_effect.json',
+  'recommendation_model.pkl',
+  'feature_importance.json',
+  'registry.json',
+  'ml/',
+  'train_ml_model.py',
+  'rgzn.py',
+  'logs/',
+  'backups/',
+  'model_backups/',
+  'tests/',
+  '.ai/',
+  '__pycache__/',
+  '.git/',
+  'ssl/',
+  'dist/',
+  'screenshots/',
+  '.playwright-mcp/',
+  '.github/',
+  '唐猫菜品/',
+  '*.pem',
+  '*.key',
+];
 app.use((req, res, next) => {
-  if (req.method !== 'GET') return next();
+  if (req.method !== 'GET') {
+    return next();
+  }
   const ext = path.extname(req.path).toLowerCase();
   const basename = path.basename(req.path).toLowerCase();
   // 规范化路径，防止路径遍历绕过
   const normalizedPath = path.normalize(req.path).replace(/\\/g, '/');
   // 阻止敏感文件（精确匹配文件，或匹配目录前缀，或startsWith用于fix_前缀，或glob模式）
-  if (BLOCKED_STATIC_PATHS.some(p => {
-    if (p.endsWith('/')) return normalizedPath.startsWith('/' + p) || normalizedPath === '/' + p.slice(0, -1);
-    if (p.endsWith('_')) return basename.startsWith(p);
-    if (p.startsWith('*.')) return basename.endsWith(p.slice(1));
-    return basename === p;
-  })) {
+  if (
+    BLOCKED_STATIC_PATHS.some((p) => {
+      if (p.endsWith('/')) {
+        return normalizedPath.startsWith('/' + p) || normalizedPath === '/' + p.slice(0, -1);
+      }
+      if (p.endsWith('_')) {
+        return basename.startsWith(p);
+      }
+      if (p.startsWith('*.')) {
+        return basename.endsWith(p.slice(1));
+      }
+      return basename === p;
+    })
+  ) {
     return res.status(403).json({ success: false, error: '禁止访问' });
   }
   // 只允许特定扩展名（仅对看起来像文件的路径检查）
@@ -265,21 +402,30 @@ app.use((req, res, next) => {
   }
   next();
 });
-app.use(express.static(__dirname, { setHeaders: (res, p) => {
-  // HTML 不缓存（防止 Edge 等浏览器缓存旧版，导致版本号更新不生效）
-  if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-  // 带 ?v=20xxxxx 版本参数的资源走 immutable 一年长缓存：版本号一变 URL 即变，零旧版风险，
-  // 免掉每次访问的 304 重验证；纪律——改了 js/css/插画必须同步改版本号，否则用户最长一年拿旧文件
-  const ver = res.req.originalUrl && /[?&]v=20\d{5}\w*/.test(res.req.originalUrl);
-  // CSS/JS：带版本号 → immutable；不带 → no-cache + etag 重验证兜底（双重保险）
-  if (p.endsWith('.css') || p.endsWith('.js')) {
-    res.setHeader('Cache-Control', ver ? 'public, max-age=31536000, immutable' : 'no-cache, must-revalidate, max-age=0');
-  }
-  // 图片：带版本号 → immutable；不带 → 缓存7天
-  if (p.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
-    res.setHeader('Cache-Control', ver ? 'public, max-age=31536000, immutable' : 'public, max-age=604800');
-  }
-} }));
+app.use(
+  express.static(__dirname, {
+    setHeaders: (res, p) => {
+      // HTML 不缓存（防止 Edge 等浏览器缓存旧版，导致版本号更新不生效）
+      if (p.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+      // 带 ?v=20xxxxx 版本参数的资源走 immutable 一年长缓存：版本号一变 URL 即变，零旧版风险，
+      // 免掉每次访问的 304 重验证；纪律——改了 js/css/插画必须同步改版本号，否则用户最长一年拿旧文件
+      const ver = res.req.originalUrl && /[?&]v=20\d{5}\w*/.test(res.req.originalUrl);
+      // CSS/JS：带版本号 → immutable；不带 → no-cache + etag 重验证兜底（双重保险）
+      if (p.endsWith('.css') || p.endsWith('.js')) {
+        res.setHeader(
+          'Cache-Control',
+          ver ? 'public, max-age=31536000, immutable' : 'no-cache, must-revalidate, max-age=0'
+        );
+      }
+      // 图片：带版本号 → immutable；不带 → 缓存7天
+      if (p.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
+        res.setHeader('Cache-Control', ver ? 'public, max-age=31536000, immutable' : 'public, max-age=604800');
+      }
+    },
+  })
+);
 // node_modules 中的前端库文件（在拦截中间件之后注册，敏感文件已被阻止）
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules'), { maxAge: '7d' }));
 
@@ -295,52 +441,59 @@ async function loadDishData() {
     let pool;
     try {
       pool = require('./db');
-    } catch(e) {
+    } catch (e) {
       logger.error('db模块加载失败:', e?.message || String(e));
-      state.dishData = []; return;
+      state.dishData = [];
+      return;
     }
     if (!pool || !pool.connect) {
       logger.error('db模块无效');
-      state.dishData = []; return;
+      state.dishData = [];
+      return;
     }
     // 用同一个连接执行 SET + SELECT，确保编码设置生效
     const client = await pool.connect();
     try {
       await client.query("SET client_encoding = 'UTF8'");
-      const result = await client.query('SELECT d.*, COALESCE(oc.order_count, 0) as order_count FROM dishes d LEFT JOIN (SELECT dish_id, COUNT(*) as order_count FROM (SELECT jsonb_array_elements(items)->>\'id\' as dish_id FROM orders) o WHERE o.dish_id IS NOT NULL GROUP BY dish_id) oc ON d.id::text = oc.dish_id ORDER BY d.id');
-    state.dishData = result.rows.map(d => ({
-      id: d.id,
-      name: d.name,
-      category: d.category,
-      tags: d.tags || [],
-      spiciness: d.spiciness || '不辣',
-      saltiness: d.saltiness || '适中',
-      sweetness: d.sweetness || '无味',
-      price: d.price !== null && d.price !== undefined && d.price !== '' ? parseFloat(d.price) : (d.price === 0 ? 0 : null),
-      rating: d.rating !== null && d.rating !== undefined && d.rating !== '' ? d.rating.toString() : '3.5',
-      calorie: d.calorie || '未知',
-      protein: d.protein ? d.protein.toString() : (d.calorie ? String(Math.round(parseFloat(d.calorie) * 0.1)) : '0'),
-      cuisine: '食堂菜',
-      religion: d.religion || '无特殊要求',
-      isHalal: d.is_halal || false,
-      isVegetarian: d.is_vegetarian || false,
-      allergies: d.allergies || {},
-      is_active: d.is_active,
-      is_sold_out: d.is_sold_out === true,
-      name_en: d.name_en || null,
-      description_en: d.description_en || null,
-      description: d.description || '',
-      price_unit: d.price_unit || '',
-      serving: d.serving || '',
-      image_url: d.image_url || '',
-      order_count: parseInt(d.order_count) || 0,
-      type: '偏好推荐',
-      reason: '综合多项偏好匹配',
-      matchIndex: 0,
-      matchRate: 0.5,
-    }));
-    logger.info(`成功加载${state.dishData.length}条菜品数据`);
-    } finally { client.release(); }
+      const result = await client.query(
+        "SELECT d.*, COALESCE(oc.order_count, 0) as order_count FROM dishes d LEFT JOIN (SELECT dish_id, COUNT(*) as order_count FROM (SELECT jsonb_array_elements(items)->>'id' as dish_id FROM orders) o WHERE o.dish_id IS NOT NULL GROUP BY dish_id) oc ON d.id::text = oc.dish_id ORDER BY d.id"
+      );
+      state.dishData = result.rows.map((d) => ({
+        id: d.id,
+        name: d.name,
+        category: d.category,
+        tags: d.tags || [],
+        spiciness: d.spiciness || '不辣',
+        saltiness: d.saltiness || '适中',
+        sweetness: d.sweetness || '无味',
+        price:
+          d.price !== null && d.price !== undefined && d.price !== '' ? parseFloat(d.price) : d.price === 0 ? 0 : null,
+        rating: d.rating !== null && d.rating !== undefined && d.rating !== '' ? d.rating.toString() : '3.5',
+        calorie: d.calorie || '未知',
+        protein: d.protein ? d.protein.toString() : d.calorie ? String(Math.round(parseFloat(d.calorie) * 0.1)) : '0',
+        cuisine: '食堂菜',
+        religion: d.religion || '无特殊要求',
+        isHalal: d.is_halal || false,
+        isVegetarian: d.is_vegetarian || false,
+        allergies: d.allergies || {},
+        is_active: d.is_active,
+        is_sold_out: d.is_sold_out === true,
+        name_en: d.name_en || null,
+        description_en: d.description_en || null,
+        description: d.description || '',
+        price_unit: d.price_unit || '',
+        serving: d.serving || '',
+        image_url: d.image_url || '',
+        order_count: parseInt(d.order_count) || 0,
+        type: '偏好推荐',
+        reason: '综合多项偏好匹配',
+        matchIndex: 0,
+        matchRate: 0.5,
+      }));
+      logger.info(`成功加载${state.dishData.length}条菜品数据`);
+    } finally {
+      client.release();
+    }
   } catch (e) {
     logger.error('加载菜品数据失败: ' + (e?.code || '') + ' ' + (e?.message || JSON.stringify(e) || '未知错误'));
     state.dishData = [];
@@ -361,7 +514,9 @@ async function syncDishRatings() {
         WHERE d.id = sub.dish_id AND sub.n >= $1 AND d.rating IS DISTINCT FROM sub.avg`,
       [MIN_RATINGS]
     );
-    if (r.rowCount > 0) logger.info(`已按用户反馈同步 ${r.rowCount} 道菜的评分`);
+    if (r.rowCount > 0) {
+      logger.info(`已按用户反馈同步 ${r.rowCount} 道菜的评分`);
+    }
     return r.rowCount;
   } catch (e) {
     logger.warn('同步菜品评分失败: ' + (e?.message || String(e)));
@@ -374,11 +529,20 @@ function refreshRecommendationEffect() {
   try {
     const { spawn } = require('child_process');
     const proc = spawn('python', ['ml/recommendation_effect_report.py'], {
-      cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true
+      cwd: __dirname,
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      stdio: ['ignore', 'ignore', 'pipe'],
+      windowsHide: true,
     });
-    proc.on('error', e => logger.warn('生成推荐效果报告失败: ' + e.message));
-    proc.on('close', code => { if (code !== 0) logger.warn('生成推荐效果报告失败，退出码: ' + code); });
-  } catch (e) { logger.warn('生成推荐效果报告失败: ' + (e?.message || '')); }
+    proc.on('error', (e) => logger.warn('生成推荐效果报告失败: ' + e.message));
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        logger.warn('生成推荐效果报告失败，退出码: ' + code);
+      }
+    });
+  } catch (e) {
+    logger.warn('生成推荐效果报告失败: ' + (e?.message || ''));
+  }
 }
 
 // 服务器启动后异步加载菜品数据
@@ -397,7 +561,7 @@ async function ensureTokenBlacklistTable() {
     );
     await pool.query('CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at)');
     logger.info('token_blacklist 表已就绪');
-  } catch(e) {
+  } catch (e) {
     logger.warn('token_blacklist 表创建失败（可能 DB 未就绪）: ' + (e?.message || String(e)));
   }
 }
@@ -413,8 +577,10 @@ app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'assets'
 app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: state.dishData }));
 app.get('/api/dishes/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const dish = state.dishData.find(d => d.id == id);
-  if (!dish) return res.status(404).json({ success: false, error: '菜品不存在' });
+  const dish = state.dishData.find((d) => d.id === id);
+  if (!dish) {
+    return res.status(404).json({ success: false, error: '菜品不存在' });
+  }
   res.json({ success: true, dish });
 });
 
@@ -436,7 +602,7 @@ app.post('/api/admin/login', (req, res) => {
     let matched = false;
     try {
       matched = bcrypt.compareSync(password, ADMIN_PASS);
-    } catch(e) {
+    } catch (e) {
       // ADMIN_PASS 不是 bcrypt 哈希格式
     }
     // bcrypt 返回 false 时，尝试 timingSafeEqual（处理明文密码场景）
@@ -447,11 +613,16 @@ app.post('/api/admin/login', (req, res) => {
         if (a.length === b.length) {
           matched = crypto.timingSafeEqual(a, b);
         }
-      } catch(e2) { matched = false; }
+      } catch (e2) {
+        matched = false;
+      }
     }
     if (matched) {
       // 管理端短会话（默认12小时，可用 ADMIN_TOKEN_EXPIRES_IN 覆盖）：共享电脑的残留 token 不能长期有效
-      const token = generateToken({ id: 0, username: ADMIN_USER, role: 'admin' }, { expiresIn: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h' });
+      const token = generateToken(
+        { id: 0, username: ADMIN_USER, role: 'admin' },
+        { expiresIn: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h' }
+      );
       return res.json({ success: true, message: '管理员登录成功', token });
     }
   }
@@ -461,7 +632,9 @@ app.post('/api/admin/login', (req, res) => {
 // 管理后台认证中间件（排除登录接口）
 async function adminAuth(req, res, next) {
   // 登录接口不需要认证
-  if (req.path === '/login') return next();
+  if (req.path === '/login') {
+    return next();
+  }
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -469,7 +642,9 @@ async function adminAuth(req, res, next) {
   }
   try {
     // maxAge 与签发端 12h 对齐：历史上无 exp 的管理 token（iat 超龄）也一并拒绝
-    const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET, { maxAge: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h' });
+    const decoded = require('jsonwebtoken').verify(authHeader.split(' ')[1], process.env.JWT_SECRET, {
+      maxAge: process.env.ADMIN_TOKEN_EXPIRES_IN || '12h',
+    });
     if (decoded.role !== 'admin') {
       return res.status(403).json({ success: false, error: '无管理权限' });
     }
@@ -497,12 +672,26 @@ const runtimeSettings = { autoRetrain: false };
 // 桌码管理（A2）：批量生成签名桌码链接（协议/域名取自请求头，支持反代与隧道）
 // /api/admin/* 业务域拆分至 server/routes/admin.js(登录/上传图/认证中间件仍在本文件)(2026-10-13 改造4)
 require('./server/routes/admin').register(app, {
-  adminAuth, db, logger, state, readJSON, tableSig, loadDishData, refreshRecommendationEffect, userStorage, generateToken,
-  loadModelInfo, toCSV, runtimeSettings, saveRuntimeSettings,
+  adminAuth,
+  db,
+  logger,
+  state,
+  readJSON,
+  tableSig,
+  loadDishData,
+  refreshRecommendationEffect,
+  userStorage,
+  generateToken,
+  loadModelInfo,
+  toCSV,
+  runtimeSettings,
+  saveRuntimeSettings,
   getModelInfo: () => modelInfo,
   // 重训锁标志在模块 let 上,经 getter/setter 注入(admin 域不能直接引用本文件作用域)
   getRetrainingCheck: () => _isRetrainingCheck,
-  setRetrainingCheck: (v) => { _isRetrainingCheck = v; },
+  setRetrainingCheck: (v) => {
+    _isRetrainingCheck = v;
+  },
   backupOldModel: () => backupOldModel(),
   syncDishRatings: () => syncDishRatings(),
   trackMetrics: () => trackMetrics(),
@@ -561,16 +750,23 @@ require('./server/routes/orders').register(app, { db, logger, softAuth, authMidd
 // 拿它们自动重训会把模型带偏 —— 所以默认关闭：反馈照常收集进库，
 // 但不自动拿去重训。上线积累到真实反馈后再来后台打开。
 const RUNTIME_SETTINGS_PATH = path.join(__dirname, 'runtime_settings.json');
-try { Object.assign(runtimeSettings, readJSON(RUNTIME_SETTINGS_PATH)); } catch (e) { /* 首次运行无文件，用默认值 */ }
+try {
+  Object.assign(runtimeSettings, readJSON(RUNTIME_SETTINGS_PATH));
+} catch (e) {
+  /* 首次运行无文件，用默认值 */
+}
 function saveRuntimeSettings() {
-  try { fs.writeFileSync(RUNTIME_SETTINGS_PATH, JSON.stringify(runtimeSettings, null, 2)); }
-  catch (e) { logger.warn('保存运行时设置失败: ' + (e?.message || '')); }
+  try {
+    fs.writeFileSync(RUNTIME_SETTINGS_PATH, JSON.stringify(runtimeSettings, null, 2));
+  } catch (e) {
+    logger.warn('保存运行时设置失败: ' + (e?.message || ''));
+  }
 }
 
 // ═══════════════════════════════════════════════
 // 模型版本管理 & 自动重训练
 // ═══════════════════════════════════════════════
-let modelInfo = { version: '1.0', trainedAt: null, feedbackCount: 0, r2: 0 };
+const modelInfo = { version: '1.0', trainedAt: null, feedbackCount: 0, r2: 0 };
 const MODEL_PATH = path.join(__dirname, 'recommendation_model.pkl');
 const MODEL_BACKUP_DIR = path.join(__dirname, 'model_backups');
 
@@ -580,48 +776,60 @@ function loadModelInfo() {
     const data = readJSON(path.join(__dirname, 'model_metrics.json'));
     modelInfo.r2 = data.r2 || 0;
     modelInfo.feedbackCount = data.real_feedback_count || 0;
-  } catch(e) { logger.warn('加载模型指标失败: ' + (e?.message || String(e))); }
+  } catch (e) {
+    logger.warn('加载模型指标失败: ' + (e?.message || String(e)));
+  }
   // 检查模型文件修改时间作为训练时间
   try {
     const stat = fs.statSync(MODEL_PATH);
     modelInfo.trainedAt = stat.mtime.toISOString();
-  } catch(e) { logger.warn('获取模型文件时间失败: ' + (e?.message || String(e))); }
+  } catch (e) {
+    logger.warn('获取模型文件时间失败: ' + (e?.message || String(e)));
+  }
 }
 
 // 备份旧模型
 function backupOldModel() {
   try {
-    if (!fs.existsSync(MODEL_BACKUP_DIR)) fs.mkdirSync(MODEL_BACKUP_DIR);
+    if (!fs.existsSync(MODEL_BACKUP_DIR)) {
+      fs.mkdirSync(MODEL_BACKUP_DIR);
+    }
     const now = new Date();
-    const backupName = `recommendation_model_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.pkl`;
+    const backupName = `recommendation_model_${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}.pkl`;
     const backupPath = path.join(MODEL_BACKUP_DIR, backupName);
     if (fs.existsSync(MODEL_PATH) && !fs.existsSync(backupPath)) {
       fs.copyFileSync(MODEL_PATH, backupPath);
       logger.info(`模型已备份: ${backupName}`);
     }
     // 只保留最近 5 个备份
-    const backups = fs.readdirSync(MODEL_BACKUP_DIR)
-      .filter(f => f.startsWith('recommendation_model_'))
-      .sort().reverse();
-    backups.slice(5).forEach(f => {
+    const backups = fs
+      .readdirSync(MODEL_BACKUP_DIR)
+      .filter((f) => f.startsWith('recommendation_model_'))
+      .sort()
+      .reverse();
+    backups.slice(5).forEach((f) => {
       fs.unlinkSync(path.join(MODEL_BACKUP_DIR, f));
     });
-  } catch(e) { logger.warn('模型备份失败: ' + (e.message || '')); }
+  } catch (e) {
+    logger.warn('模型备份失败: ' + (e.message || ''));
+  }
 }
 
 // 检查反馈数量并决定是否重训练
 let _isRetrainingCheck = false;
 async function checkAndRetrain() {
   // 开关关闭时直接跳过（未上线，feedback 里全是测试用例，不拿它们自动重训）
-  if (!runtimeSettings.autoRetrain) return;
-  if (_isRetrainingCheck || global._isRetraining) return;
+  if (!runtimeSettings.autoRetrain) {
+    return;
+  }
+  if (_isRetrainingCheck || global._isRetraining) {
+    return;
+  }
   _isRetrainingCheck = true;
   global._isRetraining = true;
   try {
     const pool = db;
-    const result = await pool.query(
-      "SELECT COUNT(*) FROM feedback WHERE processed = FALSE OR processed IS NULL"
-    );
+    const result = await pool.query('SELECT COUNT(*) FROM feedback WHERE processed = FALSE OR processed IS NULL');
     const newCount = parseInt(result.rows[0].count);
     if (newCount >= 50 && newCount >= modelInfo.feedbackCount + 10) {
       // 有足够的新反馈，触发重训练（异步执行，不阻塞）
@@ -629,37 +837,65 @@ async function checkAndRetrain() {
       backupOldModel();
       const { spawn } = require('child_process');
       const proc = spawn('python', [path.join(__dirname, 'ml', 'retrain_from_feedback.py')], {
-        cwd: __dirname, env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-        stdio: ['ignore', 'ignore', 'pipe']
+        cwd: __dirname,
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+        stdio: ['ignore', 'ignore', 'pipe'],
       });
-      const retrainTimeout = setTimeout(() => { if (proc.exitCode === null) { global._isRetraining = false; _isRetrainingCheck = false; } }, 30000);
-      proc.stderr?.on('data', (d) => { logger.warn('自动重训练stderr: ' + d.toString().slice(0, 500)); });
-      proc.on('error', (e) => { clearTimeout(retrainTimeout); logger.error('自动重训练进程错误: ' + e.message); _isRetrainingCheck = false; global._isRetraining = false; });
+      const retrainTimeout = setTimeout(() => {
+        if (proc.exitCode === null) {
+          global._isRetraining = false;
+          _isRetrainingCheck = false;
+        }
+      }, 30000);
+      proc.stderr?.on('data', (d) => {
+        logger.warn('自动重训练stderr: ' + d.toString().slice(0, 500));
+      });
+      proc.on('error', (e) => {
+        clearTimeout(retrainTimeout);
+        logger.error('自动重训练进程错误: ' + e.message);
+        _isRetrainingCheck = false;
+        global._isRetraining = false;
+      });
       proc.on('close', async (code) => {
         clearTimeout(retrainTimeout);
         try {
           if (code === 0) {
             const pool = db;
-            await pool.query("UPDATE feedback SET processed = TRUE WHERE processed = FALSE OR processed IS NULL");
+            await pool.query('UPDATE feedback SET processed = TRUE WHERE processed = FALSE OR processed IS NULL');
             modelInfo.feedbackCount = newCount;
             modelInfo.version = (parseFloat(modelInfo.version) + 0.1).toFixed(1);
             modelInfo.trainedAt = new Date().toISOString();
             loadModelInfo();
             logger.info(`自动重训练完成，模型版本: ${modelInfo.version}`);
-            try { await syncDishRatings(); } catch(e) { logger.warn('同步菜品评分失败: ' + (e?.message || '')); }
-            try { await loadDishData(); } catch(e) { logger.error('刷新菜品缓存失败:', e.message); }
+            try {
+              await syncDishRatings();
+            } catch (e) {
+              logger.warn('同步菜品评分失败: ' + (e?.message || ''));
+            }
+            try {
+              await loadDishData();
+            } catch (e) {
+              logger.error('刷新菜品缓存失败:', e.message);
+            }
             refreshRecommendationEffect();
           } else {
             logger.warn('自动重训练失败，退出码: ' + code);
           }
-        } catch(e) { logger.warn('自动重训练处理失败: ' + (e?.message || '')); }
-        finally { _isRetrainingCheck = false; global._isRetraining = false; }
+        } catch (e) {
+          logger.warn('自动重训练处理失败: ' + (e?.message || ''));
+        } finally {
+          _isRetrainingCheck = false;
+          global._isRetraining = false;
+        }
       });
     } else {
       _isRetrainingCheck = false;
       global._isRetraining = false;
     }
-  } catch(e) { _isRetrainingCheck = false; global._isRetraining = false; }
+  } catch (e) {
+    _isRetrainingCheck = false;
+    global._isRetraining = false;
+  }
 }
 
 // 模型版本信息 API
@@ -673,7 +909,9 @@ function trackMetrics() {
   try {
     const metricsPath = path.join(__dirname, 'model_metrics.json');
     const historyPath = path.join(__dirname, 'metrics_history.json');
-    if (!fs.existsSync(metricsPath)) return;
+    if (!fs.existsSync(metricsPath)) {
+      return;
+    }
     const metrics = readJSON(metricsPath);
     const entry = {
       timestamp: new Date().toISOString(),
@@ -681,7 +919,7 @@ function trackMetrics() {
       mse: metrics.mse || 0,
       rmse: metrics.rmse || 0,
       mae: metrics.mae || 0,
-      feedbackCount: metrics.real_feedback_count || 0
+      feedbackCount: metrics.real_feedback_count || 0,
     };
     let history = [];
     if (fs.existsSync(historyPath)) {
@@ -689,24 +927,32 @@ function trackMetrics() {
     }
     history.push(entry);
     // 只保留最近 60 条记录
-    if (history.length > 60) history = history.slice(-60);
+    if (history.length > 60) {
+      history = history.slice(-60);
+    }
     fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
-  } catch(e) { /* 忽略记录错误 */ }
+  } catch (e) {
+    /* 忽略记录错误 */
+  }
 }
 
 // 错误日志监控 + 错误率统计
-let errorStats = { hourly: [], total: 0, lastReset: Date.now() };
+const errorStats = { hourly: [], total: 0, lastReset: Date.now() };
 
 function checkErrorLog() {
   try {
-    const today = new Date().toISOString().slice(0,10);
-    const errorLogPath = path.join(__dirname, 'logs', 'error-'+today+'.log');
-    if (!fs.existsSync(errorLogPath)) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const errorLogPath = path.join(__dirname, 'logs', 'error-' + today + '.log');
+    if (!fs.existsSync(errorLogPath)) {
+      return;
+    }
     const stats = fs.statSync(errorLogPath);
     if (Date.now() - stats.mtimeMs < 3600000 && stats.size > 0) {
       logger.warn('错误日志在 1 小时内有更新，请检查日志文件');
     }
-  } catch(e) { logger.warn('错误日志监控异常: ' + (e?.message || String(e))); }
+  } catch (e) {
+    logger.warn('错误日志监控异常: ' + (e?.message || String(e)));
+  }
 }
 
 // 记录 API 错误
@@ -715,11 +961,11 @@ function recordApiError(path, status) {
   errorStats.hourly.push({
     time: Date.now(),
     path: path,
-    status: status
+    status: status,
   });
   // 只保留最近 1 小时的数据
   const oneHour = 3600000;
-  errorStats.hourly = errorStats.hourly.filter(e => Date.now() - e.time < oneHour);
+  errorStats.hourly = errorStats.hourly.filter((e) => Date.now() - e.time < oneHour);
 }
 
 // 在请求日志中记录错误
@@ -745,15 +991,14 @@ app.use((req, res, next) => {
 
 // 3.1 数据导出 CSV
 function toCSV(headers, rows) {
-  const escape = v => {
+  const escape = (v) => {
     const s = String(v || '');
     // 防止 CSV 注入：以 = + - @ 开头的值添加 \t 前缀
     const safe = /^[=+\-@]/.test(s) ? '\t' + s : s;
     return '"' + safe.replace(/"/g, '""') + '"';
   };
-  return headers.join(',') + '\n' + rows.map(r => r.map(escape).join(',')).join('\n');
+  return headers.join(',') + '\n' + rows.map((r) => r.map(escape).join(',')).join('\n');
 }
-
 
 // 3.2 批量操作
 
@@ -767,18 +1012,28 @@ function toCSV(headers, rows) {
 
 // 404 兜底（对 /api/ 路径返回 JSON，其他路径返回友好页面）
 app.use((req, res) => {
-  res.set('Cache-Control', 'no-store');   // 404 页不缓存: 避免浏览器缓存旧版页面/图片加载失败
+  res.set('Cache-Control', 'no-store'); // 404 页不缓存: 避免浏览器缓存旧版页面/图片加载失败
   if (req.path.startsWith('/api/')) {
     res.status(404).json({ success: false, error: '请求的接口不存在' });
   } else {
-    res.status(404).send(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>页面走丢了 · 唐猫庭院</title><style>body{margin:0;background:#faf6f0;color:#2c1810;font-family:'Noto Serif SC','STSong','SimSun',serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}.box{text-align:center;max-width:480px;}.box img{width:min(360px,86vw);display:block;margin:0 auto 18px;border-radius:16px;box-shadow:0 10px 30px rgba(60,30,10,.14);}h1{font-size:1.6rem;letter-spacing:6px;margin:0 0 10px;font-weight:900;}p{color:#756558;font-size:.95rem;line-height:1.9;margin:0 0 22px;}a.btn{display:inline-block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#b83a2a,#d0453a);padding:10px 34px;border-radius:22px;font-size:.95rem;letter-spacing:3px;box-shadow:0 4px 14px rgba(184,58,42,.35);}.code{margin-top:14px;font-size:.75rem;color:#a08b6a;letter-spacing:2px;}</style></head><body><div class="box"><img src="/assets/illustrations/cat-404.webp?v=20260922" alt="唐猫不小心打翻了托盘"><h1>页面走丢了</h1><p>小唐猫不小心打翻了托盘，找不到这个页面。<br>回首页看看今天的推荐吧。</p><a class="btn" href="/">回唐猫庭院</a><div class="code">404 · NOT FOUND</div></div></body></html>`);
+    res
+      .status(404)
+      .send(
+        `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>页面走丢了 · 唐猫庭院</title><style>body{margin:0;background:#faf6f0;color:#2c1810;font-family:'Noto Serif SC','STSong','SimSun',serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}.box{text-align:center;max-width:480px;}.box img{width:min(360px,86vw);display:block;margin:0 auto 18px;border-radius:16px;box-shadow:0 10px 30px rgba(60,30,10,.14);}h1{font-size:1.6rem;letter-spacing:6px;margin:0 0 10px;font-weight:900;}p{color:#756558;font-size:.95rem;line-height:1.9;margin:0 0 22px;}a.btn{display:inline-block;text-decoration:none;color:#fff;background:linear-gradient(135deg,#b83a2a,#d0453a);padding:10px 34px;border-radius:22px;font-size:.95rem;letter-spacing:3px;box-shadow:0 4px 14px rgba(184,58,42,.35);}.code{margin-top:14px;font-size:.75rem;color:#a08b6a;letter-spacing:2px;}</style></head><body><div class="box"><img src="/assets/illustrations/cat-404.webp?v=20260922" alt="唐猫不小心打翻了托盘"><h1>页面走丢了</h1><p>小唐猫不小心打翻了托盘，找不到这个页面。<br>回首页看看今天的推荐吧。</p><a class="btn" href="/">回唐猫庭院</a><div class="code">404 · NOT FOUND</div></div></body></html>`
+      );
   }
 });
 
 // 500 友好错误页面（仅在非 API 请求时返回 HTML）
 app.use((err, req, res, next) => {
-  if (req.path.startsWith('/api/')) return next(err);
-  res.status(500).send(`<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>500 - 服务器错误 · 唐猫庭院</title><link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css"><link rel="stylesheet" href="styles.css"></head><body><div class="container text-center" style="padding:100px 20px"><h1 style="font-size:6rem;color:#c0392b;font-weight:700;">500</h1><h2 class="mb-4" style="color:#8b7a6a;">😿 服务器出了点小问题</h2><p class="text-muted mb-4">请稍后再试，或联系管理员。</p><a href="/" class="btn btn-primary px-4 py-2" style="background:#c0392b;border-color:#c0392b;border-radius:50px;"><i class="bi bi-house-door"></i> 返回首页</a></div></body></html>`);
+  if (req.path.startsWith('/api/')) {
+    return next(err);
+  }
+  res
+    .status(500)
+    .send(
+      `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>500 - 服务器错误 · 唐猫庭院</title><link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css"><link rel="stylesheet" href="styles.css"></head><body><div class="container text-center" style="padding:100px 20px"><h1 style="font-size:6rem;color:#c0392b;font-weight:700;">500</h1><h2 class="mb-4" style="color:#8b7a6a;">😿 服务器出了点小问题</h2><p class="text-muted mb-4">请稍后再试，或联系管理员。</p><a href="/" class="btn btn-primary px-4 py-2" style="background:#c0392b;border-color:#c0392b;border-radius:50px;"><i class="bi bi-house-door"></i> 返回首页</a></div></body></html>`
+    );
 });
 
 // 数据归档/清理任务（每 24 小时执行）
@@ -787,22 +1042,16 @@ async function cleanupOldData() {
     const pool = db;
     const dayAgo = new Date(Date.now() - 24 * 3600 * 1000 * 30).toISOString(); // 30 天前
     // 永久删除下架超过 30 天的菜品
-    const cleared = await pool.query(
-      "DELETE FROM dishes WHERE is_active = FALSE AND updated_at < $1",
-      [dayAgo]
-    );
+    const cleared = await pool.query('DELETE FROM dishes WHERE is_active = FALSE AND updated_at < $1', [dayAgo]);
     // 清理 90 天前的旧推荐日志
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
-    const oldLogs = await pool.query(
-      "DELETE FROM recommendation_log WHERE created_at < $1",
-      [ninetyDaysAgo]
-    );
+    const oldLogs = await pool.query('DELETE FROM recommendation_log WHERE created_at < $1', [ninetyDaysAgo]);
     // 清理已过期的 token_blacklist 记录
-    const expiredTokens = await pool.query(
-      "DELETE FROM token_blacklist WHERE expires_at < NOW()"
-    );
+    const expiredTokens = await pool.query('DELETE FROM token_blacklist WHERE expires_at < NOW()');
     if (cleared.rowCount > 0 || oldLogs.rowCount > 0 || expiredTokens.rowCount > 0) {
-      logger.info(`数据清理完成：删除 ${cleared.rowCount} 条下架超30天菜品，${oldLogs.rowCount} 条90天前推荐日志，${expiredTokens.rowCount} 条过期token`);
+      logger.info(
+        `数据清理完成：删除 ${cleared.rowCount} 条下架超30天菜品，${oldLogs.rowCount} 条90天前推荐日志，${expiredTokens.rowCount} 条过期token`
+      );
     }
   } catch (e) {
     logger.warn('数据清理任务异常: ' + (e?.message || String(e)));
@@ -831,19 +1080,19 @@ httpServer.listen(PORT, () => {
 // 埋点写入自身有 catch 兜底，列缺失的那几秒只是丢埋点不丢功能。
 db.query(`ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(50) DEFAULT '单菜推荐'`)
   .then(() => logger.info('recommendation_log.mode 列就绪'))
-  .catch(e => logger.error('recommendation_log.mode 迁移失败: ' + e.message));
+  .catch((e) => logger.error('recommendation_log.mode 迁移失败: ' + e.message));
 
 // 幂等迁移：orders 补 completed_at 列（厨房看板"当日已完成"按完成时间归档，
 // 原来回退用 created_at 近似——跨天完成的单会被归错档）。GET /api/orders 走 SELECT * 自动带出。
 db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ`)
   .then(() => logger.info('orders.completed_at 列就绪'))
-  .catch(e => logger.error('orders.completed_at 迁移失败: ' + e.message));
+  .catch((e) => logger.error('orders.completed_at 迁移失败: ' + e.message));
 
 // 幂等迁移：preference_log.price 放宽到 VARCHAR(20)——价格档全称「标准型（12-20元）」11 字符
 // 曾超 VARCHAR(10)，选标准型/品质型的用户一存偏好就 500
 db.query(`ALTER TABLE preference_log ALTER COLUMN price TYPE VARCHAR(20)`)
   .then(() => logger.info('preference_log.price 列宽就绪'))
-  .catch(e => logger.error('preference_log.price 迁移失败: ' + e.message));
+  .catch((e) => logger.error('preference_log.price 迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
@@ -872,7 +1121,7 @@ if (typeof module !== 'undefined' && module.exports) {
 // ═══════════════════════════════════════════════
 // 全局未捕获异常处理（防止进程崩溃）
 // ═══════════════════════════════════════════════
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   logger.error('未捕获的 Promise 拒绝:', reason instanceof Error ? reason.message : String(reason));
 });
 
@@ -887,7 +1136,9 @@ process.on('uncaughtException', (err) => {
 // ═══════════════════════════════════════════════
 let isShuttingDown = false;
 async function gracefulShutdown(signal) {
-  if (isShuttingDown) return;
+  if (isShuttingDown) {
+    return;
+  }
   isShuttingDown = true;
   logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
 

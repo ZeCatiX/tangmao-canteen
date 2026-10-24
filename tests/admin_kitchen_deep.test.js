@@ -7,12 +7,14 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
   return true;
 }
 
@@ -28,23 +30,34 @@ async function adminLogin(page) {
 describe('管理后台深度交互测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 仪表盘 =====
   it('1.1 仪表盘加载并显示统计数据', async () => {
@@ -59,7 +72,9 @@ describe('管理后台深度交互测试', () => {
     // 检查统计卡片是否存在
     const statCards = await page.evaluate(() => {
       const dash = document.getElementById('page-dashboard');
-      if (!dash) return 0;
+      if (!dash) {
+        return 0;
+      }
       return dash.querySelectorAll('.card, .stat-card, [class*="stat"]').length;
     });
     assert.ok(statCards > 0, '仪表盘应显示统计卡片，实际: ' + statCards);
@@ -79,7 +94,9 @@ describe('管理后台深度交互测试', () => {
     // 检查菜品表格是否有数据行
     const tableRows = await page.evaluate(() => {
       const page = document.getElementById('page-dishes');
-      if (!page) return 0;
+      if (!page) {
+        return 0;
+      }
       const tbody = page.querySelector('tbody');
       return tbody ? tbody.children.length : 0;
     });
@@ -188,7 +205,9 @@ describe('管理后台深度交互测试', () => {
     // 检查Bootstrap模态框是否打开
     const modalOpen = await page.evaluate(() => {
       const modal = document.getElementById('dishModal');
-      if (!modal) return false;
+      if (!modal) {
+        return false;
+      }
       // Bootstrap 5 Modal 显示后添加 .show 类并设置 display:block
       const style = window.getComputedStyle(modal);
       return modal.classList.contains('show') || style.display === 'block';
@@ -204,25 +223,38 @@ describe('管理后台深度交互测试', () => {
 describe('厨房看板深度交互测试', () => {
   before(async () => {
     // 重新启动browser，避免detached frame问题
-    if (browser) await browser.close();
+    if (browser) {
+      await browser.close();
+    }
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   it('2.1 厨房看板时间显示正常', async () => {
     resetErrors();
@@ -244,7 +276,7 @@ describe('厨房看板深度交互测试', () => {
     await sleep(500);
     // 尝试登录
     const loginOverlay = await page.$('#login-overlay');
-    const isOverlayVisible = await page.evaluate(el => el && !el.classList.contains('d-none'), loginOverlay);
+    const isOverlayVisible = await page.evaluate((el) => el && !el.classList.contains('d-none'), loginOverlay);
     if (isOverlayVisible) {
       await page.type('#login-user', 'admin', { delay: 30 });
       await page.type('#login-pass', ADMIN_PASS, { delay: 30 });

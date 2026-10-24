@@ -35,7 +35,7 @@ npm run dev
 
 遵循 Conventional Commits 格式：
 
-```
+```text
 feat: 新功能
 fix: 修复 bug
 docs: 文档变更
@@ -64,7 +64,7 @@ npm run lint          # ESLint 检查
 
 ## 项目结构
 
-```
+```text
 ├── server.js          # Express 主入口
 ├── auth.js            # JWT 认证
 ├── db.js              # PostgreSQL 连接池

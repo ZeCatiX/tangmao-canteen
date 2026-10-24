@@ -2,12 +2,18 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const assert = require('node:assert/strict');
@@ -26,8 +32,10 @@ async function api(path, options = {}) {
       headers: { 'Content-Type': 'application/json', ...optHeaders },
       ...rest,
     });
-    if (res.status !== 429) break;
-    await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    if (res.status !== 429) {
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
   }
   const body = await res.json().catch(() => ({}));
   return { status: res.status, body };
@@ -41,18 +49,29 @@ describe('HTTPS和Python Worker深度检查', () => {
     const result = await new Promise((resolve) => {
       let attempts = 0;
       const tryRequest = () => {
-        const req = https.get('https://localhost:3443/api/worker-health', {
-          rejectUnauthorized: false,
-        }, (res) => {
-          let data = '';
-          res.on('data', chunk => data += chunk);
-          res.on('end', () => {
-            if (res.statusCode === 429 && attempts < 3) { attempts++; setTimeout(tryRequest, 500 * attempts); return; }
-            resolve({ status: res.statusCode, body: data });
-          });
-        });
+        const req = https.get(
+          'https://localhost:3443/api/worker-health',
+          {
+            rejectUnauthorized: false,
+          },
+          (res) => {
+            let data = '';
+            res.on('data', (chunk) => (data += chunk));
+            res.on('end', () => {
+              if (res.statusCode === 429 && attempts < 3) {
+                attempts++;
+                setTimeout(tryRequest, 500 * attempts);
+                return;
+              }
+              resolve({ status: res.statusCode, body: data });
+            });
+          }
+        );
         req.on('error', (e) => resolve({ error: e.message }));
-        req.setTimeout(5000, () => { req.destroy(); resolve({ error: 'timeout' }); });
+        req.setTimeout(5000, () => {
+          req.destroy();
+          resolve({ error: 'timeout' });
+        });
       };
       tryRequest();
     });
@@ -78,18 +97,60 @@ describe('HTTPS和Python Worker深度检查', () => {
       method: 'POST',
       body: JSON.stringify({
         userPrefs: {
-          '辣度': '微辣',
-          '咸淡': '适中',
-          '甜酸': '酸甜',
-          '价格区间': '0-30',
-          '热量': '0-500',
-          '饮食_宗教': '无特殊要求'
+          辣度: '微辣',
+          咸淡: '适中',
+          甜酸: '酸甜',
+          价格区间: '0-30',
+          热量: '0-500',
+          饮食_宗教: '无特殊要求',
         },
         dishes: [
-          { id: 1, name: '测试菜品1', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4.5, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: '测试菜品2', spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜', rating: 3.5, price: 25, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '300', protein: '15' },
-          { id: 3, name: '测试菜品3', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 5.0, price: 15, isHalal: true, isVegetarian: true, allergies: [], religion: '无特殊要求', calorie: '150', protein: '8' }
-        ]
+          {
+            id: 1,
+            name: '测试菜品1',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4.5,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: '测试菜品2',
+            spiciness: '中辣',
+            saltiness: '偏咸',
+            sweetness: '咸鲜',
+            rating: 3.5,
+            price: 25,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '300',
+            protein: '15',
+          },
+          {
+            id: 3,
+            name: '测试菜品3',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 5.0,
+            price: 15,
+            isHalal: true,
+            isVegetarian: true,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '150',
+            protein: '8',
+          },
+        ],
       }),
     });
     assert.equal(r.status, 200);
@@ -108,7 +169,23 @@ describe('HTTPS和Python Worker深度检查', () => {
       method: 'POST',
       body: JSON.stringify({
         userPrefs: {},
-        dishes: [{ id: 1, name: '测试', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }]
+        dishes: [
+          {
+            id: 1,
+            name: '测试',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+        ],
       }),
     });
     // 应返回200或错误，但不崩溃
@@ -123,17 +200,34 @@ describe('HTTPS和Python Worker深度检查', () => {
     const dishes = [];
     for (let i = 1; i <= 69; i++) {
       dishes.push({
-        id: i, name: '菜品' + i, spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        rating: 4.0, price: 20, isHalal: false, isVegetarian: false, allergies: [],
-        religion: '无特殊要求', calorie: '200', protein: '10'
+        id: i,
+        name: '菜品' + i,
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        rating: 4.0,
+        price: 20,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
+        calorie: '200',
+        protein: '10',
       });
     }
     const start = Date.now();
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '价格区间': '0-30', '热量': '0-500', '饮食_宗教': '无特殊要求' },
-        dishes
+        userPrefs: {
+          辣度: '微辣',
+          咸淡: '适中',
+          甜酸: '酸甜',
+          价格区间: '0-30',
+          热量: '0-500',
+          饮食_宗教: '无特殊要求',
+        },
+        dishes,
       }),
     });
     const elapsed = Date.now() - start;
@@ -202,7 +296,7 @@ describe('用户存储和认证流程检查', () => {
     const token = reg.body.token;
     // 用token访问订单列表
     const r = await api('/api/orders?userId=' + uniq, {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.ok(r.status === 200 || r.status === 404, 'token应能认证，状态: ' + r.status);
   });
@@ -210,7 +304,7 @@ describe('用户存储和认证流程检查', () => {
   // ===== 11. 过期/无效token被拒绝 =====
   it('11.1 无效token被拒绝', async () => {
     const r = await api('/api/orders?userId=test', {
-      headers: { 'Authorization': 'Bearer invalid_expired_token_xyz' },
+      headers: { Authorization: 'Bearer invalid_expired_token_xyz' },
     });
     assert.equal(r.status, 401, '无效token应返回401');
   });
@@ -226,10 +320,10 @@ describe('用户存储和认证流程检查', () => {
     // 保存偏好
     const saveR = await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         username: uniq,
-        preferences: { spiciness: '微辣', saltiness: '适中', sweetness: '酸甜' }
+        preferences: { spiciness: '微辣', saltiness: '适中', sweetness: '酸甜' },
       }),
     });
     assert.ok(saveR.status === 200 || saveR.status === 201, '保存偏好应成功');
@@ -245,12 +339,12 @@ describe('用户存储和认证流程检查', () => {
     const token = reg.body.token;
     const r = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         dishId: 1,
         score: 4,
         userId: uniq,
-        userPreferences: { spiciness: '微辣' }
+        userPreferences: { spiciness: '微辣' },
       }),
     });
     assert.ok(r.status === 200 || r.status === 201, '反馈提交应成功');
@@ -266,11 +360,11 @@ describe('用户存储和认证流程检查', () => {
     const token = reg.body.token;
     const r = await api('/api/order', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
         items: [{ id: dishPool[0].id, name: '测试菜品', price: 20, type: '偏好推荐', matchRate: 0.8 }],
-        totalPrice: 20
+        totalPrice: 20,
       }),
     });
     assert.ok(r.status === 200 || r.status === 201, '订单创建应成功');

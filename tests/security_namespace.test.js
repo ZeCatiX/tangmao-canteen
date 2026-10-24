@@ -29,8 +29,11 @@ describe('限流和暴力破解防护检查', () => {
     // 应有RateLimit头（express-rate-limit标准头）
     const headers = r.headers;
     // draft-6标准头
-    const hasRateLimit = headers.get('ratelimit-limit') || headers.get('ratelimit-remaining') ||
-                        headers.get('x-ratelimit-limit') || headers.get('x-ratelimit-remaining');
+    const hasRateLimit =
+      headers.get('ratelimit-limit') ||
+      headers.get('ratelimit-remaining') ||
+      headers.get('x-ratelimit-limit') ||
+      headers.get('x-ratelimit-remaining');
     assert.ok(hasRateLimit !== null, '登录端点应有限流头');
   });
 
@@ -66,7 +69,7 @@ describe('限流和暴力破解防护检查', () => {
     if (r.body.token) {
       await api('/api/user/delete', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + r.body.token },
+        headers: { Authorization: 'Bearer ' + r.body.token },
         body: JSON.stringify({ username: 'ratelimit_reg' }),
       });
     }
@@ -104,34 +107,67 @@ describe('JS函数全局命名空间检查', () => {
   let browser, page;
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
   });
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // ===== 7. 首页全局函数无冲突 =====
   it('7.1 首页关键函数存在且不重复定义', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const check = await page.evaluate(() => {
-      const required = ['login', 'register', 'showSection', 'fetchRecommendations',
-        'displayRecommendations', 'addToFavorites', 'addToBlacklist', 'openStarFeedback',
-        'submitStarFeedback', 'endRecommendation', 'checkoutCart', 'showCart', 'clearCart',
-        'logout', 'deleteAccount', 'showProfile', 'loadUserPreferences', 'esc',
-        'authHeaders', 'getCart', 'saveCart', 'formatPrice', 'showMessage',
-        'checkApiAvailability', 'loadDecisionTreeModel', 'predictWithDecisionTree',
-        'computeDishMatch', 'generateDishReason', 'selectBlindBoxDish',
-        'resetRecommendation', 'fallback', 'safeFetch'];
+      const required = [
+        'login',
+        'register',
+        'showSection',
+        'fetchRecommendations',
+        'displayRecommendations',
+        'addToFavorites',
+        'addToBlacklist',
+        'openStarFeedback',
+        'submitStarFeedback',
+        'endRecommendation',
+        'checkoutCart',
+        'showCart',
+        'clearCart',
+        'logout',
+        'deleteAccount',
+        'showProfile',
+        'loadUserPreferences',
+        'esc',
+        'authHeaders',
+        'getCart',
+        'saveCart',
+        'formatPrice',
+        'showMessage',
+        'checkApiAvailability',
+        'loadDecisionTreeModel',
+        'predictWithDecisionTree',
+        'computeDishMatch',
+        'generateDishReason',
+        'selectBlindBoxDish',
+        'resetRecommendation',
+        'fallback',
+        'safeFetch',
+      ];
       const results = {};
-      required.forEach(f => {
+      required.forEach((f) => {
         results[f] = typeof window[f] === 'function';
       });
       return results;
     });
-    const missing = Object.entries(check).filter(([k, v]) => !v).map(([k]) => k);
+    const missing = Object.entries(check)
+      .filter(([k, v]) => !v)
+      .map(([k]) => k);
     assert.equal(missing.length, 0, '缺少全局函数: ' + missing.join(', '));
   });
 
@@ -145,17 +181,32 @@ describe('JS函数全局命名空间检查', () => {
     await page.evaluate(() => document.getElementById('admin-login-btn').click());
     await sleep(2000);
     const check = await page.evaluate(() => {
-      const required = ['loadStats', 'loadDishes', 'editDish', 'saveDish', 'deleteDish',
-        'exportCSV', 'showAdmin', 'showToast', 'loadUsers', 'deleteUser',
-        'loadFeedback', 'loadPopularDishes', 'loadNotifications',
-        'loadModelManagement', 'renderRatingChart'];
+      const required = [
+        'loadStats',
+        'loadDishes',
+        'editDish',
+        'saveDish',
+        'deleteDish',
+        'exportCSV',
+        'showAdmin',
+        'showToast',
+        'loadUsers',
+        'deleteUser',
+        'loadFeedback',
+        'loadPopularDishes',
+        'loadNotifications',
+        'loadModelManagement',
+        'renderRatingChart',
+      ];
       const results = {};
-      required.forEach(f => {
+      required.forEach((f) => {
         results[f] = typeof window[f] === 'function';
       });
       return results;
     });
-    const missing = Object.entries(check).filter(([k, v]) => !v).map(([k]) => k);
+    const missing = Object.entries(check)
+      .filter(([k, v]) => !v)
+      .map(([k]) => k);
     assert.equal(missing.length, 0, '缺少管理后台函数: ' + missing.join(', '));
   });
 
@@ -164,15 +215,16 @@ describe('JS函数全局命名空间检查', () => {
     await page.goto(BASE + '/kitchen', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const check = await page.evaluate(() => {
-      const required = ['doLogin', 'loadOrders', 'completeOrder', 'updateTime',
-        'esc', 'getToken', 'getAuthHeaders'];
+      const required = ['doLogin', 'loadOrders', 'completeOrder', 'updateTime', 'esc', 'getToken', 'getAuthHeaders'];
       const results = {};
-      required.forEach(f => {
+      required.forEach((f) => {
         results[f] = typeof window[f] === 'function';
       });
       return results;
     });
-    const missing = Object.entries(check).filter(([k, v]) => !v).map(([k]) => k);
+    const missing = Object.entries(check)
+      .filter(([k, v]) => !v)
+      .map(([k]) => k);
     assert.equal(missing.length, 0, '缺少厨房看板函数: ' + missing.join(', '));
   });
 
@@ -277,4 +329,4 @@ describe('HTTP状态码和错误页面检查', () => {
   });
 });
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

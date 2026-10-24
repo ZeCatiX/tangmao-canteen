@@ -7,17 +7,29 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -42,23 +54,34 @@ async function getAdminToken() {
 describe('深层边界与特殊场景测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 特殊字符菜名（emoji、unicode） =====
   it('1.1 含emoji的菜名不崩溃', async () => {
@@ -66,13 +89,21 @@ describe('深层边界与特殊场景测试', () => {
     const adminToken = await getAdminToken();
     const r = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
         name: '🔥 火焰测试 🐉 龙菜',
         category: '测试',
-        spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        price: 30, rating: 4.0, calorie: 200, protein: 10,
-        isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        price: 30,
+        rating: 4.0,
+        calorie: 200,
+        protein: 10,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     assert.equal(r.status, 200, '含emoji菜名应创建成功');
@@ -81,7 +112,7 @@ describe('深层边界与特殊场景测试', () => {
     if (r.body.id) {
       await api('/api/admin/dish/' + r.body.id + '/permanent', {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
     }
   });
@@ -93,13 +124,21 @@ describe('深层边界与特殊场景测试', () => {
     const longName = '长'.repeat(101);
     const r = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
         name: longName,
         category: '测试',
-        spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        price: 10, rating: 3.5, calorie: 100, protein: 5,
-        isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        price: 10,
+        rating: 3.5,
+        calorie: 100,
+        protein: 5,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     assert.equal(r.status, 400, '超长菜名应返回400');
@@ -112,13 +151,21 @@ describe('深层边界与特殊场景测试', () => {
     const adminToken = await getAdminToken();
     const r = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
         name: '免费试吃_' + Date.now(),
         category: '测试',
-        spiciness: '不辣', saltiness: '清淡', sweetness: '无味',
-        price: 0, rating: 3.0, calorie: 0, protein: 0,
-        isHalal: false, isVegetarian: true, allergies: [], religion: '无特殊要求'
+        spiciness: '不辣',
+        saltiness: '清淡',
+        sweetness: '无味',
+        price: 0,
+        rating: 3.0,
+        calorie: 0,
+        protein: 0,
+        isHalal: false,
+        isVegetarian: true,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     assert.equal(r.status, 200, '零价格菜品应创建成功');
@@ -126,7 +173,7 @@ describe('深层边界与特殊场景测试', () => {
     if (r.body.id) {
       await api('/api/admin/dish/' + r.body.id + '/permanent', {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
     }
   });
@@ -181,28 +228,46 @@ describe('深层边界与特殊场景测试', () => {
     // 先创建两个菜品
     const r1 = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
-        name: 'batch_t' + Date.now(), category: '测试',
-        spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        price: 10, rating: 3.5, calorie: 100, protein: 5,
-        isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
+        name: 'batch_t' + Date.now(),
+        category: '测试',
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        price: 10,
+        rating: 3.5,
+        calorie: 100,
+        protein: 5,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     const r2 = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
-        name: 'batch_t' + Date.now(), category: '测试',
-        spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜',
-        price: 20, rating: 4.0, calorie: 200, protein: 10,
-        isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
+        name: 'batch_t' + Date.now(),
+        category: '测试',
+        spiciness: '中辣',
+        saltiness: '偏咸',
+        sweetness: '咸鲜',
+        price: 20,
+        rating: 4.0,
+        calorie: 200,
+        protein: 10,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     // 测试批量状态更新
     const batchR = await api('/api/admin/dish/batch-status', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ ids: [r1.body.id, r2.body.id], is_active: false }),
     });
     assert.ok(batchR.status === 200 || batchR.status === 400, '批量状态更新应返回200或400');
@@ -210,13 +275,13 @@ describe('深层边界与特殊场景测试', () => {
     if (r1.body.id) {
       await api('/api/admin/dish/' + r1.body.id + '/permanent', {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
     }
     if (r2.body.id) {
       await api('/api/admin/dish/' + r2.body.id + '/permanent', {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
     }
     assert.equal(realErrors().length, 0, '批量操作不应有错误');
@@ -236,14 +301,21 @@ describe('深层边界与特殊场景测试', () => {
       document.getElementById('preference-form').querySelector('button[type="submit"]').click();
     });
     // 有界等待推荐卡片渲染(ML冷启动时盲等5秒不够)
-    await page.waitForFunction(() => document.querySelectorAll('#dish-list button').length > 0, { timeout: 30000, polling: 1000 }).catch(() => { /* 超时交给下方断言报错 */ });
+    await page
+      .waitForFunction(() => document.querySelectorAll('#dish-list button').length > 0, {
+        timeout: 30000,
+        polling: 1000,
+      })
+      .catch(() => {
+        /* 超时交给下方断言报错 */
+      });
     // 2026-10-08 产品决策:游客态隐藏收藏/拉黑按钮(消除"请先登录"弹窗误触),仅登录用户渲染
     const btnCount = await page.evaluate(() => {
       return {
         fav: document.querySelectorAll('#dish-list button[onclick*="addToFavorites"]').length,
         blk: document.querySelectorAll('#dish-list button[onclick*="addToBlacklist"]').length,
         star: document.querySelectorAll('#dish-list button[onclick*="openStarFeedback"]').length,
-        cart: document.querySelectorAll('#dish-list .add-to-cart-btn').length
+        cart: document.querySelectorAll('#dish-list .add-to-cart-btn').length,
       };
     });
     assert.equal(btnCount.fav, 0, '游客态不应渲染收藏按钮(游客隐藏设计)');
@@ -258,7 +330,7 @@ describe('深层边界与特殊场景测试', () => {
     resetErrors();
     const adminToken = await getAdminToken();
     const r = await api('/api/admin/monitor', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     // 监控端点可能返回200或404
     assert.ok(r.status === 200 || r.status === 404, '监控端点应返回200或404');
@@ -277,10 +349,10 @@ describe('深层边界与特殊场景测试', () => {
     // 保存偏好
     await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         username: uniq,
-        preferences: { spiciness: '重辣', saltiness: '偏咸', sweetness: '咸鲜' }
+        preferences: { spiciness: '重辣', saltiness: '偏咸', sweetness: '咸鲜' },
       }),
     });
     // 获取推荐（通过API）
@@ -290,7 +362,7 @@ describe('深层边界与特殊场景测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
     assert.equal(realErrors().length, 0, '偏好保存+推荐不应有错误');
@@ -308,12 +380,12 @@ describe('深层边界与特殊场景测试', () => {
     // 提交两次相同反馈
     const fb1 = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ dishId: 1, score: 4, userId: uniq, userPreferences: {} }),
     });
     const fb2 = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ dishId: 1, score: 4, userId: uniq, userPreferences: {} }),
     });
     assert.ok(fb1.status === 200 || fb1.status === 201, '第一次反馈应成功');
@@ -321,7 +393,7 @@ describe('深层边界与特殊场景测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
     assert.equal(realErrors().length, 0, '重复反馈不应有错误');

@@ -33,13 +33,15 @@ async function getAdminToken() {
 
 describe('文件上传安全性检查', () => {
   let adminToken;
-  before(async () => { adminToken = await getAdminToken(); });
+  before(async () => {
+    adminToken = await getAdminToken();
+  });
 
   // ===== 1. 无文件上传返回400 =====
   it('1.1 无文件上传返回400', async () => {
     const r = await fetch(BASE + '/api/admin/dish/upload-image', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     const body = await r.json().catch(() => ({}));
     assert.equal(r.status, 400);
@@ -62,7 +64,7 @@ describe('文件上传安全性检查', () => {
 
     const r = await fetch(BASE + '/api/admin/dish/upload-image', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: formData,
     });
     const body = await r.json().catch(() => ({}));
@@ -79,7 +81,7 @@ describe('文件上传安全性检查', () => {
 
     const r = await fetch(BASE + '/api/admin/dish/upload-image', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: formData,
     });
     // 应被multer fileFilter拒绝
@@ -106,7 +108,7 @@ describe('文件上传安全性检查', () => {
 
     const r = await fetch(BASE + '/api/admin/dish/upload-image', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: formData,
     });
     // 即使上传成功，文件名也应在uploads目录内
@@ -139,18 +141,25 @@ describe('暗黑模式CSS检查', () => {
   let browser, page;
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox', '--force-dark-mode']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox', '--force-dark-mode'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') page._consoleErrors.push(msg.text());
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   it('9.1 暗黑模式首页不崩溃且显示正常', async () => {
     page._consoleErrors = [];
@@ -163,9 +172,9 @@ describe('暗黑模式CSS检查', () => {
     });
     assert.ok(bg, '暗黑模式下body应有背景色: ' + bg);
     // 不应有JS错误
-    const jsErrors = page._consoleErrors.filter(e =>
-      !e.includes('fonts.') && !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') && !e.includes('favicon')
+    const jsErrors = page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') && !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '暗黑模式不应有JS错误: ' + jsErrors.join('; '));
   });
@@ -176,9 +185,9 @@ describe('暗黑模式CSS检查', () => {
     await sleep(500);
     const loginBtn = await page.$('#admin-login-btn');
     assert.ok(loginBtn, '暗黑模式下管理后台登录按钮应存在');
-    const jsErrors = page._consoleErrors.filter(e =>
-      !e.includes('fonts.') && !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') && !e.includes('favicon')
+    const jsErrors = page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') && !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '暗黑模式管理后台不应有JS错误');
   });
@@ -189,9 +198,9 @@ describe('暗黑模式CSS检查', () => {
     await sleep(500);
     const orderList = await page.$('#order-list');
     assert.ok(orderList, '暗黑模式下厨房看板订单列表应存在');
-    const jsErrors = page._consoleErrors.filter(e =>
-      !e.includes('fonts.') && !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') && !e.includes('favicon')
+    const jsErrors = page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') && !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '暗黑模式厨房看板不应有JS错误');
   });
@@ -214,12 +223,12 @@ describe('暗黑模式CSS检查', () => {
       return el && !el.classList.contains('d-none');
     });
     assert.ok(recVisible, '暗黑模式下推荐结果应显示');
-    const jsErrors = page._consoleErrors.filter(e =>
-      !e.includes('fonts.') && !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') && !e.includes('favicon')
+    const jsErrors = page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') && !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '暗黑模式推荐页不应有JS错误');
   });
 });
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

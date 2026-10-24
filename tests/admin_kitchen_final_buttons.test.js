@@ -43,7 +43,14 @@ describe('管理后台HTML元素验证', () => {
 
   it('5.1 admin.html 包含偏好统计看板', async () => {
     const html = await getHtml('/admin');
-    const prefIds = ['pref-spiciness', 'pref-saltiness', 'pref-sweetness', 'pref-price', 'pref-calorie', 'pref-religion'];
+    const prefIds = [
+      'pref-spiciness',
+      'pref-saltiness',
+      'pref-sweetness',
+      'pref-price',
+      'pref-calorie',
+      'pref-religion',
+    ];
     for (const id of prefIds) {
       assert.ok(html.includes(id), `应包含 ${id} 偏好统计看板`);
     }

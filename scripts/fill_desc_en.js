@@ -1,7 +1,11 @@
 // 一次性:通过 admin API 给 29 道有中文描述的菜品补 description_en(规格短语英译)
 const BASE = process.env.BASE || 'http://localhost:3000';
-const ADMIN_USER = process.env.ADMIN_USER, ADMIN_PASS = process.env.ADMIN_PASS;
-if (!ADMIN_USER || !ADMIN_PASS) { console.error('需要 ADMIN_USER/ADMIN_PASS 环境变量'); process.exit(1); }
+const ADMIN_USER = process.env.ADMIN_USER,
+  ADMIN_PASS = process.env.ADMIN_PASS;
+if (!ADMIN_USER || !ADMIN_PASS) {
+  console.error('需要 ADMIN_USER/ADMIN_PASS 环境变量');
+  process.exit(1);
+}
 
 const EN = {
   2070: 'About 250g fish, cleaned',
@@ -37,22 +41,37 @@ const EN = {
 
 (async () => {
   const login = await fetch(BASE + '/api/admin/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: ADMIN_USER, password: ADMIN_PASS }),
   });
   const lj = await login.json();
-  if (!lj.token) { console.error('登录失败:', JSON.stringify(lj).slice(0, 200)); process.exit(1); }
+  if (!lj.token) {
+    console.error('登录失败:', JSON.stringify(lj).slice(0, 200));
+    process.exit(1);
+  }
   const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + lj.token };
   const j = await (await fetch(BASE + '/api/dishes')).json();
-  let ok = 0, skip = 0, fail = 0;
+  let ok = 0,
+    skip = 0,
+    fail = 0;
   for (const d of j.dishes) {
     const en = EN[d.id];
-    if (!en) { skip++; continue; }
+    if (!en) {
+      skip++;
+      continue;
+    }
     const r = await fetch(BASE + '/api/admin/dish/' + d.id, {
-      method: 'PUT', headers: H,
+      method: 'PUT',
+      headers: H,
       body: JSON.stringify({ description_en: en }),
     });
-    if (r.ok) ok++; else { fail++; console.error('FAIL', d.id, d.name, r.status, (await r.text()).slice(0, 120)); }
+    if (r.ok) {
+      ok++;
+    } else {
+      fail++;
+      console.error('FAIL', d.id, d.name, r.status, (await r.text()).slice(0, 120));
+    }
   }
   console.log(`ok=${ok} skip=${skip} fail=${fail}`);
 })();

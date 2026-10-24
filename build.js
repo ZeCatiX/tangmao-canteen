@@ -9,15 +9,15 @@ const esbuild = require('esbuild');
 
 const files = [
   'js/globals.js',
-  'js/menu.js',      // 菜单渲染域(2026-10-19 自 core.js 拆出)
-  'js/cart.js',      // 购物车与结算域(2026-10-19 自 core.js 拆出)
+  'js/menu.js', // 菜单渲染域(2026-10-19 自 core.js 拆出)
+  'js/cart.js', // 购物车与结算域(2026-10-19 自 core.js 拆出)
   'js/core.js',
   'js/recommendation.js',
   'js/logo-intro.js',
   'js/init.js',
 ];
 
-const parts = files.map(f => {
+const parts = files.map((f) => {
   try {
     return fs.readFileSync(f, 'utf8');
   } catch (e) {
@@ -27,27 +27,32 @@ const parts = files.map(f => {
 });
 const combined = parts.join('\n');
 
-esbuild.transform(combined, {
-  minify: true,
-  target: ['es2018'],
-  legalComments: 'none',
-  logLevel: 'warning',
-}).then(r => {
-  fs.writeFileSync('script.js', r.code);
-  console.log(`✓ script.js 已生成 (${r.code.length} bytes, 源 ${combined.length} bytes, 压缩率 ${(r.code.length / combined.length * 100).toFixed(0)}%)`);
-  // 验证语法
-  try {
-    require('child_process').execSync('node --check script.js', { stdio: 'pipe' });
-    console.log('✓ 语法验证通过');
-  } catch (e) {
-    console.error('✗ 语法错误:', e.stderr.toString());
+esbuild
+  .transform(combined, {
+    minify: true,
+    target: ['es2018'],
+    legalComments: 'none',
+    logLevel: 'warning',
+  })
+  .then((r) => {
+    fs.writeFileSync('script.js', r.code);
+    console.log(
+      `✓ script.js 已生成 (${r.code.length} bytes, 源 ${combined.length} bytes, 压缩率 ${((r.code.length / combined.length) * 100).toFixed(0)}%)`
+    );
+    // 验证语法
+    try {
+      require('child_process').execSync('node --check script.js', { stdio: 'pipe' });
+      console.log('✓ 语法验证通过');
+    } catch (e) {
+      console.error('✗ 语法错误:', e.stderr.toString());
+      process.exit(1);
+    }
+    if (r.warnings.length) {
+      console.warn('⚠ esbuild 警告:');
+      r.warnings.forEach((w) => console.warn(' ', w.text));
+    }
+  })
+  .catch((e) => {
+    console.error('✗ esbuild 压缩失败:', e.message);
     process.exit(1);
-  }
-  if (r.warnings.length) {
-    console.warn('⚠ esbuild 警告:');
-    r.warnings.forEach(w => console.warn(' ', w.text));
-  }
-}).catch(e => {
-  console.error('✗ esbuild 压缩失败:', e.message);
-  process.exit(1);
-});
+  });

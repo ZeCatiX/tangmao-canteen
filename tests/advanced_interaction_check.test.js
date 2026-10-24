@@ -5,40 +5,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('高级交互验证', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 菜单类别筛选联动 =====
   it('1.1 菜单类别下拉筛选结果变化', async () => {
@@ -47,7 +70,9 @@ describe('高级交互验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     // 获取初始行数
@@ -88,7 +113,9 @@ describe('高级交互验证', () => {
     // 重置
     await page.evaluate(() => {
       const btn = document.getElementById('menu-reset-filter');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, '菜单类别筛选不应有错误');
@@ -101,14 +128,18 @@ describe('高级交互验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     // 获取排序下拉框选项
     const sortOptions = await page.evaluate(() => {
       const select = document.getElementById('menu-sort');
-      if (!select) return [];
-      return Array.from(select.options).map(o => o.text);
+      if (!select) {
+        return [];
+      }
+      return Array.from(select.options).map((o) => o.text);
     });
     if (sortOptions.length > 1) {
       // 选择第二个排序方式
@@ -138,7 +169,9 @@ describe('高级交互验证', () => {
     // 重置筛选后测试辣度筛选
     await page.evaluate(() => {
       const btn = document.getElementById('menu-reset-filter');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const initialRows = await page.evaluate(() => {
@@ -168,7 +201,9 @@ describe('高级交互验证', () => {
     // 重置
     await page.evaluate(() => {
       const btn = document.getElementById('menu-reset-filter');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, '辣度筛选不应有错误');
@@ -183,9 +218,11 @@ describe('高级交互验证', () => {
     const navIds = ['nav-home', 'nav-about', 'nav-dataset', 'nav-privacy'];
     for (let round = 0; round < 3; round++) {
       for (const id of navIds) {
-        await page.evaluate(nid => {
+        await page.evaluate((nid) => {
           const link = document.getElementById(nid);
-          if (link) link.click();
+          if (link) {
+            link.click();
+          }
         }, id);
         await sleep(100);
       }
@@ -228,23 +265,36 @@ describe('高级交互验证', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     // 登录
@@ -252,15 +302,23 @@ describe('高级交互验证', () => {
     await sleep(300);
     await page.evaluate((u) => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 检查"我的"导航是否显示
@@ -282,7 +340,7 @@ describe('高级交互验证', () => {
     // 选择价格区间
     const priceOptions = await page.evaluate(() => {
       const select = document.getElementById('price');
-      return select ? Array.from(select.options).map(o => o.text) : [];
+      return select ? Array.from(select.options).map((o) => o.text) : [];
     });
     assert.ok(priceOptions.length > 1, `价格区间应有多个选项，实际: ${priceOptions.length}`);
     if (priceOptions.length > 1) {
@@ -301,17 +359,22 @@ describe('高级交互验证', () => {
     // 选择素食
     await page.evaluate(() => {
       const cb = document.getElementById('vegetarian');
-      if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      if (cb) {
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     });
     // 提交偏好
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     const recoVisible = await page.evaluate(() => {
       const section = document.getElementById('recommendation-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(recoVisible, '素食偏好应能获取推荐');
     assert.equal(realErrors().length, 0, '素食偏好推荐不应有错误');
@@ -328,7 +391,9 @@ describe('高级交互验证', () => {
     for (let i = 0; i < 3; i++) {
       await page.evaluate(() => {
         const btn = document.querySelector('#preference-form button[type="submit"]');
-        if (btn) btn.click();
+        if (btn) {
+          btn.click();
+        }
       });
       await sleep(100);
     }
@@ -354,14 +419,19 @@ describe('高级交互验证', () => {
     // 点击汉堡菜单
     await page.evaluate(() => {
       const btn = document.querySelector('.navbar-toggler');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const afterClick = await page.evaluate(() => {
       const btn = document.querySelector('.navbar-toggler');
       return btn ? btn.getAttribute('aria-expanded') : null;
     });
-    assert.ok(initialExpanded === 'false' || initialExpanded === null, `初始aria-expanded应为false: ${initialExpanded}`);
+    assert.ok(
+      initialExpanded === 'false' || initialExpanded === null,
+      `初始aria-expanded应为false: ${initialExpanded}`
+    );
     assert.ok(afterClick === 'true' || afterClick === null, `点击后aria-expanded应为true: ${afterClick}`);
     await page.setViewport({ width: 1280, height: 800 });
     assert.equal(realErrors().length, 0, '汉堡菜单aria不应有错误');

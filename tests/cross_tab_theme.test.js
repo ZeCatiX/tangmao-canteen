@@ -8,35 +8,52 @@ const path = require('path');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ROOT = path.join(__dirname, '..');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('跨标签页购物车同步检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
   });
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // ===== 1. localStorage storage事件触发购物车角标更新 =====
   it('1.1 storage事件触发购物车角标更新', async () => {
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     // 清空购物车
@@ -112,7 +129,10 @@ describe('颜色主题和CSS变量一致性检查', () => {
     const varUsage = (css.match(/var\(--[a-z-]+\)/g) || []).length;
     assert.ok(varUsage > 10, `CSS应大量使用var()引用变量，实际: ${varUsage}`);
     // 检查body使用var()引用背景色
-    assert.ok(css.includes('background-color:var(') || css.includes('background-color: var('), 'body背景色应使用var()引用');
+    assert.ok(
+      css.includes('background-color:var(') || css.includes('background-color: var('),
+      'body背景色应使用var()引用'
+    );
   });
 
   // ===== 6. admin.html内联样式使用一致的颜色 =====
@@ -139,23 +159,34 @@ describe('颜色主题和CSS变量一致性检查', () => {
 describe('页面交互细节深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 8. 首页logo图片加载 =====
   it('8.1 首页logo图片正常加载', async () => {
@@ -164,7 +195,9 @@ describe('页面交互细节深度检查', () => {
     await sleep(500);
     const logoOk = await page.evaluate(() => {
       const img = document.querySelector('img[alt="餐馆Logo"]');
-      if (!img) return false;
+      if (!img) {
+        return false;
+      }
       return img.complete && img.naturalWidth > 0;
     });
     assert.ok(logoOk, 'logo图片应正常加载');
@@ -195,11 +228,13 @@ describe('页面交互细节深度检查', () => {
     resetErrors();
     const sections = ['about-section', 'dataset-section', 'privacy-section', 'home-section'];
     for (const s of sections) {
-      await page.evaluate(sec => showSection(sec), s);
+      await page.evaluate((sec) => showSection(sec), s);
       await sleep(200);
       const navVisible = await page.evaluate(() => {
         const nav = document.querySelector('.navbar');
-        if (!nav) return false;
+        if (!nav) {
+          return false;
+        }
         const rect = nav.getBoundingClientRect();
         return rect.height > 0;
       });
@@ -214,19 +249,30 @@ describe('页面交互细节深度检查', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」+ 选桌(guest-btn 现进菜单)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     const labels = await page.evaluate(() => {
-      var inputs = document.querySelectorAll('#preference-section select, #preference-section input');
+      const inputs = document.querySelectorAll('#preference-section select, #preference-section input');
       // 2026-09-17: 只返回无 label 关联的 SELECT 元素 ID(修复原代码在 Node 上下文访问 document 的 bug)
-      return Array.from(inputs).filter(function(input) {
-        var id = input.id;
-        if (!id) return false;
-        var label = document.querySelector('label[for="' + id + '"]');
-        return !label && input.tagName === 'SELECT';
-      }).map(function(input) { return input.id; });
+      return Array.from(inputs)
+        .filter(function (input) {
+          const id = input.id;
+          if (!id) {
+            return false;
+          }
+          const label = document.querySelector('label[for="' + id + '"]');
+          return !label && input.tagName === 'SELECT';
+        })
+        .map(function (input) {
+          return input.id;
+        });
     });
-    var selectsWithoutLabel = labels;
+    const selectsWithoutLabel = labels;
     assert.ok(selectsWithoutLabel.length === 0, 'select元素应有label关联: ' + selectsWithoutLabel.join(', '));
   });
 
@@ -240,10 +286,20 @@ describe('页面交互细节深度检查', () => {
       document.getElementById('preference-form').querySelector('button[type="submit"]').click();
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    for (let wi = 0; wi < 25; wi++) {
+      await sleep(1000);
+      try {
+        if (
+          document.getElementById('recommendation-result') &&
+          !document.getElementById('recommendation-result').classList.contains('d-none')
+        ) {
+          break;
+        }
+      } catch (e) {}
+    }
     const names = await page.evaluate(() => {
       const headings = document.querySelectorAll('#dish-list h5');
-      return Array.from(headings).map(h => h.textContent.trim());
+      return Array.from(headings).map((h) => h.textContent.trim());
     });
     assert.ok(names.length > 0, '应有推荐菜品');
     for (const name of names) {
@@ -258,7 +314,7 @@ describe('页面交互细节深度检查', () => {
   it('14.1 推荐结果菜品价格显示正确', async () => {
     const prices = await page.evaluate(() => {
       const items = document.querySelectorAll('#dish-list p.mb-1');
-      return Array.from(items).map(p => p.textContent);
+      return Array.from(items).map((p) => p.textContent);
     });
     for (const text of prices) {
       // 应包含价格信息（"元"或"未知"）
@@ -272,7 +328,9 @@ describe('页面交互细节深度检查', () => {
     const check = await page.evaluate(() => {
       const modal = document.getElementById('message-modal');
       const nav = document.querySelector('.navbar');
-      if (!modal || !nav) return false;
+      if (!modal || !nav) {
+        return false;
+      }
       const modalZ = parseInt(window.getComputedStyle(modal).zIndex) || 0;
       const navZ = parseInt(window.getComputedStyle(nav).zIndex) || 0;
       return modalZ > navZ;
@@ -294,7 +352,9 @@ describe('页面交互细节深度检查', () => {
     await sleep(500);
     await page.evaluate(() => {
       const btn = document.getElementById('modal-close-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 关闭后应能正常点击按钮

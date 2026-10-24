@@ -17,14 +17,15 @@ function readJSON(f) {
 // 从 API 获取菜品数据（替代 dishes_current.json）
 let dishesData = null;
 async function getDishesData() {
-  if (dishesData) return dishesData;
+  if (dishesData) {
+    return dishesData;
+  }
   const resp = await fetch(BASE + '/api/dishes');
   dishesData = await resp.json();
   return dishesData;
 }
 
 describe('数据文件完整性检查', () => {
-
   // ===== 1. API 菜品数据结构（替代 dishes_current.json） =====
   it('1.1 API菜品数据结构和字段完整', async () => {
     const data = await getDishesData();
@@ -43,20 +44,28 @@ describe('数据文件完整性检查', () => {
     const cur = await getDishesData();
     // dishes_verify.json 可能不存在，跳过比较
     const verifyPath = path.join(ROOT, 'dishes_verify.json');
-    if (!fs.existsSync(verifyPath)) { assert.ok(true, 'dishes_verify.json 不存在，跳过'); return; }
+    if (!fs.existsSync(verifyPath)) {
+      assert.ok(true, 'dishes_verify.json 不存在，跳过');
+      return;
+    }
     const ver = readJSON('dishes_verify.json');
     assert.ok(Array.isArray(ver.dishes), 'verify应有dishes数组');
-    assert.ok(ver.dishes.length >= cur.dishes.length - 5,
-      `verify(${ver.dishes.length})应接近current(${cur.dishes.length})`);
+    assert.ok(
+      ver.dishes.length >= cur.dishes.length - 5,
+      `verify(${ver.dishes.length})应接近current(${cur.dishes.length})`
+    );
   });
 
   // ===== 3. 菜品ID唯一性 =====
   it('3.1 菜品ID唯一且有序', async () => {
     const data = await getDishesData();
-    const ids = data.dishes.map(d => d.id);
+    const ids = data.dishes.map((d) => d.id);
     const unique = new Set(ids);
     assert.equal(unique.size, ids.length, '菜品ID应唯一');
-    assert.ok(ids.every(id => id > 0), '菜品ID应为正数');
+    assert.ok(
+      ids.every((id) => id > 0),
+      '菜品ID应为正数'
+    );
   });
 
   // ===== 4. 菜品数据字段完整性 =====
@@ -105,8 +114,10 @@ describe('数据文件完整性检查', () => {
   // ===== 9. feature_importance.json 结构 =====
   it('9.1 feature_importance.json 包含特征重要性', () => {
     const data = readJSON('feature_importance.json');
-    assert.ok(data.importance !== undefined || data.features !== undefined || data.data !== undefined,
-      '应包含importance/features/data');
+    assert.ok(
+      data.importance !== undefined || data.features !== undefined || data.data !== undefined,
+      '应包含importance/features/data'
+    );
   });
 
   // ===== 10. sample_data.sql 存在且含表结构 =====
@@ -141,8 +152,19 @@ describe('数据文件完整性检查', () => {
   // ===== 14. .env.example 完整性 =====
   it('14.1 .env.example 包含所有必需配置', () => {
     const content = fs.readFileSync(path.join(ROOT, '.env.example'), 'utf8');
-    const required = ['PORT', 'PG_HOST', 'PG_PORT', 'PG_DATABASE', 'PG_USER', 'PG_PASSWORD',
-      'JWT_SECRET', 'JWT_EXPIRES_IN', 'ADMIN_USER', 'ADMIN_PASS', 'SSL_PORT'];
+    const required = [
+      'PORT',
+      'PG_HOST',
+      'PG_PORT',
+      'PG_DATABASE',
+      'PG_USER',
+      'PG_PASSWORD',
+      'JWT_SECRET',
+      'JWT_EXPIRES_IN',
+      'ADMIN_USER',
+      'ADMIN_PASS',
+      'SSL_PORT',
+    ];
     for (const key of required) {
       assert.ok(content.includes(key), `.env.example应包含${key}`);
     }
@@ -155,17 +177,19 @@ describe('数据文件完整性检查', () => {
     const userStorage = fs.readFileSync(path.join(ROOT, 'user_storage.js'), 'utf8');
     assert.ok(!auth.includes("require('./auth')"), 'auth.js不应require自己');
     assert.ok(!logger.includes("require('./logger')"), 'logger.js不应require自己');
-    assert.ok(auth.includes('require(\'./db\')') || auth.includes('require("./db")'), 'auth应懒加载db');
+    assert.ok(auth.includes("require('./db')") || auth.includes('require("./db")'), 'auth应懒加载db');
   });
 
   // ===== 16. 菜品图片引用 =====
   it('16.1 菜品图片URL格式正确', async () => {
     const data = await getDishesData();
-    const imageUrls = data.dishes.filter(d => d.image_url).map(d => d.image_url);
+    const imageUrls = data.dishes.filter((d) => d.image_url).map((d) => d.image_url);
     for (const url of imageUrls) {
       // 2026-09-17: 部分菜品以 emoji 作 image_url(如五常大米饭 🍚),前端支持渲染
-      assert.ok(url.startsWith('/uploads/') || url.startsWith('data:') || url.length <= 4,
-        `图片URL应以/uploads/、data: 或 emoji 形式: ${url}`);
+      assert.ok(
+        url.startsWith('/uploads/') || url.startsWith('data:') || url.length <= 4,
+        `图片URL应以/uploads/、data: 或 emoji 形式: ${url}`
+      );
     }
   });
 

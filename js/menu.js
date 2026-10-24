@@ -76,13 +76,17 @@ function buildCategoryUI() {
       '</option>' +
       cats.map((c) => '<option value="' + esc(c) + '">' + esc(catNameOf(c)) + '</option>').join('');
     sel.dataset.cats = key;
-    if (cur && cats.includes(cur)) sel.value = cur;
+    if (cur && cats.includes(cur)) {
+      sel.value = cur;
+    }
   }
 }
 // B8 菜品详情弹层：点菜名看大图/描述/过敏源/热量/口味
 function showDishDetail(id) {
   const d = dishData.find((x) => x.id === id);
-  if (!d) return;
+  if (!d) {
+    return;
+  }
   // 规格组重聚: 虚拟主卡(同基础名规格互并)的 _variants 挂在渲染期克隆上,详情按同一规则重聚,
   // 否则弹窗丢规格(如一口脆虾球原味/芥末味、华山论剑年份、八宝茶壶)
   const nm = String(d.name || '');
@@ -105,7 +109,9 @@ function showDishDetail(id) {
     h4Name = dishNameOf(d);
   }
   const old = document.getElementById('dish-detail-modal');
-  if (old) old.remove();
+  if (old) {
+    old.remove();
+  }
   const al = d.allergies || {};
   const alTags = [
     ['seafood', '海鲜'],
@@ -225,7 +231,9 @@ function showDishDetail(id) {
   document.body.appendChild(modal);
   const el = modal.querySelector('.modal');
   let m = bootstrap.Modal.getInstance(el);
-  if (!m) m = new bootstrap.Modal(el);
+  if (!m) {
+    m = new bootstrap.Modal(el);
+  }
   // 弹窗开关时背景页滚动会跳(bootstrap焦点管理+浏览器滚动锚定),显式钉住滚动位置
   const _sy = window.scrollY;
   const pinScroll = () => window.scrollTo(0, _sy);
@@ -286,7 +294,9 @@ function refreshMenuCardCtrl(id) {
     document.querySelector('#dataset-table-body .cart-qty-minus[data-id="' + idStr + '"]') ||
     document.querySelector('#dataset-table-body .add-to-cart-btn[data-id="' + idStr + '"]')
   )?.closest('.dish-card');
-  if (!card) return false;
+  if (!card) {
+    return false;
+  }
   const qty = (getCart().find((c) => c.id === id) || {}).qty || 0;
   if (qty > 0) {
     // 已有步进器:数量文本原地改(最高频路径,零重排)
@@ -316,10 +326,14 @@ function refreshMenuCardCtrl(id) {
 }
 function renderMenuTable() {
   const container = document.getElementById('dataset-table-body');
-  if (!container) return;
+  if (!container) {
+    return;
+  }
   // 如果 dishData 为空，最多重试 3 次
   if (!dishData || !dishData.length) {
-    if (!renderMenuTable._retryCount) renderMenuTable._retryCount = 0;
+    if (!renderMenuTable._retryCount) {
+      renderMenuTable._retryCount = 0;
+    }
     if (renderMenuTable._retryCount < 3) {
       renderMenuTable._retryCount++;
       setTimeout(renderMenuTable, 1000);
@@ -334,22 +348,37 @@ function renderMenuTable() {
   const priceRange = document.getElementById('menu-filter-price')?.value || '';
   const sorted = [...dishData].sort((a, b) => catOrderOf(a.category) - catOrderOf(b.category) || a.id - b.id);
   const filtered = sorted.filter((d) => {
-    if (q && !d.name.toLowerCase().includes(q)) return false;
-    if (cat && d.category !== cat) return false;
-    if (spice && d.spiciness !== spice) return false;
+    if (q && !d.name.toLowerCase().includes(q)) {
+      return false;
+    }
+    if (cat && d.category !== cat) {
+      return false;
+    }
+    if (spice && d.spiciness !== spice) {
+      return false;
+    }
     if (priceRange) {
       const p = parseFloat(d.price);
-      if (isNaN(p)) return false;
+      if (isNaN(p)) {
+        return false;
+      }
       const [lo, hi] = priceRange.split('-').map(Number);
-      if (p < lo || p >= hi) return false;
+      if (p < lo || p >= hi) {
+        return false;
+      }
     }
     return true;
   });
   const sortVal = document.getElementById('menu-sort')?.value || '';
-  if (sortVal === 'popular') filtered.sort((a, b) => (b.order_count || 0) - (a.order_count || 0));
-  else if (sortVal === 'rating') filtered.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
-  else if (sortVal === 'price_asc') filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
-  else if (sortVal === 'price_desc') filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+  if (sortVal === 'popular') {
+    filtered.sort((a, b) => (b.order_count || 0) - (a.order_count || 0));
+  } else if (sortVal === 'rating') {
+    filtered.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+  } else if (sortVal === 'price_asc') {
+    filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+  } else if (sortVal === 'price_desc') {
+    filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+  }
   const cart = getCart();
   // 按分类分组渲染，每组加分隔标题
   let html = '';
@@ -380,7 +409,9 @@ function renderMenuTable() {
     if (m && byName[m[1]]) {
       const main = byName[m[1]];
       main._variants = main._variants || [];
-      if (!main._variants.some((v) => v.id === d.id)) main._variants.push(d);
+      if (!main._variants.some((v) => v.id === d.id)) {
+        main._variants.push(d);
+      }
       consumedVariants.add(d.id);
     }
   });
@@ -390,21 +421,29 @@ function renderMenuTable() {
   (() => {
     const groups = {};
     filtered.forEach((d) => {
-      if (consumedVariants.has(d.id)) return;
+      if (consumedVariants.has(d.id)) {
+        return;
+      }
       const m = d.name.match(/^(.+)\(([^()]+)\)$/);
-      if (m) (groups[m[1]] = groups[m[1]] || []).push(d);
+      if (m) {
+        (groups[m[1]] = groups[m[1]] || []).push(d);
+      }
     });
     Object.keys(groups).forEach((base) => {
       const g = groups[base];
       const clone = Object.assign({}, g[0], { name: base, _flavorLabel: (g[0].name.match(/\(([^()]+)\)$/) || [])[1] });
       clone._variants = g.slice(1);
       virtualById[g[0].id] = clone;
-      for (let i = 1; i < g.length; i++) consumedVariants.add(g[i].id);
+      for (let i = 1; i < g.length; i++) {
+        consumedVariants.add(g[i].id);
+      }
     });
   })();
   filtered.forEach((rawD) => {
     const d = virtualById[rawD.id] || rawD;
-    if (consumedVariants.has(rawD.id)) return;
+    if (consumedVariants.has(rawD.id)) {
+      return;
+    }
     if (d.category !== lastCat) {
       lastCat = d.category;
       lastSub = '';
@@ -477,7 +516,9 @@ function renderMenuTable() {
     };
     // 规格行标签: 口味类取名字括号后缀(原味/芥末味/壶/年份), 其余退回单位(盖碗/6只)
     const specLabel = (d2) => {
-      if (d2._flavorLabel) return d2._flavorLabel;
+      if (d2._flavorLabel) {
+        return d2._flavorLabel;
+      }
       const m = String(d2.name || '').match(/\(([^()]+)\)$/);
       return m ? m[1] : unitLabel(d2);
     };
@@ -579,5 +620,7 @@ function renderMenuTable() {
   container.innerHTML = '<div class="dish-grid">' + html + '</div>';
   document.getElementById('menu-count').textContent = filtered.length + '/' + dishData.length;
   // 选饮品模式横幅随菜单重绘恢复（renderMenuTable 会重绘菜单容器周边 DOM）
-  if (typeof renderDrinksModeBanner === 'function') renderDrinksModeBanner();
+  if (typeof renderDrinksModeBanner === 'function') {
+    renderDrinksModeBanner();
+  }
 }

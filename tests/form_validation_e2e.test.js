@@ -5,43 +5,70 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('404') && msg.includes('Failed to load resource')) return false;
-  if (msg.includes('400') && msg.includes('Failed to load resource')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('404') && msg.includes('Failed to load resource')) {
+    return false;
+  }
+  if (msg.includes('400') && msg.includes('Failed to load resource')) {
+    return false;
+  }
   // 过滤掉 HTTP 状态码错误（非 JS 运行时错误）
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('表单验证与错误提示深度测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 注册表单 - 用户名过短 =====
   it('1.1 注册用户名过短被验证阻止', async () => {
@@ -55,8 +82,10 @@ describe('表单验证与错误提示深度测试', () => {
     await page.type('#register-confirm', 'ValidPass123!', { delay: 30 });
     const agree = await page.$('#agree-privacy');
     if (agree) {
-      const checked = await page.evaluate(el => el.checked, agree);
-      if (!checked) await agree.click();
+      const checked = await page.evaluate((el) => el.checked, agree);
+      if (!checked) {
+        await agree.click();
+      }
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -78,8 +107,10 @@ describe('表单验证与错误提示深度测试', () => {
     await page.type('#register-confirm', 'short', { delay: 30 });
     const agree = await page.$('#agree-privacy');
     if (agree) {
-      const checked = await page.evaluate(el => el.checked, agree);
-      if (!checked) await agree.click();
+      const checked = await page.evaluate((el) => el.checked, agree);
+      if (!checked) {
+        await agree.click();
+      }
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -102,8 +133,10 @@ describe('表单验证与错误提示深度测试', () => {
     // 不勾选隐私政策
     const agree = await page.$('#agree-privacy');
     if (agree) {
-      const checked = await page.evaluate(el => el.checked, agree);
-      if (checked) await agree.click(); // 确保未勾选
+      const checked = await page.evaluate((el) => el.checked, agree);
+      if (checked) {
+        await agree.click();
+      } // 确保未勾选
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -139,7 +172,7 @@ describe('表单验证与错误提示深度测试', () => {
     // 测试所有辣度选项
     const spicinessOptions = await page.evaluate(() => {
       const sel = document.getElementById('spiciness');
-      return Array.from(sel.options).map(o => o.value);
+      return Array.from(sel.options).map((o) => o.value);
     });
     for (const val of spicinessOptions) {
       await page.select('#spiciness', val);
@@ -148,7 +181,7 @@ describe('表单验证与错误提示深度测试', () => {
     // 测试所有咸淡选项
     const saltinessOptions = await page.evaluate(() => {
       const sel = document.getElementById('saltiness');
-      return Array.from(sel.options).map(o => o.value);
+      return Array.from(sel.options).map((o) => o.value);
     });
     for (const val of saltinessOptions) {
       await page.select('#saltiness', val);
@@ -167,18 +200,29 @@ describe('表单验证与错误提示深度测试', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」+ 选桌;过敏源用 JS 点击(真实点击在浮动栏下易被遮挡)
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(500);
     // 取消无过敏源，选择多个过敏源
     const allergyNone = await page.$('#allergy-none');
     if (allergyNone) {
-      const checked = await page.evaluate(el => el.checked, allergyNone);
-      if (checked) await page.evaluate(() => document.getElementById('allergy-none').click());
+      const checked = await page.evaluate((el) => el.checked, allergyNone);
+      if (checked) {
+        await page.evaluate(() => document.getElementById('allergy-none').click());
+      }
     }
     // 勾选所有过敏源
     const allergyCheckboxes = await page.evaluate(() => {
       const boxes = document.querySelectorAll('input[name="allergy"], input[id^="allergy-"]');
-      boxes.forEach(b => { if (b.id !== 'allergy-none') b.checked = true; });
+      boxes.forEach((b) => {
+        if (b.id !== 'allergy-none') {
+          b.checked = true;
+        }
+      });
       return boxes.length;
     });
     assert.ok(allergyCheckboxes > 0, '应有过敏源复选框');
@@ -207,7 +251,7 @@ describe('表单验证与错误提示深度测试', () => {
     await sleep(400);
     const priceOptions = await page.evaluate(() => {
       const sel = document.getElementById('price');
-      return sel ? Array.from(sel.options).map(o => o.value) : [];
+      return sel ? Array.from(sel.options).map((o) => o.value) : [];
     });
     if (priceOptions.length > 0) {
       for (const val of priceOptions) {
@@ -227,7 +271,7 @@ describe('表单验证与错误提示深度测试', () => {
     await sleep(400);
     const religionOptions = await page.evaluate(() => {
       const sel = document.getElementById('religion');
-      return sel ? Array.from(sel.options).map(o => o.value) : [];
+      return sel ? Array.from(sel.options).map((o) => o.value) : [];
     });
     if (religionOptions.length > 0) {
       for (const val of religionOptions) {
@@ -283,8 +327,10 @@ describe('表单验证与错误提示深度测试', () => {
     await page.type('#register-confirm', 'TestPass123!', { delay: 30 });
     const agree = await page.$('#agree-privacy');
     if (agree) {
-      const checked = await page.evaluate(el => el.checked, agree);
-      if (!checked) await agree.click();
+      const checked = await page.evaluate((el) => el.checked, agree);
+      if (!checked) {
+        await agree.click();
+      }
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();

@@ -7,24 +7,29 @@ require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 describe('真实用户点击旅程深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
-    page.on('dialog', async d => await d.dismiss());
+    page.on('dialog', async (d) => await d.dismiss());
     page._errors = [];
-    page.on('pageerror', e => page._errors.push(e.message));
+    page.on('pageerror', (e) => page._errors.push(e.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   it('1.1 全部菜单渲染70行数据', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
@@ -40,23 +45,29 @@ describe('真实用户点击旅程深度检查', () => {
     await page.type('#menu-search', '鸡', { delay: 15 });
     await sleep(800);
     const filtered = await page.evaluate(() => document.querySelectorAll('#dataset-table-body .dish-card').length);
-    const total = await page.evaluate(() => parseInt(document.getElementById('menu-count')?.textContent.split('/')[0] || '0'));
+    const total = await page.evaluate(() =>
+      parseInt(document.getElementById('menu-count')?.textContent.split('/')[0] || '0')
+    );
     assert.ok(filtered > 0 && filtered < 70, '搜索应过滤菜品，实际:' + filtered);
     assert.ok(total === filtered, '菜单计数应与过滤结果一致:' + total + 'vs' + filtered);
   });
 
   it('1.3 分类筛选与重置', async () => {
-    await page.evaluate(() => { document.getElementById('menu-search').value = ''; });
+    await page.evaluate(() => {
+      document.getElementById('menu-search').value = '';
+    });
     await page.evaluate(() => {
       const el = document.getElementById('menu-filter-cat');
-      el.value = '招牌'; el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.value = '招牌';
+      el.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await sleep(800);
     const catRows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body .dish-card').length);
     assert.ok(catRows > 0, '招牌分类应有菜品');
     await page.evaluate(() => {
       const el = document.getElementById('menu-filter-cat');
-      el.value = ''; el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.value = '';
+      el.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await sleep(800);
     const resetRows = await page.evaluate(() => document.querySelectorAll('#dataset-table-body .dish-card').length);
@@ -71,8 +82,8 @@ describe('真实用户点击旅程深度检查', () => {
       const form = document.getElementById('preference-form');
       return {
         hasForm: !!form,
-        selects: form ? Array.from(form.querySelectorAll('select')).map(s => s.id) : [],
-        submitText: form?.querySelector('button[type="submit"]')?.textContent.trim() || ''
+        selects: form ? Array.from(form.querySelectorAll('select')).map((s) => s.id) : [],
+        submitText: form?.querySelector('button[type="submit"]')?.textContent.trim() || '',
       };
     });
     assert.ok(state.hasForm, '偏好表单应存在');
@@ -87,8 +98,10 @@ describe('真实用户点击旅程深度检查', () => {
     await page.evaluate(() => document.getElementById('table-change-btn').click());
     await sleep(600);
     await page.evaluate(() => {
-      const b = [...document.querySelectorAll('#table-grid button')].find(x => x.textContent.trim() === '08');
-      if (b) b.click();
+      const b = [...document.querySelectorAll('#table-grid button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
     });
     await sleep(500);
     // 确保先回到偏好表单（ai-recommend-btn 才是偏好路径；guest-btn 进菜单）
@@ -98,7 +111,10 @@ describe('真实用户点击旅程深度检查', () => {
       const map = { spiciness: '微辣', saltiness: '适中', sweetness: '无味' };
       for (const [id, v] of Object.entries(map)) {
         const el = document.getElementById(id);
-        if (el) { el.value = v; el.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (el) {
+          el.value = v;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
       const form = document.getElementById('preference-form');
       form.querySelector('button[type="submit"]').click();
@@ -114,10 +130,12 @@ describe('真实用户点击旅程深度检查', () => {
           active: sec ? sec.classList.contains('active') : false,
           resultVisible: rr ? !rr.classList.contains('d-none') : false,
           items: document.querySelectorAll('#dish-list .list-group-item').length,
-          dishList: !!document.getElementById('dish-list')
+          dishList: !!document.getElementById('dish-list'),
         };
       });
-      if (state.items >= 1) break;
+      if (state.items >= 1) {
+        break;
+      }
     }
     assert.ok(state.active, '推荐section应激活');
     assert.ok(state.resultVisible, '推荐结果应可见');
@@ -131,13 +149,15 @@ describe('真实用户点击旅程深度检查', () => {
     for (let i = 0; i < 30; i++) {
       await sleep(1000);
       items = await page.evaluate(() => document.querySelectorAll('#dish-list .list-group-item').length);
-      if (items >= 1) break;
+      if (items >= 1) {
+        break;
+      }
     }
     assert.ok(items >= 1, '换一批后仍有推荐条目，实际:' + items);
   });
 
   it('1.7 全流程无页面JS错误', async () => {
-    const real = page._errors.filter(e => !/favicon|fonts\.|net::/i.test(e));
+    const real = page._errors.filter((e) => !/favicon|fonts\.|net::/i.test(e));
     assert.equal(real.length, 0, '页面JS错误:' + real.slice(0, 3).join('; '));
   });
 });

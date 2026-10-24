@@ -9,7 +9,9 @@ const BASE = 'http://localhost:3000';
 const ROOT = path.join(__dirname, '..');
 
 // 读取前端源码用于静态断言
-function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
+function read(f) {
+  return fs.readFileSync(path.join(ROOT, f), 'utf8');
+}
 
 describe('按钮可用性与显示检查', () => {
   // ========== 首页按钮 ==========
@@ -22,7 +24,7 @@ describe('按钮可用性与显示检查', () => {
     assert.ok(html.includes('id="login-btn"') || html.includes('登录'), '应有登录按钮');
     assert.ok(html.includes('注册'), '应有注册按钮');
     // 推荐菜品按钮
-    assert.ok(js.includes('getElementById(\'recommend-btn\')') || html.includes('推荐菜品'), '应有推荐菜品按钮');
+    assert.ok(js.includes("getElementById('recommend-btn')") || html.includes('推荐菜品'), '应有推荐菜品按钮');
   });
 
   it('message-modal 弹窗有确定按钮且支持自动关闭（遮罩问题修复）', () => {
@@ -40,7 +42,7 @@ describe('按钮可用性与显示检查', () => {
   it('管理后台导航链接完整', () => {
     const html = read('admin.html');
     const pages = ['控制面板', '菜品管理', '用户管理', '反馈查看', '偏好分布', '数据分析', '模型管理'];
-    pages.forEach(p => assert.ok(html.includes(p), `管理后台应包含${p}导航`));
+    pages.forEach((p) => assert.ok(html.includes(p), `管理后台应包含${p}导航`));
   });
 
   it('管理后台菜品管理有增删改按钮', () => {
@@ -67,10 +69,10 @@ describe('按钮可用性与显示检查', () => {
 
   // ========== 显示与字符 ==========
   it('无 BOM 字符编码问题', () => {
-    ['index.html', 'admin.html', 'styles.css', 'js/core.js', 'script.js'].forEach(f => {
+    ['index.html', 'admin.html', 'styles.css', 'js/core.js', 'script.js'].forEach((f) => {
       const content = fs.readFileSync(path.join(ROOT, f), 'utf8');
       // 检查 BOM（第一个字符是 U+FEFF）
-      const hasBOM = content.charCodeAt(0) === 0xFEFF;
+      const hasBOM = content.charCodeAt(0) === 0xfeff;
       assert.ok(!hasBOM, `${f} 不应有 BOM`);
     });
   });
@@ -86,7 +88,7 @@ describe('按钮可用性与显示检查', () => {
   // ========== 崩溃风险 ==========
   it('前端 JS 无语法错误', () => {
     // 语法检查通过（node --check 在 CI 中验证）
-    ['script.js', 'js/core.js', 'js/globals.js', 'js/recommendation.js'].forEach(f => {
+    ['script.js', 'js/core.js', 'js/globals.js', 'js/recommendation.js'].forEach((f) => {
       const content = read(f);
       assert.ok(content.length > 100, `${f} 不应为空`);
     });
@@ -101,30 +103,36 @@ describe('按钮可用性与显示检查', () => {
   });
 
   it('关键 DOM 操作有 null 保护防崩溃', () => {
-    const js = frontSrc() + read('js/recommendation.js');  // 2026-09-17: displayRecommendations 位于 recommendation.js
+    const js = frontSrc() + read('js/recommendation.js'); // 2026-09-17: displayRecommendations 位于 recommendation.js
     const init = read('js/init.js');
     // dish-list 渲染有 null 保护
     // 2026-09-17: 实现为 if(!dl){...warn;return;}(块语句),不是 return 同行
     // 2026-10-16: prettier 改造后为 if (!dl)(带空格),两种形状都接受
     assert.ok(js.includes('if(!dl)') || js.includes('if (!dl)'), 'displayRecommendations 应有 dish-list null 保护');
     // profile 页面元素有 null 保护
-    assert.ok(js.includes("if(pu)") || js.includes("if (pu)"), 'profile-username 应有 null 保护');
-    assert.ok(js.includes("if(pl)") || js.includes("if (pl)"), 'profile-last-login 应有 null 保护');
+    assert.ok(js.includes('if(pu)') || js.includes('if (pu)'), 'profile-username 应有 null 保护');
+    assert.ok(js.includes('if(pl)') || js.includes('if (pl)'), 'profile-last-login 应有 null 保护');
     // rec-history-list 有 null 保护
-    assert.ok(js.includes("if(rh)") || js.includes("if (rh)"), 'rec-history-list 应有 null 保护');
+    assert.ok(js.includes('if(rh)') || js.includes('if (rh)'), 'rec-history-list 应有 null 保护');
     // message-modal 有 null 保护
-    assert.ok(init.includes("if(!me)return") || init.includes("if (!me) return"), 'closeModal 应有 me null 保护');
-    assert.ok(init.includes("if(me)") || init.includes("if (me)"), 'message-modal 应有 null 保护');
+    assert.ok(init.includes('if(!me)return') || init.includes('if (!me) return'), 'closeModal 应有 me null 保护');
+    assert.ok(init.includes('if(me)') || init.includes('if (me)'), 'message-modal 应有 null 保护');
     // allergy-none 有 null 保护
-    assert.ok(js.includes("if($('allergy-none')&&") || js.includes("if ($('allergy-none') &&"), 'allergy-none 应有 null 保护');
+    assert.ok(
+      js.includes("if($('allergy-none')&&") || js.includes("if ($('allergy-none') &&"),
+      'allergy-none 应有 null 保护'
+    );
     // recommendation-loading 和 result 有 null 保护(2026-09-17: 实现为 if(!loading||!result)return)
     assert.ok(js.includes('if(!loading') || js.includes('if (!loading'), 'loading 应有 null 保护');
-    assert.ok(js.includes('!result') || js.includes('if(result)') || js.includes('if (result)'), 'result 应有 null 保护');
+    assert.ok(
+      js.includes('!result') || js.includes('if(result)') || js.includes('if (result)'),
+      'result 应有 null 保护'
+    );
   });
 });
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }

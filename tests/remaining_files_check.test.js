@@ -7,11 +7,10 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 
 describe('剩余基础设施文件最终检查', () => {
-
   // ===== 1. db.js 数据库连接模块 =====
   it('1.1 db.js 存在且包含pg连接', () => {
     const content = fs.readFileSync(path.join(ROOT, 'db.js'), 'utf8');
-    assert.ok(content.includes('require(\'pg\')') || content.includes('require("pg")'), '应使用pg');
+    assert.ok(content.includes("require('pg')") || content.includes('require("pg")'), '应使用pg');
     assert.ok(content.includes('Pool') || content.includes('Client'), '应创建Pool或Client');
     assert.ok(content.length > 50, '应有实质内容');
   });
@@ -75,25 +74,51 @@ describe('剩余基础设施文件最终检查', () => {
 
   // ===== 11. 所有文件无BOM =====
   it('11.1 所有JS/JSON文件无BOM头', () => {
-    const files = ['db.js', 'migrate_to_pg.js', 'edit_package.js', 'optimize_images.js',
-      'ecosystem.config.js', 'build.js', 'backup_db.js', 'logger.js', 'auth.js', 'user_storage.js'];
+    const files = [
+      'db.js',
+      'migrate_to_pg.js',
+      'edit_package.js',
+      'optimize_images.js',
+      'ecosystem.config.js',
+      'build.js',
+      'backup_db.js',
+      'logger.js',
+      'auth.js',
+      'user_storage.js',
+    ];
     let bomCount = 0;
     for (const f of files) {
       const p = path.join(ROOT, f);
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const buf = fs.readFileSync(p);
-      if (buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) bomCount++;
+      if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+        bomCount++;
+      }
     }
     assert.equal(bomCount, 0, '不应有BOM头文件');
   });
 
   // ===== 12. 所有JS文件有内容 =====
   it('12.1 所有JS文件有内容', () => {
-    const files = ['db.js', 'migrate_to_pg.js', 'edit_package.js', 'optimize_images.js',
-      'ecosystem.config.js', 'build.js', 'backup_db.js', 'logger.js', 'auth.js', 'user_storage.js'];
+    const files = [
+      'db.js',
+      'migrate_to_pg.js',
+      'edit_package.js',
+      'optimize_images.js',
+      'ecosystem.config.js',
+      'build.js',
+      'backup_db.js',
+      'logger.js',
+      'auth.js',
+      'user_storage.js',
+    ];
     for (const f of files) {
       const p = path.join(ROOT, f);
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const content = fs.readFileSync(p, 'utf8');
       assert.ok(content.length > 50, `${f}应有内容`);
     }

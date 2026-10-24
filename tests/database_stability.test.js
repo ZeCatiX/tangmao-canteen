@@ -2,12 +2,18 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const assert = require('node:assert/strict');
@@ -37,12 +43,14 @@ async function getAdminToken() {
 
 describe('数据库连接与查询稳定性', () => {
   let adminToken;
-  before(async () => { adminToken = await getAdminToken(); });
+  before(async () => {
+    adminToken = await getAdminToken();
+  });
 
   // ===== 1. 数据库连接池正常工作 =====
   it('1.1 管理后台统计查询正常返回', async () => {
     const r = await api('/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.equal(r.body.success, true);
@@ -57,13 +65,21 @@ describe('数据库连接与查询稳定性', () => {
     // 创建菜品
     const createRes = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({
         name: 'db_test' + Date.now(),
         category: '测试',
-        spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        price: 10, rating: 4.5, calorie: 100, protein: 10,
-        isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求'
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        price: 10,
+        rating: 4.5,
+        calorie: 100,
+        protein: 10,
+        isHalal: false,
+        isVegetarian: false,
+        allergies: [],
+        religion: '无特殊要求',
       }),
     });
     assert.equal(createRes.status, 200);
@@ -76,7 +92,7 @@ describe('数据库连接与查询稳定性', () => {
     if (newId) {
       await api('/api/admin/dish/' + newId + '/permanent', {
         method: 'DELETE',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
     }
   });
@@ -94,7 +110,7 @@ describe('数据库连接与查询稳定性', () => {
     const prefs = { spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜', price: '30-50' };
     await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq, preferences: prefs }),
     });
     // 重新登录
@@ -108,7 +124,7 @@ describe('数据库连接与查询稳定性', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -124,24 +140,24 @@ describe('数据库连接与查询稳定性', () => {
     // 创建订单
     const orderRes = await api('/api/order', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
         items: [{ id: dishPool[0].id, name: '测试订单菜品', price: 30, type: '偏好推荐', matchRate: 0.9 }],
-        totalPrice: 30
+        totalPrice: 30,
       }),
     });
     assert.ok(orderRes.status === 200 || orderRes.status === 201, '订单创建应成功');
     // 查询订单列表
     const listRes = await api('/api/orders?userId=' + uniq, {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(listRes.status, 200);
     // 订单列表应包含新订单（或为空如果状态已更新）
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -157,23 +173,25 @@ describe('数据库连接与查询稳定性', () => {
     // 提交反馈
     const fbRes = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
-        dishId: 1, score: 5, userId: uniq,
-        userPreferences: { spiciness: '微辣' }
+        dishId: 1,
+        score: 5,
+        userId: uniq,
+        userPreferences: { spiciness: '微辣' },
       }),
     });
     assert.ok(fbRes.status === 200 || fbRes.status === 201, '反馈提交应成功');
     // 管理后台查看反馈列表
     const fbListRes = await api('/api/admin/feedback-summary', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(fbListRes.status, 200);
     assert.equal(fbListRes.body.success, true);
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -183,15 +201,19 @@ describe('数据库连接与查询稳定性', () => {
     const promises = [];
     for (let i = 0; i < 5; i++) {
       const uniq = 'conc' + Date.now() + '_' + i;
-      promises.push(api('/api/user/register', {
-        method: 'POST',
-        body: JSON.stringify({ username: uniq, password: 'Concurrent123!' }),
-      }));
+      promises.push(
+        api('/api/user/register', {
+          method: 'POST',
+          body: JSON.stringify({ username: uniq, password: 'Concurrent123!' }),
+        })
+      );
     }
     const results = await Promise.all(promises);
     let successCount = 0;
     for (const r of results) {
-      if (r.body.success) successCount++;
+      if (r.body.success) {
+        successCount++;
+      }
     }
     assert.equal(successCount, 5, '5个并发注册应全部成功');
     // 清理
@@ -201,7 +223,7 @@ describe('数据库连接与查询稳定性', () => {
       if (reg.body.token) {
         await api('/api/user/delete', {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + reg.body.token },
+          headers: { Authorization: 'Bearer ' + reg.body.token },
           body: JSON.stringify({ username: uniq }),
         });
       }
@@ -227,7 +249,7 @@ describe('数据库连接与查询稳定性', () => {
     if (r1.body.token) {
       await api('/api/user/delete', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + r1.body.token },
+        headers: { Authorization: 'Bearer ' + r1.body.token },
         body: JSON.stringify({ username: uniq }),
       });
     }
@@ -236,15 +258,23 @@ describe('数据库连接与查询稳定性', () => {
   // ===== 8. 管理后台所有查询端点正常 =====
   it('8.1 管理后台所有查询端点返回200', async () => {
     const endpoints = [
-      '/api/admin/stats', '/api/admin/popular-dishes', '/api/admin/feedback-summary',
-      '/api/admin/preference-stats', '/api/admin/daily-recommendations',
-      '/api/admin/user-activity', '/api/admin/recommendation-details',
-      '/api/admin/model-history', '/api/admin/worst-dishes', '/api/admin/model-compare',
-      '/api/admin/recommendation-stats', '/api/admin/users', '/api/admin/notifications'
+      '/api/admin/stats',
+      '/api/admin/popular-dishes',
+      '/api/admin/feedback-summary',
+      '/api/admin/preference-stats',
+      '/api/admin/daily-recommendations',
+      '/api/admin/user-activity',
+      '/api/admin/recommendation-details',
+      '/api/admin/model-history',
+      '/api/admin/worst-dishes',
+      '/api/admin/model-compare',
+      '/api/admin/recommendation-stats',
+      '/api/admin/users',
+      '/api/admin/notifications',
     ];
     for (const ep of endpoints) {
       const r = await api(ep, {
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
       assert.ok(r.status === 200, `${ep} 应返回200，实际: ${r.status}`);
     }
@@ -255,9 +285,15 @@ describe('数据库连接与查询稳定性', () => {
     const r = await api('/api/preference-log', {
       method: 'POST',
       body: JSON.stringify({
-        spiciness: '微辣', saltiness: '适中', sweetness: '酸甜',
-        price: '0-30', calorie: '0-500', religion: '无特殊要求',
-        allergies: [], userId: 'guest', recommendationMode: 'auto'
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '酸甜',
+        price: '0-30',
+        calorie: '0-500',
+        religion: '无特殊要求',
+        allergies: [],
+        userId: 'guest',
+        recommendationMode: 'auto',
       }),
     });
     assert.equal(r.status, 200);

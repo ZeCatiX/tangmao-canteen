@@ -17,12 +17,11 @@ function generateToken(user, opts) {
 
 // 查询 jti 是否已吊销（token_blacklist 表中且未过期）
 async function isTokenBlacklisted(jti) {
-  if (!jti) return false;
+  if (!jti) {
+    return false;
+  }
   try {
-    const result = await pool.query(
-      'SELECT 1 FROM token_blacklist WHERE jti = $1 AND expires_at > NOW()',
-      [jti]
-    );
+    const result = await pool.query('SELECT 1 FROM token_blacklist WHERE jti = $1 AND expires_at > NOW()', [jti]);
     return result.rows.length > 0;
   } catch (e) {
     // 查询失败时放行（可用性优先，token_blacklist 表极小、故障概率低）
@@ -35,15 +34,17 @@ async function isTokenBlacklisted(jti) {
 async function revokeToken(token) {
   try {
     const decoded = jwt.decode(token);
-    if (!decoded || !decoded.jti) return false;
+    if (!decoded || !decoded.jti) {
+      return false;
+    }
     // exp 为秒级时间戳；无 exp 时按 7 天兜底
     const expiresAt = decoded.exp
       ? new Date(decoded.exp * 1000).toISOString()
       : new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
-    await pool.query(
-      'INSERT INTO token_blacklist (jti, expires_at) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING',
-      [decoded.jti, expiresAt]
-    );
+    await pool.query('INSERT INTO token_blacklist (jti, expires_at) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING', [
+      decoded.jti,
+      expiresAt,
+    ]);
     return true;
   } catch (e) {
     console.error('吊销 token 失败:', e.message);
@@ -55,9 +56,15 @@ async function revokeToken(token) {
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    if (req.path === '/api/user/login' || req.path === '/api/user/register' ||
-        req.path === '/' || req.path === '/api/dishes' || req.path.startsWith('/api/worker-health') ||
-        req.path.startsWith('/api/feature-importance') || req.path.startsWith('/api/model-metrics')) {
+    if (
+      req.path === '/api/user/login' ||
+      req.path === '/api/user/register' ||
+      req.path === '/' ||
+      req.path === '/api/dishes' ||
+      req.path.startsWith('/api/worker-health') ||
+      req.path.startsWith('/api/feature-importance') ||
+      req.path.startsWith('/api/model-metrics')
+    ) {
       return next();
     }
     return res.status(401).json({ success: false, error: '未登录' });

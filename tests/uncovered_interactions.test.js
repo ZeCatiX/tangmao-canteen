@@ -5,19 +5,35 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
-  if (msg.includes('400') && msg.includes('Failed to load resource')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
+  if (msg.includes('400') && msg.includes('Failed to load resource')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -30,10 +46,23 @@ async function registerAndLogin(page, uniq) {
   await page.type('#register-password', 'TestPath123!', { delay: 30 });
   await page.type('#register-confirm', 'TestPath123!', { delay: 30 });
   const agree = await page.$('#agree-privacy');
-  if (agree) { const c = await page.evaluate(el => el.checked, agree); if (!c) await agree.click(); }
+  if (agree) {
+    const c = await page.evaluate((el) => el.checked, agree);
+    if (!c) {
+      await agree.click();
+    }
+  }
   await page.evaluate(() => document.getElementById('register-form').querySelector('button[type="submit"]').click());
   await sleep(1500);
-  await page.evaluate(() => { const m = document.querySelector('.modal.show'); if (m) { const b = m.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); } });
+  await page.evaluate(() => {
+    const m = document.querySelector('.modal.show');
+    if (m) {
+      const b = m.querySelector('.btn-close,[data-bs-dismiss]');
+      if (b) {
+        b.click();
+      }
+    }
+  });
   await sleep(300);
   await page.evaluate(() => document.getElementById('login-btn')?.click());
   await sleep(400);
@@ -41,7 +70,15 @@ async function registerAndLogin(page, uniq) {
   await page.type('#login-password', 'TestPath123!', { delay: 30 });
   await page.evaluate(() => document.getElementById('login-form').querySelector('button[type="submit"]').click());
   await sleep(1500);
-  await page.evaluate(() => { const m = document.querySelector('.modal.show'); if (m) { const b = m.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); } });
+  await page.evaluate(() => {
+    const m = document.querySelector('.modal.show');
+    if (m) {
+      const b = m.querySelector('.btn-close,[data-bs-dismiss]');
+      if (b) {
+        b.click();
+      }
+    }
+  });
   await sleep(300);
 }
 
@@ -58,26 +95,42 @@ async function getRecommendations(page) {
 describe('未覆盖交互路径补充检查', () => {
   before(async () => {
     // 批量跑测试时偶发 Chrome 启动瞬态失败(资源竞争),重试一次再放弃
-    const launch = () => puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
-    });
-    try { browser = await launch(); }
-    catch (e) { await new Promise(r => setTimeout(r, 1500)); browser = await launch(); }
+    const launch = () =>
+      puppeteer.launch({
+        headless: 'new',
+        executablePath: CHROME_PATH,
+        args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
+      });
+    try {
+      browser = await launch();
+    } catch (e) {
+      await new Promise((r) => setTimeout(r, 1500));
+      browser = await launch();
+    }
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 游客模式推荐结果中盲盒菜品特殊渲染 =====
   it('1.1 盲盒菜品有特殊渲染样式', async () => {
@@ -103,7 +156,7 @@ describe('未覆盖交互路径补充检查', () => {
     await sleep(400);
     const options = await page.evaluate(() => {
       const sel = document.getElementById('recommendation-mode');
-      return sel ? Array.from(sel.options).map(o => o.value) : [];
+      return sel ? Array.from(sel.options).map((o) => o.value) : [];
     });
     assert.ok(options.length > 0, '推荐模式应有选项');
     for (const val of options) {
@@ -124,7 +177,11 @@ describe('未覆盖交互路径补充检查', () => {
     const orderedBadges = await page.evaluate(() => {
       const badges = document.querySelectorAll('#dish-list .badge');
       let count = 0;
-      badges.forEach(b => { if (b.textContent.includes('已点过')) count++; });
+      badges.forEach((b) => {
+        if (b.textContent.includes('已点过')) {
+          count++;
+        }
+      });
       return count;
     });
     // 如果推荐结果包含已点过的菜品，应有标记
@@ -139,8 +196,10 @@ describe('未覆盖交互路径补充检查', () => {
     const imgCheck = await page.evaluate(() => {
       const imgs = document.querySelectorAll('#dish-list img');
       let broken = 0;
-      imgs.forEach(img => {
-        if (img.complete && img.naturalWidth === 0) broken++;
+      imgs.forEach((img) => {
+        if (img.complete && img.naturalWidth === 0) {
+          broken++;
+        }
       });
       return { total: imgs.length, broken };
     });
@@ -175,7 +234,7 @@ describe('未覆盖交互路径补充检查', () => {
     // 检查查看缓存按钮
     const cachedBtn = await page.$('#view-cached-btn');
     if (cachedBtn) {
-      const visible = await page.evaluate(el => !el.classList.contains('d-none'), cachedBtn);
+      const visible = await page.evaluate((el) => !el.classList.contains('d-none'), cachedBtn);
       if (visible) {
         await page.evaluate(() => document.getElementById('view-cached-btn')?.click());
         await sleep(500);
@@ -198,7 +257,15 @@ describe('未覆盖交互路径补充检查', () => {
     // 下单
     await page.evaluate(() => document.getElementById('end-recommendation')?.click());
     await sleep(2000);
-    await page.evaluate(() => { const m = document.querySelector('.modal.show'); if (m) { const b = m.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); } });
+    await page.evaluate(() => {
+      const m = document.querySelector('.modal.show');
+      if (m) {
+        const b = m.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
+    });
     await sleep(300);
     // 查看个人资料
     await page.evaluate(() => document.getElementById('nav-profile')?.click());
@@ -222,7 +289,9 @@ describe('未覆盖交互路径补充检查', () => {
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     // 提交
-    await page.evaluate(() => document.getElementById('preference-form').querySelector('button[type="submit"]').click());
+    await page.evaluate(() =>
+      document.getElementById('preference-form').querySelector('button[type="submit"]').click()
+    );
     // 检查loading状态
     const loadingVisible = await page.evaluate(() => {
       const el = document.getElementById('recommendation-loading');
@@ -243,7 +312,10 @@ describe('未覆盖交互路径补充检查', () => {
     await sleep(2000);
     const imgCheck = await page.evaluate(() => {
       const imgs = document.querySelectorAll('#dataset-section img');
-      return { total: imgs.length, loaded: Array.from(imgs).filter(img => img.complete && img.naturalWidth > 0).length };
+      return {
+        total: imgs.length,
+        loaded: Array.from(imgs).filter((img) => img.complete && img.naturalWidth > 0).length,
+      };
     });
     assert.ok(imgCheck.total >= 0, '菜单页面应有图片或占位图');
     assert.equal(realErrors().length, 0, '菜单图片加载不应有错误');
@@ -255,11 +327,16 @@ describe('未覆盖交互路径补充检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
     // 清空购物车
-    await page.evaluate(() => { localStorage.setItem('cart', '[]'); updateCartBadge(); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', '[]');
+      updateCartBadge();
+    });
     await sleep(200);
     const badge = await page.evaluate(() => {
       const el = document.getElementById('cart-badge');
-      if (!el) return 'none';
+      if (!el) {
+        return 'none';
+      }
       const style = window.getComputedStyle(el);
       return { text: el.textContent, display: style.display };
     });
@@ -272,9 +349,9 @@ describe('未覆盖交互路径补充检查', () => {
     resetErrors();
     const sections = ['home-section', 'about-section', 'dataset-section', 'privacy-section'];
     for (const s of sections) {
-      await page.evaluate(sec => showSection(sec), s);
+      await page.evaluate((sec) => showSection(sec), s);
       await sleep(200);
-      const content = await page.evaluate(sec => {
+      const content = await page.evaluate((sec) => {
         const el = document.getElementById(sec);
         return el ? el.textContent.trim().length : 0;
       }, s);
@@ -294,7 +371,7 @@ describe('未覆盖交互路径补充检查', () => {
     await sleep(2000);
     const navTexts = await page.evaluate(() => {
       const items = document.querySelectorAll('[data-page]');
-      return Array.from(items).map(n => n.textContent.trim());
+      return Array.from(items).map((n) => n.textContent.trim());
     });
     for (const text of navTexts) {
       assert.ok(text.length > 0, '导航项应有文字');

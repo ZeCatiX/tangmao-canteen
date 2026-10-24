@@ -6,15 +6,16 @@ const assert = require('node:assert/strict');
 require('dotenv').config();
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
-var adminToken = '';
-var createdIds = [];
-var orderIds = [];
+let adminToken = '';
+const createdIds = [];
+const orderIds = [];
 
-const auth = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminToken });
+const auth = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminToken });
 
 async function createDish(name, serving, description) {
   const r = await fetch(BASE + '/api/admin/dish', {
-    method: 'POST', headers: auth(),
+    method: 'POST',
+    headers: auth(),
     body: JSON.stringify({ name, category: '特色凉菜', price: 7, rating: 3.5, serving, description }),
   });
   const d = await r.json();
@@ -25,22 +26,26 @@ async function createDish(name, serving, description) {
 
 async function placeOrder(dish, qty) {
   const r = await fetch(BASE + '/api/order', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       items: [{ id: dish.id, name: dish.name, price: Number(dish.price), qty, type: '购物车' }],
-      totalPrice: Number(dish.price) * qty, tableNumber: '18',
+      totalPrice: Number(dish.price) * qty,
+      tableNumber: '18',
     }),
   });
   const d = await r.json();
-  if (d.success && d.orderId) orderIds.push(d.orderId);
+  if (d.success && d.orderId) {
+    orderIds.push(d.orderId);
+  }
   return d;
 }
 
 async function findDish(name) {
   const r = await fetch(BASE + '/api/dishes');
   const d = await r.json();
-  const list = Array.isArray(d) ? d : (d.dishes || d.data || []);
-  return list.find(x => x.name === name) || null;
+  const list = Array.isArray(d) ? d : d.dishes || d.data || [];
+  return list.find((x) => x.name === name) || null;
 }
 
 // 建菜后服务端异步刷 dishData 缓存, 下单前轮询等缓存可见(与 /api/dishes 同源)
@@ -48,16 +53,22 @@ async function waitDish(name, timeoutMs = 3000) {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     const dish = await findDish(name);
-    if (dish) return dish;
-    if (Date.now() > deadline) return null;
-    await new Promise(res => setTimeout(res, 200));
+    if (dish) {
+      return dish;
+    }
+    if (Date.now() > deadline) {
+      return null;
+    }
+    await new Promise((res) => setTimeout(res, 200));
   }
 }
 
 async function cleanup() {
   for (const oid of orderIds) {
     await fetch(BASE + '/api/orders/' + oid + '/status', {
-      method: 'PUT', headers: auth(), body: JSON.stringify({ status: 'cancelled' }),
+      method: 'PUT',
+      headers: auth(),
+      body: JSON.stringify({ status: 'cancelled' }),
     }).catch(() => {});
   }
   for (const id of createdIds) {
@@ -67,7 +78,8 @@ async function cleanup() {
 
 before(async () => {
   const r = await fetch(BASE + '/api/admin/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: process.env.ADMIN_USER || 'admin', password: process.env.ADMIN_PASS }),
   });
   const d = await r.json();

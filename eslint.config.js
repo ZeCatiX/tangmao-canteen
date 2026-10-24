@@ -2,9 +2,11 @@
 const globals = require('globals');
 
 const sharedRules = {
-  'no-unused-vars': 'warn',
+  // catch(e) 的 e 未使用是刻意吞异常的惯用法,不计(2026-10-22 警告清零配套)
+  'no-unused-vars': ['warn', { caughtErrors: 'none', varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
   'no-console': 'off',
-  'no-empty': 'warn',
+  // 空 catch 是刻意的静默降级,允许
+  'no-empty': ['warn', { allowEmptyCatch: true }],
   'no-extra-semi': 'warn',
   'no-redeclare': 'error',
   'no-var': 'warn',

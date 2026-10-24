@@ -5,40 +5,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('购物车与内容展示深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 购物车数量修改按钮 =====
   it('1.1 购物车数量加按钮增加数量', async () => {
@@ -54,13 +77,19 @@ describe('购物车与内容展示深度检查', () => {
     await sleep(500);
     // 点击数量加按钮
     const clicked = await page.evaluate(() => {
-      const btn = document.querySelector('#cart-table-body [onclick*="qty"], #cart-table-body [class*="plus"], #cart-table-body [class*="inc"]');
-      if (btn) { btn.click(); return true; }
+      const btn = document.querySelector(
+        '#cart-table-body [onclick*="qty"], #cart-table-body [class*="plus"], #cart-table-body [class*="inc"]'
+      );
+      if (btn) {
+        btn.click();
+        return true;
+      }
       // 尝试按钮文字+/−或直接调用函数
       const buttons = document.querySelectorAll('#cart-table-body button');
       for (const b of buttons) {
         if (b.textContent.includes('+') || b.textContent.includes('＋') || b.textContent.includes('增加')) {
-          b.click(); return true;
+          b.click();
+          return true;
         }
       }
       return false;
@@ -72,7 +101,9 @@ describe('购物车与内容展示深度检查', () => {
         try {
           const data = localStorage.getItem('cart');
           return data ? JSON.parse(data) : [];
-        } catch(e) { return []; }
+        } catch (e) {
+          return [];
+        }
       });
       assert.ok(cartData.length > 0, '购物车应有商品');
       if (cartData.length > 0 && cartData[0].id === 1) {
@@ -95,9 +126,7 @@ describe('购物车与内容展示深度检查', () => {
     await sleep(400);
     // 写入商品：2 x 15元 = 30元
     await page.evaluate(() => {
-      localStorage.setItem('cart', JSON.stringify([
-        { id: 99997, name: '菜A', price: 15, qty: 2 }
-      ]));
+      localStorage.setItem('cart', JSON.stringify([{ id: 99997, name: '菜A', price: 15, qty: 2 }]));
     });
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
     await sleep(500);
@@ -106,7 +135,7 @@ describe('购物车与内容展示深度检查', () => {
       const totalPrice = document.getElementById('cart-total-price');
       return {
         items: totalItems ? totalItems.textContent : '',
-        price: totalPrice ? totalPrice.textContent : ''
+        price: totalPrice ? totalPrice.textContent : '',
       };
     });
     assert.ok(totalInfo.items !== '', '应显示总件数');
@@ -128,13 +157,15 @@ describe('购物车与内容展示深度检查', () => {
     await sleep(500);
     // 点击清空按钮前注册dialog处理器
     let dialogShown = false;
-    page.once('dialog', async dialog => {
+    page.once('dialog', async (dialog) => {
       dialogShown = true;
       await dialog.accept();
     });
     await page.evaluate(() => {
       const btn = document.getElementById('cart-clear-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const stillOk = await page.evaluate(() => {
@@ -151,17 +182,19 @@ describe('购物车与内容展示深度检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
     // 注册dialog处理器（默认接受）
-    page.on('dialog', async dialog => { await dialog.accept(); });
+    page.on('dialog', async (dialog) => {
+      await dialog.accept();
+    });
     await page.evaluate(() => {
-      localStorage.setItem('cart', JSON.stringify([
-        { id: 99999, name: '完整菜名', price: 25.5, qty: 3 }
-      ]));
+      localStorage.setItem('cart', JSON.stringify([{ id: 99999, name: '完整菜名', price: 25.5, qty: 3 }]));
     });
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
     await sleep(500);
     const rowInfo = await page.evaluate(() => {
       const tbody = document.getElementById('cart-table-body');
-      if (!tbody || !tbody.children[0]) return { exists: false, text: '' };
+      if (!tbody || !tbody.children[0]) {
+        return { exists: false, text: '' };
+      }
       const row = tbody.children[0];
       const text = row.textContent;
       const qtyInput = row.querySelector('.cart-qty-input');
@@ -171,7 +204,7 @@ describe('购物车与内容展示深度检查', () => {
         hasPrice: text.includes('25.50') || text.includes('25.5') || text.includes('76.50'),
         qtyValue: qtyInput ? qtyInput.value : '',
         qtyOk: qtyInput ? qtyInput.value === '3' : false,
-        text
+        text,
       };
     });
     if (rowInfo.exists) {
@@ -198,22 +231,24 @@ describe('购物车与内容展示深度检查', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     const imgs = await page.evaluate(() => {
       const items = document.querySelectorAll('#dish-list img');
-      return Array.from(items).map(img => ({
+      return Array.from(items).map((img) => ({
         src: img.src ? img.src.substring(0, 60) : '',
         hasAlt: !!img.getAttribute('alt'),
-        loaded: img.complete && img.naturalWidth > 0
+        loaded: img.complete && img.naturalWidth > 0,
       }));
     });
     if (imgs.length > 0) {
       for (const img of imgs) {
         assert.ok(img.hasAlt, '图片应有alt属性');
       }
-      const anyLoaded = imgs.some(i => i.loaded);
+      const anyLoaded = imgs.some((i) => i.loaded);
       assert.ok(anyLoaded, `至少一张图片应加载成功，实际: ${imgs.length}张`);
     } else {
       assert.ok(true, '推荐结果无图片，跳过');
@@ -242,7 +277,7 @@ describe('购物车与内容展示深度检查', () => {
       // 检查匹配度百分比显示
       const matchRates = await page.evaluate(() => {
         const items = document.querySelectorAll('#dish-list .list-group-item');
-        return Array.from(items).filter(item => item.textContent.includes('%')).length;
+        return Array.from(items).filter((item) => item.textContent.includes('%')).length;
       });
       assert.ok(matchRates >= 1, `应有匹配度显示，实际: ${matchRates}个`);
     }
@@ -253,7 +288,9 @@ describe('购物车与内容展示深度检查', () => {
   it('7.1 推荐结果中包含收藏按钮', async () => {
     resetErrors();
     const favBtns = await page.evaluate(() => {
-      const btns = document.querySelectorAll('#dish-list [onclick*="fav"], #dish-list [onclick*="收藏"], #dish-list [class*="fav"]');
+      const btns = document.querySelectorAll(
+        '#dish-list [onclick*="fav"], #dish-list [onclick*="收藏"], #dish-list [class*="fav"]'
+      );
       return btns.length;
     });
     assert.ok(true, `收藏按钮数量: ${favBtns}`);
@@ -264,7 +301,9 @@ describe('购物车与内容展示深度检查', () => {
   it('8.1 推荐结果中包含拉黑按钮', async () => {
     resetErrors();
     const blacklistBtns = await page.evaluate(() => {
-      const btns = document.querySelectorAll('#dish-list [onclick*="black"], #dish-list [onclick*="拉黑"], #dish-list [class*="black"]');
+      const btns = document.querySelectorAll(
+        '#dish-list [onclick*="black"], #dish-list [onclick*="拉黑"], #dish-list [class*="black"]'
+      );
       return btns.length;
     });
     assert.ok(true, `拉黑按钮数量: ${blacklistBtns}`);
@@ -289,7 +328,9 @@ describe('购物车与内容展示深度检查', () => {
     // 点击选好了结束推荐
     await page.evaluate(() => {
       const btn = document.getElementById('end-recommendation');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const endStats = await page.evaluate(() => {
@@ -299,7 +340,7 @@ describe('购物车与内容展示深度检查', () => {
       return {
         count: count ? count.textContent : '',
         avg: avg ? avg.textContent : '',
-        top: top ? top.textContent : ''
+        top: top ? top.textContent : '',
       };
     });
     assert.ok(endStats.count !== '', '应显示菜品数量');

@@ -5,12 +5,18 @@ const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 require('dotenv').config();
@@ -92,7 +98,7 @@ describe('管理后台功能测试', () => {
   it('管理后台登录 -> 获取统计数据', async () => {
     assert.ok(adminToken, '应获取到管理 token');
     const { status, body } = await api('/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -105,7 +111,7 @@ describe('管理后台功能测试', () => {
     // 添加
     const add = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ name: 'E2E测试菜', category: '热菜', price: 25, rating: 4.0 }),
     });
     assert.equal(add.status, 200, '添加菜品应成功');
@@ -116,7 +122,7 @@ describe('管理后台功能测试', () => {
     // 更新
     const update = await api('/api/admin/dish/' + newId, {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ name: 'E2E测试菜-已更新', price: 30 }),
     });
     assert.equal(update.status, 200, '更新菜品应成功');
@@ -125,7 +131,7 @@ describe('管理后台功能测试', () => {
     // 永久删除（清理测试数据）
     const del = await api('/api/admin/dish/' + newId + '/permanent', {
       method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(del.status, 200, '删除菜品应成功');
   });
@@ -133,7 +139,7 @@ describe('管理后台功能测试', () => {
   it('管理后台 - 数据导出功能', async () => {
     const token = adminToken;
     const res = await fetch(BASE + '/api/admin/export/popular-dishes', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(res.status, 200);
     const csv = await res.text();
@@ -169,7 +175,7 @@ describe('完整用户会话流程', () => {
     // 保存偏好（需要 Bearer token，用户名取自 token）
     const pref = await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         preferences: { spiciness: '微辣', saltiness: '适中', sweetness: '酸甜' },
       }),
@@ -180,7 +186,7 @@ describe('完整用户会话流程', () => {
     const rec = await api('/api/predict-rf', {
       method: 'POST',
       // 真实菜品 id 走服务端数字展开垫片;曾用 [1,2,3] 展开为空挂 worker 50s 才降级
-      body: JSON.stringify({ userPrefs: { spiciness: '微辣' }, dishes: dishPool.slice(0, 3).map(d => d.id) }),
+      body: JSON.stringify({ userPrefs: { spiciness: '微辣' }, dishes: dishPool.slice(0, 3).map((d) => d.id) }),
     });
     // 推荐API可能返回200或504（Worker超时），只要不崩溃即可
     assert.ok(rec.status === 200 || rec.status === 504, '推荐API应响应: ' + rec.status);
@@ -205,7 +211,9 @@ describe('完整用户会话流程', () => {
     const fb = await api('/api/feedback', {
       method: 'POST',
       body: JSON.stringify({
-        dishId: 1, score: 4.5, userId: testUser,
+        dishId: 1,
+        score: 4.5,
+        userId: testUser,
         userPreferences: { spiciness: '微辣' },
       }),
     });
@@ -220,7 +228,7 @@ describe('厨房看板 API 测试', () => {
   it('GET /api/orders 返回订单列表', async () => {
     const adminToken = await getAdminToken();
     const res = await fetch(BASE + '/api/orders?status=pending,confirmed', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(res.status, 200);
     const body = await res.json().catch(() => ({}));
@@ -229,13 +237,16 @@ describe('厨房看板 API 测试', () => {
   });
 
   it('订单状态流转完整路径', async () => {
-    let adminToken = await getAdminToken();
+    const adminToken = await getAdminToken();
 
     // 创建订单
     const order = await api('/api/order', {
       method: 'POST',
       body: JSON.stringify({
-        userId: 'kitchen_test', items: [{ id: dishPool[0].id, name: '厨房测试', price: 10 }], totalPrice: 10, tableNumber: '28',
+        userId: 'kitchen_test',
+        items: [{ id: dishPool[0].id, name: '厨房测试', price: 10 }],
+        totalPrice: 10,
+        tableNumber: '28',
       }),
     });
     assert.equal(order.status, 200);
@@ -245,7 +256,7 @@ describe('厨房看板 API 测试', () => {
     // 设为 preparing
     const prep = await api('/api/orders/' + orderId + '/status', {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ status: 'preparing' }),
     });
     assert.equal(prep.status, 200);
@@ -253,7 +264,7 @@ describe('厨房看板 API 测试', () => {
     // 设为 completed
     const comp = await api('/api/orders/' + orderId + '/status', {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ status: 'completed' }),
     });
     assert.equal(comp.status, 200);
@@ -274,9 +285,7 @@ describe('安全与边界测试', () => {
   it('XSS 菜品名应被转义', async () => {
     const { body } = await api('/api/dishes');
     const dishes = body.dishes || [];
-    const xssDishes = dishes.filter(d => 
-      d.name.includes('<script>') || d.name.includes('alert(')
-    );
+    const xssDishes = dishes.filter((d) => d.name.includes('<script>') || d.name.includes('alert('));
     // 验证前端 esc() 函数存在（在 script.js 构建产物中）
     const scriptJs = await (await fetch(BASE + '/script.js')).text();
     assert.ok(scriptJs.includes('function esc(') || scriptJs.includes('esc ='), 'script.js 应包含 esc() 转义函数');

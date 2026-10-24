@@ -21,27 +21,42 @@ describe('域拆分内容断言(防回退/防复发)', () => {
   it('server.js 顶层声明共享 runtimeSettings(拆分时曾丢声明致定时器崩溃)', () => {
     const content = read('server.js');
     assert.ok(content.includes('const runtimeSettings = { autoRetrain: false }'), 'server.js 应声明 runtimeSettings');
-    assert.ok(content.includes('runtimeSettings, saveRuntimeSettings'), 'admin 挂载应注入 runtimeSettings/saveRuntimeSettings');
+    assert.ok(
+      content.includes('runtimeSettings, saveRuntimeSettings'),
+      'admin 挂载应注入 runtimeSettings/saveRuntimeSettings'
+    );
   });
 
   it('admin.js 从 deps 解构 runtimeSettings/saveRuntimeSettings(曾漏注入致 settings POST 500)', () => {
     const content = read('server/routes/admin.js');
     assert.ok(/const \{[^}]*runtimeSettings[^}]*\} = deps/.test(content), 'admin.js 应从 deps 解构 runtimeSettings');
-    assert.ok(/const \{[^}]*saveRuntimeSettings[^}]*\} = deps/.test(content), 'admin.js 应从 deps 解构 saveRuntimeSettings');
-    assert.ok(!content.includes('const runtimeSettings = { autoRetrain: false }'), 'admin.js 不应有寄主本地的 runtimeSettings 声明(双份状态)');
+    assert.ok(
+      /const \{[^}]*saveRuntimeSettings[^}]*\} = deps/.test(content),
+      'admin.js 应从 deps 解构 saveRuntimeSettings'
+    );
+    assert.ok(
+      !content.includes('const runtimeSettings = { autoRetrain: false }'),
+      'admin.js 不应有寄主本地的 runtimeSettings 声明(双份状态)'
+    );
   });
 
   it('ml-worker.js 有 fs require 且 ORD_MAPPINGS_CACHE 为 Map(HistGB 兜底曾连环 TypeError)', () => {
     const content = read('server/ml-worker.js');
     assert.ok(content.includes("require('fs')"), '兜底模型加载需要 fs');
     assert.ok(content.includes("'辣度': new Map(["), '口味序数映射应为 Map(.get 调用点依赖)');
-    assert.ok(content.includes("const ROOT = path.join(__dirname, '..');"), 'server/ 一层深,ROOT 只回退一级(../.. 曾指到仓库外,worker 即退)');
+    assert.ok(
+      content.includes("const ROOT = path.join(__dirname, '..');"),
+      'server/ 一层深,ROOT 只回退一级(../.. 曾指到仓库外,worker 即退)'
+    );
     assert.ok(!content.includes("path.join(__dirname, '..', '..')"), '不得出现两级回退(routes 子目录才需要)');
   });
 
   it('worker-health 唯一归 ml-worker 挂载,recommend 不再重复注册', () => {
     assert.ok(read('server/ml-worker.js').includes("app.get('/api/worker-health'"), 'ml-worker 应挂 worker-health');
-    assert.ok(!read('server/routes/recommend.js').includes("app.get('/api/worker-health'"), 'recommend 不应重复挂 worker-health(Express 首个注册生效,重复即死代码)');
+    assert.ok(
+      !read('server/routes/recommend.js').includes("app.get('/api/worker-health'"),
+      'recommend 不应重复挂 worker-health(Express 首个注册生效,重复即死代码)'
+    );
   });
 
   it('server.js 只装配不内联:域代码已迁出且挂载齐全', () => {
@@ -53,8 +68,14 @@ describe('域拆分内容断言(防回退/防复发)', () => {
     assert.ok(content.includes('mlworker.register(app'), '应调用 mlworker.register');
     assert.ok(content.includes('recommendDomain.register(app'), '应调用 recommendDomain.register');
     assert.ok(content.includes('mlworker.startPythonWorker()'), 'listen 启动应改道 mlworker');
-    assert.ok(content.includes('mlworker.shutdown()'), '优雅停机应改道 mlworker.shutdown(拆分后 typeof 守卫曾致 worker 杀不掉)');
-    assert.ok(content.includes('recommendDomain.getFeatureImportanceCache()'), 'admin 的特征重要性 getter 应接 recommend 模块');
+    assert.ok(
+      content.includes('mlworker.shutdown()'),
+      '优雅停机应改道 mlworker.shutdown(拆分后 typeof 守卫曾致 worker 杀不掉)'
+    );
+    assert.ok(
+      content.includes('recommendDomain.getFeatureImportanceCache()'),
+      'admin 的特征重要性 getter 应接 recommend 模块'
+    );
   });
 
   it('recommend.js 导出特征重要性 getter 供 admin 共享', () => {
@@ -102,8 +123,13 @@ describe('域拆分功能回归(HTTP)', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        spiciness: '微辣', saltiness: '适中', sweetness: '无',
-        price: '品质型（20元以上）', calorie: '中', religion: '无特殊要求', allergies: [],
+        spiciness: '微辣',
+        saltiness: '适中',
+        sweetness: '无',
+        price: '品质型（20元以上）',
+        calorie: '中',
+        religion: '无特殊要求',
+        allergies: [],
       }),
     });
     assert.equal(res.status, 200, `最长价格档(11字符)不应 500,实际 ${res.status}`);
@@ -118,7 +144,7 @@ describe('域拆分功能回归(HTTP)', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userPrefs: { spiciness: '微辣', saltiness: '适中', sweetness: '无', price: '标准型（12-20元）', calorie: '中' },
-        dishes: dishes.slice(0, 3).map(d => d.id),
+        dishes: dishes.slice(0, 3).map((d) => d.id),
       }),
     });
     assert.equal(res.status, 200);

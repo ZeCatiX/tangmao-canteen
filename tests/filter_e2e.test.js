@@ -6,7 +6,7 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
@@ -15,21 +15,37 @@ describe('菜单筛选器测试', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') page._consoleErrors.push(msg.text());
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(e => !e.includes('fonts.') && !e.includes('401 (Unauthorized)') && !e.includes('429 (Too Many Requests)') && !e.includes('404 (Not Found)')); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') &&
+        !e.includes('401 (Unauthorized)') &&
+        !e.includes('429 (Too Many Requests)') &&
+        !e.includes('404 (Not Found)')
+    );
+  }
 
   it('1.1 分类筛选 - 招牌菜', async () => {
     resetErrors();
@@ -44,15 +60,26 @@ describe('菜单筛选器测试', () => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const cards = document.querySelectorAll('#dataset-table-body .dish-card');
       // 2026-10-06:卡片副标题为 "分类 · 辣度 · 规格"(规格后加),按 " · " 分段取第1段=分类
-      const cats = [...new Set([...cards].map(c => {
-        var p = c.querySelector('.dish-card-body p');
-        if (!p) return '';
-        return (p.textContent.split(' · ')[0] || '').trim();
-      }))];
+      const cats = [
+        ...new Set(
+          [...cards].map((c) => {
+            const p = c.querySelector('.dish-card-body p');
+            if (!p) {
+              return '';
+            }
+            return (p.textContent.split(' · ')[0] || '').trim();
+          })
+        ),
+      ];
       return { count: count, rows: cards.length, cats: cats };
     });
     assert.ok(info.rows >= 1 && info.rows <= 69, '筛选后行数应1-69: ' + info.rows);
-    assert.ok(info.cats.every(function(c) { return c === '招牌与游西安必打卡'; }), '所有行都应是招牌: ' + info.cats.join(','));
+    assert.ok(
+      info.cats.every(function (c) {
+        return c === '招牌与游西安必打卡';
+      }),
+      '所有行都应是招牌: ' + info.cats.join(',')
+    );
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 
@@ -68,15 +95,26 @@ describe('菜单筛选器测试', () => {
       const count = document.getElementById('menu-count')?.textContent || '';
       const cards = document.querySelectorAll('#dataset-table-body .dish-card');
       // 第2段=辣度(规格在第3段,分类名内部的 · 无空格不受影响)
-      const spices = [...new Set([...cards].map(function(c) {
-        var p = c.querySelector('.dish-card-body p');
-        if (!p) return '';
-        return (p.textContent.split(' · ')[1] || '').trim();
-      }))];
+      const spices = [
+        ...new Set(
+          [...cards].map(function (c) {
+            const p = c.querySelector('.dish-card-body p');
+            if (!p) {
+              return '';
+            }
+            return (p.textContent.split(' · ')[1] || '').trim();
+          })
+        ),
+      ];
       return { count: count, rows: cards.length, spices: spices };
     });
     assert.ok(info.rows >= 1, '筛选后应有结果: ' + info.rows);
-    assert.ok(info.spices.every(function(s) { return s === '不辣'; }), '所有行都是不辣: ' + info.spices.join(','));
+    assert.ok(
+      info.spices.every(function (s) {
+        return s === '不辣';
+      }),
+      '所有行都是不辣: ' + info.spices.join(',')
+    );
     assert.equal(realErrors().length, 0, '不应有控制台错误: ' + realErrors().join('; '));
   });
 

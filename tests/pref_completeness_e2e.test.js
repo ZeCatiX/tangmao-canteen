@@ -6,7 +6,7 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
@@ -15,24 +15,36 @@ describe('偏好完整度引导', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') page._consoleErrors.push(msg.text());
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
   function realErrors() {
-    return page._consoleErrors.filter(e =>
-      !e.includes('fonts.') && !e.includes('401 (Unauthorized)') &&
-      !e.includes('429 (Too Many Requests)') && !e.includes('404 (Not Found)'));
+    return page._consoleErrors.filter(
+      (e) =>
+        !e.includes('fonts.') &&
+        !e.includes('401 (Unauthorized)') &&
+        !e.includes('429 (Too Many Requests)') &&
+        !e.includes('404 (Not Found)')
+    );
   }
 
   // 1. 仪表盘渲染：游客进偏好页应显示 0/5，咸淡/热量标 weak
@@ -47,22 +59,27 @@ describe('偏好完整度引导', () => {
     await sleep(300);
     const r = await page.evaluate(() => {
       const m = document.getElementById('pref-completeness-meter');
-      if (!m) return { err: 'no meter' };
-      const items = [...m.querySelectorAll('[data-pref-key]')].map(el => ({
+      if (!m) {
+        return { err: 'no meter' };
+      }
+      const items = [...m.querySelectorAll('[data-pref-key]')].map((el) => ({
         key: el.dataset.prefKey,
-        cls: el.className
+        cls: el.className,
       }));
       return {
         badge: m.querySelector('.badge')?.textContent.trim(),
         fillW: m.querySelector('.pref-meter-fill')?.style.width,
-        items
+        items,
       };
     });
     assert.strictEqual(r.badge, '0/5', '初始应为 0/5');
     assert.strictEqual(r.fillW, '0%', '进度条应为 0%');
-    const weaks = r.items.filter(i => i.cls.includes('weak'));
+    const weaks = r.items.filter((i) => i.cls.includes('weak'));
     assert.strictEqual(weaks.length, 2, '咸淡+热量应为 weak 维度');
-    assert.ok(weaks.every(i => i.cls.includes('todo')), '初始咸淡/热量应为 todo 状态');
+    assert.ok(
+      weaks.every((i) => i.cls.includes('todo')),
+      '初始咸淡/热量应为 todo 状态'
+    );
     assert.equal(realErrors().length, 0, '不应有错误');
   });
 
@@ -80,12 +97,14 @@ describe('偏好完整度引导', () => {
       return {
         badge: m.querySelector('.badge').textContent.trim(),
         saltinessCls: m.querySelector('[data-pref-key="saltiness"]').className,
-        fillW: m.querySelector('.pref-meter-fill').style.width
+        fillW: m.querySelector('.pref-meter-fill').style.width,
       };
     });
     assert.strictEqual(r.badge, '1/5', '改一项后应为 1/5');
-    assert.ok(r.saltinessCls.includes('done') && r.saltinessCls.includes('weak'),
-      '咸淡应变为 done+weak 状态, got: ' + r.saltinessCls);
+    assert.ok(
+      r.saltinessCls.includes('done') && r.saltinessCls.includes('weak'),
+      '咸淡应变为 done+weak 状态, got: ' + r.saltinessCls
+    );
     assert.strictEqual(r.fillW, '20%', '进度条应为 20%');
     assert.equal(realErrors().length, 0, '不应有错误');
   });
@@ -99,12 +118,14 @@ describe('偏好完整度引导', () => {
     await sleep(300);
     const r = await page.evaluate(() => {
       const b = document.getElementById('pref-completeness-banner');
-      if (!b) return { err: 'no banner el' };
+      if (!b) {
+        return { err: 'no banner el' };
+      }
       return {
         visible: !b.classList.contains('d-none'),
         text: b.textContent.replace(/\s+/g, ' ').trim().slice(0, 40),
         hasGoto: !!b.querySelector('#pref-completeness-goto'),
-        hasClose: !!b.querySelector('.btn-close')
+        hasClose: !!b.querySelector('.btn-close'),
       };
     });
     assert.ok(r.visible, 'banner 应可见');
@@ -124,7 +145,7 @@ describe('偏好完整度引导', () => {
       const hl = document.querySelector('.pref-highlight');
       return {
         activeSec: active?.id,
-        highlightId: hl?.id
+        highlightId: hl?.id,
       };
     });
     assert.strictEqual(r.activeSec, 'preference-section', '应跳到偏好页');
@@ -139,7 +160,9 @@ describe('偏好完整度引导', () => {
     await sleep(200);
     await page.evaluate(() => {
       const c = document.querySelector('#pref-completeness-banner .btn-close');
-      if (c) c.click();
+      if (c) {
+        c.click();
+      }
     });
     await sleep(500); // 等 closed.bs.alert
     const flag = await page.evaluate(() => localStorage.getItem('prefCompletenessDismissed'));
@@ -164,14 +187,21 @@ describe('偏好完整度引导', () => {
     assert.strictEqual(before, 'true', '前置：标记应为 true');
     // 调 logout(同步部分先清 localStorage)
     await page.evaluate(() => {
-      try { logout(); } catch (e) {}
+      try {
+        logout();
+      } catch (e) {}
     });
     await sleep(200);
     // 关掉 logout 弹出的 modal
     await page.evaluate(() => {
       try {
         const m = document.getElementById('message-modal');
-        if (m) { const inst = bootstrap.Modal.getInstance(m); if (inst) inst.hide(); }
+        if (m) {
+          const inst = bootstrap.Modal.getInstance(m);
+          if (inst) {
+            inst.hide();
+          }
+        }
       } catch (e) {}
     });
     const after = await page.evaluate(() => localStorage.getItem('prefCompletenessDismissed'));

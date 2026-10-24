@@ -7,39 +7,60 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('404') && msg.includes('Failed to load resource')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('404') && msg.includes('Failed to load resource')) {
+    return false;
+  }
   return true;
 }
 
 describe('admin内联脚本运行时检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // 登录
   async function adminLogin() {
@@ -55,15 +76,38 @@ describe('admin内联脚本运行时检查', () => {
   it('1.1 所有关键函数存在且可调用', async () => {
     await adminLogin();
     const check = await page.evaluate(() => {
-      const funcs = ['loadStats', 'loadPopularDishes', 'loadFeedback', 'loadDishes',
-        'editDish', 'saveDish', 'deleteDish', 'loadNotifications', 'loadUsers',
-        'deleteUser', 'exportCSV', 'showToast', 'loadDailyTrend', 'loadAnalyticsPrefs',
-        'loadUserActivity', 'loadRecommendationLog', 'loadModelManagement',
-        'loadRecommendationStats', 'loadWorstDishes', 'loadMonitor', 'loadModelCompare',
-        'loadPreferenceStats', 'loadModelInfo', 'showAdmin', 'renderRatingChart'];
+      const funcs = [
+        'loadStats',
+        'loadPopularDishes',
+        'loadFeedback',
+        'loadDishes',
+        'editDish',
+        'saveDish',
+        'deleteDish',
+        'loadNotifications',
+        'loadUsers',
+        'deleteUser',
+        'exportCSV',
+        'showToast',
+        'loadDailyTrend',
+        'loadAnalyticsPrefs',
+        'loadUserActivity',
+        'loadRecommendationLog',
+        'loadModelManagement',
+        'loadRecommendationStats',
+        'loadWorstDishes',
+        'loadMonitor',
+        'loadModelCompare',
+        'loadPreferenceStats',
+        'loadModelInfo',
+        'showAdmin',
+        'renderRatingChart',
+      ];
       const missing = [];
-      funcs.forEach(f => {
-        if (typeof window[f] !== 'function') missing.push(f);
+      funcs.forEach((f) => {
+        if (typeof window[f] !== 'function') {
+          missing.push(f);
+        }
       });
       return missing;
     });
@@ -75,22 +119,43 @@ describe('admin内联脚本运行时检查', () => {
     resetErrors();
     await page.evaluate(async () => {
       // 依次调用所有load函数
-      const funcs = ['loadStats', 'loadPopularDishes', 'loadFeedback', 'loadDishes',
-        'loadNotifications', 'loadUsers', 'loadDailyTrend', 'loadAnalyticsPrefs',
-        'loadUserActivity', 'loadRecommendationLog', 'loadModelManagement',
-        'loadRecommendationStats', 'loadWorstDishes', 'loadMonitor', 'loadModelCompare',
-        'loadPreferenceStats', 'loadModelInfo'];
+      const funcs = [
+        'loadStats',
+        'loadPopularDishes',
+        'loadFeedback',
+        'loadDishes',
+        'loadNotifications',
+        'loadUsers',
+        'loadDailyTrend',
+        'loadAnalyticsPrefs',
+        'loadUserActivity',
+        'loadRecommendationLog',
+        'loadModelManagement',
+        'loadRecommendationStats',
+        'loadWorstDishes',
+        'loadMonitor',
+        'loadModelCompare',
+        'loadPreferenceStats',
+        'loadModelInfo',
+      ];
       for (const f of funcs) {
-        try { if (typeof window[f] === 'function') await window[f](); } catch (e) { console.warn(f + '调用失败:', e.message); }
+        try {
+          if (typeof window[f] === 'function') {
+            await window[f]();
+          }
+        } catch (e) {
+          console.warn(f + '调用失败:', e.message);
+        }
       }
     });
     await sleep(3000);
     // 只检查JS运行时错误，不检查网络错误
-    const jsErrors = realErrors().filter(e =>
-      !e.includes('Failed to load resource') &&
-      !e.includes('数据加载失败') &&
-      !e.includes('ERR_') &&
-      !e.includes('favicon')
+    const jsErrors = realErrors().filter(
+      (e) =>
+        !e.includes('Failed to load resource') &&
+        !e.includes('数据加载失败') &&
+        !e.includes('ERR_') &&
+        !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, 'load函数调用不应有JS运行时错误: ' + jsErrors.join('; '));
   });
@@ -100,8 +165,12 @@ describe('admin内联脚本运行时检查', () => {
     resetErrors();
     const pages = ['dashboard', 'dishes', 'feedback', 'preferences', 'analytics', 'model', 'apidocs', 'users'];
     for (const p of pages) {
-      await page.evaluate(pg => {
-        try { if (typeof showAdmin === 'function') showAdmin(pg); } catch (e) {}
+      await page.evaluate((pg) => {
+        try {
+          if (typeof showAdmin === 'function') {
+            showAdmin(pg);
+          }
+        } catch (e) {}
       }, p);
       await sleep(300);
     }
@@ -112,7 +181,11 @@ describe('admin内联脚本运行时检查', () => {
   it('4.1 showToast显示提示不崩溃', async () => {
     resetErrors();
     await page.evaluate(() => {
-      try { if (typeof showToast === 'function') showToast('测试', '测试消息'); } catch (e) {}
+      try {
+        if (typeof showToast === 'function') {
+          showToast('测试', '测试消息');
+        }
+      } catch (e) {}
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, 'showToast不应有JS错误');
@@ -156,12 +229,16 @@ describe('admin内联脚本运行时检查', () => {
     await sleep(1500);
     await page.evaluate(() => {
       const btn = document.querySelector('button[onclick*="editDish"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const check = await page.evaluate(() => {
       const modal = document.getElementById('dishModal');
-      if (!modal) return { open: false, nameFilled: false };
+      if (!modal) {
+        return { open: false, nameFilled: false };
+      }
       const isOpen = modal.classList.contains('show') || window.getComputedStyle(modal).display === 'block';
       const nameInput = document.getElementById('dish-name');
       return { open: isOpen, nameFilled: nameInput ? nameInput.value.length > 0 : false };
@@ -177,8 +254,12 @@ describe('admin内联脚本运行时检查', () => {
     // 模拟空数据传入renderRatingChart
     await page.evaluate(() => {
       try {
-        if (typeof renderRatingChart === 'function') renderRatingChart([]);
-      } catch (e) { console.warn('renderRatingChart空数据:', e.message); }
+        if (typeof renderRatingChart === 'function') {
+          renderRatingChart([]);
+        }
+      } catch (e) {
+        console.warn('renderRatingChart空数据:', e.message);
+      }
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, '空数据不应有JS错误: ' + realErrors().join('; '));

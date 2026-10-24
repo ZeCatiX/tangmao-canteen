@@ -6,40 +6,63 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('厨房看板实时刷新和ESC功能', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 厨房看板时间每秒更新 =====
   it('1.1 厨房看板时间每秒更新', async () => {
@@ -172,23 +195,34 @@ describe('厨房看板实时刷新和ESC功能', () => {
 describe('推荐逻辑深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 8. 推荐结果包含盲盒菜品 =====
   it('8.1 推荐结果可能包含盲盒菜品', async () => {
@@ -207,7 +241,9 @@ describe('推荐逻辑深度检查', () => {
     const hasBlindBox = await page.evaluate(() => {
       const badges = document.querySelectorAll('#dish-list .badge');
       for (const b of badges) {
-        if (b.textContent.includes('盲盒') || b.textContent.includes('🎁')) return true;
+        if (b.textContent.includes('盲盒') || b.textContent.includes('🎁')) {
+          return true;
+        }
       }
       return false;
     });
@@ -220,7 +256,7 @@ describe('推荐逻辑深度检查', () => {
     resetErrors();
     const matchBadges = await page.evaluate(() => {
       const badges = document.querySelectorAll('#dish-list .badge.bg-danger');
-      return Array.from(badges).map(b => b.textContent.trim());
+      return Array.from(badges).map((b) => b.textContent.trim());
     });
     // 所有匹配度应包含数字和%
     for (const text of matchBadges) {
@@ -233,7 +269,7 @@ describe('推荐逻辑深度检查', () => {
   it('10.1 推荐菜品都有推荐理由', async () => {
     const reasons = await page.evaluate(() => {
       const reasons = document.querySelectorAll('#dish-list .dish-reason');
-      return Array.from(reasons).map(r => r.textContent.trim());
+      return Array.from(reasons).map((r) => r.textContent.trim());
     });
     for (const r of reasons) {
       assert.ok(r.length > 5, '推荐理由不应为空或过短: ' + r);
@@ -248,7 +284,7 @@ describe('推荐逻辑深度检查', () => {
   it('12.1 换一批后菜品与之前不重复', async () => {
     resetErrors();
     const beforeIds = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map(el => {
+      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map((el) => {
         const btn = el.querySelector('button[onclick*="addToFavorites"]');
         return btn ? btn.getAttribute('onclick').match(/\d+/)[0] : null;
       });
@@ -256,7 +292,7 @@ describe('推荐逻辑深度检查', () => {
     await page.evaluate(() => document.getElementById('refresh-recommendations')?.click());
     await sleep(3000);
     const afterIds = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map(el => {
+      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map((el) => {
         const btn = el.querySelector('button[onclick*="addToFavorites"]');
         return btn ? btn.getAttribute('onclick').match(/\d+/)[0] : null;
       });
@@ -264,7 +300,7 @@ describe('推荐逻辑深度检查', () => {
     // 换一批后应有菜品
     assert.ok(afterIds.length > 0, '换一批后应有菜品');
     // 检查是否有重复（推荐过的菜品不应再推荐）
-    const overlap = afterIds.filter(id => beforeIds.includes(id));
+    const overlap = afterIds.filter((id) => beforeIds.includes(id));
     // 允许少量重复（当可用菜品不足时），但不应全部重复
     assert.ok(overlap.length < afterIds.length, '换一批后不应全部是之前推荐过的菜品');
     assert.equal(realErrors().length, 0, '换一批不应有错误');
@@ -283,7 +319,9 @@ describe('推荐逻辑深度检查', () => {
     resetErrors();
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list .add-to-cart-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, '加购按钮点击不应有JS错误');

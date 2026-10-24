@@ -10,7 +10,7 @@
 
   // 仅注入一次样式
   if (!document.getElementById('pwd-toggle-style')) {
-    var style = document.createElement('style');
+    const style = document.createElement('style');
     style.id = 'pwd-toggle-style';
     style.textContent =
       '.pwd-toggle-wrap{position:relative;display:flex;align-items:center;width:100%;}' +
@@ -29,32 +29,36 @@
     document.head.appendChild(style);
   }
 
-  var ICON_HIDDEN = 'bi-eye'; // 密码当前隐藏 → 点击显示
-  var ICON_SHOWN = 'bi-eye-slash'; // 密码当前显示 → 点击隐藏
+  const ICON_HIDDEN = 'bi-eye'; // 密码当前隐藏 → 点击显示
+  const ICON_SHOWN = 'bi-eye-slash'; // 密码当前显示 → 点击隐藏
 
   function setState(input, btn, shown) {
     input.type = shown ? 'text' : 'password';
-    var icon = btn.querySelector('i');
-    if (icon) icon.className = 'bi ' + (shown ? ICON_SHOWN : ICON_HIDDEN);
+    const icon = btn.querySelector('i');
+    if (icon) {
+      icon.className = 'bi ' + (shown ? ICON_SHOWN : ICON_HIDDEN);
+    }
     btn.setAttribute('aria-label', shown ? '隐藏密码' : '显示密码');
     btn.setAttribute('aria-pressed', shown ? 'true' : 'false');
     btn.title = shown ? '隐藏密码' : '显示密码';
   }
 
   function enhance(scope) {
-    var root = scope || document;
-    var inputs = root.querySelectorAll('input[type="password"]:not([data-pwd-toggle])');
+    const root = scope || document;
+    const inputs = root.querySelectorAll('input[type="password"]:not([data-pwd-toggle])');
     Array.prototype.forEach.call(inputs, function (input) {
       input.setAttribute('data-pwd-toggle', '');
       // 若已被包裹则跳过
-      if (input.parentElement && input.parentElement.classList.contains('pwd-toggle-wrap')) return;
+      if (input.parentElement && input.parentElement.classList.contains('pwd-toggle-wrap')) {
+        return;
+      }
 
-      var wrap = document.createElement('div');
+      const wrap = document.createElement('div');
       wrap.className = 'pwd-toggle-wrap';
       input.parentNode.insertBefore(wrap, input);
       wrap.appendChild(input);
 
-      var btn = document.createElement('button');
+      const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'pwd-toggle-btn';
       btn.setAttribute('aria-label', '显示密码');

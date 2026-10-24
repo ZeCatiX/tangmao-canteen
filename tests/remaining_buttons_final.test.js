@@ -5,41 +5,64 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('剩余按钮最终点击测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 登录表单返回按钮 =====
   it('1.1 登录表单返回按钮可点击', async () => {
@@ -52,7 +75,9 @@ describe('剩余按钮最终点击测试', () => {
     // 点击返回按钮
     await page.evaluate(() => {
       const btn = document.getElementById('back-to-home');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(300);
     // 检查是否回到首页
@@ -73,7 +98,9 @@ describe('剩余按钮最终点击测试', () => {
     await sleep(300);
     await page.evaluate(() => {
       const btn = document.getElementById('back-to-home-from-register');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(300);
     const homeVisible = await page.evaluate(() => {
@@ -96,23 +123,36 @@ describe('剩余按钮最终点击测试', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     // 登录
@@ -120,27 +160,39 @@ describe('剩余按钮最终点击测试', () => {
     await sleep(300);
     await page.evaluate((u) => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 进入个人资料
     await page.evaluate(() => {
       const link = document.getElementById('nav-profile');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     // 点击返回按钮
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-profile');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '个人资料返回按钮不应有错误');
@@ -158,13 +210,17 @@ describe('剩余按钮最终点击测试', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     // 点击"返回偏好设置"按钮
     await page.evaluate(() => {
       const btn = document.getElementById('back-to-preference');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 检查是否回到偏好设置
@@ -188,19 +244,25 @@ describe('剩余按钮最终点击测试', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     // 进入评分页面
     await page.evaluate(() => {
       const btn = document.getElementById('star-submit-btn') || document.querySelector('[onclick*="starFeedback"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 点击"返回推荐"按钮
     await page.evaluate(() => {
       const btn = document.getElementById('back-to-recommendations');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 检查是否回到推荐页面
@@ -218,25 +280,33 @@ describe('剩余按钮最终点击测试', () => {
     // 完成推荐流程到结束页
     await page.evaluate(() => {
       const btn = document.getElementById('end-recommendation');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const endSat = await page.evaluate(() => {
       const el = document.getElementById('end-satisfaction');
-      if (!el) return null;
+      if (!el) {
+        return null;
+      }
       return el.textContent?.trim()?.substring(0, 20);
     });
     if (endSat) {
       // 点击满意度emoji
       await page.evaluate(() => {
         const el = document.getElementById('end-satisfaction');
-        if (el) el.click();
+        if (el) {
+          el.click();
+        }
       });
       await sleep(300);
       // 点击提交按钮
       await page.evaluate(() => {
         const btn = document.getElementById('end-sat-submit');
-        if (btn && !btn.disabled) btn.click();
+        if (btn && !btn.disabled) {
+          btn.click();
+        }
       });
       await sleep(300);
     }
@@ -249,7 +319,9 @@ describe('剩余按钮最终点击测试', () => {
     resetErrors();
     await page.evaluate(() => {
       const btn = document.getElementById('end-logout');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 检查是否回到首页
@@ -274,13 +346,17 @@ describe('剩余按钮最终点击测试', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     // 点击"退出"按钮（end-logout-btn，在推荐结果页面）
     await page.evaluate(() => {
       const btn = document.getElementById('end-logout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(800);
     // 检查是否回到首页且退出登录
@@ -299,44 +375,67 @@ describe('剩余按钮最终点击测试', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => document.getElementById('login-btn')?.click());
     await sleep(300);
     await page.evaluate((u) => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 进入个人资料查看拉黑列表
     await page.evaluate(() => {
       const link = document.getElementById('nav-profile');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     // 检查取消拉黑按钮
@@ -360,44 +459,68 @@ describe('剩余按钮最终点击测试', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => document.getElementById('login-btn')?.click());
     await sleep(300);
     await page.evaluate((u) => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 点击"我的收藏"按钮
     const hasBtn = await page.evaluate(() => {
       const btn = document.getElementById('view-profile-btn');
-      if (btn) { btn.click(); return true; }
+      if (btn) {
+        btn.click();
+        return true;
+      }
       return false;
     });
     await sleep(500);

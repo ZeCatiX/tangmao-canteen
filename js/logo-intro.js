@@ -7,13 +7,13 @@
 // 纯图形无文字: 中英模式通用; prefers-reduced-motion 由调用方决定是否跳过。
 'use strict';
 var TangCatIntro = (function () {
-  var NS = 'http://www.w3.org/2000/svg';
-  var _raf = null,
+  const NS = 'http://www.w3.org/2000/svg';
+  let _raf = null,
     _host = null,
     _stopped = false;
 
   /* ═══ 数据(与 radar.html 同源: feature_importance.json 2026-09-19 加权重训) ═══ */
-  var W = {
+  const W = {
     辣度: 8.0,
     咸淡: 6.2,
     甜酸: 4.1,
@@ -27,8 +27,8 @@ var TangCatIntro = (function () {
     用户价格: 14.9,
     用户热量: 9.3,
   };
-  var MAX = 17.7;
-  var ORD = [
+  const MAX = 17.7;
+  const ORD = [
     '辣度',
     '咸淡',
     '甜酸',
@@ -42,10 +42,10 @@ var TangCatIntro = (function () {
     '用户价格',
     '用户热量',
   ];
-  var CX = 450,
+  const CX = 450,
     CY = 348,
     UNIT = 11.6;
-  var CATPOS = {
+  const CATPOS = {
     用户辣度: [232, 240],
     用户价格: [-52, 240],
     招牌: [250, 129],
@@ -59,7 +59,7 @@ var TangCatIntro = (function () {
     用户咸淡: [48, 208],
     辣度: [90, 192],
   };
-  var STATE = {};
+  const STATE = {};
   ORD.forEach(function (n, i) {
     STATE[n] = { a0: ((i * 30 - 90) * Math.PI) / 180, r0: W[n] * UNIT };
   });
@@ -68,24 +68,32 @@ var TangCatIntro = (function () {
     STATE[n].r1 = 144 + (W[n] / MAX) * 76;
     STATE[n].r2 = CATPOS[n][1];
   });
-  var PHI = (347 * Math.PI) / 180;
+  const PHI = (347 * Math.PI) / 180;
   function normKey(a) {
     a = a - PHI;
     return ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   }
   function posAt(n, kr, ka, kc) {
-    var st = STATE[n];
-    var d = st.a1 - st.a0;
-    while (d > Math.PI) d -= 2 * Math.PI;
-    while (d < -Math.PI) d += 2 * Math.PI;
-    var a = st.a0 + d * (ka === undefined ? kr : ka);
-    var r = st.r0 + (st.r1 - st.r0) * kr;
-    if (kc) r += (st.r2 - r) * kc;
+    const st = STATE[n];
+    let d = st.a1 - st.a0;
+    while (d > Math.PI) {
+      d -= 2 * Math.PI;
+    }
+    while (d < -Math.PI) {
+      d += 2 * Math.PI;
+    }
+    const a = st.a0 + d * (ka === undefined ? kr : ka);
+    let r = st.r0 + (st.r1 - st.r0) * kr;
+    if (kc) {
+      r += (st.r2 - r) * kc;
+    }
     return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
   }
   function el(parent, tag, attrs) {
-    var e = document.createElementNS(NS, tag);
-    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) {
+      e.setAttribute(k, attrs[k]);
+    }
     parent.appendChild(e);
     return e;
   }
@@ -95,7 +103,7 @@ var TangCatIntro = (function () {
   }
 
   /* ═══ 场景构建(纯图形, 无文字标签) ═══ */
-  var g = {};
+  const g = {};
   function build(host) {
     host.innerHTML = '';
     g.svg = document.createElementNS(NS, 'svg');
@@ -146,8 +154,8 @@ var TangCatIntro = (function () {
       'stroke-width': 1.2,
       opacity: 0.7,
     });
-    for (var i = 0; i < 24; i++) {
-      var a = (i * 15 * Math.PI) / 180;
+    for (let i = 0; i < 24; i++) {
+      const a = (i * 15 * Math.PI) / 180;
       el(g.decor, 'circle', {
         cx: (450 + 238 * Math.cos(a)).toFixed(1),
         cy: (348 + 238 * Math.sin(a)).toFixed(1),
@@ -157,7 +165,7 @@ var TangCatIntro = (function () {
       });
     }
     [45, 135, 225, 315].forEach(function (a) {
-      var r = (a * Math.PI) / 180;
+      const r = (a * Math.PI) / 180;
       el(g.decor, 'circle', {
         cx: (450 + 243 * Math.cos(r)).toFixed(1),
         cy: (348 + 243 * Math.sin(r)).toFixed(1),
@@ -228,7 +236,7 @@ var TangCatIntro = (function () {
     g.vspokes = [];
     g.vdots = [];
     ORD.forEach(function (n, i) {
-      var p = posAt(n, 0),
+      const p = posAt(n, 0),
         f = [p[0].toFixed(1), p[1].toFixed(1)];
       g.vspokes.push(
         el(g.dataLayer, 'line', {
@@ -274,8 +282,8 @@ var TangCatIntro = (function () {
       'stroke-linejoin': 'round',
     });
     g.gP1 = el(g.faceLayer, 'g', { opacity: 0 });
-    for (var hi = 0; hi < 5; hi++) {
-      var ha = -Math.PI / 2 + (hi * 2 * Math.PI) / 5;
+    for (let hi = 0; hi < 5; hi++) {
+      const ha = -Math.PI / 2 + (hi * 2 * Math.PI) / 5;
       el(g.gP1, 'circle', {
         cx: (450 + 6.5 * Math.cos(ha)).toFixed(1),
         cy: (284 + 6.5 * Math.sin(ha)).toFixed(1),
@@ -313,7 +321,7 @@ var TangCatIntro = (function () {
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round',
     });
-    var whiskers = el(g.gP2, 'g', { stroke: '#5a4a3a', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0.9 });
+    const whiskers = el(g.gP2, 'g', { stroke: '#5a4a3a', 'stroke-width': 2, 'stroke-linecap': 'round', opacity: 0.9 });
     [
       [272, 412, 188, 398],
       [272, 428, 178, 428],
@@ -328,8 +336,8 @@ var TangCatIntro = (function () {
     /* ═══ 标签层(2026-10-08 移植自 radar.html 并按反馈钉在表盘: 固定半径264=瓦当外环外侧,不随顶点飞行;
        用户口味维红色加粗/菜品维墨色;EN 模式换词表) ═══ */
     g.labelLayer = el(g.svg, 'g', { id: 'labelLayer' });
-    var EN = typeof menuLang !== 'undefined' && menuLang === 'en';
-    var EN_NAME = {
+    const EN = typeof menuLang !== 'undefined' && menuLang === 'en';
+    const EN_NAME = {
       辣度: 'Spicy',
       咸淡: 'Salty',
       甜酸: 'Sweet·Sour',
@@ -343,16 +351,16 @@ var TangCatIntro = (function () {
       用户价格: 'Your Price',
       用户热量: 'Your Calorie',
     };
-    var LRAD = 264;
+    const LRAD = 264;
     g.labelEls = [];
     ORD.forEach(function (n) {
-      var a0 = STATE[n].a0,
+      const a0 = STATE[n].a0,
         c = Math.cos(a0),
         s = Math.sin(a0);
-      var px = CX + LRAD * c,
+      const px = CX + LRAD * c,
         py = CY + LRAD * s;
-      var isUser = n.indexOf('用户') === 0;
-      var t = el(g.labelLayer, 'text', {
+      const isUser = n.indexOf('用户') === 0;
+      const t = el(g.labelLayer, 'text', {
         x: px.toFixed(1),
         y: (py + (s < -0.5 ? -4 : s > 0.5 ? 14 : 5)).toFixed(1),
         'font-size': isUser ? 15 : 14,
@@ -367,25 +375,31 @@ var TangCatIntro = (function () {
 
   /* ═══ 动画驱动(与 radar.html 同一套三幕时序) ═══ */
   function updateData(kr, ka, kc) {
-    var items = [];
+    const items = [];
     ORD.forEach(function (n, i) {
-      var st = STATE[n];
-      var d = st.a1 - st.a0;
-      while (d > Math.PI) d -= 2 * Math.PI;
-      while (d < -Math.PI) d += 2 * Math.PI;
-      var a = st.a0 + d * ka;
-      var r = st.r0 + (st.r1 - st.r0) * kr;
-      if (kc) r += (st.r2 - r) * kc;
-      var x = CX + r * Math.cos(a),
+      const st = STATE[n];
+      let d = st.a1 - st.a0;
+      while (d > Math.PI) {
+        d -= 2 * Math.PI;
+      }
+      while (d < -Math.PI) {
+        d += 2 * Math.PI;
+      }
+      const a = st.a0 + d * ka;
+      let r = st.r0 + (st.r1 - st.r0) * kr;
+      if (kc) {
+        r += (st.r2 - r) * kc;
+      }
+      const x = CX + r * Math.cos(a),
         y = CY + r * Math.sin(a);
       items.push({ a: normKey(a), x: x, y: y, i: i });
     });
     items.sort(function (p, q) {
       return p.a - q.a;
     });
-    var ptsStr = '';
+    let ptsStr = '';
     items.forEach(function (it) {
-      var f = [it.x.toFixed(1), it.y.toFixed(1)];
+      const f = [it.x.toFixed(1), it.y.toFixed(1)];
       g.vspokes[it.i].setAttribute('x2', f[0]);
       g.vspokes[it.i].setAttribute('y2', f[1]);
       g.vdots[it.i].setAttribute('cx', f[0]);
@@ -393,10 +407,10 @@ var TangCatIntro = (function () {
       ptsStr += f[0] + ',' + f[1] + ' ';
     });
     g.dataPoly.setAttribute('points', ptsStr.trim());
-    var kc2 = kc || 0;
-    var c0 = [184, 58, 42],
+    const kc2 = kc || 0;
+    const c0 = [184, 58, 42],
       c1 = [250, 246, 240];
-    var cr = [
+    const cr = [
       Math.round(c0[0] + (c1[0] - c0[0]) * kc2),
       Math.round(c0[1] + (c1[1] - c0[1]) * kc2),
       Math.round(c0[2] + (c1[2] - c0[2]) * kc2),
@@ -422,11 +436,13 @@ var TangCatIntro = (function () {
   function frame(ms) {
     /* 标签钉在表盘全程可见(2026-10-08 用户反馈: 表盘刻度不应淡出)—— radar.html 的
        变形期淡出是为顶点跟随版设计的防遮挡逻辑,标签固定后无碰撞不再需要 */
-    if (ms < 2800) setFace(0, 0);
+    if (ms < 2800) {
+      setFace(0, 0);
+    }
     if (ms < 900) {
       updateData(0, 0, 0);
     } else if (ms < 3400) {
-      var p = (ms - 900) / 2500;
+      const p = (ms - 900) / 2500;
       updateData(smooth(p / 0.42), smooth((p - 0.3) / 0.5), smooth((p - 0.55) / 0.45));
     } else if (ms < 3700) {
       updateData(0, 1, 1);
@@ -446,27 +462,34 @@ var TangCatIntro = (function () {
     _host = host;
     _stopped = false;
     build(host);
-    var DUR = opts.duration || 5400;
+    const DUR = opts.duration || 5400;
     /* 动画时钟用逐帧累加(单帧最多计50ms)而非墙钟——页面在后台加载/切走时 raf 节流,
        墙钟会在恢复瞬间跳过整段动画(表现为"一闪而过"),累加时钟保证完整播完 */
-    var acc = 0,
+    let acc = 0,
       last = null;
     function raf(now) {
-      if (_stopped || _host !== host) return;
-      if (last === null) last = now;
+      if (_stopped || _host !== host) {
+        return;
+      }
+      if (last === null) {
+        last = now;
+      }
       acc += Math.min(now - last, 50);
       last = now;
-      var ms = Math.min(DUR, acc);
+      const ms = Math.min(DUR, acc);
       try {
         frame(ms);
       } catch (e) {
         /* 单帧异常不终止 */
       }
-      if (ms < DUR) requestAnimationFrame(raf);
-      else if (opts.loop) {
+      if (ms < DUR) {
+        requestAnimationFrame(raf);
+      } else if (opts.loop) {
         acc = 0;
         requestAnimationFrame(raf);
-      } else if (opts.onDone) opts.onDone();
+      } else if (opts.onDone) {
+        opts.onDone();
+      }
     }
     requestAnimationFrame(raf);
   }

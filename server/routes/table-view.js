@@ -1,10 +1,13 @@
 'use strict';
 // 唐猫庭院 · 本桌账单(免登录,凭签名桌码)——从 server.js 拆出(2026-10-13 可维护性改造4)
 const TABLE_SECRET = process.env.TABLE_SECRET || process.env.JWT_SECRET || 'tangmao-table-secret';
-function tableSig(n) { return require('crypto').createHmac('sha256', TABLE_SECRET).update(String(n)).digest('hex').slice(0, 16); }
+function tableSig(n) {
+  return require('crypto').createHmac('sha256', TABLE_SECRET).update(String(n)).digest('hex').slice(0, 16);
+}
 // 常量时间比较:避免字符串 !== 逐字符短路产生的计时侧信道(与 admin 登录同一套路)
 function tableSigEq(expect, got) {
-  const a = Buffer.from(String(expect)), b = Buffer.from(String(got));
+  const a = Buffer.from(String(expect)),
+    b = Buffer.from(String(got));
   return a.length === b.length && require('crypto').timingSafeEqual(a, b);
 }
 
@@ -27,7 +30,10 @@ function register(app, deps) {
         [num]
       );
       res.json({ success: true, tableNumber: num, orders: r.rows });
-    } catch (e) { logger.error('桌码查询失败:', e.message); res.status(500).json({ success: false, error: '服务器内部错误' }); }
+    } catch (e) {
+      logger.error('桌码查询失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
   });
 }
 

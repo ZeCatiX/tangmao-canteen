@@ -26,9 +26,12 @@ const pool = new Pool({
   password: process.env.PG_PASSWORD,
 });
 
-pool.query(sql)
-  .then(r => {
-    if (r.rowCount > 200) console.log(`⚠️ 返回 ${r.rowCount} 行,建议加 LIMIT`);
+pool
+  .query(sql)
+  .then((r) => {
+    if (r.rowCount > 200) {
+      console.log(`⚠️ 返回 ${r.rowCount} 行,建议加 LIMIT`);
+    }
     if (asJson) {
       console.log(JSON.stringify(r.rows, null, 2));
     } else {
@@ -36,5 +39,8 @@ pool.query(sql)
       console.table(r.rows);
     }
   })
-  .catch(e => { console.error('❌ 查询失败:', e.message); process.exit(1); })
+  .catch((e) => {
+    console.error('❌ 查询失败:', e.message);
+    process.exit(1);
+  })
   .finally(() => pool.end());

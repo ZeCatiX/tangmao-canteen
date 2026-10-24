@@ -4,12 +4,18 @@ const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const { Pool } = require('pg');
@@ -19,7 +25,9 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-function uid() { return crypto.randomUUID().slice(0, 8); }
+function uid() {
+  return crypto.randomUUID().slice(0, 8);
+}
 
 async function api(p, options = {}) {
   const res = await fetch(BASE + p, {
@@ -42,14 +50,16 @@ after(async () => {
   try {
     const prefixes = ['rich_'];
     // 清理用户
-    const users = await pool.query('SELECT id, username FROM users WHERE username LIKE ANY($1)', [prefixes.map(p => p + '%')]);
-    const usernames = users.rows.map(r => r.username);
+    const users = await pool.query('SELECT id, username FROM users WHERE username LIKE ANY($1)', [
+      prefixes.map((p) => p + '%'),
+    ]);
+    const usernames = users.rows.map((r) => r.username);
     if (usernames.length > 0) {
       await pool.query('DELETE FROM orders WHERE user_id = ANY($1)', [usernames]);
       await pool.query('DELETE FROM feedback WHERE user_id = ANY($1)', [usernames]);
       await pool.query('DELETE FROM recommendation_log WHERE user_id = ANY($1)', [usernames]);
       await pool.query('DELETE FROM preference_log WHERE user_id = ANY($1)', [usernames]);
-      await pool.query('DELETE FROM users WHERE id = ANY($1)', [users.rows.map(r => r.id)]);
+      await pool.query('DELETE FROM users WHERE id = ANY($1)', [users.rows.map((r) => r.id)]);
     }
     // 清理未注册用户的订单（并发测试创建的用户未注册）
     await pool.query("DELETE FROM orders WHERE user_id LIKE 'rich_concurrent%'");
@@ -58,33 +68,48 @@ after(async () => {
     await pool.query("DELETE FROM dishes WHERE name LIKE '%丰富测试%'");
     await pool.query("DELETE FROM dishes WHERE name LIKE '%边界测试%'");
     console.log('✅ 丰富测试数据清理完成');
-  } catch (e) { console.error('清理失败:', e.message); } finally { await pool.end(); }
+  } catch (e) {
+    console.error('清理失败:', e.message);
+  } finally {
+    await pool.end();
+  }
 });
 
 describe('全面丰富 E2E 测试', () => {
-
   // ── 方向1: 并发争用 ──
   describe('1. 并发争用测试', () => {
     it('并发创建订单不崩溃且均返回合理状态', async () => {
       const results = await Promise.all(
-        Array.from({ length: 20 }, (_, i) => api('/api/order', {
-          method: 'POST',
-          body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试' + i, price: 1, quantity: 1 }], total: 1, userId: 'rich_concurrent_' + i }),
-        }))
+        Array.from({ length: 20 }, (_, i) =>
+          api('/api/order', {
+            method: 'POST',
+            body: JSON.stringify({
+              items: [{ id: dishPool[0].id, name: '测试' + i, price: 1, quantity: 1 }],
+              total: 1,
+              userId: 'rich_concurrent_' + i,
+            }),
+          })
+        )
       );
-      const okStatuses = results.filter(r => r.status === 200 || r.status === 400 || r.status === 429);
-      assert.equal(okStatuses.length, 20, '20个并发请求应全部返回合理状态，实际: ' + results.map(r => r.status).join(','));
+      const okStatuses = results.filter((r) => r.status === 200 || r.status === 400 || r.status === 429);
+      assert.equal(
+        okStatuses.length,
+        20,
+        '20个并发请求应全部返回合理状态，实际: ' + results.map((r) => r.status).join(',')
+      );
     });
 
     it('并发注册不同用户全部成功', async () => {
       const results = await Promise.all(
-        Array.from({ length: 10 }, (_, i) => api('/api/user/register', {
-          method: 'POST',
-          body: JSON.stringify({ username: 'rich_reg_' + i + '_' + uid(), password: 'Test1234!' }),
-        }))
+        Array.from({ length: 10 }, (_, i) =>
+          api('/api/user/register', {
+            method: 'POST',
+            body: JSON.stringify({ username: 'rich_reg_' + i + '_' + uid(), password: 'Test1234!' }),
+          })
+        )
       );
-      const ok = results.filter(r => r.status === 200 || r.status === 201);
-      assert.ok(ok.length >= 8, '多数并发注册应成功，实际: ' + results.map(r => r.status).join(','));
+      const ok = results.filter((r) => r.status === 200 || r.status === 201);
+      assert.ok(ok.length >= 8, '多数并发注册应成功，实际: ' + results.map((r) => r.status).join(','));
     });
   });
 
@@ -93,24 +118,50 @@ describe('全面丰富 E2E 测试', () => {
     it('注册→登录→偏好→下单→评价→注销 完整闭环', async () => {
       const uname = 'rich_life_' + uid();
       // 注册
-      const reg = await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test1234!' }) });
+      const reg = await api('/api/user/register', {
+        method: 'POST',
+        body: JSON.stringify({ username: uname, password: 'Test1234!' }),
+      });
       assert.ok([200, 201].includes(reg.status), '注册应成功，实际: ' + reg.status);
       // 登录获取 token
-      const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test1234!' }) });
+      const login = await api('/api/user/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: uname, password: 'Test1234!' }),
+      });
       assert.equal(login.status, 200, '登录应成功');
       const token = login.body.token;
       assert.ok(token, '登录应返回 token');
       // 保存偏好（带认证头）
-      const prefs = await api('/api/user-preferences', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ userId: uname, spiciness: '微辣', price: '20-40' }) });
+      const prefs = await api('/api/user-preferences', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ userId: uname, spiciness: '微辣', price: '20-40' }),
+      });
       assert.equal(prefs.status, 200, '保存偏好应成功，实际: ' + prefs.status + ' ' + JSON.stringify(prefs.body));
       // 下单（带认证头）
-      const order = await api('/api/order', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, userId: uname }) });
+      const order = await api('/api/order', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({
+          items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }],
+          total: 28,
+          userId: uname,
+        }),
+      });
       assert.equal(order.status, 200, '下单应成功，实际: ' + order.status);
       // 评价（带认证头）
-      const feedback = await api('/api/feedback', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ dishId: 1, score: 5, userId: uname }) });
+      const feedback = await api('/api/feedback', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ dishId: 1, score: 5, userId: uname }),
+      });
       assert.equal(feedback.status, 200, '评价应成功，实际: ' + feedback.status);
       // 注销（POST /api/user/delete 带认证头;2026-10-06 起需密码二次确认）
-      const del = await api('/api/user/delete', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ username: uname, password: 'Test1234!' }) });
+      const del = await api('/api/user/delete', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ username: uname, password: 'Test1234!' }),
+      });
       assert.equal(del.status, 200, '注销应成功，实际: ' + del.status + ' ' + JSON.stringify(del.body));
     });
   });
@@ -118,21 +169,34 @@ describe('全面丰富 E2E 测试', () => {
   // ── 方向3: 数据边界测试 ──
   describe('3. 数据边界测试', () => {
     it('超长用户名（200字符）返回 400', async () => {
-      const { status } = await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: 'x'.repeat(200), password: 'Test1234!' }) });
+      const { status } = await api('/api/user/register', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'x'.repeat(200), password: 'Test1234!' }),
+      });
       assert.equal(status, 400, '超长用户名应返回 400，实际: ' + status);
     });
 
     it('特殊字符用户名（Emoji/引号）返回合理状态', async () => {
-      const { status } = await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: '测试😀"\'用户', password: 'Test1234!' }) });
+      const { status } = await api('/api/user/register', {
+        method: 'POST',
+        body: JSON.stringify({ username: '测试😀"\'用户', password: 'Test1234!' }),
+      });
       assert.ok([200, 400].includes(status), '特殊字符用户名应返回 200 或 400，实际: ' + status);
     });
 
     it('负价格在管理端被拒绝', async () => {
-      const login = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }) });
+      const login = await api('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }),
+      });
       assert.equal(login.status, 200, '管理员登录应成功');
       const token = login.body.token;
       assert.ok(token, '应获取管理员 token');
-      const negPrice = await api('/api/admin/dish', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ name: '丰富测试负价', category: '招牌', price: -5, rating: 4 }) });
+      const negPrice = await api('/api/admin/dish', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ name: '丰富测试负价', category: '招牌', price: -5, rating: 4 }),
+      });
       assert.ok([400, 422].includes(negPrice.status), '负价格应被拒绝(400/422)，实际: ' + negPrice.status);
     });
   });
@@ -165,26 +229,29 @@ describe('全面丰富 E2E 测试', () => {
   describe('5. 管理后台深度测试', () => {
     let token = '';
     before(async () => {
-      const login = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }) });
+      const login = await api('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }),
+      });
       assert.equal(login.status, 200, '管理员登录应成功');
       token = login.body.token;
       assert.ok(token, '应获取管理员 token');
     });
 
     it('最差菜品统计可访问', async () => {
-      const { status, body } = await api('/api/admin/worst-dishes', { headers: { 'Authorization': 'Bearer ' + token } });
+      const { status, body } = await api('/api/admin/worst-dishes', { headers: { Authorization: 'Bearer ' + token } });
       assert.equal(status, 200, '最差菜品统计应返回 200');
       assert.ok(Array.isArray(body.dishes), '应返回 dishes 数组');
     });
 
     it('模型历史可访问', async () => {
-      const { status, body } = await api('/api/admin/model-history', { headers: { 'Authorization': 'Bearer ' + token } });
+      const { status, body } = await api('/api/admin/model-history', { headers: { Authorization: 'Bearer ' + token } });
       assert.equal(status, 200, '模型历史应返回 200');
       assert.ok(body, '应返回模型历史数据');
     });
 
     it('用户列表可访问且分页正常', async () => {
-      const { status, body } = await api('/api/admin/users?limit=5', { headers: { 'Authorization': 'Bearer ' + token } });
+      const { status, body } = await api('/api/admin/users?limit=5', { headers: { Authorization: 'Bearer ' + token } });
       assert.equal(status, 200, '用户列表应返回 200');
       assert.ok(Array.isArray(body.users || body), '应返回用户列表数组');
     });
@@ -235,7 +302,7 @@ describe('全面丰富 E2E 测试', () => {
     });
 
     it('错误 token 访问管理后台返回 401/403', async () => {
-      const { status } = await api('/api/admin/stats', { headers: { 'Authorization': 'Bearer invalid.token.here' } });
+      const { status } = await api('/api/admin/stats', { headers: { Authorization: 'Bearer invalid.token.here' } });
       assert.ok([401, 403].includes(status), '错误 token 应返回 401/403，实际: ' + status);
     });
   });
@@ -244,26 +311,43 @@ describe('全面丰富 E2E 测试', () => {
   describe('8. 厨房看板订单流转', () => {
     let token = '';
     before(async () => {
-      const login = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }) });
+      const login = await api('/api/admin/login', {
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }),
+      });
       assert.equal(login.status, 200, '管理员登录应成功');
       token = login.body.token;
       assert.ok(token, '应获取管理员 token');
     });
 
     it('订单可按状态过滤（待处理）', async () => {
-      const { status, body } = await api('/api/orders?status=pending', { headers: { 'Authorization': 'Bearer ' + token } });
+      const { status, body } = await api('/api/orders?status=pending', {
+        headers: { Authorization: 'Bearer ' + token },
+      });
       assert.equal(status, 200, '订单状态过滤应返回 200');
       assert.ok(Array.isArray(body.orders || body), '应返回订单数组');
     });
 
     it('订单状态可流转（创建→完成）', async () => {
       // 创建订单
-      const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }], total: 28, tableNumber: '26', userId: 'rich_kitchen_' + uid() }) });
+      const order = await api('/api/order', {
+        method: 'POST',
+        body: JSON.stringify({
+          items: [{ id: dishPool[0].id, name: '测试菜', price: 28, quantity: 1 }],
+          total: 28,
+          tableNumber: '26',
+          userId: 'rich_kitchen_' + uid(),
+        }),
+      });
       assert.equal(order.status, 200, '创建订单应成功');
       const orderId = order.body.orderId || order.body.id;
       assert.ok(orderId, '创建订单应返回 orderId');
       // 更新状态为完成
-      const update = await api('/api/orders/' + orderId + '/status', { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ status: 'completed' }) });
+      const update = await api('/api/orders/' + orderId + '/status', {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ status: 'completed' }),
+      });
       assert.equal(update.status, 200, '订单状态更新应成功，实际: ' + update.status);
     });
   });

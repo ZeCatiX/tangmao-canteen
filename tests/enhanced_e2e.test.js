@@ -4,12 +4,18 @@ const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 require('dotenv').config();
@@ -55,7 +61,17 @@ describe('1. admin.html 中文乱码回归', () => {
   it('管理员侧边栏导航中文正常', async () => {
     const res = await fetch(BASE + '/admin');
     const html = await res.text();
-    const navItems = ['控制面板', '菜品管理', '用户管理', '反馈查看', '偏好分布', '数据分析', '模型管理', 'API文档', '返回首页'];
+    const navItems = [
+      '控制面板',
+      '菜品管理',
+      '用户管理',
+      '反馈查看',
+      '偏好分布',
+      '数据分析',
+      '模型管理',
+      'API文档',
+      '返回首页',
+    ];
     for (const item of navItems) {
       assert.ok(html.includes(item), `侧边栏应包含"${item}"`);
     }
@@ -82,7 +98,31 @@ describe('1. admin.html 中文乱码回归', () => {
   it('菜品弹窗中文正常', async () => {
     const res = await fetch(BASE + '/admin');
     const html = await res.text();
-    const modalTexts = ['菜品名称', '菜品描述', '分类', '辣度', '咸淡', '甜酸', '价格（元）', '评分', '过敏原', '海鲜', '花生', '鸡蛋', '麸质', '大豆', '饮食要求', '清真', '素食', '标签', '菜品图片', '上架', '删除菜品', '取消', '保存'];
+    const modalTexts = [
+      '菜品名称',
+      '菜品描述',
+      '分类',
+      '辣度',
+      '咸淡',
+      '甜酸',
+      '价格（元）',
+      '评分',
+      '过敏原',
+      '海鲜',
+      '花生',
+      '鸡蛋',
+      '麸质',
+      '大豆',
+      '饮食要求',
+      '清真',
+      '素食',
+      '标签',
+      '菜品图片',
+      '上架',
+      '删除菜品',
+      '取消',
+      '保存',
+    ];
     for (const t of modalTexts) {
       assert.ok(html.includes(t), `菜品弹窗应包含"${t}"`);
     }
@@ -91,7 +131,19 @@ describe('1. admin.html 中文乱码回归', () => {
   it('数据分析页面中文正常', async () => {
     const res = await fetch(BASE + '/admin');
     const html = await res.text();
-    const texts = ['数据分析', '导出热门菜品', '导出反馈数据', '导出订单数据', '每日推荐趋势', '偏好分布饼图', '用户活跃度', '推荐统计', '评分最低的菜品', '推荐日志详情', '监控系统'];
+    const texts = [
+      '数据分析',
+      '导出热门菜品',
+      '导出反馈数据',
+      '导出订单数据',
+      '每日推荐趋势',
+      '偏好分布饼图',
+      '用户活跃度',
+      '推荐统计',
+      '评分最低的菜品',
+      '推荐日志详情',
+      '监控系统',
+    ];
     for (const t of texts) {
       assert.ok(html.includes(t), `数据分析页应包含"${t}"`);
     }
@@ -100,7 +152,17 @@ describe('1. admin.html 中文乱码回归', () => {
   it('模型管理页面中文正常', async () => {
     const res = await fetch(BASE + '/admin');
     const html = await res.text();
-    const texts = ['模型管理', '当前模型', '版本', '训练时间', '反馈数量', '重新训练模型', '版本对比', '历史版本', '特征重要性对比'];
+    const texts = [
+      '模型管理',
+      '当前模型',
+      '版本',
+      '训练时间',
+      '反馈数量',
+      '重新训练模型',
+      '版本对比',
+      '历史版本',
+      '特征重要性对比',
+    ];
     for (const t of texts) {
       assert.ok(html.includes(t), `模型管理页应包含"${t}"`);
     }
@@ -109,7 +171,17 @@ describe('1. admin.html 中文乱码回归', () => {
   it('API文档页面中文正常', async () => {
     const res = await fetch(BASE + '/admin');
     const html = await res.text();
-    const texts = ['API 文档', '菜品 API', '用户 API', '推荐 & 反馈 API', '管理后台 API', '方法', '路径', '参数', '返回'];
+    const texts = [
+      'API 文档',
+      '菜品 API',
+      '用户 API',
+      '推荐 & 反馈 API',
+      '管理后台 API',
+      '方法',
+      '路径',
+      '参数',
+      '返回',
+    ];
     for (const t of texts) {
       assert.ok(html.includes(t), `API文档页应包含"${t}"`);
     }
@@ -150,11 +222,13 @@ describe('1. admin.html 中文乱码回归', () => {
 describe('2. 管理后台数据加载', () => {
   let token = '';
 
-  before(async () => { token = await getAdminToken(); });
+  before(async () => {
+    token = await getAdminToken();
+  });
 
   it('GET /api/admin/stats 返回完整统计数据', async () => {
     const { status, body } = await api('/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -168,7 +242,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/feedback-summary 返回反馈数据', async () => {
     const { status, body } = await api('/api/admin/feedback-summary', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -177,7 +251,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/preference-stats 返回偏好统计', async () => {
     const { status, body } = await api('/api/admin/preference-stats', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -187,7 +261,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/daily-recommendations 返回趋势数据', async () => {
     const { status, body } = await api('/api/admin/daily-recommendations', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -196,7 +270,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/user-activity 返回活跃度', async () => {
     const { status, body } = await api('/api/admin/user-activity', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -206,7 +280,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/recommendation-stats 返回推荐统计', async () => {
     const { status, body } = await api('/api/admin/recommendation-stats', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -216,7 +290,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/worst-dishes 返回最差菜品', async () => {
     const { status, body } = await api('/api/admin/worst-dishes', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -225,7 +299,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/model-history 返回模型历史', async () => {
     const { status, body } = await api('/api/admin/model-history', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -234,7 +308,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/model-compare 返回版本对比', async () => {
     const { status, body } = await api('/api/admin/model-compare', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.ok(Array.isArray(body.versions), 'versions 应为数组');
@@ -243,7 +317,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/users 返回用户列表', async () => {
     const { status, body } = await api('/api/admin/users', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -252,7 +326,7 @@ describe('2. 管理后台数据加载', () => {
 
   it('GET /api/admin/notifications 返回通知', async () => {
     const { status, body } = await api('/api/admin/notifications', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -260,7 +334,7 @@ describe('2. 管理后台数据加载', () => {
   });
 
   it('数据导出 CSV 均正常', async () => {
-    const auth = { headers: { 'Authorization': 'Bearer ' + token } };
+    const auth = { headers: { Authorization: 'Bearer ' + token } };
     for (const ep of ['/api/admin/export/popular-dishes', '/api/admin/export/feedback', '/api/admin/export/orders']) {
       const res = await fetch(BASE + ep, auth);
       assert.equal(res.status, 200, `${ep} 应返回 200`);
@@ -286,9 +360,19 @@ describe('3. 前端页面结构', () => {
   it('首页所有 section 存在', async () => {
     const res = await fetch(BASE + '/');
     const html = await res.text();
-    const sections = ['home-section', 'login-section', 'register-section', 'preference-section',
-      'profile-section', 'recommendation-section', 'feedback-section', 'cart-section',
-      'end-section', 'about-section', 'dataset-section'];
+    const sections = [
+      'home-section',
+      'login-section',
+      'register-section',
+      'preference-section',
+      'profile-section',
+      'recommendation-section',
+      'feedback-section',
+      'cart-section',
+      'end-section',
+      'about-section',
+      'dataset-section',
+    ];
     for (const s of sections) {
       assert.ok(html.includes('id="' + s + '"'), `首页应包含 section #${s}`);
     }
@@ -345,14 +429,21 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/order 空 items 返回 400', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ items: [] }),
+      method: 'POST',
+      body: JSON.stringify({ items: [] }),
     });
     assert.equal(status, 400, '空 items 应返回 400');
   });
 
   it('POST /api/order 负价格被服务端重算覆盖(不产生负价订单)', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '负价', price: -10 }], totalPrice: -10, tableNumber: '30' }),
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'test',
+        items: [{ id: dishPool[0].id, name: '负价', price: -10 }],
+        totalPrice: -10,
+        tableNumber: '30',
+      }),
     });
     // 2026-09-17: 服务端不信任客户端价格(按 DB 单价重算),负价被忽略(200)或被拒绝(400)均安全
     assert.ok(status === 200 || status === 400, '负价应被安全处理,实际: ' + status);
@@ -360,7 +451,12 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/order 非数字价格被安全处理', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 'abc' }], tableNumber: '23' }),
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'test',
+        items: [{ id: dishPool[0].id, name: '菜', price: 'abc' }],
+        tableNumber: '23',
+      }),
     });
     // 同上:客户端价格被忽略并重算,不会写入异常价格
     assert.ok(status === 200 || status === 400, '非数字价格应被安全处理,实际: ' + status);
@@ -370,7 +466,12 @@ describe('4. 边界与安全', () => {
     // 2026-09-17 安全修复回归:qty 为负会与正单价相乘产生负价订单(-5 × 3元 = -15元)
     for (const qty of [-5, 0, 1000]) {
       const { status } = await api('/api/order', {
-        method: 'POST', body: JSON.stringify({ userId: 'badqty_test', items: [{ id: dishPool[0].id, name: '测试', qty }], tableNumber: '25' }),
+        method: 'POST',
+        body: JSON.stringify({
+          userId: 'badqty_test',
+          items: [{ id: dishPool[0].id, name: '测试', qty }],
+          tableNumber: '25',
+        }),
       });
       assert.equal(status, 400, `qty=${qty} 应返回 400,实际 ${status}`);
     }
@@ -379,7 +480,13 @@ describe('4. 边界与安全', () => {
   it('POST /api/order 空字符串总价兜底为 0 不崩溃', async () => {
     // 空字符串 totalPrice 应被兜底为 0，订单可正常创建
     const { status, body } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ userId: 'test', items: [{ id: dishPool[0].id, name: '菜', price: 10 }], totalPrice: '', tableNumber: '30' }),
+      method: 'POST',
+      body: JSON.stringify({
+        userId: 'test',
+        items: [{ id: dishPool[0].id, name: '菜', price: 10 }],
+        totalPrice: '',
+        tableNumber: '30',
+      }),
     });
     assert.equal(status, 200, `空字符串总价订单应创建成功，实际 ${status}`);
     assert.ok(body.orderId, '应返回订单ID');
@@ -387,18 +494,21 @@ describe('4. 边界与安全', () => {
 
   it('POST /api/feedback 边界值 0 和 5 分', async () => {
     const { status: s1 } = await api('/api/feedback', {
-      method: 'POST', body: JSON.stringify({ dishId: 1, score: 0 }),
+      method: 'POST',
+      body: JSON.stringify({ dishId: 1, score: 0 }),
     });
     assert.equal(s1, 200, '0 分应返回 200');
     const { status: s2 } = await api('/api/feedback', {
-      method: 'POST', body: JSON.stringify({ dishId: 1, score: 5 }),
+      method: 'POST',
+      body: JSON.stringify({ dishId: 1, score: 5 }),
     });
     assert.equal(s2, 200, '5 分应返回 200');
   });
 
   it('POST /api/user/register 用户名包含特殊字符', async () => {
     const { status } = await api('/api/user/register', {
-      method: 'POST', body: JSON.stringify({ username: '<script>', password: 'Test123!' }),
+      method: 'POST',
+      body: JSON.stringify({ username: '<script>', password: 'Test123!' }),
     });
     // 允许拒绝或接受，但不能崩溃
     assert.ok(status === 200 || status === 400, `特殊字符注册应响应 200/400，实际 ${status}`);
@@ -407,25 +517,25 @@ describe('4. 边界与安全', () => {
   it('管理后台数据导出 CSV 带 BOM 头', async () => {
     const token = await getAdminToken();
     const res = await fetch(BASE + '/api/admin/export/popular-dishes', {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     const text = await res.text();
     // CSV 应包含 BOM (U+FEFF) 以便 Excel 正确识别 UTF-8
-    assert.ok(text.charCodeAt(0) === 0xFEFF || text.includes('菜名') || text.includes('name'), 'CSV 应包含 BOM 或表头');
+    assert.ok(text.charCodeAt(0) === 0xfeff || text.includes('菜名') || text.includes('name'), 'CSV 应包含 BOM 或表头');
   });
 
   it('POST /api/admin/dish 添加重复名', async () => {
     const token = await getAdminToken();
     const { status } = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ name: '测试重复菜名', category: '热菜', price: 20, rating: 4.0 }),
     });
     assert.equal(status, 200, '添加菜品应成功');
     // 再次添加同名
     const { status: s2 } = await api('/api/admin/dish', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ name: '测试重复菜名', category: '热菜', price: 20, rating: 4.0 }),
     });
     // 允许重复（不强制唯一名称），但不应崩溃

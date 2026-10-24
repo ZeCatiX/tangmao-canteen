@@ -6,40 +6,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('视觉渲染与布局深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 首页元素无重叠（排除父子关系） =====
   it('1.1 首页元素无重叠', async () => {
@@ -49,8 +72,10 @@ describe('视觉渲染与布局深度检查', () => {
     const overlaps = await page.evaluate(() => {
       const all = document.querySelectorAll('*');
       const visible = [];
-      all.forEach(el => {
-        if (!el.offsetParent) return;
+      all.forEach((el) => {
+        if (!el.offsetParent) {
+          return;
+        }
         const id = el.id || el.className || el.textContent?.substring(0, 10) || el.tagName;
         const r = el.getBoundingClientRect();
         if (r.width > 10 && r.height > 10 && r.width < window.innerWidth && r.height < window.innerHeight) {
@@ -60,14 +85,18 @@ describe('视觉渲染与布局深度检查', () => {
       const issues = [];
       for (let i = 0; i < Math.min(30, visible.length); i++) {
         for (let j = i + 1; j < Math.min(30, visible.length); j++) {
-          const a = visible[i].r, b = visible[j].r;
+          const a = visible[i].r,
+            b = visible[j].r;
           // 跳过父子关系
-          if (visible[i].el.contains(visible[j].el) || visible[j].el.contains(visible[i].el)) continue;
+          if (visible[i].el.contains(visible[j].el) || visible[j].el.contains(visible[i].el)) {
+            continue;
+          }
           const overlapX = a.left < b.right && a.right > b.left;
           const overlapY = a.top < b.bottom && a.bottom > b.top;
           if (overlapX && overlapY) {
-            const overlapArea = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
-                              Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            const overlapArea =
+              Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
+              Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
             const minArea = Math.min(a.width * a.height, b.width * b.height);
             if (overlapArea > 0 && overlapArea / minArea > 0.85 && minArea > 1000) {
               issues.push(visible[i].id.substring(0, 20) + ' ↔ ' + visible[j].id.substring(0, 20));
@@ -78,7 +107,9 @@ describe('视觉渲染与布局深度检查', () => {
       return issues;
     });
     assert.ok(overlaps.length < 5, `不应有大量元素重叠: ${overlaps.length}个`);
-    if (overlaps.length > 0) console.log('重叠:', JSON.stringify(overlaps));
+    if (overlaps.length > 0) {
+      console.log('重叠:', JSON.stringify(overlaps));
+    }
     assert.equal(realErrors().length, 0, '首页布局不应有JS错误');
   });
 
@@ -86,8 +117,10 @@ describe('视觉渲染与布局深度检查', () => {
   it('2.1 首页特色卡片高度均匀', async () => {
     resetErrors();
     const heights = await page.evaluate(() => {
-      const cards = document.querySelectorAll('#home-section .card, #home-section [class*="card-"], #home-section .col-md-4 > div');
-      return Array.from(cards).map(c => c.getBoundingClientRect().height);
+      const cards = document.querySelectorAll(
+        '#home-section .card, #home-section [class*="card-"], #home-section .col-md-4 > div'
+      );
+      return Array.from(cards).map((c) => c.getBoundingClientRect().height);
     });
     if (heights.length > 1) {
       const max = Math.max(...heights);
@@ -104,7 +137,11 @@ describe('视觉渲染与布局深度检查', () => {
     resetErrors();
     const sections = ['about-section', 'dataset-section', 'privacy-section', 'home-section'];
     for (const sec of sections) {
-      await page.evaluate(s => { try { showSection(s); } catch(e) {} }, sec);
+      await page.evaluate((s) => {
+        try {
+          showSection(s);
+        } catch (e) {}
+      }, sec);
       await sleep(200);
       const navTop = await page.evaluate(() => {
         const nav = document.querySelector('.navbar');
@@ -125,8 +162,10 @@ describe('视觉渲染与布局深度检查', () => {
     const overflow = await page.evaluate(() => {
       const issues = [];
       const all = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, button, a, label');
-      all.forEach(el => {
-        if (!el.offsetParent) return;
+      all.forEach((el) => {
+        if (!el.offsetParent) {
+          return;
+        }
         if (el.scrollWidth > el.clientWidth + 2) {
           issues.push(el.tagName + '#' + (el.id || '') + ' text=' + el.textContent.substring(0, 20));
         }
@@ -150,19 +189,25 @@ describe('视觉渲染与布局深度检查', () => {
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
-    await page.evaluate(() => document.getElementById('preference-form').querySelector('button[type="submit"]').click());
+    await page.evaluate(() =>
+      document.getElementById('preference-form').querySelector('button[type="submit"]').click()
+    );
     await sleep(5000);
     const layoutCheck = await page.evaluate(() => {
       const issues = [];
       const items = document.querySelectorAll('#dish-list .list-group-item');
       items.forEach((item, i) => {
         const rect = item.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) issues.push(`第${i+1}个推荐项尺寸为0`);
+        if (rect.width <= 0 || rect.height <= 0) {
+          issues.push(`第${i + 1}个推荐项尺寸为0`);
+        }
         // 检查图片是否溢出
         const imgs = item.querySelectorAll('img');
-        imgs.forEach(img => {
+        imgs.forEach((img) => {
           if (img.naturalWidth > 0) {
-            if (img.offsetWidth > rect.width) issues.push(`第${i+1}个推荐项图片溢出`);
+            if (img.offsetWidth > rect.width) {
+              issues.push(`第${i + 1}个推荐项图片溢出`);
+            }
           }
         });
       });
@@ -186,7 +231,9 @@ describe('视觉渲染与布局深度检查', () => {
     const sidebarOverlap = await page.evaluate(() => {
       const sidebar = document.querySelector('.sidebar, .sidebar-nav, [class*="sidebar"]');
       const main = document.querySelector('#page-dashboard, .main-content, [class*="main"]');
-      if (!sidebar || !main) return false;
+      if (!sidebar || !main) {
+        return false;
+      }
       const sr = sidebar.getBoundingClientRect();
       const mr = main.getBoundingClientRect();
       // 侧边栏应在左侧，主内容在右侧，不应该重叠
@@ -209,10 +256,12 @@ describe('视觉渲染与布局深度检查', () => {
       // 检查是否有文字颜色
       const allText = document.querySelectorAll('h1, h2, span, div');
       let hasVisible = false;
-      allText.forEach(el => {
+      allText.forEach((el) => {
         if (el.textContent.trim().length > 0 && el.offsetParent) {
           const c = window.getComputedStyle(el).color;
-          if (c !== 'rgba(0, 0, 0, 0)') hasVisible = true;
+          if (c !== 'rgba(0, 0, 0, 0)') {
+            hasVisible = true;
+          }
         }
       });
       return { bg, text, hasVisible };
@@ -230,14 +279,19 @@ describe('视觉渲染与布局深度检查', () => {
     await sleep(500);
     const modalCenter = await page.evaluate(() => {
       const modal = document.getElementById('message-modal');
-      if (!modal) return null;
+      if (!modal) {
+        return null;
+      }
       const rect = modal.getBoundingClientRect();
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       return {
         centerX: Math.abs(rect.left + rect.width / 2 - vw / 2),
         centerY: Math.abs(rect.top + rect.height / 2 - vh / 2),
-        left: rect.left, top: rect.top, width: rect.width, height: rect.height
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
       };
     });
     if (modalCenter) {
@@ -245,7 +299,12 @@ describe('视觉渲染与布局深度检查', () => {
       assert.ok(modalCenter.centerX < 300, `模态框应在水平方向居中: 偏差${modalCenter.centerX}px`);
       assert.ok(modalCenter.left >= 0, '模态框应在视口内(left>=0)');
     }
-    await page.evaluate(() => { const b = document.getElementById('modal-close-btn'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = document.getElementById('modal-close-btn');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(300);
     assert.equal(realErrors().length, 0, '模态框显示不应有错误');
   });

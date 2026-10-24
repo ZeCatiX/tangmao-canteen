@@ -8,7 +8,9 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const BASE = 'http://localhost:3000';
 
-function readFile(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
+function readFile(p) {
+  return fs.readFileSync(path.join(ROOT, p), 'utf8');
+}
 
 // 改造1 后 js/ 源码经 prettier 格式化,紧凑断言串需空白归一化后比较
 const sq = (s) => String(s).replace(/\s+/g, '');
@@ -31,7 +33,7 @@ describe('点2 盲盒/换一批/选好了/退出按钮', () => {
     assert.ok(js.includes('退出'), '缺少退出文字');
   });
   it('换一批按钮调用 fetchRecommendations', () => {
-    const js = sq(readFile('js/recommendation.js'));  // 2026-09-17: 按钮委托绑定已迁至 recommendation.js,且带参数
+    const js = sq(readFile('js/recommendation.js')); // 2026-09-17: 按钮委托绑定已迁至 recommendation.js,且带参数
     assert.ok(js.includes("'refresh-recommendations':()=>fetchRecommendations("), '换一批按钮应绑定推荐刷新');
   });
   it('选好了按钮调用 endRecommendation', () => {
@@ -40,8 +42,11 @@ describe('点2 盲盒/换一批/选好了/退出按钮', () => {
   });
   it('退出按钮调用 resetRecommendation', () => {
     const js = sq(readFile('js/recommendation.js'));
-    assert.ok(js.includes("'end-logout-btn':()=>{resetRecommendation();showSection('home-section')}") ||
-              js.includes("'end-logout-btn':()=>{resetRecommendation()"), '退出按钮应绑定重置并返回首页');
+    assert.ok(
+      js.includes("'end-logout-btn':()=>{resetRecommendation();showSection('home-section')}") ||
+        js.includes("'end-logout-btn':()=>{resetRecommendation()"),
+      '退出按钮应绑定重置并返回首页'
+    );
   });
   it('盲盒推荐显示"盲盒尝鲜"标签', () => {
     const js = sq(frontSrc());
@@ -103,15 +108,37 @@ describe('点111 打印样式', () => {
 describe('点117 fix_error_leak修复检查', () => {
   it('server.js catch块不泄露e.message给客户端', () => {
     // catch 块随域拆分分布于 server.js 与各路由模块(2026-10-19 扩面:此前只扫 server.js,模块化后泄露会漏检)
-    const server = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js', 'server/routes/users.js', 'server/routes/recommend.js', 'server/routes/table-view.js', 'server/ml-worker.js'].map(readFile).join('\n');
+    const server = [
+      'server.js',
+      'server/routes/admin.js',
+      'server/routes/orders.js',
+      'server/routes/users.js',
+      'server/routes/recommend.js',
+      'server/routes/table-view.js',
+      'server/ml-worker.js',
+    ]
+      .map(readFile)
+      .join('\n');
     // 查找所有 catch 块中直接返回 e.message 的模式
     const leakPattern = /catch\s*\(e\)[\s\S]*?res\.status\(\d+\)\.json\(\{[\s\S]*?error:\s*e\.message\s*\}/g;
     const matches = server.match(leakPattern);
-    assert.ok(!matches || matches.length === 0, '不应有泄露e.message的catch块，发现：' + (matches ? matches.length : 0));
+    assert.ok(
+      !matches || matches.length === 0,
+      '不应有泄露e.message的catch块，发现：' + (matches ? matches.length : 0)
+    );
   });
   it('server.js catch块统一使用服务器内部错误', () => {
     // catch 块随域拆分分布于 server.js 与各路由模块(改造4)
-    const server = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js', 'server/routes/users.js', 'server/routes/recommend.js', 'server/ml-worker.js'].map(readFile).join('\n');
+    const server = [
+      'server.js',
+      'server/routes/admin.js',
+      'server/routes/orders.js',
+      'server/routes/users.js',
+      'server/routes/recommend.js',
+      'server/ml-worker.js',
+    ]
+      .map(readFile)
+      .join('\n');
     const safePattern = /catch\s*\(e\)[\s\S]*?res\.status\(\d+\)\.json\(\{[\s\S]*?error:\s*'服务器内部错误'\s*\}/g;
     const matches = server.match(safePattern);
     assert.ok(matches && matches.length >= 20, '应有至少20处安全catch块，实际：' + (matches ? matches.length : 0));
@@ -191,6 +218,6 @@ describe('点106 测试数据清理', () => {
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }

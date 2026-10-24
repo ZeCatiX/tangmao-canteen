@@ -2,12 +2,18 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const assert = require('node:assert');
@@ -15,42 +21,67 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('账单结算与订单状态验证', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
-    page.on('dialog', async dialog => { await dialog.accept(); });
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
+    page.on('dialog', async (dialog) => {
+      await dialog.accept();
+    });
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 购物车结算按钮可点击 =====
   it('1.1 购物车结算按钮存在且可点击', async () => {
@@ -74,7 +105,9 @@ describe('账单结算与订单状态验证', () => {
     // 点击结算按钮
     await page.evaluate(() => {
       const btn = document.getElementById('cart-checkout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     // 结算后应触发下单流程，不崩溃
@@ -97,7 +130,9 @@ describe('账单结算与订单状态验证', () => {
     await sleep(500);
     await page.evaluate(() => {
       const btn = document.getElementById('cart-checkout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 不应崩溃
@@ -118,7 +153,9 @@ describe('账单结算与订单状态验证', () => {
     await page.type('#login-pass', ADMIN_PASS, { delay: 5 });
     await page.evaluate(() => {
       const btn = document.getElementById('login-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(2000);
     // 检查是否有订单状态按钮
@@ -127,7 +164,7 @@ describe('账单结算与订单状态验证', () => {
       const cookingBtns = document.querySelectorAll('.btn-cooking, [class*="cooking"]');
       return {
         complete: completeBtns.length,
-        cooking: cookingBtns.length
+        cooking: cookingBtns.length,
       };
     });
     // 可能没有订单，但按钮应存在（在订单模板中）
@@ -145,8 +182,10 @@ describe('账单结算与订单状态验证', () => {
     resetErrors();
     const hasTime = await page.evaluate(() => {
       const orderCards = document.querySelectorAll('.order-card');
-      if (orderCards.length === 0) return false;
-      return Array.from(orderCards).some(card => {
+      if (orderCards.length === 0) {
+        return false;
+      }
+      return Array.from(orderCards).some((card) => {
         const text = card.textContent;
         return /\d{1,2}:\d{2}/.test(text) || text.includes('分钟前') || text.includes('秒前');
       });
@@ -165,22 +204,22 @@ describe('账单结算与订单状态验证', () => {
     const regRes = await fetch(BASE + '/api/user/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: uname, password: upass })
+      body: JSON.stringify({ username: uname, password: upass }),
     });
     const regData = await regRes.json();
     // 登录获取token
     const loginRes = await fetch(BASE + '/api/user/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: uname, password: upass })
+      body: JSON.stringify({ username: uname, password: upass }),
     });
     const loginData = await loginRes.json();
     assert.ok(loginData.token, '应获取到token');
     // 创建订单
     const orderRes = await fetch(BASE + '/api/order', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + loginData.token },
-      body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '葫芦鸡', price: 68, qty: 1 }], table: 'A1' })
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + loginData.token },
+      body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '葫芦鸡', price: 68, qty: 1 }], table: 'A1' }),
     });
     const orderData = await orderRes.json();
     assert.ok(orderRes.status === 200 || orderRes.status === 201, `订单创建应成功: ${orderRes.status}`);
@@ -188,7 +227,7 @@ describe('账单结算与订单状态验证', () => {
     // 删除测试用户
     await fetch(BASE + '/api/user/delete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + loginData.token }
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + loginData.token },
     }).catch(() => {});
     assert.equal(realErrors().length, 0, '订单API不应有错误');
   });
@@ -200,13 +239,13 @@ describe('账单结算与订单状态验证', () => {
     const adminLogin = await fetch(BASE + '/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'admin', password: ADMIN_PASS })
+      body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }),
     });
     const adminData = await adminLogin.json();
     assert.ok(adminData.token, '管理员应获取token');
     // 获取订单列表
     const ordersRes = await fetch(BASE + '/api/orders', {
-      headers: { 'Authorization': 'Bearer ' + adminData.token }
+      headers: { Authorization: 'Bearer ' + adminData.token },
     });
     const ordersData = await ordersRes.json();
     assert.ok(ordersRes.status === 200, `订单列表应返回: ${ordersRes.status}`);
@@ -216,8 +255,8 @@ describe('账单结算与订单状态验证', () => {
       const firstOrder = orders[0];
       const updateRes = await fetch(BASE + '/api/orders/' + firstOrder.id + '/status', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + adminData.token },
-        body: JSON.stringify({ status: 'completed' })
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + adminData.token },
+        body: JSON.stringify({ status: 'completed' }),
       });
       // 状态更新可能因当前状态不同而返回不同结果
       assert.ok([200, 400, 409].includes(updateRes.status), `状态更新应返回合理状态码: ${updateRes.status}`);
@@ -237,23 +276,36 @@ describe('账单结算与订单状态验证', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 写入购物车
@@ -266,7 +318,9 @@ describe('账单结算与订单状态验证', () => {
     // 点击结算
     await page.evaluate(() => {
       const btn = document.getElementById('cart-checkout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 结算后不崩溃，购物车数据应保留
@@ -274,7 +328,9 @@ describe('账单结算与订单状态验证', () => {
       try {
         const data = localStorage.getItem('cart');
         return data ? JSON.parse(data) : [];
-      } catch(e) { return []; }
+      } catch (e) {
+        return [];
+      }
     });
     // 结算后可能清空购物车也可能保留，取决于实现
     assert.ok(true, '结算流程完成');
@@ -288,8 +344,10 @@ describe('账单结算与订单状态验证', () => {
     await sleep(2000);
     const orderIdDisplay = await page.evaluate(() => {
       const cards = document.querySelectorAll('.order-card');
-      if (cards.length === 0) return false;
-      return Array.from(cards).some(card => {
+      if (cards.length === 0) {
+        return false;
+      }
+      return Array.from(cards).some((card) => {
         const text = card.textContent;
         return text.includes('订单') || text.includes('#') || /\b\d{3,}\b/.test(text);
       });
@@ -332,15 +390,20 @@ describe('账单结算与订单状态验证', () => {
     assert.ok(badgeVisible, '有商品时徽标应显示');
     // 清空购物车（使用clearCart函数，它会同时更新徽标）
     await page.evaluate(() => {
-      if (typeof clearCart === 'function') clearCart();
-      else localStorage.removeItem('cart');
+      if (typeof clearCart === 'function') {
+        clearCart();
+      } else {
+        localStorage.removeItem('cart');
+      }
     });
     // 打开购物车触发showCart
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
     await sleep(300);
     // 检查徽标（使用updateCartBadge后）
     await page.evaluate(() => {
-      if (typeof updateCartBadge === 'function') updateCartBadge();
+      if (typeof updateCartBadge === 'function') {
+        updateCartBadge();
+      }
     });
     await sleep(200);
     const badgeHidden = await page.evaluate(() => {

@@ -6,18 +6,26 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 // 过滤非服务器问题的网络错误
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
   // 401 Unauthorized 是正常业务逻辑（未登录用户访问需认证API）
-  if (msg.includes('401 (Unauthorized)')) return false;
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
   // 429 是限流响应，大量测试并发运行时正常触发
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
   return true;
 }
 
@@ -33,8 +41,10 @@ async function registerAndLogin(page, uniqUser, password) {
   // 勾选隐私政策同意
   const agreeCheckbox = await page.$('#agree-privacy');
   if (agreeCheckbox) {
-    const checked = await page.evaluate(el => el.checked, agreeCheckbox);
-    if (!checked) await agreeCheckbox.click();
+    const checked = await page.evaluate((el) => el.checked, agreeCheckbox);
+    if (!checked) {
+      await agreeCheckbox.click();
+    }
   }
   await page.evaluate(() => {
     document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -45,7 +55,9 @@ async function registerAndLogin(page, uniqUser, password) {
     const modal = document.querySelector('.modal.show');
     if (modal) {
       const closeBtn = modal.querySelector('.btn-close, [data-bs-dismiss="modal"]');
-      if (closeBtn) closeBtn.click();
+      if (closeBtn) {
+        closeBtn.click();
+      }
     }
   });
   await sleep(500);
@@ -63,7 +75,9 @@ async function registerAndLogin(page, uniqUser, password) {
     const modal = document.querySelector('.modal.show');
     if (modal) {
       const closeBtn = modal.querySelector('.btn-close, [data-bs-dismiss="modal"]');
-      if (closeBtn) closeBtn.click();
+      if (closeBtn) {
+        closeBtn.click();
+      }
     }
   });
   await sleep(500);
@@ -71,8 +85,13 @@ async function registerAndLogin(page, uniqUser, password) {
 
 async function getRecommendations(page) {
   await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
-    await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+  await sleep(500);
+  await page.evaluate(() => {
+    const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+    if (b) {
+      b.click();
+    }
+  });
   await sleep(400);
   await page.select('#spiciness', '微辣');
   await page.select('#saltiness', '适中');
@@ -80,30 +99,51 @@ async function getRecommendations(page) {
   await page.evaluate(() => {
     document.getElementById('preference-form').querySelector('button[type="submit"]').click();
   });
-    // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+  // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
+  for (let wi = 0; wi < 25; wi++) {
+    await sleep(1000);
+    try {
+      if (
+        document.getElementById('recommendation-result') &&
+        !document.getElementById('recommendation-result').classList.contains('d-none')
+      ) {
+        break;
+      }
+    } catch (e) {}
+  }
 }
 
 describe('用户全流程深度交互测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 注册→登录完整流程 =====
   it('1.1 注册新用户并登录成功', async () => {
@@ -146,7 +186,9 @@ describe('用户全流程深度交互测试', () => {
     await getRecommendations(page);
     const favResult = await page.evaluate(() => {
       const btns = document.querySelectorAll('#dish-list button[onclick*="addToFavorites"]');
-      if (btns.length === 0) return 'no_button';
+      if (btns.length === 0) {
+        return 'no_button';
+      }
       btns[0].click();
       return 'clicked';
     });
@@ -167,7 +209,9 @@ describe('用户全流程深度交互测试', () => {
     await getRecommendations(page);
     const blkResult = await page.evaluate(() => {
       const btns = document.querySelectorAll('#dish-list button[onclick*="addToBlacklist"]');
-      if (btns.length === 0) return 'no_button';
+      if (btns.length === 0) {
+        return 'no_button';
+      }
       btns[0].click();
       return 'clicked';
     });
@@ -186,7 +230,9 @@ describe('用户全流程深度交互测试', () => {
     await getRecommendations(page);
     const starResult = await page.evaluate(() => {
       const btns = document.querySelectorAll('#dish-list button[onclick*="openStarFeedback"]');
-      if (btns.length === 0) return 'no_button';
+      if (btns.length === 0) {
+        return 'no_button';
+      }
       btns[0].click();
       return 'clicked';
     });
@@ -268,7 +314,9 @@ describe('用户全流程深度交互测试', () => {
       const modal = document.querySelector('.modal.show');
       if (modal) {
         const closeBtn = modal.querySelector('.btn-close, [data-bs-dismiss="modal"]');
-        if (closeBtn) closeBtn.click();
+        if (closeBtn) {
+          closeBtn.click();
+        }
       }
     });
     await sleep(500);

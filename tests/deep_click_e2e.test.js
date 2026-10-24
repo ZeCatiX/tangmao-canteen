@@ -6,17 +6,27 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 // 过滤掉外网不可达的网络错误和资源加载404（不是服务器崩溃问题）
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -25,22 +35,32 @@ describe('深度点击测试 - 全流程用户交互', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const text = msg.text();
-      if (msg.type() === 'error' && isRealError(text)) page._consoleErrors.push(text);
+      if (msg.type() === 'error' && isRealError(text)) {
+        page._consoleErrors.push(text);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 首页所有按钮逐一点击 =====
   it('1.1 点击关于本店导航 + 返回按钮', async () => {
@@ -50,10 +70,17 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 品牌开幕动画(logo-intro-overlay,fixed+inset:0+z-index3000)每会话首访播放约5.6s,
     // 期间盖住导航栏——真实鼠标点击(page.click 有命中测试)会被遮挡判 not clickable;
     // 等动画收场再点(套件只有首个 goto 承担该窗口,后续用例 sessionStorage 已跳过)
-    await page.waitForFunction(() => {
-      const ov = document.getElementById('logo-intro-overlay');
-      return !ov || ov.style.display === 'none';
-    }, { timeout: 8000, polling: 300 }).catch(() => { /* 动画未播(reduced-motion/已播会话)直接过 */ });
+    await page
+      .waitForFunction(
+        () => {
+          const ov = document.getElementById('logo-intro-overlay');
+          return !ov || ov.style.display === 'none';
+        },
+        { timeout: 8000, polling: 300 }
+      )
+      .catch(() => {
+        /* 动画未播(reduced-motion/已播会话)直接过 */
+      });
     await page.click('#nav-about');
     await sleep(400);
     const visible = await page.evaluate(() => {
@@ -188,15 +215,40 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
-    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => {
+      const el = document.getElementById('spiciness');
+      if (el) {
+        el.value = '微辣';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('saltiness');
+      if (el) {
+        el.value = '适中';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('sweetness');
+      if (el) {
+        el.value = '酸甜';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
     const allergyNone = await page.$('#allergy-none');
     if (allergyNone) {
-      const isChecked = await page.evaluate(el => el.checked, allergyNone);
-      if (isChecked) await allergyNone.click();
+      const isChecked = await page.evaluate((el) => el.checked, allergyNone);
+      if (isChecked) {
+        await allergyNone.click();
+      }
     }
     await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     // 2026-09-17: ML(HistGB)冷启动 + 可能的接口超时回退,轮询至推荐可见(最多 25s)
@@ -206,7 +258,9 @@ describe('深度点击测试 - 全流程用户交互', () => {
         const el = document.getElementById('recommendation-result');
         return el && !el.classList.contains('d-none');
       });
-      if (vis) break;
+      if (vis) {
+        break;
+      }
     }
     const content = await page.content();
     assert.ok(!content.includes('cannot read') && !content.toLowerCase().includes('undefined is not'), '页面不应崩溃');
@@ -230,11 +284,34 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
-    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '中辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '偏咸'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '咸鲜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => {
+      const el = document.getElementById('spiciness');
+      if (el) {
+        el.value = '中辣';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('saltiness');
+      if (el) {
+        el.value = '偏咸';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('sweetness');
+      if (el) {
+        el.value = '咸鲜';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
     await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     const refreshBtn = await page.$('#refresh-recommendations');
@@ -256,11 +333,34 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
-    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => {
+      const el = document.getElementById('spiciness');
+      if (el) {
+        el.value = '微辣';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('saltiness');
+      if (el) {
+        el.value = '适中';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('sweetness');
+      if (el) {
+        el.value = '酸甜';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
     await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     const endRecBtn = await page.$('#end-recommendation');
@@ -287,11 +387,34 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 2026-09-17: 偏好页入口为「AI帮你选」,且无桌号先弹选桌层
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
-    await page.evaluate(() => { const el = document.getElementById('spiciness'); if (el) { el.value = '微辣'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('saltiness'); if (el) { el.value = '适中'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
-    await page.evaluate(() => { const el = document.getElementById('sweetness'); if (el) { el.value = '酸甜'; el.dispatchEvent(new Event('change', { bubbles: true })); } });
+    await page.evaluate(() => {
+      const el = document.getElementById('spiciness');
+      if (el) {
+        el.value = '微辣';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('saltiness');
+      if (el) {
+        el.value = '适中';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    await page.evaluate(() => {
+      const el = document.getElementById('sweetness');
+      if (el) {
+        el.value = '酸甜';
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
     await page.evaluate(() => document.querySelector('#preference-form button[type="submit"]').click());
     await sleep(4000);
     await page.click('#nav-cart');
@@ -320,7 +443,9 @@ describe('深度点击测试 - 全流程用户交互', () => {
     // 用 evaluate 触发点击，避免遮挡问题
     await page.evaluate(() => {
       const btn = document.getElementById('admin-login-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(2000);
     const logged = await page.evaluate(() => {
@@ -328,8 +453,12 @@ describe('深度点击测试 - 全流程用户交互', () => {
       const loginCard = document.getElementById('admin-login-card');
       // 登录成功后登录卡片应隐藏或后台面板可见
       const dashboard = document.getElementById('page-dashboard');
-      if (dashboard && !dashboard.classList.contains('d-none')) return true;
-      if (loginCard && loginCard.classList.contains('d-none')) return true;
+      if (dashboard && !dashboard.classList.contains('d-none')) {
+        return true;
+      }
+      if (loginCard && loginCard.classList.contains('d-none')) {
+        return true;
+      }
       return false;
     });
     assert.ok(logged, '管理后台应登录成功');
@@ -337,7 +466,7 @@ describe('深度点击测试 - 全流程用户交互', () => {
     for (const p of pages) {
       const navItem = await page.$('[data-page="' + p + '"]');
       if (navItem) {
-        await page.evaluate(el => el.click(), navItem);
+        await page.evaluate((el) => el.click(), navItem);
         await sleep(800);
       }
     }
@@ -361,13 +490,13 @@ describe('深度点击测试 - 全流程用户交互', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const text = await page.evaluate(() => document.body.innerText);
-    const mojibakePatterns = [
-      /閲/g, /鍑/g, /閫/g, /鐨/g, /鍦/g, /鏄/g, /涓/g, /鎺/g, /鍞/g, /搴/g, /鎴/g, /鐢/g
-    ];
+    const mojibakePatterns = [/閲/g, /鍑/g, /閫/g, /鐨/g, /鍦/g, /鏄/g, /涓/g, /鎺/g, /鍞/g, /搴/g, /鎴/g, /鐢/g];
     let mojibakeCount = 0;
     for (const p of mojibakePatterns) {
       const m = text.match(p);
-      if (m) mojibakeCount += m.length;
+      if (m) {
+        mojibakeCount += m.length;
+      }
     }
     assert.ok(mojibakeCount < 5, '首页不应有大量乱码字符，检测到: ' + mojibakeCount + ' 个');
   });
@@ -380,7 +509,9 @@ describe('深度点击测试 - 全流程用户交互', () => {
     let mojibakeCount = 0;
     for (const p of mojibakePatterns) {
       const m = text.match(p);
-      if (m) mojibakeCount += m.length;
+      if (m) {
+        mojibakeCount += m.length;
+      }
     }
     assert.ok(mojibakeCount < 5, '管理后台不应有大量乱码字符，检测到: ' + mojibakeCount + ' 个');
   });
@@ -393,7 +524,9 @@ describe('深度点击测试 - 全流程用户交互', () => {
     let mojibakeCount = 0;
     for (const p of mojibakePatterns) {
       const m = text.match(p);
-      if (m) mojibakeCount += m.length;
+      if (m) {
+        mojibakeCount += m.length;
+      }
     }
     assert.ok(mojibakeCount < 5, '厨房看板不应有大量乱码字符，检测到: ' + mojibakeCount + ' 个');
   });
@@ -404,9 +537,11 @@ describe('深度点击测试 - 全流程用户交互', () => {
     await sleep(300);
     const btnTexts = await page.evaluate(() => {
       const section = document.getElementById('recommendation-section');
-      if (!section) return [];
+      if (!section) {
+        return [];
+      }
       const btns = section.querySelectorAll('button');
-      return Array.from(btns).map(b => b.textContent.trim());
+      return Array.from(btns).map((b) => b.textContent.trim());
     });
     for (const txt of btnTexts) {
       const hasMojibake = /閫€鍑|閫夊ソ|閲|鍑|閫/.test(txt);

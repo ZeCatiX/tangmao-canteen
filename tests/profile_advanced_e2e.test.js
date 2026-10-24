@@ -3,12 +3,18 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const assert = require('node:assert');
@@ -16,16 +22,26 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -34,23 +50,33 @@ describe('个人中心与高级交互测试', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
     // 自动接受 confirm 对话框（厨房完成订单等场景）
-    page.on('dialog', d => d.accept().catch(() => {}));
-    page.on('console', msg => {
-      if (msg.type() === 'error' && isRealError(msg.text())) page._consoleErrors.push(msg.text());
+    page.on('dialog', (d) => d.accept().catch(() => {}));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' && isRealError(msg.text())) {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 登录后个人中心 =====
   it('1.1 用户登录后进入个人中心（我的收藏）', async () => {
@@ -99,7 +125,8 @@ describe('个人中心与高级交互测试', () => {
       const blBtn = document.getElementById('cancel-blacklist-btn');
       return {
         visible,
-        favEmpty, blEmpty,
+        favEmpty,
+        blEmpty,
         favBtnHidden: !favBtn || favBtn.offsetParent === null || getComputedStyle(favBtn).display === 'none',
         blBtnHidden: !blBtn || blBtn.offsetParent === null || getComputedStyle(blBtn).display === 'none',
       };
@@ -125,7 +152,10 @@ describe('个人中心与高级交互测试', () => {
       // 点击第一个收藏按钮
       const clicked = await page.evaluate(() => {
         const btns = document.querySelectorAll('#dataset-table-body button, .fav-btn, [data-fav]');
-        if (btns[0]) { btns[0].click(); return true; }
+        if (btns[0]) {
+          btns[0].click();
+          return true;
+        }
         return false;
       });
       assert.ok(clicked, '应能点击收藏按钮');
@@ -161,22 +191,32 @@ describe('个人中心与高级交互测试', () => {
   // ===== 2. 厨房看板完成订单 =====
   it('2.1 游客下单后厨房看板可完成订单', async () => {
     resetErrors();
-    var ts = Date.now();
-    var uniqUser = 'kitchen_t_' + ts;
-    var createRes = await fetch(BASE + '/api/order', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: uniqUser, items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 1 }] }),
-    }).catch(function(e) { console.log('下单失败:', e.message); return null; });
-    if (!createRes || !createRes.ok) { console.log('下单返回异常'); return; }
-    var orderData = await createRes.json();
-    var orderId = String(orderData.orderId);
+    const ts = Date.now();
+    const uniqUser = 'kitchen_t_' + ts;
+    const createRes = await fetch(BASE + '/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: uniqUser,
+        items: [{ id: dishPool[0].id, name: dishPool[0].name, price: dishPool[0].price, quantity: 1 }],
+      }),
+    }).catch(function (e) {
+      console.log('下单失败:', e.message);
+      return null;
+    });
+    if (!createRes || !createRes.ok) {
+      console.log('下单返回异常');
+      return;
+    }
+    const orderData = await createRes.json();
+    const orderId = String(orderData.orderId);
     console.log('订单已创建: ' + orderId);
 
     // 厨房看板登录
     await page.goto(BASE + '/kitchen', { waitUntil: 'networkidle0', timeout: 20000 });
     await sleep(800);
-    var userInput = await page.$('#login-user');
-    var passInput = await page.$('#login-pass');
+    const userInput = await page.$('#login-user');
+    const passInput = await page.$('#login-pass');
     assert.ok(userInput && passInput, '厨房应有登录输入框');
     require('dotenv').config();
     await userInput.type('admin', { delay: 10 });
@@ -185,20 +225,26 @@ describe('个人中心与高级交互测试', () => {
     await sleep(2500);
 
     // 轮询找到订单卡片并双击完成(最多 30s)
-    var completed = false;
-    for (var r = 0; r < 15 && !completed; r++) {
+    let completed = false;
+    for (let r = 0; r < 15 && !completed; r++) {
       await sleep(2000);
-      completed = await page.evaluate(function(oid) {
-        var cards = document.querySelectorAll('.order-card');
-        for (var ci = 0; ci < cards.length; ci++) {
+      completed = await page.evaluate(function (oid) {
+        const cards = document.querySelectorAll('.order-card');
+        for (let ci = 0; ci < cards.length; ci++) {
           if (cards[ci].getAttribute('data-id') === oid) {
-            var btn = cards[ci].querySelector('.btn-complete');
-            if (btn) { btn.click(); btn.click(); return true; }
+            const btn = cards[ci].querySelector('.btn-complete');
+            if (btn) {
+              btn.click();
+              btn.click();
+              return true;
+            }
           }
         }
         return false;
       }, orderId);
-      if (completed) break;
+      if (completed) {
+        break;
+      }
     }
     assert.ok(completed, '厨房看板应显示并完成订单 ' + orderId + ', 实际: ' + completed);
     assert.equal(realErrors().length, 0, '厨房看板不应有错误: ' + realErrors().join('; '));
@@ -225,7 +271,10 @@ describe('个人中心与高级交互测试', () => {
     const dishNav = await page.evaluate(() => {
       const links = document.querySelectorAll('[data-page="dishes"], #nav-dishes, .sidebar a');
       for (const l of links) {
-        if (/菜品|dishes/i.test(l.textContent)) { l.click(); return true; }
+        if (/菜品|dishes/i.test(l.textContent)) {
+          l.click();
+          return true;
+        }
       }
       return false;
     });
@@ -259,7 +308,10 @@ describe('个人中心与高级交互测试', () => {
       const res = {};
       for (const id of ids) {
         const el = document.querySelector(id);
-        if (!el) { res[id] = '不存在'; continue; }
+        if (!el) {
+          res[id] = '不存在';
+          continue;
+        }
         const r = el.getBoundingClientRect();
         res[id] = r.width > 0 && r.height > 0 && r.top >= 0 && r.top < window.innerHeight;
       }

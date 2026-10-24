@@ -10,24 +10,31 @@ const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 const OUT = path.join(__dirname, '..', '_shots');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 describe('视觉排版与暗黑模式截图检查', () => {
   before(async () => {
-    if (!fs.existsSync(OUT)) fs.mkdirSync(OUT);
+    if (!fs.existsSync(OUT)) {
+      fs.mkdirSync(OUT);
+    }
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
-    page.on('dialog', async d => await d.accept());
+    page.on('dialog', async (d) => await d.accept());
     page._errors = [];
-    page.on('pageerror', e => page._errors.push(e.message));
+    page.on('pageerror', (e) => page._errors.push(e.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   it('3.1 首页浅色模式截图', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
@@ -43,14 +50,19 @@ describe('视觉排版与暗黑模式截图检查', () => {
     const hasTitle = await page.evaluate(() => document.title.includes('唐猫庭院'));
     const hasLogo = text.includes('唐猫庭院');
     const hasNav = text.includes('首页') || text.includes('开始点餐');
-    assert.ok(hasTitle && hasLogo && hasNav, '首页应有核心内容, 标题:' + hasTitle + ' logo:' + hasLogo + ' nav:' + hasNav);
+    assert.ok(
+      hasTitle && hasLogo && hasNav,
+      '首页应有核心内容, 标题:' + hasTitle + ' logo:' + hasLogo + ' nav:' + hasNav
+    );
   });
 
   it('3.2 首页暗黑模式截图', async () => {
     await page.evaluate(() => {
       document.documentElement.classList.add('dark-mode');
       const tb = document.getElementById('dark-mode-toggle');
-      if (tb) tb.textContent = '☀️';
+      if (tb) {
+        tb.textContent = '☀️';
+      }
     });
     await sleep(500);
     await page.screenshot({ path: path.join(OUT, '02_首页暗黑.png'), fullPage: true });
@@ -82,7 +94,12 @@ describe('视觉排版与暗黑模式截图检查', () => {
   });
 
   it('3.5 管理后台菜品管理截图', async () => {
-    await page.evaluate(() => { const el = document.querySelector('a[data-page="dishes"]'); if (el) el.click(); });
+    await page.evaluate(() => {
+      const el = document.querySelector('a[data-page="dishes"]');
+      if (el) {
+        el.click();
+      }
+    });
     await sleep(2000);
     await page.screenshot({ path: path.join(OUT, '05_菜品管理.png'), fullPage: true });
     const rows = await page.evaluate(() => document.querySelectorAll('#dish-table tbody tr').length);
@@ -107,7 +124,7 @@ describe('视觉排版与暗黑模式截图检查', () => {
   });
 
   it('3.8 无JS页面错误', async () => {
-    const real = page._errors.filter(e => !/favicon|fonts\.|net::/i.test(e));
+    const real = page._errors.filter((e) => !/favicon|fonts\.|net::/i.test(e));
     assert.equal(real.length, 0, 'JS错误:' + real.slice(0, 3).join('; '));
   });
 });

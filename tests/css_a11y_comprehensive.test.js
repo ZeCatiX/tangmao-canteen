@@ -8,40 +8,63 @@ const path = require('path');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ROOT = path.join(__dirname, '..');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('CSS布局与无障碍综合审计', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== CSS布局：flex/grid溢出 =====
   it('1.1 flex容器无溢出', async () => {
@@ -50,12 +73,23 @@ describe('CSS布局与无障碍综合审计', () => {
     await sleep(500);
     const flexIssues = await page.evaluate(() => {
       const issues = [];
-      document.querySelectorAll('*').forEach(el => {
+      document.querySelectorAll('*').forEach((el) => {
         const cs = window.getComputedStyle(el);
         // 只审计横向不换行的 flex 容器：纵向堆叠/可换行容器子项宽度求和必然超宽，属误报
-        if ((cs.display === 'flex' || cs.display === 'inline-flex') && cs.flexDirection === 'row' && cs.flexWrap === 'nowrap') {
+        if (
+          (cs.display === 'flex' || cs.display === 'inline-flex') &&
+          cs.flexDirection === 'row' &&
+          cs.flexWrap === 'nowrap'
+        ) {
           if (el.scrollWidth > el.clientWidth + 5 && el.children.length > 0) {
-            issues.push('flex溢出: ' + (el.id || el.className || el.tagName) + ' scroll=' + el.scrollWidth + ' client=' + el.clientWidth);
+            issues.push(
+              'flex溢出: ' +
+                (el.id || el.className || el.tagName) +
+                ' scroll=' +
+                el.scrollWidth +
+                ' client=' +
+                el.clientWidth
+            );
           }
         }
       });
@@ -80,7 +114,12 @@ describe('CSS布局与无障碍综合审计', () => {
       return { modalZ, navZ, ok: modalZ > navZ };
     });
     assert.ok(zIndexCheck.ok, `模态框z-index(${zIndexCheck.modalZ})应>导航栏(${zIndexCheck.navZ})`);
-    await page.evaluate(() => { const b = document.getElementById('modal-close-btn'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = document.getElementById('modal-close-btn');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(300);
     assert.equal(realErrors().length, 0, 'z-index检查不应有错误');
   });
@@ -92,14 +131,16 @@ describe('CSS布局与无障碍综合审计', () => {
     await sleep(500);
     const absIssues = await page.evaluate(() => {
       const issues = [];
-      document.querySelectorAll('*').forEach(el => {
+      document.querySelectorAll('*').forEach((el) => {
         const cs = window.getComputedStyle(el);
         if (cs.position === 'absolute' || cs.position === 'fixed') {
           const r = el.getBoundingClientRect();
           // 允许部分在视口外（如隐藏的购物车面板）
           if (r.width > 0 && r.height > 0) {
             if (r.left + r.width < -10 || r.top + r.height < -10) {
-              if (el.offsetParent) issues.push('绝对定位溢出: ' + (el.id || el.className || el.tagName));
+              if (el.offsetParent) {
+                issues.push('绝对定位溢出: ' + (el.id || el.className || el.tagName));
+              }
             }
           }
         }
@@ -117,7 +158,7 @@ describe('CSS布局与无障碍综合审计', () => {
     await sleep(500);
     const missingAria = await page.evaluate(() => {
       const issues = [];
-      document.querySelectorAll('button, a, input, select, textarea').forEach(el => {
+      document.querySelectorAll('button, a, input, select, textarea').forEach((el) => {
         const text = el.textContent.trim();
         const hasIcon = el.querySelector('i, svg, img');
         const hasAria = el.getAttribute('aria-label');
@@ -139,9 +180,11 @@ describe('CSS布局与无障碍综合审计', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const noAlt = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('img')).filter(img => {
-        return !img.getAttribute('alt') && img.offsetParent !== null;
-      }).map(img => img.src.substring(0, 50));
+      return Array.from(document.querySelectorAll('img'))
+        .filter((img) => {
+          return !img.getAttribute('alt') && img.offsetParent !== null;
+        })
+        .map((img) => img.src.substring(0, 50));
     });
     assert.equal(noAlt.length, 0, '所有可见图片应有alt属性，缺少: ' + noAlt.join(', '));
     assert.equal(realErrors().length, 0, 'alt检查不应有错误');
@@ -154,22 +197,37 @@ describe('CSS布局与无障碍综合审计', () => {
     await sleep(500);
     const contrastCheck = await page.evaluate(() => {
       const issues = [];
-      document.querySelectorAll('p, span, a, button, h1, h2, h3, h4, h5, h6, label').forEach(el => {
-        if (!el.offsetParent || !el.textContent.trim()) return;
+      document.querySelectorAll('p, span, a, button, h1, h2, h3, h4, h5, h6, label').forEach((el) => {
+        if (!el.offsetParent || !el.textContent.trim()) {
+          return;
+        }
         const cs = window.getComputedStyle(el);
         const color = cs.color;
         const bg = cs.backgroundColor;
         // 跳过透明背景
-        if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return;
+        if (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+          return;
+        }
         // 检查文字是否为灰色（可能对比度不足）
         if (color === 'rgb(128, 128, 128)' || color === 'rgb(153, 153, 153)' || color === 'rgb(169, 169, 169)') {
-          issues.push('灰文字: ' + el.tagName + '#' + (el.id || '') + ' color=' + color + ' text=' + el.textContent.substring(0, 15));
+          issues.push(
+            '灰文字: ' +
+              el.tagName +
+              '#' +
+              (el.id || '') +
+              ' color=' +
+              color +
+              ' text=' +
+              el.textContent.substring(0, 15)
+          );
         }
       });
       return issues;
     });
     // 灰文字可能是有意设计（如占位提示），只报告不强制失败
-    if (contrastCheck.length > 0) console.log('对比度警告:', JSON.stringify(contrastCheck));
+    if (contrastCheck.length > 0) {
+      console.log('对比度警告:', JSON.stringify(contrastCheck));
+    }
     assert.ok(contrastCheck.length < 10, `对比度问题: ${contrastCheck.length}个`);
     assert.equal(realErrors().length, 0, '对比度检查不应有错误');
   });
@@ -193,7 +251,9 @@ describe('CSS布局与无障碍综合审计', () => {
     // 模拟触摸事件（通过dispatchEvent，不创建TouchEvent以避免浏览器限制）
     const touchResult = await page.evaluate(() => {
       const el = document.querySelector('.list-group-item, #guest-btn, .card');
-      if (!el) return 'no_element';
+      if (!el) {
+        return 'no_element';
+      }
       return 'element_found';
     });
     assert.equal(touchResult, 'element_found', '触摸元素应存在');
@@ -213,7 +273,9 @@ describe('CSS布局与无障碍综合审计', () => {
       await sleep(100);
       const info = await page.evaluate(() => {
         const el = document.activeElement;
-        if (!el) return 'none';
+        if (!el) {
+          return 'none';
+        }
         return el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ')[0] : '');
       });
       if (info !== 'BODY' && !focusedElements.includes(info)) {
@@ -231,11 +293,15 @@ describe('CSS布局与无障碍综合审计', () => {
     await sleep(500);
     const labelCheck = await page.evaluate(() => {
       const issues = [];
-      document.querySelectorAll('input, select, textarea').forEach(el => {
+      document.querySelectorAll('input, select, textarea').forEach((el) => {
         const id = el.id;
-        if (!id) return;
+        if (!id) {
+          return;
+        }
         // 跳过隐藏输入
-        if (el.type === 'hidden') return;
+        if (el.type === 'hidden') {
+          return;
+        }
         const label = document.querySelector(`label[for="${id}"]`);
         // 检查是否被label包裹
         const parentLabel = el.closest('label');

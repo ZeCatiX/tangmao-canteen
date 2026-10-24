@@ -6,38 +6,57 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
   return true;
 }
 
 describe('未覆盖交互路径深度测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 菜单搜索功能 =====
   it('1.1 菜单搜索输入文字后显示筛选结果', async () => {
@@ -53,14 +72,21 @@ describe('未覆盖交互路径深度测试', () => {
     // 搜索后应显示筛选结果
     const hasResults = await page.evaluate(() => {
       const table = document.querySelector('#dataset-section table tbody, #menu-table tbody, .dish-table tbody');
-      if (table) return table.children.length;
+      if (table) {
+        return table.children.length;
+      }
       // 也可能是卡片列表
       const cards = document.querySelectorAll('#dataset-section .dish-card, #dataset-section .card');
       return cards.length;
     });
     assert.ok(hasResults > 0 || true, '搜索后应显示菜品或空结果（无崩溃）');
     // 清空搜索
-    await page.evaluate(() => { const el = document.getElementById('menu-search'); if (el) el.value = ''; });
+    await page.evaluate(() => {
+      const el = document.getElementById('menu-search');
+      if (el) {
+        el.value = '';
+      }
+    });
     await page.type('#menu-search', '', { delay: 0 });
     assert.equal(realErrors().length, 0, '菜单搜索不应有错误: ' + realErrors().join('; '));
   });
@@ -105,11 +131,13 @@ describe('未覆盖交互路径深度测试', () => {
     // 检查购物车内是否有数量增减按钮
     const cartButtons = await page.evaluate(() => {
       const cart = document.getElementById('cart-section');
-      if (!cart) return { plus: 0, minus: 0, remove: 0 };
+      if (!cart) {
+        return { plus: 0, minus: 0, remove: 0 };
+      }
       return {
         plus: cart.querySelectorAll('[onclick*="increaseQty"], [id*="qty-plus"], [class*="qty-plus"]').length,
         minus: cart.querySelectorAll('[onclick*="decreaseQty"], [id*="qty-minus"], [class*="qty-minus"]').length,
-        remove: cart.querySelectorAll('[onclick*="removeFromCart"], [id*="remove"], [class*="remove"]').length
+        remove: cart.querySelectorAll('[onclick*="removeFromCart"], [id*="remove"], [class*="remove"]').length,
       };
     });
     // 购物车按钮存在性检查（可能因无菜品而无可操作按钮）
@@ -202,7 +230,7 @@ describe('未覆盖交互路径深度测试', () => {
         dishCount: document.getElementById('end-dish-count')?.textContent || '',
         avgMatch: document.getElementById('end-avg-match')?.textContent || '',
         topMatch: document.getElementById('end-top-match')?.textContent || '',
-        modelR2: document.getElementById('end-model-r2')?.textContent || ''
+        modelR2: document.getElementById('end-model-r2')?.textContent || '',
       };
     });
     assert.ok(stats.dishCount.length > 0, '推荐菜品数应显示');
@@ -281,11 +309,17 @@ describe('未覆盖交互路径深度测试', () => {
     const navCheck = await page.evaluate(() => {
       const navIds = ['nav-home', 'nav-about', 'nav-dataset', 'nav-privacy', 'nav-user'];
       const results = [];
-      navIds.forEach(id => {
+      navIds.forEach((id) => {
         const el = document.getElementById(id);
-        if (!el) { results.push(id + ': 不存在'); return; }
+        if (!el) {
+          results.push(id + ': 不存在');
+          return;
+        }
         const text = el.textContent.trim();
-        if (!text) { results.push(id + ': 无文字'); return; }
+        if (!text) {
+          results.push(id + ': 无文字');
+          return;
+        }
       });
       return results;
     });
@@ -332,7 +366,9 @@ describe('未覆盖交互路径深度测试', () => {
     await sleep(2000);
     const dishCount = await page.evaluate(() => {
       const section = document.getElementById('dataset-section');
-      if (!section) return 0;
+      if (!section) {
+        return 0;
+      }
       const rows = section.querySelectorAll('tbody tr, .dish-card, .card-body');
       return rows.length;
     });

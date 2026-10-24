@@ -7,17 +7,29 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -42,23 +54,34 @@ async function getAdminToken() {
 describe('决策树本地推荐逻辑检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 决策树模型加载 =====
   it('1.1 决策树模型可正常加载', async () => {
@@ -81,9 +104,11 @@ describe('决策树本地推荐逻辑检查', () => {
     // 等待菜品数据加载
     await sleep(2000);
     const result = await page.evaluate(() => {
-      if (!dishData.length) return { error: 'no dishData' };
+      if (!dishData.length) {
+        return { error: 'no dishData' };
+      }
       const dish = dishData[0];
-      const prefs = { '辣度': dish.spiciness, '咸淡': dish.saltiness, '甜酸': dish.sweetness };
+      const prefs = { 辣度: dish.spiciness, 咸淡: dish.saltiness, 甜酸: dish.sweetness };
       const score = predictWithDecisionTree(prefs, dish);
       return { score, dishName: dish.name, isFinite: isFinite(score) };
     });
@@ -97,9 +122,11 @@ describe('决策树本地推荐逻辑检查', () => {
   it('3.1 computeDishMatch返回匹配度和详情', async () => {
     resetErrors();
     const result = await page.evaluate(() => {
-      if (!dishData.length) return { error: 'no dishData' };
+      if (!dishData.length) {
+        return { error: 'no dishData' };
+      }
       const dish = dishData[0];
-      const prefs = { '辣度': dish.spiciness, '咸淡': dish.saltiness, '甜酸': dish.sweetness };
+      const prefs = { 辣度: dish.spiciness, 咸淡: dish.saltiness, 甜酸: dish.sweetness };
       const match = computeDishMatch(prefs, dish);
       return {
         matchDetails: match.matchDetails,
@@ -109,7 +136,7 @@ describe('决策树本地推荐逻辑检查', () => {
         hasCuisine: match.matchDetails.cuisine !== undefined,
         hasNutrition: match.matchDetails.calorie !== undefined,
         hasRating: match.matchDetails.rating !== undefined,
-        matchRateFinite: isFinite(match.matchRate)
+        matchRateFinite: isFinite(match.matchRate),
       };
     });
     assert.ok(!result.error, '应有菜品数据');
@@ -126,9 +153,11 @@ describe('决策树本地推荐逻辑检查', () => {
   it('4.1 generateDishReason返回非空推荐理由', async () => {
     resetErrors();
     const result = await page.evaluate(() => {
-      if (!dishData.length) return { error: 'no dishData' };
+      if (!dishData.length) {
+        return { error: 'no dishData' };
+      }
       const dish = dishData[0];
-      const prefs = { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' };
+      const prefs = { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' };
       const reason = generateDishReason(prefs, dish);
       return { reason, length: reason.length };
     });
@@ -144,38 +173,70 @@ describe('决策树本地推荐逻辑检查', () => {
     // 用偏好1获取推荐
     const result1 = await page.evaluate(async () => {
       const dishes = dishData.slice(0, 20);
-      const prefs1 = { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '价格区间': '无', '饮食_宗教': '无特殊要求', allergies: [], calorie: '无' };
-      dishes.forEach(d => {
+      const prefs1 = {
+        辣度: '微辣',
+        咸淡: '适中',
+        甜酸: '酸甜',
+        价格区间: '无',
+        饮食_宗教: '无特殊要求',
+        allergies: [],
+        calorie: '无',
+      };
+      dishes.forEach((d) => {
         const m = computeDishMatch(prefs1, d);
         d.matchIndex = m.totalMatch;
       });
-      return dishes.sort((a, b) => b.matchIndex - a.matchIndex).slice(0, 3).map(d => d.id);
+      return dishes
+        .sort((a, b) => b.matchIndex - a.matchIndex)
+        .slice(0, 3)
+        .map((d) => d.id);
     });
     // 用偏好2获取推荐
     const result2 = await page.evaluate(() => {
       const dishes = dishData.slice(0, 20);
-      const prefs2 = { '辣度': '重辣', '咸淡': '偏咸', '甜酸': '咸鲜', '价格区间': '无', '饮食_宗教': '无特殊要求', allergies: [], calorie: '无' };
-      dishes.forEach(d => {
+      const prefs2 = {
+        辣度: '重辣',
+        咸淡: '偏咸',
+        甜酸: '咸鲜',
+        价格区间: '无',
+        饮食_宗教: '无特殊要求',
+        allergies: [],
+        calorie: '无',
+      };
+      dishes.forEach((d) => {
         const m = computeDishMatch(prefs2, d);
         d.matchIndex = m.totalMatch;
       });
-      return dishes.sort((a, b) => b.matchIndex - a.matchIndex).slice(0, 3).map(d => d.id);
+      return dishes
+        .sort((a, b) => b.matchIndex - a.matchIndex)
+        .slice(0, 3)
+        .map((d) => d.id);
     });
     // 两个偏好的top3可能在小样本上相同（如果菜品口味都一样）
     // 用全部菜品测试
     const allResult1 = await page.evaluate(() => {
-      const dishes = dishData.filter(d => d.is_active !== false);
-      const prefs1 = { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' };
-      dishes.forEach(d => { d.matchIndex = computeDishMatch(prefs1, d).totalMatch; });
-      return dishes.sort((a, b) => b.matchIndex - a.matchIndex).slice(0, 5).map(d => d.id);
+      const dishes = dishData.filter((d) => d.is_active !== false);
+      const prefs1 = { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' };
+      dishes.forEach((d) => {
+        d.matchIndex = computeDishMatch(prefs1, d).totalMatch;
+      });
+      return dishes
+        .sort((a, b) => b.matchIndex - a.matchIndex)
+        .slice(0, 5)
+        .map((d) => d.id);
     });
     const allResult2 = await page.evaluate(() => {
-      const dishes = dishData.filter(d => d.is_active !== false);
-      const prefs2 = { '辣度': '重辣', '咸淡': '偏咸', '甜酸': '咸鲜' };
-      dishes.forEach(d => { d.matchIndex = computeDishMatch(prefs2, d).totalMatch; });
-      return dishes.sort((a, b) => b.matchIndex - a.matchIndex).slice(0, 5).map(d => d.id);
+      const dishes = dishData.filter((d) => d.is_active !== false);
+      const prefs2 = { 辣度: '重辣', 咸淡: '偏咸', 甜酸: '咸鲜' };
+      dishes.forEach((d) => {
+        d.matchIndex = computeDishMatch(prefs2, d).totalMatch;
+      });
+      return dishes
+        .sort((a, b) => b.matchIndex - a.matchIndex)
+        .slice(0, 5)
+        .map((d) => d.id);
     });
-    const overlap = allResult1.filter(id => allResult2.includes(id));
+    const overlap = allResult1.filter((id) => allResult2.includes(id));
     // 允许部分重叠，但不应完全相同
     assert.ok(overlap.length < 5, `不同偏好应有不同推荐排序，重叠: ${overlap.length}/5`);
     assert.equal(realErrors().length, 0, '不同偏好推荐不应有错误');
@@ -197,18 +258,34 @@ describe('决策树本地推荐逻辑检查', () => {
     });
     if (result) {
       // 设置拉黑
-      await page.evaluate(id => {
+      await page.evaluate((id) => {
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const u = users.find(x => x.username === 'blacklist_test');
-        if (u) { u.blacklist = [id]; localStorage.setItem('users', JSON.stringify(users)); }
+        const u = users.find((x) => x.username === 'blacklist_test');
+        if (u) {
+          u.blacklist = [id];
+          localStorage.setItem('users', JSON.stringify(users));
+        }
       }, result);
       // 获取推荐
       const recIds = await page.evaluate(() => {
-        const prefs = { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '价格区间': '无', '饮食_宗教': '无特殊要求', allergies: [], calorie: '无' };
+        const prefs = {
+          辣度: '微辣',
+          咸淡: '适中',
+          甜酸: '酸甜',
+          价格区间: '无',
+          饮食_宗教: '无特殊要求',
+          allergies: [],
+          calorie: '无',
+        };
         const blk = [dishData[0]?.id];
-        const dishes = dishData.filter(d => !blk.includes(d.id) && d.is_active !== false);
-        dishes.forEach(d => { d.matchIndex = computeDishMatch(prefs, d).totalMatch; });
-        return dishes.sort((a, b) => b.matchIndex - a.matchIndex).slice(0, 5).map(d => d.id);
+        const dishes = dishData.filter((d) => !blk.includes(d.id) && d.is_active !== false);
+        dishes.forEach((d) => {
+          d.matchIndex = computeDishMatch(prefs, d).totalMatch;
+        });
+        return dishes
+          .sort((a, b) => b.matchIndex - a.matchIndex)
+          .slice(0, 5)
+          .map((d) => d.id);
       });
       assert.ok(!recIds.includes(result), '推荐结果不应包含已拉黑菜品');
     }
@@ -256,23 +333,34 @@ describe('决策树本地推荐逻辑检查', () => {
 describe('管理后台用户管理深度E2E测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 8. 用户管理页面加载用户列表 =====
   it('8.1 用户管理页面加载用户列表', async () => {
@@ -316,7 +404,7 @@ describe('管理后台用户管理深度E2E测试', () => {
     if (regR.body.token) {
       await api('/api/user/delete', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + regR.body.token },
+        headers: { Authorization: 'Bearer ' + regR.body.token },
         body: JSON.stringify({ username: uniq }),
       });
     }
@@ -352,7 +440,9 @@ describe('管理后台用户管理深度E2E测试', () => {
     const notifExists = await page.evaluate(() => typeof loadNotifications === 'function');
     assert.ok(notifExists, 'loadNotifications函数应存在');
     await page.evaluate(() => {
-      try { loadNotifications(); } catch(e) {}
+      try {
+        loadNotifications();
+      } catch (e) {}
     });
     await sleep(1000);
     assert.equal(realErrors().length, 0, '通知加载不应有错误');
@@ -364,7 +454,7 @@ describe('管理后台用户管理深度E2E测试', () => {
     const adminToken = await page.evaluate(() => localStorage.getItem('adminToken'));
     if (adminToken) {
       const r = await api('/api/admin/monitor', {
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
       assert.ok(r.status === 200 || r.status === 404, '监控端点应返回200或404');
     }

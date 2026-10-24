@@ -5,71 +5,109 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('用户流程与存储深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
     // 默认处理dialog
-    page.on('dialog', async dialog => { await dialog.accept(); });
+    page.on('dialog', async (dialog) => {
+      await dialog.accept();
+    });
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 注册后自动登录 =====
   it('1.1 注册成功后自动登录（无需再次登录）', async () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
-    const uname = 'auto_' + Date.now();  // 18字符,≤20上限(Date.now()13位;前缀过长会被maxlength=20拒绝)
+    const uname = 'auto_' + Date.now(); // 18字符,≤20上限(Date.now()13位;前缀过长会被maxlength=20拒绝)
     const upass = 'Autologin123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 检查是否自动登录（"我的"导航显示 = 已登录）
@@ -92,7 +130,9 @@ describe('用户流程与存储深度检查', () => {
     // 当前已自动登录，点击退出
     await page.evaluate(() => {
       const btn = document.getElementById('logout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     // 检查localStorage中用户数据是否清理
@@ -118,36 +158,53 @@ describe('用户流程与存储深度检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(400);
     // 注册新用户
-    const uname = 'prefs_' + Date.now();  // 19字符,≤20上限
+    const uname = 'prefs_' + Date.now(); // 19字符,≤20上限
     const upass = 'Prefsave123';
     await page.evaluate(() => document.getElementById('register-btn')?.click());
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 进入偏好设置
-    await page.evaluate(() => {
-      const btn = document.getElementById('continue-btn');
-      if (btn) btn.click();
-    }).catch(() => {});
+    await page
+      .evaluate(() => {
+        const btn = document.getElementById('continue-btn');
+        if (btn) {
+          btn.click();
+        }
+      })
+      .catch(() => {});
     // 直接切到偏好section
     await page.evaluate(() => showSection('preference-section'));
     await sleep(500);
@@ -156,19 +213,23 @@ describe('用户流程与存储深度检查', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     // 检查users数组中当前用户的偏好
     const prefSaved = await page.evaluate((expectedUser) => {
       try {
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.username === expectedUser);
+        const user = users.find((u) => u.username === expectedUser);
         if (user && user.preferences) {
           return { found: true, pref: JSON.stringify(user.preferences).substring(0, 80) };
         }
         return { found: false };
-      } catch(e) { return { found: false, err: e.message }; }
+      } catch (e) {
+        return { found: false, err: e.message };
+      }
     }, uname);
     assert.ok(prefSaved.found, `已登录用户偏好应保存: ${JSON.stringify(prefSaved)}`);
     assert.equal(realErrors().length, 0, '偏好保存不应有错误');
@@ -182,7 +243,10 @@ describe('用户流程与存储深度检查', () => {
       const result = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.includes('rec') || key.includes('recommend') || key.includes('dish') || key.includes('cache'))) {
+        if (
+          key &&
+          (key.includes('rec') || key.includes('recommend') || key.includes('dish') || key.includes('cache'))
+        ) {
           result.push(key);
         }
       }
@@ -202,9 +266,7 @@ describe('用户流程与存储深度检查', () => {
     await page.evaluate(() => localStorage.removeItem('cart'));
     // 直接写入2件商品并刷新页面
     await page.evaluate(() => {
-      localStorage.setItem('cart', JSON.stringify([
-        { id: 99996, name: '徽标菜', price: 8, qty: 2 }
-      ]));
+      localStorage.setItem('cart', JSON.stringify([{ id: 99996, name: '徽标菜', price: 8, qty: 2 }]));
     });
     await page.reload({ waitUntil: 'networkidle0', timeout: 15000 }).catch(() => {});
     await sleep(800);
@@ -231,7 +293,9 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(1500);
     const menuInfo = await page.evaluate(() => {
@@ -239,7 +303,7 @@ describe('用户流程与存储深度检查', () => {
       const tbody = document.getElementById('dataset-table-body');
       return {
         countText: count ? count.textContent : '',
-        rows: tbody ? tbody.children.length : 0
+        rows: tbody ? tbody.children.length : 0,
       };
     });
     assert.ok(menuInfo.rows > 0, `菜单应有数据行，实际: ${menuInfo.rows}`);
@@ -259,29 +323,44 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 退出登录（如果自动登录了）
     await page.evaluate(() => {
       const btn = document.getElementById('logout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 再次注册同名
@@ -289,23 +368,36 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     // 应显示错误提示或留在注册页
@@ -316,7 +408,7 @@ describe('用户流程与存储深度检查', () => {
     });
     const stayedOnRegister = await page.evaluate(() => {
       const section = document.getElementById('register-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(errorShown || stayedOnRegister, '重复注册应被拒绝');
     assert.equal(realErrors().length, 0, '重复注册不应有JS错误');
@@ -329,17 +421,21 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-dataset');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const homeVisible = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeVisible, '数据集返回应回到首页');
     assert.equal(realErrors().length, 0, '数据集返回不应有错误');
@@ -352,17 +448,21 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-about');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-about');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const homeVisible = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeVisible, '关于本店返回应回到首页');
     assert.equal(realErrors().length, 0, '关于本店返回不应有错误');
@@ -375,17 +475,21 @@ describe('用户流程与存储深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-privacy');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-privacy');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const homeVisible = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeVisible, '隐私政策返回应回到首页');
     assert.equal(realErrors().length, 0, '隐私政策返回不应有错误');

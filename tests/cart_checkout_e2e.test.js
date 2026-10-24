@@ -5,17 +5,29 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -36,23 +48,34 @@ async function getRecommendations(page) {
 describe('购物车结账下单全流程', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 获取推荐后打开购物车 =====
   it('1.1 推荐后打开购物车显示内容', async () => {
@@ -73,7 +96,7 @@ describe('购物车结账下单全流程', () => {
     resetErrors();
     const badge = await page.$('#cart-badge');
     assert.ok(badge, '购物车角标应存在');
-    const badgeText = await page.evaluate(el => el.textContent.trim(), badge);
+    const badgeText = await page.evaluate((el) => el.textContent.trim(), badge);
     // 角标应有数字或为空（无菜品时）
     assert.ok(true, '角标检查完成: ' + badgeText);
     assert.equal(realErrors().length, 0, '角标检查不应有错误');
@@ -106,7 +129,7 @@ describe('购物车结账下单全流程', () => {
       const end = document.getElementById('end-section');
       return {
         cart: cart && !cart.classList.contains('d-none'),
-        end: end && !end.classList.contains('d-none')
+        end: end && !end.classList.contains('d-none'),
       };
     });
     assert.ok(cartOrEnd.cart || cartOrEnd.end, '应跳转到购物车或结束页');
@@ -121,7 +144,7 @@ describe('购物车结账下单全流程', () => {
         dishCount: document.getElementById('end-dish-count')?.textContent || '',
         avgMatch: document.getElementById('end-avg-match')?.textContent || '',
         topMatch: document.getElementById('end-top-match')?.textContent || '',
-        r2: document.getElementById('end-model-r2')?.textContent || ''
+        r2: document.getElementById('end-model-r2')?.textContent || '',
       };
     });
     assert.ok(stats.dishCount, '推荐菜品数应显示');
@@ -197,13 +220,13 @@ describe('购物车结账下单全流程', () => {
     await getRecommendations(page);
     const beforeDishes = await page.evaluate(() => {
       const list = document.getElementById('dish-list');
-      return list ? Array.from(list.children).map(c => c.textContent.substring(0, 30)) : [];
+      return list ? Array.from(list.children).map((c) => c.textContent.substring(0, 30)) : [];
     });
     await page.evaluate(() => document.getElementById('refresh-recommendations')?.click());
     await sleep(3000);
     const afterDishes = await page.evaluate(() => {
       const list = document.getElementById('dish-list');
-      return list ? Array.from(list.children).map(c => c.textContent.substring(0, 30)) : [];
+      return list ? Array.from(list.children).map((c) => c.textContent.substring(0, 30)) : [];
     });
     assert.ok(afterDishes.length > 0, '换一批后应有推荐菜品');
     assert.equal(realErrors().length, 0, '换一批不应有错误: ' + realErrors().join('; '));

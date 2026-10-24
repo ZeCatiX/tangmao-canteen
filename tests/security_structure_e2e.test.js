@@ -2,12 +2,18 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const assert = require('node:assert/strict');
@@ -26,7 +32,6 @@ async function api(p, options = {}) {
 }
 
 describe('用户密码安全与数据表结构测试', () => {
-
   // ===== 1. 注册用户密码不明文返回 =====
   it('1.1 注册响应不包含密码', async () => {
     const uniq = 'pw_chec' + Date.now();
@@ -43,7 +48,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + r.body.token },
+      headers: { Authorization: 'Bearer ' + r.body.token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -66,7 +71,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + r.body.token },
+      headers: { Authorization: 'Bearer ' + r.body.token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -85,7 +90,7 @@ describe('用户密码安全与数据表结构测试', () => {
     const adminToken = adminR.body.token;
     // 获取用户列表
     const users = await api('/api/admin/users', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(users.status, 200);
     const str = JSON.stringify(users.body);
@@ -94,7 +99,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + reg.body.token },
+      headers: { Authorization: 'Bearer ' + reg.body.token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -109,10 +114,10 @@ describe('用户密码安全与数据表结构测试', () => {
     const token = reg.body.token;
     const r = await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         username: uniq,
-        preferences: { spiciness: '微辣', saltiness: '适中', sweetness: '酸甜' }
+        preferences: { spiciness: '微辣', saltiness: '适中', sweetness: '酸甜' },
       }),
     });
     assert.ok(r.status === 200 || r.status === 201, '偏好保存应成功');
@@ -120,7 +125,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -132,8 +137,7 @@ describe('用户密码安全与数据表结构测试', () => {
       body: JSON.stringify({ username: 'short_pw', password: 'short' }),
     });
     // 密码太短应被拒绝（或前端minlength处理）
-    assert.ok(r.status === 400 || r.body.success === false || r.status === 200,
-      '短密码注册应返回400或422');
+    assert.ok(r.status === 400 || r.body.success === false || r.status === 200, '短密码注册应返回400或422');
   });
 
   // ===== 6. 用户favorites/blacklist数据结构 =====
@@ -147,14 +151,14 @@ describe('用户密码安全与数据表结构测试', () => {
     // 保存收藏
     const r = await api('/api/user-favorites', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq, favorites: [1, 2, 3] }),
     });
     assert.ok(r.status === 200 || r.status === 201, '收藏保存应成功');
     // 保存拉黑
     const b = await api('/api/user-blacklist', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq, blacklist: [5] }),
     });
     assert.ok(b.status === 200 || b.status === 201, '拉黑保存应成功');
@@ -171,7 +175,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -186,11 +190,11 @@ describe('用户密码安全与数据表结构测试', () => {
     const token = reg.body.token;
     const r = await api('/api/order', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
         userId: uniq,
         items: [{ id: dishPool[0].id, name: '测试菜', price: 20, type: '偏好推荐', matchRate: 0.9 }],
-        totalPrice: 20
+        totalPrice: 20,
       }),
     });
     assert.ok(r.status === 200 || r.status === 201, '订单创建应成功');
@@ -198,7 +202,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -213,10 +217,12 @@ describe('用户密码安全与数据表结构测试', () => {
     const token = reg.body.token;
     const r = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({
-        dishId: 3, score: 5, userId: uniq,
-        userPreferences: { spiciness: '微辣' }
+        dishId: 3,
+        score: 5,
+        userId: uniq,
+        userPreferences: { spiciness: '微辣' },
       }),
     });
     assert.ok(r.status === 200 || r.status === 201, '反馈提交应成功');
@@ -224,7 +230,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });
@@ -258,7 +264,7 @@ describe('用户密码安全与数据表结构测试', () => {
     // 清理
     await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq }),
     });
   });

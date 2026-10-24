@@ -5,18 +5,32 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/[4-5]\d{2}/)) return false;
-  if (msg.includes('favicon.ico')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/[4-5]\d{2}/)) {
+    return false;
+  }
+  if (msg.includes('favicon.ico')) {
+    return false;
+  }
   return true;
 }
 
@@ -30,14 +44,21 @@ async function registerAndLogin(page, uniq) {
   await page.type('#register-confirm', 'TestCart123!', { delay: 30 });
   const agree = await page.$('#agree-privacy');
   if (agree) {
-    const checked = await page.evaluate(el => el.checked, agree);
-    if (!checked) await agree.click();
+    const checked = await page.evaluate((el) => el.checked, agree);
+    if (!checked) {
+      await agree.click();
+    }
   }
   await page.evaluate(() => document.getElementById('register-form').querySelector('button[type="submit"]').click());
   await sleep(1500);
   await page.evaluate(() => {
     const modal = document.querySelector('.modal.show');
-    if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+    if (modal) {
+      const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+      if (b) {
+        b.click();
+      }
+    }
   });
   await sleep(300);
   await page.evaluate(() => document.getElementById('login-btn')?.click());
@@ -48,7 +69,12 @@ async function registerAndLogin(page, uniq) {
   await sleep(1500);
   await page.evaluate(() => {
     const modal = document.querySelector('.modal.show');
-    if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+    if (modal) {
+      const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+      if (b) {
+        b.click();
+      }
+    }
   });
   await sleep(300);
 }
@@ -66,23 +92,34 @@ async function getRecommendations(page) {
 describe('购物车操作深度E2E测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 加购后购物车角标更新 =====
   it('1.1 加购后购物车角标显示数量', async () => {
@@ -93,13 +130,20 @@ describe('购物车操作深度E2E测试', () => {
     // 点击加购按钮
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list .add-to-cart-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     // 关闭可能的消息模态框
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     const badge = await page.evaluate(() => document.getElementById('cart-badge')?.textContent || '0');
@@ -134,7 +178,9 @@ describe('购物车操作深度E2E测试', () => {
     });
     await page.evaluate(() => {
       const btn = document.querySelector('.cart-qty-plus');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const afterQty = await page.evaluate(() => {
@@ -154,7 +200,9 @@ describe('购物车操作深度E2E测试', () => {
     });
     await page.evaluate(() => {
       const btn = document.querySelector('.cart-qty-minus');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const afterQty = await page.evaluate(() => {
@@ -174,10 +222,13 @@ describe('购物车操作深度E2E测试', () => {
     await sleep(300);
     // 手动设置购物车数据
     await page.evaluate(() => {
-      localStorage.setItem('cart', JSON.stringify([
-        { id: 1, name: '测试菜品A', price: 20, qty: 2, image: '' },
-        { id: 2, name: '测试菜品B', price: 30, qty: 1, image: '' }
-      ]));
+      localStorage.setItem(
+        'cart',
+        JSON.stringify([
+          { id: 1, name: '测试菜品A', price: 20, qty: 2, image: '' },
+          { id: 2, name: '测试菜品B', price: 30, qty: 1, image: '' },
+        ])
+      );
       updateCartBadge();
     });
     await sleep(200);
@@ -188,7 +239,9 @@ describe('购物车操作深度E2E测试', () => {
     // 点击删除第一个
     await page.evaluate(() => {
       const btn = document.querySelector('.cart-remove-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const afterCount = await page.evaluate(() => document.querySelectorAll('#cart-table-body tr').length);
@@ -213,13 +266,20 @@ describe('购物车操作深度E2E测试', () => {
     // 点击结账
     await page.evaluate(() => {
       const btn = document.getElementById('cart-checkout-btn');
-      if (btn && !btn.disabled) btn.click();
+      if (btn && !btn.disabled) {
+        btn.click();
+      }
     });
     await sleep(2000);
     // 关闭可能的成功模态框
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '结账不应有JS错误: ' + realErrors().join('; '));
@@ -236,7 +296,12 @@ describe('购物车操作深度E2E测试', () => {
     // 应显示"购物车是空的"提示
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '空购物车结账不应有错误');
@@ -261,23 +326,34 @@ describe('购物车操作深度E2E测试', () => {
 describe('收藏/拉黑/取消功能深度E2E测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 9. 登录用户收藏菜品 =====
   it('9.1 登录用户可收藏菜品', async () => {
@@ -287,12 +363,19 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     await getRecommendations(page);
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list button[onclick*="addToFavorites"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '收藏不应有JS错误');
@@ -304,7 +387,10 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
     // 清除登录状态
-    await page.evaluate(() => { localStorage.removeItem('currentUser'); localStorage.removeItem('userToken'); });
+    await page.evaluate(() => {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userToken');
+    });
     await page.reload({ waitUntil: 'networkidle0' });
     await sleep(300);
     await getRecommendations(page);
@@ -317,7 +403,12 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     await sleep(500);
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '游客收藏不应有JS错误');
@@ -336,12 +427,19 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list button[onclick*="addToFavorites"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     const afterState = await page.evaluate(() => {
@@ -360,12 +458,19 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     await getRecommendations(page);
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list button[onclick*="addToBlacklist"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     assert.equal(realErrors().length, 0, '拉黑不应有JS错误');
@@ -380,12 +485,19 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     // 收藏一个菜品
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list button[onclick*="addToFavorites"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => {
       const modal = document.querySelector('.modal.show');
-      if (modal) { const b = modal.querySelector('.btn-close,[data-bs-dismiss]'); if (b) b.click(); }
+      if (modal) {
+        const b = modal.querySelector('.btn-close,[data-bs-dismiss]');
+        if (b) {
+          b.click();
+        }
+      }
     });
     await sleep(300);
     // 查看个人资料
@@ -417,7 +529,9 @@ describe('收藏/拉黑/取消功能深度E2E测试', () => {
     await getRecommendations(page);
     await page.evaluate(() => {
       const btn = document.querySelector('#dish-list button[onclick*="openStarFeedback"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const feedbackVisible = await page.evaluate(() => {

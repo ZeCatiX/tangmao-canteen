@@ -7,16 +7,26 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -25,21 +35,31 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error' && isRealError(msg.text())) page._consoleErrors.push(msg.text());
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' && isRealError(msg.text())) {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 首页游客浏览 =====
   it('1.1 首页加载、统计卡片显示正常', async () => {
@@ -134,8 +154,13 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
     await sleep(500);
     // 显示偏好区（点击推荐入口或导航到 preference-section）
     await page.evaluate(() => {
-      const btn = document.getElementById('start-recommendation') || document.getElementById('nav-recommend') || document.getElementById('preference-btn');
-      if (btn) btn.click();
+      const btn =
+        document.getElementById('start-recommendation') ||
+        document.getElementById('nav-recommend') ||
+        document.getElementById('preference-btn');
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(600);
     const prefVisible = await page.evaluate(() => {
@@ -145,9 +170,11 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
     if (!prefVisible) {
       // 直接通过 JS 切换到偏好区（用于测试内部）
       await page.evaluate(() => {
-        document.querySelectorAll('.section').forEach(s => s.classList.add('d-none'));
+        document.querySelectorAll('.section').forEach((s) => s.classList.add('d-none'));
         const sec = document.getElementById('preference-section');
-        if (sec) sec.classList.remove('d-none');
+        if (sec) {
+          sec.classList.remove('d-none');
+        }
       });
     }
     await sleep(300);
@@ -195,7 +222,10 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
       console.log('购物车元素存在:', cartVisible);
       // 关闭
       const close = await page.$('#cart-close, .cart-close, #close-cart');
-      if (close) { await close.click(); await sleep(300); }
+      if (close) {
+        await close.click();
+        await sleep(300);
+      }
     }
   });
 
@@ -224,7 +254,8 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
         const loginPage = document.getElementById('admin-login-page');
         return {
           statsCount: stats.length,
-          loginHidden: !loginPage || loginPage.style.display === 'none' || getComputedStyle(loginPage).display === 'none',
+          loginHidden:
+            !loginPage || loginPage.style.display === 'none' || getComputedStyle(loginPage).display === 'none',
         };
       });
       console.log('admin 登录后状态:', JSON.stringify(dashVisible));
@@ -264,7 +295,10 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
   });
 
   it('6.2 响应式布局 - 375px 与 768px', async () => {
-    for (const [w, h] of [[375, 667], [768, 1024]]) {
+    for (const [w, h] of [
+      [375, 667],
+      [768, 1024],
+    ]) {
       await page.setViewport({ width: w, height: h });
       await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
       await sleep(500);
@@ -276,7 +310,7 @@ describe('数据库清理后回归 - 用户完整旅程', () => {
       // 按钮可点击
       const clickable = await page.evaluate(() => {
         const btns = document.querySelectorAll('button');
-        const visible = [...btns].filter(b => {
+        const visible = [...btns].filter((b) => {
           const r = b.getBoundingClientRect();
           return r.width > 0 && r.height > 0;
         });

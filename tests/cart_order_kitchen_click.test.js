@@ -7,29 +7,34 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 describe('购物车结算与厨房看板模拟点击检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     // 确认类对话框默认接受（模拟用户点"确定"）
-    page.on('dialog', async d => {
+    page.on('dialog', async (d) => {
       const msg = d.message() || '';
       console.log('  [对话框]', msg.slice(0, 40));
       await d.accept();
     });
     page._errors = [];
-    page.on('pageerror', e => page._errors.push(e.message));
+    page.on('pageerror', (e) => page._errors.push(e.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   it('2.1 从菜单加购菜品到购物车', async () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 20000 });
@@ -39,9 +44,13 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     // 点击第一行的加购按钮
     const clicked = await page.evaluate(() => {
       const row = document.querySelector('#dataset-table-body .dish-card');
-      if (!row) return 'no-row';
+      if (!row) {
+        return 'no-row';
+      }
       const btn = row.querySelector('.btn');
-      if (!btn) return 'no-btn';
+      if (!btn) {
+        return 'no-btn';
+      }
       btn.click();
       return 'clicked:' + btn.textContent.trim().slice(0, 10);
     });
@@ -75,7 +84,9 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     // 点击+号
     await page.evaluate(() => {
       const btn = document.querySelector('#cart-table-body .cart-qty-plus');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const afterCount = await page.evaluate(() => {
@@ -100,7 +111,9 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     await page.evaluate(() => {
       const card = document.querySelector('#dataset-table-body .dish-card');
       const btn = card ? card.querySelector('.add-to-cart-btn') : null;
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(600);
     // 打开购物车结算
@@ -110,8 +123,12 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
     await sleep(800);
     // 选桌层弹出:选 08,验证选完桌号自动续结算
     await page.evaluate(() => {
-      const b = [...document.querySelectorAll('#table-picker-modal button')].find(function(x) { return x.textContent.trim() === '08'; });
-      if (b) b.click();
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find(function (x) {
+        return x.textContent.trim() === '08';
+      });
+      if (b) {
+        b.click();
+      }
     });
     await sleep(4000);
     const state = await page.evaluate(() => {
@@ -123,7 +140,7 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
         modalBody: body ? body.textContent.slice(0, 30) : 'no-body',
         homeActive: home ? home.classList.contains('active') : false,
         endActive: (document.getElementById('end-section') || {}).classList?.contains('active') || false,
-        orderId: sessionStorage.getItem('lastOrderId') || ''
+        orderId: sessionStorage.getItem('lastOrderId') || '',
       };
     });
     console.log('下单结果:', JSON.stringify(state));
@@ -158,7 +175,7 @@ describe('购物车结算与厨房看板模拟点击检查', () => {
   });
 
   it('2.7 全流程无页面JS错误', async () => {
-    const real = page._errors.filter(e => !/favicon|fonts\.|net::/i.test(e));
+    const real = page._errors.filter((e) => !/favicon|fonts\.|net::/i.test(e));
     assert.equal(real.length, 0, 'JS错误:' + real.slice(0, 3).join('; '));
   });
 });

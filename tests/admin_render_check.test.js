@@ -7,15 +7,23 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
   return true;
 }
 
@@ -31,23 +39,34 @@ async function adminLogin(page) {
 describe('管理后台数据渲染深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 仪表盘统计卡片有数据 =====
   it('1.1 仪表盘统计卡片有数据', async () => {
@@ -55,9 +74,11 @@ describe('管理后台数据渲染深度检查', () => {
     await adminLogin(page);
     const stats = await page.evaluate(() => {
       const dash = document.getElementById('page-dashboard');
-      if (!dash) return [];
+      if (!dash) {
+        return [];
+      }
       const cards = dash.querySelectorAll('.card, .stat-card, [class*="stat"]');
-      return Array.from(cards).map(c => {
+      return Array.from(cards).map((c) => {
         const text = c.textContent.trim();
         // 检查是否有数字
         const hasNumber = /\d+/.test(text);
@@ -65,7 +86,7 @@ describe('管理后台数据渲染深度检查', () => {
       });
     });
     // 至少有一些统计卡片有数字
-    const withNumbers = stats.filter(s => s.hasNumber);
+    const withNumbers = stats.filter((s) => s.hasNumber);
     assert.ok(withNumbers.length > 0, '仪表盘应至少有1个统计卡片显示数字，实际: ' + stats.length + ' 个卡片');
     assert.equal(realErrors().length, 0, '仪表盘不应有错误: ' + realErrors().join('; '));
   });
@@ -77,7 +98,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(1500);
     const tableCheck = await page.evaluate(() => {
       const page = document.getElementById('page-dishes');
-      if (!page) return { rows: 0, hasNaN: false };
+      if (!page) {
+        return { rows: 0, hasNaN: false };
+      }
       const tbody = page.querySelector('tbody');
       const rows = tbody ? tbody.children.length : 0;
       const text = page.textContent;
@@ -98,7 +121,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(1500);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-feedback');
-      if (!page) return { content: 0, hasNaN: false };
+      if (!page) {
+        return { content: 0, hasNaN: false };
+      }
       const text = page.textContent.trim();
       return { content: text.length, hasNaN: text.includes('NaN'), hasUndefined: text.includes('undefined') };
     });
@@ -114,7 +139,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(2000);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-analytics');
-      if (!page) return { content: 0, hasCanvas: false, hasNaN: false };
+      if (!page) {
+        return { content: 0, hasCanvas: false, hasNaN: false };
+      }
       const text = page.textContent.trim();
       const canvases = page.querySelectorAll('canvas');
       return { content: text.length, hasCanvas: canvases.length > 0, hasNaN: text.includes('NaN') };
@@ -131,7 +158,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(2000);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-model');
-      if (!page) return { content: 0, hasNaN: false };
+      if (!page) {
+        return { content: 0, hasNaN: false };
+      }
       const text = page.textContent.trim();
       return { content: text.length, hasNaN: text.includes('NaN'), hasUndefined: text.includes('undefined') };
     });
@@ -147,7 +176,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(1500);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-users');
-      if (!page) return { content: 0, hasNaN: false };
+      if (!page) {
+        return { content: 0, hasNaN: false };
+      }
       const text = page.textContent.trim();
       return { content: text.length, hasNaN: text.includes('NaN') };
     });
@@ -163,7 +194,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(1500);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-apidocs');
-      if (!page) return { content: 0, rows: 0 };
+      if (!page) {
+        return { content: 0, rows: 0 };
+      }
       const rows = page.querySelectorAll('tr, .endpoint, .api-row');
       const text = page.textContent.trim();
       return { content: text.length, rows: rows.length };
@@ -180,7 +213,9 @@ describe('管理后台数据渲染深度检查', () => {
     await sleep(1500);
     const check = await page.evaluate(() => {
       const page = document.getElementById('page-preferences');
-      if (!page) return { content: 0, hasNaN: false };
+      if (!page) {
+        return { content: 0, hasNaN: false };
+      }
       const text = page.textContent.trim();
       return { content: text.length, hasNaN: text.includes('NaN') };
     });
@@ -194,13 +229,13 @@ describe('管理后台数据渲染深度检查', () => {
     resetErrors();
     const navCheck = await page.evaluate(() => {
       const navItems = document.querySelectorAll('[data-page]');
-      return Array.from(navItems).map(n => {
+      return Array.from(navItems).map((n) => {
         const text = n.textContent.trim();
         return { page: n.getAttribute('data-page'), text, visible: !n.classList.contains('d-none') };
       });
     });
     assert.ok(navCheck.length >= 8, '应有至少8个侧边栏导航项，实际: ' + navCheck.length);
-    navCheck.forEach(n => {
+    navCheck.forEach((n) => {
       assert.ok(n.text.length > 0, '导航项 ' + n.page + ' 应有文字');
     });
     assert.equal(realErrors().length, 0, '侧边栏检查不应有错误');
@@ -210,7 +245,9 @@ describe('管理后台数据渲染深度检查', () => {
   it('10.1 管理后台退出登录按钮存在', async () => {
     resetErrors();
     const logoutExists = await page.evaluate(() => {
-      const links = document.querySelectorAll('#admin-logout-link, #admin-logout-link-mobile, [onclick*="adminLogout"], [onclick*="logout"]');
+      const links = document.querySelectorAll(
+        '#admin-logout-link, #admin-logout-link-mobile, [onclick*="adminLogout"], [onclick*="logout"]'
+      );
       return links.length;
     });
     assert.ok(logoutExists > 0, '应有退出登录按钮/链接');

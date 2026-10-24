@@ -6,17 +6,29 @@ require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -33,23 +45,34 @@ async function api(path, options = {}) {
 describe('长时间运行稳定性和资源监控', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. Worker健康检查一致性 =====
   it('1.1 Worker健康检查多次调用一致', async () => {
@@ -65,7 +88,10 @@ describe('长时间运行稳定性和资源监控', () => {
     }
     // pendingRequests 应为0或无挂起请求（有挂起请求时为Worker正忙，不视为失败）
     for (const r of results) {
-      assert.ok(typeof r.pendingRequests === 'undefined' || r.pendingRequests >= 0, 'pendingRequests应为非负整数或undefined');
+      assert.ok(
+        typeof r.pendingRequests === 'undefined' || r.pendingRequests >= 0,
+        'pendingRequests应为非负整数或undefined'
+      );
     }
   });
 
@@ -74,7 +100,9 @@ describe('长时间运行稳定性和资源监控', () => {
     resetErrors();
     // 获取初始内存
     const beforeMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     // 发起10次推荐请求
@@ -82,14 +110,39 @@ describe('长时间运行稳定性和资源监控', () => {
       await api('/api/predict-rf', {
         method: 'POST',
         body: JSON.stringify({
-          userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '价格区间': '0-30', '热量': '0-500', '饮食_宗教': '无特殊要求' },
-          dishes: [{ id: 1, name: '测试' + i, spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }]
+          userPrefs: {
+            辣度: '微辣',
+            咸淡: '适中',
+            甜酸: '酸甜',
+            价格区间: '0-30',
+            热量: '0-500',
+            饮食_宗教: '无特殊要求',
+          },
+          dishes: [
+            {
+              id: 1,
+              name: '测试' + i,
+              spiciness: '微辣',
+              saltiness: '适中',
+              sweetness: '酸甜',
+              rating: 4,
+              price: 20,
+              isHalal: false,
+              isVegetarian: false,
+              allergies: [],
+              religion: '无特殊要求',
+              calorie: '200',
+              protein: '10',
+            },
+          ],
         }),
       });
     }
     await sleep(1000);
     const afterMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     if (beforeMem > 0 && afterMem > 0) {
@@ -105,10 +158,8 @@ describe('长时间运行稳定性和资源监控', () => {
     resetErrors();
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(20000);
-    const jsErrors = realErrors().filter(e =>
-      !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') &&
-      !e.includes('favicon')
+    const jsErrors = realErrors().filter(
+      (e) => !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '20秒停留后不应有JS错误累积: ' + jsErrors.join('; '));
   });
@@ -136,8 +187,24 @@ describe('长时间运行稳定性和资源监控', () => {
       await api('/api/predict-rf', {
         method: 'POST',
         body: JSON.stringify({
-          userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' },
-          dishes: [{ id: 1, name: '测试', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }]
+          userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' },
+          dishes: [
+            {
+              id: 1,
+              name: '测试',
+              spiciness: '微辣',
+              saltiness: '适中',
+              sweetness: '酸甜',
+              rating: 4,
+              price: 20,
+              isHalal: false,
+              isVegetarian: false,
+              allergies: [],
+              religion: '无特殊要求',
+              calorie: '200',
+              protein: '10',
+            },
+          ],
         }),
       });
       times.push(Date.now() - start);
@@ -148,7 +215,7 @@ describe('长时间运行稳定性和资源监控', () => {
     });
     // 响应时间波动不应太大
     const avg = times.reduce((a, b) => a + b, 0) / times.length;
-    const maxDeviation = Math.max(...times.map(t => Math.abs(t - avg)));
+    const maxDeviation = Math.max(...times.map((t) => Math.abs(t - avg)));
     assert.ok(maxDeviation < 3000, `响应时间波动应<3000ms，平均: ${avg.toFixed(0)}ms 最大偏差: ${maxDeviation}ms`);
   });
 
@@ -198,8 +265,18 @@ describe('CSS类引用完整性检查', () => {
     }
 
     // 只检查项目自定义的类（非Bootstrap标准类）
-    const customClasses = ['blind-box-card', 'badge-blind', 'dish-info', 'dish-details', 'dish-actions', 'dish-score', 'dish-reason', 'section', 'loading-text'];
-    let missing = [];
+    const customClasses = [
+      'blind-box-card',
+      'badge-blind',
+      'dish-info',
+      'dish-details',
+      'dish-actions',
+      'dish-score',
+      'dish-reason',
+      'section',
+      'loading-text',
+    ];
+    const missing = [];
     for (const cls of customClasses) {
       if (!cssClasses.has(cls)) {
         missing.push(cls);

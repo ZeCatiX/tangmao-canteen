@@ -6,36 +6,55 @@ require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('多设备响应式布局检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // 测试各种设备视口
   const devices = [
@@ -128,24 +147,21 @@ describe('HTTP缓存策略检查', () => {
   it('2.2 CSS文件有长缓存', async () => {
     const r = await fetch(BASE + '/styles.css');
     const cc = r.headers.get('cache-control') || '';
-    assert.ok(cc.includes('max-age') || cc.includes('7d') || cc.includes('public'),
-      'CSS应有长缓存: ' + cc);
+    assert.ok(cc.includes('max-age') || cc.includes('7d') || cc.includes('public'), 'CSS应有长缓存: ' + cc);
   });
 
   // ===== 3. JS有缓存头 =====
   it('3.3 JS文件有长缓存', async () => {
     const r = await fetch(BASE + '/script.js');
     const cc = r.headers.get('cache-control') || '';
-    assert.ok(cc.includes('max-age') || cc.includes('7d') || cc.includes('public'),
-      'JS应有长缓存: ' + cc);
+    assert.ok(cc.includes('max-age') || cc.includes('7d') || cc.includes('public'), 'JS应有长缓存: ' + cc);
   });
 
   // ===== 4. node_modules有缓存 =====
   it('4.1 node_modules资源有长缓存', async () => {
     const r = await fetch(BASE + '/node_modules/bootstrap/dist/css/bootstrap.min.css');
     const cc = r.headers.get('cache-control') || '';
-    assert.ok(cc.includes('max-age') || cc.includes('7d'),
-      'node_modules应有长缓存: ' + cc);
+    assert.ok(cc.includes('max-age') || cc.includes('7d'), 'node_modules应有长缓存: ' + cc);
   });
 
   // ===== 5. API响应不被缓存 =====
@@ -170,20 +186,27 @@ describe('PWA和离线特性检查', () => {
   let browser, page;
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // ===== 7. viewport meta存在 =====
   it('7.1 首页有viewport meta', async () => {
@@ -283,7 +306,9 @@ describe('PWA和离线特性检查', () => {
     await page.keyboard.press('Tab');
     const focused = await page.evaluate(() => {
       const el = document.activeElement;
-      return el ? el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ')[0] : '') : 'none';
+      return el
+        ? el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className.split(' ')[0] : '')
+        : 'none';
     });
     assert.ok(focused !== 'BODY', 'Tab键应聚焦到某个元素: ' + focused);
   });

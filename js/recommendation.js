@@ -13,15 +13,19 @@ async function fetchRecommendations(isRefresh) {
   rl.classList.remove('d-none');
   rr.classList.add('d-none');
   if (window.TangCatIntro) {
-    var _la = document.getElementById('rec-logo-anim');
-    if (_la) TangCatIntro.play(_la, { duration: 4200, loop: true });
+    const _la = document.getElementById('rec-logo-anim');
+    if (_la) {
+      TangCatIntro.play(_la, { duration: 4200, loop: true });
+    }
   }
 
   // 等待菜品数据加载完成（最多等5秒）
   if (!dishData.length) {
     for (let w = 0; w < 50; w++) {
       await new Promise((r) => setTimeout(r, 100));
-      if (dishData.length) break;
+      if (dishData.length) {
+        break;
+      }
     }
     if (!dishData.length) {
       showMessage('提示', '菜品数据加载中，请稍后重试');
@@ -44,36 +48,61 @@ async function fetchRecommendations(isRefresh) {
   let blk = [];
   if (currentUser && currentUser !== 'guest') {
     const u = getUserData(currentUser);
-    if (u) blk = u.blacklist || [];
+    if (u) {
+      blk = u.blacklist || [];
+    }
   }
 
-  let dishes = dishData.filter((d) => {
-    if (d.is_active === false) return false;
-    if (d.is_sold_out === true) return false; // 售罄菜不进推荐池(菜单灰化/冷启动/结算拦截之外的推荐侧防线)
-    if (d.category === '飲品与酒水' || d.category === '主食') return false;
-    // 价格改为软打分(computeDishMatch),不再硬过滤
-    const p = parseFloat(d.price);
-    if (!isNaN(p)) {
+  const dishes = dishData.filter((d) => {
+    if (d.is_active === false) {
+      return false;
     }
+    if (d.is_sold_out === true) {
+      return false;
+    } // 售罄菜不进推荐池(菜单灰化/冷启动/结算拦截之外的推荐侧防线)
+    if (d.category === '飲品与酒水' || d.category === '主食') {
+      return false;
+    }
+    // 价格改为软打分(computeDishMatch),不再硬过滤
     // 饮食要求筛选
     const r = prefs['饮食_宗教'];
     if (r !== '无特殊要求') {
-      if (r === '清真' && !d.isHalal) return false;
-      if (r === '素食' && !d.isVegetarian) return false;
+      if (r === '清真' && !d.isHalal) {
+        return false;
+      }
+      if (r === '素食' && !d.isVegetarian) {
+        return false;
+      }
     }
-    if (recommendedIds.includes(d.id)) return false;
-    if (blk.includes(d.id)) return false;
+    if (recommendedIds.includes(d.id)) {
+      return false;
+    }
+    if (blk.includes(d.id)) {
+      return false;
+    }
     const a = prefs['allergies'] || [];
-    if (a.includes('海鲜') && d.allergies?.seafood) return false;
-    if (a.includes('花生') && d.allergies?.peanut) return false;
-    if (a.includes('鸡蛋') && d.allergies?.egg) return false;
-    if (a.includes('大豆') && d.allergies?.soy) return false;
-    if (a.includes('麸质') && d.allergies?.gluten) return false;
+    if (a.includes('海鲜') && d.allergies?.seafood) {
+      return false;
+    }
+    if (a.includes('花生') && d.allergies?.peanut) {
+      return false;
+    }
+    if (a.includes('鸡蛋') && d.allergies?.egg) {
+      return false;
+    }
+    if (a.includes('大豆') && d.allergies?.soy) {
+      return false;
+    }
+    if (a.includes('麸质') && d.allergies?.gluten) {
+      return false;
+    }
     return true;
   });
   if (dishes.length < 5) {
     showMessage('提示', '没有更多菜品啦！');
-    if ($('recommendation-loading')) $('recommendation-loading').classList.add('d-none');
+    if ($('recommendation-loading')) {
+      $('recommendation-loading').classList.add('d-none');
+    }
     return;
   }
 
@@ -83,8 +112,7 @@ async function fetchRecommendations(isRefresh) {
       return p ? p.score : 0;
     });
     const mlMin = Math.min(...mlScores),
-      mlMax = Math.max(...mlScores),
-      mlR = mlMax - mlMin;
+      mlMax = Math.max(...mlScores);
     dishes.forEach((d) => {
       const { matchDetails, totalMatch } = computeDishMatch(prefs, d);
       d.matchDetails = matchDetails;
@@ -94,7 +122,7 @@ async function fetchRecommendations(isRefresh) {
       // 评分全为默认3.5时归一化会放大ML噪声, 用绝对分ml/5让规则主导
       const mlNorm = Math.max(0, Math.min(1, ml / 5));
       const declaredN = ['辣度', '咸淡', '甜酸', '热量', '价格'].filter(function (k) {
-        var v = prefs[k];
+        const v = prefs[k];
         return v && v !== '无' && v !== '无特殊要求' && v !== '不限';
       }).length;
       d.hasTasteSignal = declaredN >= 1;
@@ -112,10 +140,14 @@ async function fetchRecommendations(isRefresh) {
       d.type = '偏好推荐';
     });
     const blind = selectBlindBoxDish(prefs, top, blk);
-    if (blind) top.push(blind);
+    if (blind) {
+      top.push(blind);
+    }
     currentRecommendations = top;
     top.forEach((d) => {
-      if (!recommendedIds.includes(d.id)) recommendedIds.push(d.id);
+      if (!recommendedIds.includes(d.id)) {
+        recommendedIds.push(d.id);
+      }
     });
     currentRecommendationMode = '机器学习(梯度提升)';
     console.groupEnd();
@@ -125,24 +157,22 @@ async function fetchRecommendations(isRefresh) {
     const TIMEOUT = 15000,
       ft = (url, opt, ms) =>
         Promise.race([safeFetch(url, opt), new Promise((_, r) => setTimeout(() => r(new Error('超时')), ms))]);
-    const od = dlist
-      .slice(0, 100)
-      .map((d) => ({
-        id: d.id,
-        spiciness: d.spiciness,
-        saltiness: d.saltiness,
-        sweetness: d.sweetness,
-        vegetable: '适量',
-        rating: d.rating,
-        price: d.price,
-        isHalal: d.isHalal || false,
-        isVegetarian: d.isVegetarian || false,
-        allergies: d.allergies,
-        religion: d.religion || '无特殊要求',
-        calorie: d.calorie || '0',
-        protein: d.protein || '0',
-        tags: d.tags || [],
-      }));
+    const od = dlist.slice(0, 100).map((d) => ({
+      id: d.id,
+      spiciness: d.spiciness,
+      saltiness: d.saltiness,
+      sweetness: d.sweetness,
+      vegetable: '适量',
+      rating: d.rating,
+      price: d.price,
+      isHalal: d.isHalal || false,
+      isVegetarian: d.isVegetarian || false,
+      allergies: d.allergies,
+      religion: d.religion || '无特殊要求',
+      calorie: d.calorie || '0',
+      protein: d.protein || '0',
+      tags: d.tags || [],
+    }));
     ft(
       '/api/predict-rf',
       {
@@ -154,8 +184,11 @@ async function fetchRecommendations(isRefresh) {
     )
       .then((r) => (r.ok ? r.json() : Promise.reject(Error('HTTP' + r.status))))
       .then((d) => {
-        if (d.success) processML(d.predictions || []);
-        else fallback(prefs, blk, dishes);
+        if (d.success) {
+          processML(d.predictions || []);
+        } else {
+          fallback(prefs, blk, dishes);
+        }
       })
       .catch(() => fallback(prefs, blk, dishes));
   };
@@ -171,11 +204,14 @@ async function fetchRecommendations(isRefresh) {
     return;
   }
   checkApiAvailability().then((a) => {
-    if (a) callAPI(dishes);
-    else if (mode === 'api') {
+    if (a) {
+      callAPI(dishes);
+    } else if (mode === 'api') {
       showMessage('提示', 'API不可用，已自动切换为本地推荐模式');
       fallback(prefs, blk, dishes);
-    } else fallback(prefs, blk, dishes);
+    } else {
+      fallback(prefs, blk, dishes);
+    }
   });
 }
 
@@ -185,23 +221,45 @@ async function fallback(prefs, blk, dishes) {
   dishes.forEach((d) => {
     const ps = predictWithDecisionTree(prefs, d);
     const md = { taste: 0, cuisine: 0, calorie: 0, rating: 0, price: 0 };
-    if (prefs['辣度'] !== '无') md.taste += gradeScore(SPICE_ORDER, prefs['辣度'], d.spiciness);
-    else md.taste += 2;
-    if (prefs['咸淡'] !== '无') md.taste += gradeScoreSoft(SALT_ORDER, prefs['咸淡'], d.saltiness);
-    else md.taste += 2;
+    if (prefs['辣度'] !== '无') {
+      md.taste += gradeScore(SPICE_ORDER, prefs['辣度'], d.spiciness);
+    } else {
+      md.taste += 2;
+    }
+    if (prefs['咸淡'] !== '无') {
+      md.taste += gradeScoreSoft(SALT_ORDER, prefs['咸淡'], d.saltiness);
+    } else {
+      md.taste += 2;
+    }
     if (prefs['甜酸'] !== '无') {
-      if (d.sweetness === prefs['甜酸']) md.taste += 2;
-      else md.taste -= 1;
-    } else md.taste += 2;
-    if (d.tags && d.tags.includes('招牌')) md.cuisine += 1.0; // 与 computeDishMatch 保持一致
-    if (prefs['calorie'] !== '无') md.calorie = gradeScoreSoft(CAL_ORDER, prefs['calorie'], d.calorie);
-    else md.calorie = 1;
+      if (d.sweetness === prefs['甜酸']) {
+        md.taste += 2;
+      } else {
+        md.taste -= 1;
+      }
+    } else {
+      md.taste += 2;
+    }
+    if (d.tags && d.tags.includes('招牌')) {
+      md.cuisine += 1.0;
+    } // 与 computeDishMatch 保持一致
+    if (prefs['calorie'] !== '无') {
+      md.calorie = gradeScoreSoft(CAL_ORDER, prefs['calorie'], d.calorie);
+    } else {
+      md.calorie = 1;
+    }
     const pv = parseFloat(d.price);
     if (!isNaN(pv) && prefs['价格区间'] !== '无' && prefs['价格区间'] !== '不限') {
-      if (prefs['价格区间'] === '经济') md.price = pv < 20 ? 2 : pv < 30 ? -1 : -2;
-      else if (prefs['价格区间'] === '适中') md.price = pv >= 20 && pv <= 50 ? 2 : pv < 20 || pv > 50 ? -1 : 0;
-      else if (prefs['价格区间'] === '品质') md.price = pv > 50 ? 2 : pv > 40 ? -1 : -2;
-    } else md.price = 1;
+      if (prefs['价格区间'] === '经济') {
+        md.price = pv < 20 ? 2 : pv < 30 ? -1 : -2;
+      } else if (prefs['价格区间'] === '适中') {
+        md.price = pv >= 20 && pv <= 50 ? 2 : pv < 20 || pv > 50 ? -1 : 0;
+      } else if (prefs['价格区间'] === '品质') {
+        md.price = pv > 50 ? 2 : pv > 40 ? -1 : -2;
+      }
+    } else {
+      md.price = 1;
+    }
     // 本地决策树模型(decision_tree_model.json)特征维度与 encodeDishFeaturesForTree 不匹配，预测值不可靠；rating 改用实际评分，与 computeDishMatch 一致
     const rs = parseFloat(d.rating);
     md.rating = !isNaN(rs) ? Math.round((rs / 5) * 2.5 * 10) / 10 : 2.0;
@@ -222,10 +280,14 @@ async function fallback(prefs, blk, dishes) {
   dishes.sort((a, b) => b.matchIndex - a.matchIndex);
   const top = dishes.slice(0, 5);
   const blind = selectBlindBoxDish(prefs, top, blk);
-  if (blind) top.push(blind);
+  if (blind) {
+    top.push(blind);
+  }
   currentRecommendations = top;
   top.forEach((d) => {
-    if (!recommendedIds.includes(d.id)) recommendedIds.push(d.id);
+    if (!recommendedIds.includes(d.id)) {
+      recommendedIds.push(d.id);
+    }
   });
   currentRecommendationMode = '决策树模型';
   console.groupEnd();
@@ -235,7 +297,7 @@ async function fallback(prefs, blk, dishes) {
 // ═══════════════ 推荐结果渲染 ═══════════════
 function renderRecipeCartBtn(d, cart) {
   const ci = cart ? cart.find((c) => c.id === d.id) : null;
-  if (ci)
+  if (ci) {
     return (
       '<div data-recipe-cart="' +
       d.id +
@@ -249,6 +311,7 @@ function renderRecipeCartBtn(d, cart) {
       d.id +
       '" style="border-color:#27ae60;color:#27ae60;padding:2px 8px;line-height:1;">+</button></div>'
     );
+  }
   return (
     '<button data-recipe-cart="' +
     d.id +
@@ -265,11 +328,17 @@ function renderRecipeCartBtn(d, cart) {
 }
 function refreshRecipeCartBtn(id) {
   const rec = document.getElementById('recommendation-result');
-  if (!rec) return;
+  if (!rec) {
+    return;
+  }
   const d = currentRecommendations.find((x) => x.id === id) || dishData.find((x) => x.id === id);
-  if (!d) return;
+  if (!d) {
+    return;
+  }
   const old = rec.querySelector('[data-recipe-cart="' + id + '"]');
-  if (old) old.outerHTML = renderRecipeCartBtn(d, getCart());
+  if (old) {
+    old.outerHTML = renderRecipeCartBtn(d, getCart());
+  }
 }
 // 跳转到饮料酒水分类（菜单页筛选+标签高亮），AI推荐与一席成宴共用（顶层函数）
 // 传入席面下标时进入"为该席选饮品"模式：菜单页顶部横幅+返回席面，此模式加的饮品挂到席面
@@ -295,7 +364,9 @@ function gotoDrinksCategory(si) {
       t.style.border = on ? 'none' : '1px solid var(--gold-light)';
     });
   }
-  if (tableDrinksMode !== null) renderDrinksModeBanner();
+  if (tableDrinksMode !== null) {
+    renderDrinksModeBanner();
+  }
   if (typeof updateFloatBar === 'function') {
     updateFloatBar();
     setTimeout(function () {
@@ -315,9 +386,13 @@ function backToTableResult() {
 }
 function renderDrinksModeBanner() {
   const ds = document.getElementById('dataset-section');
-  if (!ds) return;
+  if (!ds) {
+    return;
+  }
   let ban = document.getElementById('drinks-mode-banner');
-  if (ban) ban.remove();
+  if (ban) {
+    ban.remove();
+  }
   if (tableDrinksMode === null || !window.tableSets || !window.tableSets[tableDrinksMode]) {
     tableDrinksMode = null;
     return;
@@ -334,17 +409,42 @@ function renderDrinksModeBanner() {
   ban.id = 'drinks-mode-banner';
   ban.style.cssText =
     'margin:10px 0;padding:10px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(201,169,110,0.15),rgba(201,169,110,0.05));border:1px solid rgba(201,169,110,0.5);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;';
-  var styleDisp = menuLang === 'en' ? { '家常版': 'Home-style', '宴请版': 'Banquet', '打卡版': 'Check-in' }[s.style] || s.style : s.style;
+  const styleDisp =
+    menuLang === 'en' ? { 家常版: 'Home-style', 宴请版: 'Banquet', 打卡版: 'Check-in' }[s.style] || s.style : s.style;
   ban.innerHTML =
     '<span style="color:var(--text);font-size:0.9rem;">🍹 ' +
     (menuLang === 'en'
-      ? 'Picking drinks for "' + esc(styleDisp) + '" · <strong style="color:var(--primary-accent);">' + chosen.length + '</strong> selected' +
+      ? 'Picking drinks for "' +
+        esc(styleDisp) +
+        '" · <strong style="color:var(--primary-accent);">' +
+        chosen.length +
+        '</strong> selected' +
         (chosen.length
-          ? ' (' + esc(chosen.map(function (c) { return c.name + '×' + (c.qty || 1); }).join(', ')) + ')'
+          ? ' (' +
+            esc(
+              chosen
+                .map(function (c) {
+                  return c.name + '×' + (c.qty || 1);
+                })
+                .join(', ')
+            ) +
+            ')'
           : '')
-      : '正在为「' + esc(s.style) + '」选饮品 · 已选 <strong style="color:var(--primary-accent);">' + chosen.length + '</strong> 件' +
+      : '正在为「' +
+        esc(s.style) +
+        '」选饮品 · 已选 <strong style="color:var(--primary-accent);">' +
+        chosen.length +
+        '</strong> 件' +
         (chosen.length
-          ? '（' + esc(chosen.map(function (c) { return c.name + '×' + (c.qty || 1); }).join('、')) + '）'
+          ? '（' +
+            esc(
+              chosen
+                .map(function (c) {
+                  return c.name + '×' + (c.qty || 1);
+                })
+                .join('、')
+            ) +
+            '）'
           : '')) +
     '</span>' +
     '<button class="btn btn-sm" id="drinks-back-btn" style="background:var(--primary-accent);color:#fff;border:none;border-radius:20px;padding:4px 18px;font-size:0.85rem;letter-spacing:1px;">' +
@@ -375,7 +475,9 @@ function displayRecommendations() {
   const $ = (id) => document.getElementById(id),
     loading = $('recommendation-loading'),
     result = $('recommendation-result');
-  if (!loading || !result) return;
+  if (!loading || !result) {
+    return;
+  }
   const desc =
     currentRecommendationMode === '机器学习'
       ? '(基于ML)'
@@ -406,10 +508,14 @@ function displayRecommendations() {
     (_rice ? _rice.id : '') +
     '"><i class="bi bi-plus-circle me-1"></i>加一碗米饭</button></div></div><div class="col-md-6"><div class="d-flex align-items-center justify-content-between"><div><span style="font-size:1.5rem;">🍹</span> <strong>饮料酒水</strong> <small style="color:var(--text-light);">搭配更尽兴</small></div><button class="btn btn-sm btn-outline-primary" id="goto-drinks-btn"><i class="bi bi-cup-straw me-1"></i>去选饮品</button></div></div></div></div></div><div class="mt-5"><h4 class="text-danger">操作</h4><div class="row g-3 mt-3"><div class="col-md-4"><button class="btn btn-outline-primary w-100 py-2" id="refresh-recommendations"><i class="bi bi-arrow-repeat me-2"></i>换一批</button></div><div class="col-md-4"><button class="btn btn-outline-success w-100 py-2" id="end-recommendation"><i class="bi bi-check-circle me-2"></i>选好了</button></div><div class="col-md-4"><button class="btn btn-outline-danger w-100 py-2" id="end-logout-btn"><i class="bi bi-box-arrow-right me-2"></i>退出</button></div></div></div>';
   const old = result._delegateHandler;
-  if (old) result.removeEventListener('click', old);
+  if (old) {
+    result.removeEventListener('click', old);
+  }
   const handler = (e) => {
     const t = e.target.closest('button');
-    if (!t) return;
+    if (!t) {
+      return;
+    }
     ({
       'refresh-recommendations': () => fetchRecommendations(true),
       'end-recommendation': () => endRecommendation(),
@@ -432,22 +538,19 @@ function displayRecommendations() {
       blk = u.blacklist || [];
     }
   }
-  let ordered = [];
-  try {
-    ordered = JSON.parse(localStorage.getItem('orderedDishes') || '[]');
-  } catch (e) {}
   const dl = $('dish-list');
   if (!dl) {
     console.warn('dish-list 元素未找到');
-    if (window.TangCatIntro) TangCatIntro.stop();
+    if (window.TangCatIntro) {
+      TangCatIntro.stop();
+    }
     loading.classList.add('d-none');
     return;
   }
   dl.innerHTML = '';
   currentRecommendations.forEach((d, i) => {
     const isFav = fav.includes(d.id),
-      isBlk = blk.includes(d.id),
-      isOrdered = ordered.includes(d.id);
+      isBlk = blk.includes(d.id);
     const tags = d.tags
       ? d.tags
           .filter(
@@ -459,7 +562,6 @@ function displayRecommendations() {
       d.tags && d.tags.includes('招牌')
         ? '<span class="badge bg-warning me-1">⭐' + (menuLang === 'en' ? 'Signature' : '招牌') + '</span>'
         : '';
-    const orderedBadge = '';
     const blindBoxClass = d.type === '盲盒尝鲜' ? 'blind-box-card' : '';
     const defaultImg =
       'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23fdf6f0%22/%3E%3Ctext x=%2250%22 y=%2260%22 text-anchor=%22middle%22 font-size=%2236%22%3E🍜%3C/text%3E%3C/svg%3E';
@@ -511,7 +613,6 @@ function displayRecommendations() {
       (i + 1) +
       '. ' +
       tagBadges +
-      orderedBadge +
       (d.type === '盲盒尝鲜'
         ? '<span class="badge bg-info me-1">' + (menuLang === 'en' ? 'Blind box ' : '盲盒 ') + '</span>'
         : '') +
@@ -604,7 +705,9 @@ function displayRecommendations() {
             '</div>') +
       '</div></div></div>';
   });
-  if (window.TangCatIntro) TangCatIntro.stop();
+  if (window.TangCatIntro) {
+    TangCatIntro.stop();
+  }
   loading.classList.add('d-none');
   result.classList.remove('d-none');
 }
@@ -619,20 +722,26 @@ var lastTableMeta = null; // 服务端返回的元信息（已点排除数/是�
 // 席面口径默认数量: "X个起"的按个卖菜至少给到用餐人数(4人桌核桃包×4而非起售的×3,不够分不如不排);
 // 非起售菜与束缚型规格(4个/笼、3碗、6块——"份"不可拆)不按人数补齐,仍为 1 份
 function tableDefaultQtyOf(dish) {
-  var min = minQtyOf(dish) || 1;
-  if (min <= 1) return 1;
-  var ps = (lastTableParams && lastTableParams.partySize) || 0;
+  const min = minQtyOf(dish) || 1;
+  if (min <= 1) {
+    return 1;
+  }
+  const ps = (lastTableParams && lastTableParams.partySize) || 0;
   return Math.min(99, Math.max(min, ps));
 }
 function prefillTableBuilder() {
   // 登录用户从口味档案带出辣度/忌口
-  var prefs = null;
+  let prefs = null;
   if (currentUser && currentUser !== 'guest') {
-    var u = getUserData(currentUser);
-    if (u && u.preferences) prefs = u.preferences;
+    const u = getUserData(currentUser);
+    if (u && u.preferences) {
+      prefs = u.preferences;
+    }
   }
-  var spicy = $('table-spicy');
-  if (spicy) spicy.value = prefs && ['不辣', '微辣', '中辣', '重辣'].includes(prefs.spiciness) ? prefs.spiciness : '无';
+  const spicy = $('table-spicy');
+  if (spicy) {
+    spicy.value = prefs && ['不辣', '微辣', '中辣', '重辣'].includes(prefs.spiciness) ? prefs.spiciness : '无';
+  }
   // 咸淡/甜酸/热量/饮食要求同样从档案带出（值不在选项里则保持默认）
   [
     ['table-saltiness', 'saltiness'],
@@ -640,21 +749,25 @@ function prefillTableBuilder() {
     ['table-calorie', 'calorie'],
     ['table-religion', 'religion'],
   ].forEach(function (pair) {
-    var el = $(pair[0]);
-    if (!el || !prefs) return;
-    for (var i = 0; i < el.options.length; i++) {
+    const el = $(pair[0]);
+    if (!el || !prefs) {
+      return;
+    }
+    for (let i = 0; i < el.options.length; i++) {
       if (el.options[i].value === prefs[pair[1]]) {
         el.value = prefs[pair[1]];
         break;
       }
     }
   });
-  var none = $('table-allergy-none');
-  var boxes = document.querySelectorAll('input[name="table-allergy"]');
-  var has = false;
+  const none = $('table-allergy-none');
+  const boxes = document.querySelectorAll('input[name="table-allergy"]');
+  let has = false;
   boxes.forEach(function (cb) {
     cb.checked = !!(prefs && Array.isArray(prefs.allergies) && prefs.allergies.includes(cb.value));
-    if (cb.checked) has = true;
+    if (cb.checked) {
+      has = true;
+    }
   });
   if (none) {
     none.checked = !has;
@@ -663,19 +776,23 @@ function prefillTableBuilder() {
     });
   }
   // 近期避开（会所版防重复）仅登录用户可见
-  var wrap = $('table-avoid-recent-wrap');
-  if (wrap) wrap.style.display = currentUser && currentUser !== 'guest' ? '' : 'none';
+  const wrap = $('table-avoid-recent-wrap');
+  if (wrap) {
+    wrap.style.display = currentUser && currentUser !== 'guest' ? '' : 'none';
+  }
 }
 var tableSwappedOut = []; // 本次生成内被换掉的菜：换出去就不再换回来
 function collectTableExclusions() {
   // 换菜状态：本次换出去的不应再换回（与身份无关，始终排除）
-  var ids = tableSwappedOut.slice();
+  const ids = tableSwappedOut.slice();
   // 已点排除（本会话各轮+购物车）：仅登录用户提供——游客无身份，不做已点排除（换桌/新客不继承他人记录）
   if (currentUser && currentUser !== 'guest') {
     try {
       JSON.parse(sessionStorage.getItem('lastOrderRounds') || '[]').forEach(function (r) {
         (r.items || []).forEach(function (it) {
-          if (it && it.id) ids.push(it.id);
+          if (it && it.id) {
+            ids.push(it.id);
+          }
         });
       });
     } catch (e) {}
@@ -686,13 +803,13 @@ function collectTableExclusions() {
   return ids;
 }
 function collectTableParams() {
-  var ps = parseInt($('table-party-size') ? $('table-party-size').value : '4', 10);
-  var budget = parseFloat($('table-budget') ? $('table-budget').value : '80');
-  var allergies = [];
+  const ps = parseInt($('table-party-size') ? $('table-party-size').value : '4', 10);
+  const budget = parseFloat($('table-budget') ? $('table-budget').value : '80');
+  const allergies = [];
   document.querySelectorAll('input[name="table-allergy"]:checked').forEach(function (cb) {
     allergies.push(cb.value);
   });
-  var params = {
+  const params = {
     partySize: ps,
     budgetPerPerson: isNaN(budget) ? 80 : budget,
     spiciness: $('table-spicy') ? $('table-spicy').value : '无',
@@ -702,42 +819,56 @@ function collectTableParams() {
     religion: $('table-religion') ? $('table-religion').value : '无特殊要求',
     allergies: allergies,
   };
-  var lt = ssGet('lockedTable');
-  if (lt) params.tableNumber = lt;
-  var excl = collectTableExclusions();
-  if (excl.length) params.excludeIds = excl;
-  var avoid = $('table-avoid-recent');
-  if (avoid && avoid.checked && currentUser && currentUser !== 'guest') params.avoidRecentDays = 7;
+  const lt = ssGet('lockedTable');
+  if (lt) {
+    params.tableNumber = lt;
+  }
+  const excl = collectTableExclusions();
+  if (excl.length) {
+    params.excludeIds = excl;
+  }
+  const avoid = $('table-avoid-recent');
+  if (avoid && avoid.checked && currentUser && currentUser !== 'guest') {
+    params.avoidRecentDays = 7;
+  }
   return params;
 }
 async function submitTableBuilder() {
-  if (!currentUser) currentUser = 'guest';
-  var params = collectTableParams();
+  if (!currentUser) {
+    currentUser = 'guest';
+  }
+  const params = collectTableParams();
   lastTableParams = params;
-  var form = $('table-builder-form'),
+  const form = $('table-builder-form'),
     loading = $('table-builder-loading'),
     btn = $('table-generate-btn');
-  if (form) form.style.display = 'none';
-  if (loading) loading.style.display = 'block';
-  if (btn) btn.disabled = true;
+  if (form) {
+    form.style.display = 'none';
+  }
+  if (loading) {
+    loading.style.display = 'block';
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
   try {
-    var r = await safeFetch('/api/recommend/table', {
+    const r = await safeFetch('/api/recommend/table', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(params),
     });
-    var d = await r.json();
+    const d = await r.json();
     if (d.success && Array.isArray(d.sets) && d.sets.length) {
       tableSets = d.sets;
       tableDrinksMode = null;
       // 起售+人数归一化: X个起 的按个卖菜按 max(起售量,人数) 计入席面总价(4人桌核桃包×4), 行上标 ×数量;
       // 束缚型规格(笼/碗/块)仍按 1 份, 与纸质菜单/加购口径一致
-      var ps = (lastTableParams && lastTableParams.partySize) || 1;
+      const ps = (lastTableParams && lastTableParams.partySize) || 1;
       tableSets.forEach(function (s) {
-        var adjusted = [];
+        const adjusted = [];
         s.totalPrice = 0;
         s.dishes.forEach(function (d) {
-          var min = minQtyOf(d);
+          const min = minQtyOf(d);
           if (min > 1) {
             d._qty = tableDefaultQtyOf(d);
             adjusted.push(d.name + '×' + d._qty);
@@ -760,41 +891,53 @@ async function submitTableBuilder() {
   } catch (e) {
     showMessage('网络错误', '生成一桌菜失败，请检查网络后重试');
   } finally {
-    if (form) form.style.display = '';
-    if (loading) loading.style.display = 'none';
-    if (btn) btn.disabled = false;
+    if (form) {
+      form.style.display = '';
+    }
+    if (loading) {
+      loading.style.display = 'none';
+    }
+    if (btn) {
+      btn.disabled = false;
+    }
   }
 }
 function renderTableSets() {
-  var box = $('table-result-container');
-  if (!box) return;
+  const box = $('table-result-container');
+  if (!box) {
+    return;
+  }
   if (!tableSets.length) {
     box.innerHTML =
       '<p class="py-4 text-center" style="color:var(--text-light);letter-spacing:2px;">尚未设席，先去配置一下吧。</p>';
     return;
   }
-  var notesHtml = '';
+  let notesHtml = '';
   if (lastTableMeta) {
-    var notes = [];
-    if (lastTableMeta.excludedOrdered > 0)
+    const notes = [];
+    if (lastTableMeta.excludedOrdered > 0) {
       notes.push('已自动避开本桌已点/购物车中的 ' + lastTableMeta.excludedOrdered + ' 道菜');
-    if (lastTableMeta.usedProfile) notes.push('已结合你的口味档案');
-    if (notes.length)
+    }
+    if (lastTableMeta.usedProfile) {
+      notes.push('已结合你的口味档案');
+    }
+    if (notes.length) {
       notesHtml =
         '<div class="mb-2 text-center" style="font-size:0.82rem;color:var(--text-light);letter-spacing:1px;"><span class="tang-orn">◈</span>' +
         esc(notes.join(' · ')) +
         '<span class="tang-orn">◈</span></div>';
+    }
   }
-  var styleColors = { 家常版: 'var(--gold)', 宴请版: 'var(--primary-accent)', 打卡版: '#8e44ad' };
+  const styleColors = { 家常版: 'var(--gold)', 宴请版: 'var(--primary-accent)', 打卡版: '#8e44ad' };
   box.innerHTML =
     notesHtml +
     tableSets
       .map(function (s, si) {
-        var color = styleColors[s.style] || 'var(--gold)';
-        var rows = s.dishes
+        const color = styleColors[s.style] || 'var(--gold)';
+        const rows = s.dishes
           .map(function (d) {
-            var q = d._qty || 1;
-            var stepper =
+            const q = d._qty || 1;
+            const stepper =
               '<div class="d-flex align-items-center justify-content-end gap-1" style="width:96px;">' +
               '<button class="btn btn-sm table-qty-minus" data-set="' +
               si +
@@ -850,10 +993,10 @@ function renderTableSets() {
             );
           })
           .join('');
-        var overTag = s.overBudget
+        const overTag = s.overBudget
           ? '<span class="badge rounded-pill ms-1" style="background:rgba(192,57,43,0.12);color:var(--primary-accent);font-size:0.7rem;">略超预算</span>'
           : '';
-        var autoRows = (s.autoItems || [])
+        const autoRows = (s.autoItems || [])
           .map(function (d) {
             return (
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
@@ -891,21 +1034,23 @@ function renderTableSets() {
           })
           .join('');
         // 已选饮品行（"去选饮品"入口加入的，数量以购物车实时为准，含在席面总计中，可在席面上步进调整）
-        var drinkRows = (s.chosenDrinkIds || [])
+        const drinkRows = (s.chosenDrinkIds || [])
           .map(function (id) {
-            var c = getCart().find(function (x) {
+            const c = getCart().find(function (x) {
               return x.id === id;
             });
-            if (!c) return '';
-            var q = c.qty || 1;
-            var _cd = null;
-            for (var _ci = 0; _ci < dishData.length; _ci++) {
+            if (!c) {
+              return '';
+            }
+            const q = c.qty || 1;
+            let _cd = null;
+            for (let _ci = 0; _ci < dishData.length; _ci++) {
               if (dishData[_ci].id === c.id) {
                 _cd = dishData[_ci];
                 break;
               }
             }
-            var _cn = _cd ? dishNameOf(_cd) : c.name;
+            const _cn = _cd ? dishNameOf(_cd) : c.name;
             return (
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
               dishImg(c.image, 52, c.name) +
@@ -941,13 +1086,25 @@ function renderTableSets() {
           '<span class="badge tang-tag" style="background:' +
           color +
           ';font-size:0.85rem;">' +
-          (menuLang === 'en' ? { '家常版': 'Home-style', '宴请版': 'Banquet', '打卡版': 'Check-in' }[s.style] || s.style : esc(s.style)) +
+          (menuLang === 'en'
+            ? { 家常版: 'Home-style', 宴请版: 'Banquet', 打卡版: 'Check-in' }[s.style] || s.style
+            : esc(s.style)) +
           '</span>' +
           overTag +
           '<span style="font-size:0.85rem;letter-spacing:0.5px;">' +
           (menuLang === 'en'
-            ? s.dishes.length + ' dishes · Feast total <strong class="table-total">' + esc(formatPrice(s.totalPrice)) + '</strong> · ' + esc(formatPrice(s.perPerson)) + ' per person'
-            : '共 ' + s.dishes.length + ' 道 · 席面总计 <strong class="table-total">' + esc(formatPrice(s.totalPrice)) + '</strong> · 人均 ' + esc(formatPrice(s.perPerson))) +
+            ? s.dishes.length +
+              ' dishes · Feast total <strong class="table-total">' +
+              esc(formatPrice(s.totalPrice)) +
+              '</strong> · ' +
+              esc(formatPrice(s.perPerson)) +
+              ' per person'
+            : '共 ' +
+              s.dishes.length +
+              ' 道 · 席面总计 <strong class="table-total">' +
+              esc(formatPrice(s.totalPrice)) +
+              '</strong> · 人均 ' +
+              esc(formatPrice(s.perPerson))) +
           '</span></div>' +
           '<div class="d-flex gap-2">' +
           '<button class="btn btn-sm table-drinks-btn" data-set="' +
@@ -972,18 +1129,20 @@ function renderTableSets() {
       .join('');
 }
 async function swapTableDish(si, dishId, pool, btn) {
-  var s = tableSets[si];
-  if (!s) return;
+  const s = tableSets[si];
+  if (!s) {
+    return;
+  }
   // 排除集=桌上现有菜+本会话已点/购物车（tableNumber 由 lastTableParams 带给服务端再查进行中订单）
-  var excl = s.dishes
+  const excl = s.dishes
     .map(function (d) {
       return d.id;
     })
     .concat(collectTableExclusions());
-  var outDish = s.dishes.find(function (x) {
+  const outDish = s.dishes.find(function (x) {
     return x.id === dishId;
   });
-  var params = Object.assign({}, lastTableParams || collectTableParams(), {
+  const params = Object.assign({}, lastTableParams || collectTableParams(), {
     pool: pool,
     excludeIds: excl,
     outId: dishId,
@@ -991,29 +1150,29 @@ async function swapTableDish(si, dishId, pool, btn) {
     planTotal: s.totalPrice,
     outPrice: outDish ? outDish.price || 0 : 0,
   });
-  var ps = (lastTableParams && lastTableParams.partySize) || 1;
+  const ps = (lastTableParams && lastTableParams.partySize) || 1;
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
   }
   try {
-    var r = await safeFetch('/api/recommend/table/swap', {
+    const r = await safeFetch('/api/recommend/table/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(params),
     });
-    var d = await r.json();
+    const d = await r.json();
     if (d.success && d.dish) {
-      var idx = s.dishes.findIndex(function (x) {
+      const idx = s.dishes.findIndex(function (x) {
         return x.id === dishId;
       });
       if (idx > -1) {
-        var old = s.dishes[idx];
+        const old = s.dishes[idx];
         tableSwappedOut.push(old.id);
-        var newMin = tableDefaultQtyOf(d.dish);
+        const newMin = tableDefaultQtyOf(d.dish);
         d.dish._qty = newMin;
         s.dishes[idx] = d.dish;
-        var oldQty = old._qty || 1;
+        const oldQty = old._qty || 1;
         s.totalPrice =
           Math.round((s.totalPrice - (old.price || 0) * oldQty + (d.dish.price || 0) * newMin) * 100) / 100;
         s.perPerson = Math.round((s.totalPrice / ps) * 100) / 100;
@@ -1038,12 +1197,14 @@ async function swapTableDish(si, dishId, pool, btn) {
 function setTableRiceQty(si, qty) {
   // 米饭步进：人数只是默认值，加减自由；下限 0（不加），上限 30 仅防误触。
   // 总价/人均按 菜品合计+米饭 重算（换单道的价差已含在菜品价里），人均仍按人数均摊。
-  var s = tableSets[si];
-  if (!s || !s.autoItems || !s.autoItems.length) return;
-  var rice = s.autoItems[0];
-  var ps = (lastTableParams && lastTableParams.partySize) || rice.qty;
+  const s = tableSets[si];
+  if (!s || !s.autoItems || !s.autoItems.length) {
+    return;
+  }
+  const rice = s.autoItems[0];
+  const ps = (lastTableParams && lastTableParams.partySize) || rice.qty;
   rice.qty = Math.max(0, Math.min(qty, 30));
-  var dishSum = s.dishes.reduce(function (sum, x) {
+  const dishSum = s.dishes.reduce(function (sum, x) {
     return sum + (x.price || 0);
   }, 0);
   s.totalPrice = Math.round((dishSum + rice.price * rice.qty) * 100) / 100;
@@ -1051,51 +1212,65 @@ function setTableRiceQty(si, qty) {
   renderTableSets();
 }
 function addTableDishToCart(si, dishId) {
-  var s = tableSets[si];
-  if (!s) return;
-  var d = s.dishes.find(function (x) {
+  const s = tableSets[si];
+  if (!s) {
+    return;
+  }
+  const d = s.dishes.find(function (x) {
     return x.id === dishId;
   });
-  if (!d) return;
+  if (!d) {
+    return;
+  }
   // 按步进器调好的数量加购（未动过的起售菜默认 max(起售量,人数)，其余默认 1）
-  var q = d._qty || minQtyOf(d) || 1;
+  const q = d._qty || minQtyOf(d) || 1;
   addToCart({ id: d.id, name: d.name, price: d.price, image_url: d.image_url, serving: d.serving }, q);
 }
 function addTableSetToCart(si) {
-  var s = tableSets[si];
-  if (!s || !s.dishes.length) return;
+  const s = tableSets[si];
+  if (!s || !s.dishes.length) {
+    return;
+  }
   // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
   // 起售数量：X个起 的菜品整桌加购按席面默认数量(max(起售量,人数))入车（如4人桌核桃包→×4），并在提示中说明
   // 已选饮品（chosenDrinkIds）已在购物车中，不重复加
-  var cart = getCart();
-  var adjusted = [];
-  var chosen = s.chosenDrinkIds || [];
+  const cart = getCart();
+  const adjusted = [];
+  const chosen = s.chosenDrinkIds || [];
   s.dishes.forEach(function (d) {
-    var min = d._qty || minQtyOf(d);
-    var i = cart.findIndex(function (x) {
+    const min = d._qty || minQtyOf(d);
+    const i = cart.findIndex(function (x) {
       return x.id === d.id;
     });
-    if (i >= 0) cart[i].qty = (cart[i].qty || 1) + min;
-    else {
-      var q = Math.max(1, min);
+    if (i >= 0) {
+      cart[i].qty = (cart[i].qty || 1) + min;
+    } else {
+      const q = Math.max(1, min);
       cart.push({ id: d.id, name: d.name, price: d.price, qty: q, image: d.image_url || '' });
-      if (q > 1) adjusted.push(d.name + '×' + q);
+      if (q > 1) {
+        adjusted.push(d.name + '×' + q);
+      }
     }
   });
   (s.autoItems || []).forEach(function (d) {
-    if (d.qty <= 0) return;
-    var i = cart.findIndex(function (x) {
+    if (d.qty <= 0) {
+      return;
+    }
+    const i = cart.findIndex(function (x) {
       return x.id === d.id;
     });
-    if (i >= 0) cart[i].qty = (cart[i].qty || 1) + d.qty;
-    else cart.push({ id: d.id, name: d.name, price: d.price, qty: d.qty, image: d.image_url || '' });
+    if (i >= 0) {
+      cart[i].qty = (cart[i].qty || 1) + d.qty;
+    } else {
+      cart.push({ id: d.id, name: d.name, price: d.price, qty: d.qty, image: d.image_url || '' });
+    }
   });
   saveCart(cart);
   updateCartBadge();
-  var riceQty = (s.autoItems && s.autoItems[0] && s.autoItems[0].qty) || 0;
-  var riceNote = riceQty > 0 ? '（含米饭×' + riceQty + '）' : '（未加米饭）';
-  var drinkNote = chosen.length ? '（含已选饮品×' + chosen.length + '）' : '';
-  var adjNote = adjusted.length ? '；起售调整：' + adjusted.join('、') : '';
+  const riceQty = (s.autoItems && s.autoItems[0] && s.autoItems[0].qty) || 0;
+  const riceNote = riceQty > 0 ? '（含米饭×' + riceQty + '）' : '（未加米饭）';
+  const drinkNote = chosen.length ? '（含已选饮品×' + chosen.length + '）' : '';
+  const adjNote = adjusted.length ? '；起售调整：' + adjusted.join('、') : '';
   showMessage(
     '已加入购物车',
     '「' +
@@ -1115,7 +1290,7 @@ function addTableSetToCart(si) {
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src) {
   return new Promise(function (res, rej) {
-    var im = new Image();
+    const im = new Image();
     im.onload = function () {
       res(im);
     };
@@ -1125,35 +1300,43 @@ function loadCanvasImg(src) {
 }
 // 按当前各菜数量重算席面总价与人均（步进器/换菜/起售调整后统一走这里）
 function recalcTableSetTotals(s) {
-  var t = 0;
+  let t = 0;
   s.dishes.forEach(function (d) {
     t += d.price * (d._qty || 1);
   });
   (s.autoItems || []).forEach(function (d) {
-    if (d.qty > 0) t += d.price * d.qty;
+    if (d.qty > 0) {
+      t += d.price * d.qty;
+    }
   });
   // 已选饮品（从"去选饮品"入口加入，数量以购物车实时为准）
   (s.chosenDrinkIds || []).forEach(function (id) {
-    var c = getCart().find(function (x) {
+    const c = getCart().find(function (x) {
       return x.id === id;
     });
-    if (c) t += c.price * (c.qty || 1);
+    if (c) {
+      t += c.price * (c.qty || 1);
+    }
   });
   s.totalPrice = Math.round(t * 100) / 100;
-  var ps = (lastTableParams && lastTableParams.partySize) || 1;
+  const ps = (lastTableParams && lastTableParams.partySize) || 1;
   s.perPerson = ps ? Math.round((s.totalPrice / ps) * 100) / 100 : 0;
 }
 // 席面菜品数量步进：−/＋ 调整某道菜数量（下限=最小起售量），实时重算席面总价
 function changeTableDishQty(si, id, delta) {
-  var s = tableSets[si];
-  if (!s) return;
-  var d = s.dishes.find(function (x) {
+  const s = tableSets[si];
+  if (!s) {
+    return;
+  }
+  const d = s.dishes.find(function (x) {
     return x.id === id;
   });
-  if (!d) return;
-  var min = Math.max(1, minQtyOf(d));
-  var cur = d._qty || 1;
-  var nv = cur + delta;
+  if (!d) {
+    return;
+  }
+  const min = Math.max(1, minQtyOf(d));
+  const cur = d._qty || 1;
+  const nv = cur + delta;
   if (nv < min) {
     showMessage('起售数量', '「' + d.name + '」' + min + '个起售，数量不能低于 ' + min);
     return;
@@ -1168,13 +1351,18 @@ function changeTableDishQty(si, id, delta) {
 }
 // 席面已选饮品步进：−/＋ 改购物车实时数量（减到 0 整项取消，与购物车语义一致）
 function changeTableDrinkQty(id, delta) {
-  var c = getCart().find(function (x) {
+  const c = getCart().find(function (x) {
     return x.id === id;
   });
-  if (!c) return;
-  var nq = (c.qty || 1) + delta;
-  if (nq <= 0) removeFromCart(id);
-  else updateCartQty(id, nq);
+  if (!c) {
+    return;
+  }
+  const nq = (c.qty || 1) + delta;
+  if (nq <= 0) {
+    removeFromCart(id);
+  } else {
+    updateCartQty(id, nq);
+  }
   recalcTableSetTotalsAll();
   renderTableSets();
 }
@@ -1192,10 +1380,16 @@ function canvasRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 function canvasClipText(ctx, text, maxW) {
-  if (text === undefined || text === null) return '';
+  if (text === undefined || text === null) {
+    return '';
+  }
   text = String(text);
-  if (ctx.measureText(text).width <= maxW) return text;
-  while (text.length > 1 && ctx.measureText(text + '…').width > maxW) text = text.slice(0, -1);
+  if (ctx.measureText(text).width <= maxW) {
+    return text;
+  }
+  while (text.length > 1 && ctx.measureText(text + '…').width > maxW) {
+    text = text.slice(0, -1);
+  }
   return text + '…';
 }
 function canvasDishImg(ctx, img, x, y, d) {
@@ -1212,17 +1406,21 @@ function canvasDishImg(ctx, img, x, y, d) {
   ctx.stroke();
 }
 function shareTableSetImage(si, btn) {
-  var s = tableSets[si];
-  if (!s || !s.dishes.length) return;
-  if (btn) btn.disabled = true;
-  var W = 750,
+  const s = tableSets[si];
+  if (!s || !s.dishes.length) {
+    return;
+  }
+  if (btn) {
+    btn.disabled = true;
+  }
+  const W = 750,
     pad = 44,
     rowH = 100,
     headerH = 170,
     totalsH = 140,
     footerH = 96;
   // 行列表 = 推荐菜 + 自动搭配（米饭按人数），分享图完整反映一桌
-  var rows = s.dishes
+  const rows = s.dishes
     .map(function (d) {
       return {
         name: d.name,
@@ -1247,17 +1445,17 @@ function shareTableSetImage(si, btn) {
           };
         })
     );
-  var H = headerH + rows.length * rowH + totalsH + footerH;
-  var c = document.createElement('canvas');
+  const H = headerH + rows.length * rowH + totalsH + footerH;
+  const c = document.createElement('canvas');
   c.width = W;
   c.height = H;
-  var ctx = c.getContext('2d');
-  var ps = (lastTableParams && lastTableParams.partySize) || 4;
+  const ctx = c.getContext('2d');
+  const ps = (lastTableParams && lastTableParams.partySize) || 4;
   function draw(brandImg) {
     // 底色与品牌头
     ctx.fillStyle = '#fdf6f0';
     ctx.fillRect(0, 0, W, H);
-    var grad = ctx.createLinearGradient(0, 0, W, 120);
+    const grad = ctx.createLinearGradient(0, 0, W, 120);
     grad.addColorStop(0, '#8f2a1e');
     grad.addColorStop(1, '#b83a2a');
     ctx.fillStyle = grad;
@@ -1272,22 +1470,25 @@ function shareTableSetImage(si, btn) {
     ctx.fillStyle = '#f3e3c3';
     ctx.font = '22px "Noto Serif SC",serif';
     ctx.fillText('千年陕菜 · 唐风雅韵', W / 2 - 30, 90);
-    if (brandImg) canvasDishImg(ctx, brandImg, W - 72, 32, 80);
+    if (brandImg) {
+      canvasDishImg(ctx, brandImg, W - 72, 32, 80);
+    }
     // 套名行
     ctx.fillStyle = '#8f2a1e';
     ctx.font = 'bold 34px "Noto Serif SC",serif';
     ctx.fillText('「' + s.style + '」席面 · ' + ps + ' 人 · 共 ' + s.dishes.length + ' 道', W / 2, headerH - 23);
     // 菜品行
-    var textW = W - pad * 2 - 84 - 90;
+    const textW = W - pad * 2 - 84 - 90;
     rows.forEach(function (d, i) {
-      var ry = headerH + i * rowH;
+      const ry = headerH + i * rowH;
       if (i % 2 === 0) {
         ctx.fillStyle = 'rgba(201,169,110,0.10)';
         ctx.fillRect(pad - 16, ry, W - 2 * (pad - 16), rowH);
       }
-      var x = pad;
-      if (d.__imgEl) canvasDishImg(ctx, d.__imgEl, x, ry + 18, 64);
-      else if (d.img && !/^(https?:|\/)/.test(d.img)) {
+      const x = pad;
+      if (d.__imgEl) {
+        canvasDishImg(ctx, d.__imgEl, x, ry + 18, 64);
+      } else if (d.img && !/^(https?:|\/)/.test(d.img)) {
         ctx.font = '40px serif';
         ctx.textAlign = 'center';
         ctx.fillText(d.img, x + 32, ry + 50);
@@ -1310,7 +1511,7 @@ function shareTableSetImage(si, btn) {
       ctx.textBaseline = 'alphabetic';
     });
     // 汇总卡
-    var ty = headerH + rows.length * rowH + 16;
+    const ty = headerH + rows.length * rowH + 16;
     ctx.fillStyle = '#fff';
     canvasRoundRect(ctx, pad - 10, ty, W - 2 * (pad - 10), totalsH - 40, 14);
     ctx.fill();
@@ -1343,8 +1544,8 @@ function shareTableSetImage(si, btn) {
     ctx.fillText(new Date().toLocaleDateString('zh-CN'), W / 2, H - 26);
   }
   // 预载图片：品牌猫图 + 同源菜品图（emoji/外链图直接跳过用文字兜底）
-  var jobs = [];
-  var brandJob = loadCanvasImg('/assets/brand/tangcat-official.png').catch(function () {
+  const jobs = [];
+  const brandJob = loadCanvasImg('/assets/brand/tangcat-official.png').catch(function () {
     return null;
   });
   rows.forEach(function (d) {
@@ -1358,7 +1559,7 @@ function shareTableSetImage(si, btn) {
       );
     }
   });
-  var timeout = new Promise(function (res) {
+  const timeout = new Promise(function (res) {
     setTimeout(res, 4000);
   });
   Promise.race([
@@ -1369,8 +1570,8 @@ function shareTableSetImage(si, btn) {
   ]).then(function (r) {
     try {
       draw(r || null);
-      var url = c.toDataURL('image/png');
-      var a = document.createElement('a');
+      const url = c.toDataURL('image/png');
+      const a = document.createElement('a');
       a.href = url;
       a.download = '唐猫庭院一席成宴-' + s.style + '.png';
       document.body.appendChild(a);
@@ -1380,6 +1581,8 @@ function shareTableSetImage(si, btn) {
     } catch (e) {
       showMessage('生成失败', '分享图生成失败，请重试');
     }
-    if (btn) btn.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+    }
   });
 }

@@ -10,40 +10,63 @@ const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 const ROOT = path.join(__dirname, '..');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('最终深潜检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 全局变量无冲突（var不覆盖window属性） =====
   it('1.1 全局变量声明不覆盖window内置属性', async () => {
@@ -57,7 +80,9 @@ describe('最终深潜检查', () => {
         if (window[r] !== undefined && window[r] !== null) {
           // 检查是否是页面自己的定义（不是浏览器原生）
           const desc = Object.getOwnPropertyDescriptor(window, r);
-          if (desc && !desc.configurable) continue; // 浏览器原生不可配置属性
+          if (desc && !desc.configurable) {
+            continue;
+          } // 浏览器原生不可配置属性
           conflicts.push(r + '=' + String(window[r]).substring(0, 30));
         }
       }
@@ -93,7 +118,10 @@ describe('最终深潜检查', () => {
     assert.ok(html.includes('唐猫'), '应包含网站名');
     assert.ok(html.includes('回唐猫庭院'), '应有返回首页按钮（插画化404）');
     assert.ok(html.includes('navbar') || html.includes('btn'), '应有导航或按钮样式');
-    assert.ok(html.includes('bootstrap') || html.includes('styles.css') || html.includes('<style'), '应引用CSS（404插画页为内联自包含样式）');
+    assert.ok(
+      html.includes('bootstrap') || html.includes('styles.css') || html.includes('<style'),
+      '应引用CSS（404插画页为内联自包含样式）'
+    );
   });
 
   // ===== 4. 500错误页面样式完整性 =====
@@ -117,7 +145,9 @@ describe('最终深潜检查', () => {
     const semanticTags = ['<nav', '<main', '<header', '<footer', '<section', '<article', '<aside'];
     let found = 0;
     for (const tag of semanticTags) {
-      if (html.includes(tag)) found++;
+      if (html.includes(tag)) {
+        found++;
+      }
     }
     assert.ok(found >= 3, `应使用至少3种语义化标签，实际: ${found}`);
   });
@@ -128,7 +158,9 @@ describe('最终深潜检查', () => {
     const semanticTags = ['<nav', '<main', '<header', '<footer', '<section', '<aside'];
     let found = 0;
     for (const tag of semanticTags) {
-      if (html.includes(tag)) found++;
+      if (html.includes(tag)) {
+        found++;
+      }
     }
     assert.ok(found >= 1, `管理后台应使用至少1种语义化标签，实际: ${found}`);
   });
@@ -149,7 +181,9 @@ describe('最终深潜检查', () => {
     assert.ok(btn, '重训练按钮应存在');
     await page.evaluate(() => {
       const btn = document.getElementById('retrain-btn');
-      if (btn && !btn.disabled) btn.click();
+      if (btn && !btn.disabled) {
+        btn.click();
+      }
     });
     await sleep(500);
     assert.equal(realErrors().length, 0, '重训练按钮点击不应有JS错误');
@@ -176,7 +210,9 @@ describe('最终深潜检查', () => {
       let hasPrice = false;
       for (const cell of cells) {
         const text = cell.textContent.trim();
-        if (text.match(/^\d+$/) && parseInt(text) > 0) hasPrice = true;
+        if (text.match(/^\d+$/) && parseInt(text) > 0) {
+          hasPrice = true;
+        }
       }
       const hasNaN = document.querySelector('#page-dishes')?.textContent.includes('NaN') || false;
       return { hasPrice, hasNaN };

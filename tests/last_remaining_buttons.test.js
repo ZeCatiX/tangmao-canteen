@@ -5,41 +5,66 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('最后遗漏按钮与交互点验证', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
-    page.on('dialog', async dialog => { await dialog.accept(); });
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
+    page.on('dialog', async (dialog) => {
+      await dialog.accept();
+    });
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // 辅助：注册并登录
   async function registerAndLogin() {
@@ -51,23 +76,36 @@ describe('最后遗漏按钮与交互点验证', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
   }
@@ -78,7 +116,9 @@ describe('最后遗漏按钮与交互点验证', () => {
     await registerAndLogin();
     await page.evaluate(() => {
       const link = document.getElementById('nav-home');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     const continueBtn = await page.evaluate(() => {
@@ -106,7 +146,7 @@ describe('最后遗漏按钮与交互点验证', () => {
       await sleep(500);
       const prefVisible = await page.evaluate(() => {
         const section = document.getElementById('preference-section');
-        return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+        return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
       });
       assert.ok(prefVisible, '点击continue-btn应进入偏好设置');
     } else {
@@ -133,7 +173,9 @@ describe('最后遗漏按钮与交互点验证', () => {
     await sleep(400);
     // 显示模态框
     await page.evaluate(() => {
-      if (typeof showMessage === 'function') showMessage('测试', '确认按钮测试');
+      if (typeof showMessage === 'function') {
+        showMessage('测试', '确认按钮测试');
+      }
     });
     await sleep(500);
     const visibleBefore = await page.evaluate(() => {
@@ -143,7 +185,9 @@ describe('最后遗漏按钮与交互点验证', () => {
     // 点确认按钮
     await page.evaluate(() => {
       const btn = document.getElementById('modal-confirm-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const visibleAfter = await page.evaluate(() => {
@@ -164,17 +208,21 @@ describe('最后遗漏按钮与交互点验证', () => {
     await page.evaluate(() => {
       localStorage.removeItem('currentUser');
       const item = document.getElementById('nav-profile-item');
-      if (item) item.classList.add('d-none');
+      if (item) {
+        item.classList.add('d-none');
+      }
     });
     // 点击 nav-user 链接
     await page.evaluate(() => {
       const link = document.getElementById('nav-user');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     const loginVisible = await page.evaluate(() => {
       const section = document.getElementById('login-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(loginVisible, 'nav-user 应切换到登录页');
     assert.equal(realErrors().length, 0, 'nav-user 不应有错误');
@@ -185,7 +233,9 @@ describe('最后遗漏按钮与交互点验证', () => {
     resetErrors();
     const cachedBtn = await page.evaluate(() => {
       const btn = document.getElementById('view-cached-btn');
-      return btn ? { exists: true, display: btn.style.display, hidden: btn.classList.contains('d-none') } : { exists: false };
+      return btn
+        ? { exists: true, display: btn.style.display, hidden: btn.classList.contains('d-none') }
+        : { exists: false };
     });
     // 可能只在有缓存推荐时显示
     assert.ok(cachedBtn.exists, 'view-cached-btn 应存在');
@@ -201,7 +251,7 @@ describe('最后遗漏按钮与交互点验证', () => {
     await sleep(400);
     const calOptions = await page.evaluate(() => {
       const select = document.getElementById('calorie');
-      return select ? Array.from(select.options).map(o => o.text) : [];
+      return select ? Array.from(select.options).map((o) => o.text) : [];
     });
     assert.ok(calOptions.length >= 1, `热量选项应有内容，实际: ${calOptions.length}`);
     if (calOptions.length > 1) {
@@ -215,7 +265,7 @@ describe('最后遗漏按钮与交互点验证', () => {
     resetErrors();
     const relOptions = await page.evaluate(() => {
       const select = document.getElementById('religion');
-      return select ? Array.from(select.options).map(o => o.text) : [];
+      return select ? Array.from(select.options).map((o) => o.text) : [];
     });
     assert.ok(relOptions.length >= 1, `宗教选项应有内容，实际: ${relOptions.length}`);
     if (relOptions.length > 1) {
@@ -229,7 +279,7 @@ describe('最后遗漏按钮与交互点验证', () => {
     resetErrors();
     const priceOptions = await page.evaluate(() => {
       const select = document.getElementById('price');
-      return select ? Array.from(select.options).map(o => o.text) : [];
+      return select ? Array.from(select.options).map((o) => o.text) : [];
     });
     assert.ok(priceOptions.length >= 1, `价格选项应有内容，实际: ${priceOptions.length}`);
     if (priceOptions.length > 1) {

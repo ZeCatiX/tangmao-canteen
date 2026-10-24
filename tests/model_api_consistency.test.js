@@ -7,17 +7,29 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -67,7 +79,7 @@ describe('API响应数据结构一致性检查', () => {
     if (userToken) {
       await api('/api/user/delete', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + userToken },
+        headers: { Authorization: 'Bearer ' + userToken },
         body: JSON.stringify({ username: testUser }),
       });
     }
@@ -110,20 +122,19 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 5. 管理后台统计返回统计数据 =====
   it('5.1 /api/admin/stats返回统计字段', async () => {
     const r = await api('/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.equal(r.body.success, true);
     // 统计数据应包含某些字段
     const stats = r.body.stats || r.body.data || r.body;
-    assert.ok(stats.todayRecommendations !== undefined || stats.totalDishes !== undefined,
-      '应包含统计字段');
+    assert.ok(stats.todayRecommendations !== undefined || stats.totalDishes !== undefined, '应包含统计字段');
   });
 
   // ===== 6. 热门菜品返回dishes数组 =====
   it('6.1 /api/admin/popular-dishes返回dishes数组', async () => {
     const r = await api('/api/admin/popular-dishes', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.ok(r.body.dishes !== undefined || r.body.data !== undefined, '应包含dishes或data');
@@ -132,7 +143,7 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 7. 反馈摘要返回feedbacks =====
   it('7.1 /api/admin/feedback-summary返回反馈数据', async () => {
     const r = await api('/api/admin/feedback-summary', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.ok(r.body.feedbacks !== undefined || r.body.data !== undefined, '应包含feedbacks或data');
@@ -141,7 +152,7 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 8. 用户列表返回users数组 =====
   it('8.1 /api/admin/users返回users数组', async () => {
     const r = await api('/api/admin/users', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.ok(r.body.users !== undefined || r.body.data !== undefined, '应包含users或data');
@@ -150,7 +161,7 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 9. 模型历史返回history =====
   it('9.1 /api/admin/model-history返回history', async () => {
     const r = await api('/api/admin/model-history', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
     assert.ok(r.body.history !== undefined || r.body.data !== undefined, '应包含history或data');
@@ -159,7 +170,7 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 10. 推荐统计返回stats =====
   it('10.1 /api/admin/recommendation-stats返回统计', async () => {
     const r = await api('/api/admin/recommendation-stats', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(r.status, 200);
   });
@@ -167,7 +178,7 @@ describe('API响应数据结构一致性检查', () => {
   // ===== 11. 订单API返回orders =====
   it('11.1 /api/orders返回orders数组', async () => {
     const r = await api('/api/orders?userId=' + testUser, {
-      headers: { 'Authorization': 'Bearer ' + userToken },
+      headers: { Authorization: 'Bearer ' + userToken },
     });
     assert.equal(r.status, 200);
     assert.ok(r.body.orders !== undefined, '应包含orders');
@@ -191,23 +202,34 @@ describe('API响应数据结构一致性检查', () => {
 describe('模型管理页面深度交互检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 13. 模型管理页面加载并显示模型信息 =====
   it('13.1 模型管理页面显示模型信息', async () => {
@@ -306,7 +328,9 @@ describe('模型管理页面深度交互检查', () => {
     await sleep(1500);
     const hasNaN = await page.evaluate(() => {
       const dash = document.getElementById('page-dashboard');
-      if (!dash) return false;
+      if (!dash) {
+        return false;
+      }
       return dash.textContent.includes('NaN');
     });
     assert.ok(!hasNaN, '仪表盘不应显示NaN');
@@ -320,7 +344,9 @@ describe('模型管理页面深度交互检查', () => {
     await sleep(1500);
     const hasNaN = await page.evaluate(() => {
       const page = document.getElementById('page-dishes');
-      if (!page) return false;
+      if (!page) {
+        return false;
+      }
       return page.textContent.includes('NaN');
     });
     assert.ok(!hasNaN, '菜品管理不应显示NaN');

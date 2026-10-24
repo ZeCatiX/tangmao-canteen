@@ -11,7 +11,7 @@
 ## 技术栈
 
 | 层 | 技术 |
-|---|---|
+| --- | --- |
 | 前端 | HTML5 · CSS3 · Bootstrap 5 · Chart.js · Bootstrap-Icons |
 | 后端 | Node.js · Express |
 | 数据库 | PostgreSQL 15 |
@@ -90,7 +90,7 @@ npm run security        # npm audit 依赖安全检查
 
 ## 项目结构
 
-```
+```text
 ├── server.js            # Express 服务器主入口
 ├── auth.js              # JWT 认证中间件
 ├── db.js                # PostgreSQL 连接池

@@ -5,40 +5,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('表单验证与认证深度检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 登录失败错误提示 =====
   it('1.1 错误密码登录显示错误提示', async () => {
@@ -49,15 +72,23 @@ describe('表单验证与认证深度检查', () => {
     await sleep(300);
     await page.evaluate(() => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = 'wronguser_xyz'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'wronguser_xyz';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = 'Wrong123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'Wrong123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const errorShown = await page.evaluate(() => {
@@ -78,23 +109,36 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = 'shortpass_test'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'shortpass_test';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = '123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = '123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = '123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = '123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const hasMinLength = await page.evaluate(() => {
@@ -104,7 +148,7 @@ describe('表单验证与认证深度检查', () => {
     assert.ok(hasMinLength, '密码输入框应有minlength验证');
     const registerVisible = await page.evaluate(() => {
       const section = document.getElementById('register-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(registerVisible, '密码过短应阻止注册');
     assert.equal(realErrors().length, 0, '密码验证不应有JS错误');
@@ -119,28 +163,41 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = 'mismatc' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'mismatc' + Date.now();
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = 'Match123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'Match123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = 'Different123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'Different123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const stillOnRegister = await page.evaluate(() => {
       const section = document.getElementById('register-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(stillOnRegister, '密码不一致应留在注册页');
     assert.equal(realErrors().length, 0, '密码不一致验证不应有JS错误');
@@ -155,7 +212,7 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     const modeOptions = await page.evaluate(() => {
       const select = document.getElementById('recommendation-mode');
-      return select ? Array.from(select.options).map(o => o.text) : [];
+      return select ? Array.from(select.options).map((o) => o.text) : [];
     });
     assert.ok(modeOptions.length >= 1, `推荐模式应有选项，实际: ${modeOptions.length}`);
     if (modeOptions.length > 1) {
@@ -187,38 +244,59 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     await page.evaluate(() => document.getElementById('login-btn')?.click());
     await sleep(300);
     await page.evaluate((u) => {
       const el = document.getElementById('login-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, uname);
     await page.evaluate((p) => {
       const el = document.getElementById('login-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
     await page.reload({ waitUntil: 'networkidle0', timeout: 15000 }).catch(() => {});
@@ -236,7 +314,9 @@ describe('表单验证与认证深度检查', () => {
     resetErrors();
     await page.evaluate(() => {
       const btn = document.getElementById('logout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(800);
     await page.reload({ waitUntil: 'networkidle0', timeout: 15000 }).catch(() => {});
@@ -258,28 +338,39 @@ describe('表单验证与认证深度检查', () => {
     await sleep(400);
     await page.evaluate(() => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = 'noagree' + Date.now(); el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'noagree' + Date.now();
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = 'Noagree123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'Noagree123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = 'Noagree123'; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = 'Noagree123';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const registerVisible = await page.evaluate(() => {
       const section = document.getElementById('register-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     const homeVisible = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(registerVisible || homeVisible, '未勾选协议应有处理');
     assert.equal(realErrors().length, 0, '未勾选协议验证不应有JS错误');
@@ -313,12 +404,16 @@ describe('表单验证与认证深度检查', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(5000);
     await page.evaluate(() => {
       const btn = document.getElementById('end-recommendation');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1000);
     const satDisabled = await page.evaluate(() => {

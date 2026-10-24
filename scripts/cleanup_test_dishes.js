@@ -22,10 +22,13 @@ async function main() {
   let token = '';
   try {
     const login = await fetch(BASE + '/api/admin/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: process.env.ADMIN_USER || 'admin', password: process.env.ADMIN_PASS }),
-    }).then(r => r.json());
-    if (!login.token) throw new Error(login.error || '管理员登录失败');
+    }).then((r) => r.json());
+    if (!login.token) {
+      throw new Error(login.error || '管理员登录失败');
+    }
     token = login.token;
   } catch (e) {
     console.log('cleanup_test_dishes: 管理员登录失败(' + e.message + '),跳过清理');
@@ -42,16 +45,27 @@ async function main() {
       console.log('cleanup_test_dishes: 无测试菜残留');
       return;
     }
-    let removed = 0, skipped = 0;
+    let removed = 0,
+      skipped = 0;
     for (const d of cand.rows) {
-      if (d.has_order) { skipped++; continue; }
+      if (d.has_order) {
+        skipped++;
+        continue;
+      }
       // 走管理 API 删除: 服务端同步 loadDishData 刷新菜单缓存
       const r = await fetch(BASE + '/api/admin/dish/' + d.id + '/permanent', {
-        method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token },
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
       });
-      if (r.ok) removed++; else skipped++;
+      if (r.ok) {
+        removed++;
+      } else {
+        skipped++;
+      }
     }
-    console.log(`cleanup_test_dishes: 删除 ${removed} 道,跳过 ${skipped} 道(有订单引用/失败),候选 ${cand.rows.length} 道`);
+    console.log(
+      `cleanup_test_dishes: 删除 ${removed} 道,跳过 ${skipped} 道(有订单引用/失败),候选 ${cand.rows.length} 道`
+    );
   } catch (e) {
     console.log('cleanup_test_dishes: 清理失败(' + e.message + '),不污染测试管道');
   } finally {

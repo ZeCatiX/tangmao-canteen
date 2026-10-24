@@ -49,7 +49,7 @@ describe('管理后台所有API端点响应正确性', () => {
     if (userToken) {
       await api('/api/user/delete', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + userToken },
+        headers: { Authorization: 'Bearer ' + userToken },
         body: JSON.stringify({ username: testUser }),
       });
     }
@@ -90,7 +90,7 @@ describe('管理后台所有API端点响应正确性', () => {
     for (const ep of adminApis) {
       const r = await api(ep.path, {
         method: ep.method,
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
       });
       assert.equal(r.status, 200, `${ep.method} ${ep.path} 应返回200，实际: ${r.status}`);
     }
@@ -99,8 +99,11 @@ describe('管理后台所有API端点响应正确性', () => {
   // ===== 3. 管理员API不带token返回401 =====
   it('3.1 管理员API端点无token返回401', async () => {
     const protectedApis = [
-      '/api/admin/stats', '/api/admin/popular-dishes', '/api/admin/feedback-summary',
-      '/api/admin/users', '/api/admin/notifications'
+      '/api/admin/stats',
+      '/api/admin/popular-dishes',
+      '/api/admin/feedback-summary',
+      '/api/admin/users',
+      '/api/admin/notifications',
     ];
     for (const p of protectedApis) {
       const r = await api(p);
@@ -113,18 +116,18 @@ describe('管理后台所有API端点响应正确性', () => {
     // 偏好保存
     const prefR = await api('/api/user-preferences', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + userToken },
+      headers: { Authorization: 'Bearer ' + userToken },
       body: JSON.stringify({ username: testUser, preferences: { spiciness: '微辣' } }),
     });
     assert.ok(prefR.status === 200, '偏好保存应返回200');
     // 订单查询
     const orderR = await api('/api/orders?userId=' + testUser, {
-      headers: { 'Authorization': 'Bearer ' + userToken },
+      headers: { Authorization: 'Bearer ' + userToken },
     });
     assert.equal(orderR.status, 200, '订单查询应返回200');
     // 反馈查询
     const fbR = await api('/api/feedback', {
-      headers: { 'Authorization': 'Bearer ' + userToken },
+      headers: { Authorization: 'Bearer ' + userToken },
     });
     assert.equal(fbR.status, 200, '反馈查询应返回200');
   });
@@ -142,8 +145,10 @@ describe('管理后台所有API端点响应正确性', () => {
         method: ep.method,
         body: JSON.stringify(ep.body),
       });
-      assert.ok(r.status === 200 || r.status === 201 || r.status === 400,
-        `${ep.method} ${ep.path} 应返回200/201/400，实际: ${r.status}`);
+      assert.ok(
+        r.status === 200 || r.status === 201 || r.status === 400,
+        `${ep.method} ${ep.path} 应返回200/201/400，实际: ${r.status}`
+      );
     }
   });
 
@@ -209,23 +214,20 @@ describe('HTML页面meta标签和SEO完整性', () => {
     const files = ['index.html', 'admin.html', 'kitchen.html'];
     for (const f of files) {
       const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
-      assert.ok(html.includes('UTF-8') || html.includes('utf-8'),
-        `${f} 应声明UTF-8 charset`);
+      assert.ok(html.includes('UTF-8') || html.includes('utf-8'), `${f} 应声明UTF-8 charset`);
     }
   });
 
   // ===== 13. 所有页面有favicon =====
   it('13.1 首页有favicon引用', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    assert.ok(html.includes('icon') || html.includes('favicon'),
-      '首页应有favicon引用');
+    assert.ok(html.includes('icon') || html.includes('favicon'), '首页应有favicon引用');
   });
 
   // ===== 14. 首页有skip-to-content链接 =====
   it('14.1 首页有无障碍skip链接', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    assert.ok(html.includes('main-content') || html.includes('skip'),
-      '首页应有无障碍skip链接');
+    assert.ok(html.includes('main-content') || html.includes('skip'), '首页应有无障碍skip链接');
   });
 
   // ===== 15. 所有CSS和JS资源路径正确 =====
@@ -239,8 +241,7 @@ describe('HTML页面meta标签和SEO完整性', () => {
         const url = m.match(/"([^"]+)"/)[1];
         // /开头的路径是服务器相对路径，可以接受
         // 但不应有 file:/// 或 C:\ 等本地路径
-        assert.ok(!url.includes('file:') && !url.includes(':\\'),
-          `${f} 不应引用本地文件路径: ${url}`);
+        assert.ok(!url.includes('file:') && !url.includes(':\\'), `${f} 不应引用本地文件路径: ${url}`);
       }
     }
   });

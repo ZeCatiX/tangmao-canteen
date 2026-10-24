@@ -48,10 +48,11 @@ const STORE_KEYS = {
   logoIntroShown: 'logoIntroShown', // 开幕动画本会话已播标记 [SS]
 };
 
-const $ = (id) => document.getElementById(id);
 // HTML 转义，防止 XSS
 function esc(str) {
-  if (typeof str !== 'string') return str;
+  if (typeof str !== 'string') {
+    return str;
+  }
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -83,7 +84,9 @@ var UNIT_EN = {
 };
 function formatPrice(d) {
   const p = d && typeof d === 'object' ? d.price : d;
-  if (p === null || p === undefined || p === '') return menuLang === 'en' ? 'Unknown' : '未知';
+  if (p === null || p === undefined || p === '') {
+    return menuLang === 'en' ? 'Unknown' : '未知';
+  }
   const unit = (d && d.price_unit) || '';
   // EN 货币符前置(¥6/pc,国际惯例);zh 沿用 6元
   return menuLang === 'en'
@@ -109,9 +112,12 @@ function dishImg(url, size, alt) {
     'px;display:inline-flex;align-items:center;justify-content:center;font-size:' +
     Math.round(size * 0.6) +
     'px;';
-  if (u.startsWith('/uploads/') || u.startsWith('data:'))
+  if (u.startsWith('/uploads/') || u.startsWith('data:')) {
     return '<img src="' + esc(u) + '" style="' + st + '" alt="' + esc(alt || '') + '" loading="lazy">';
-  if (u) return '<span style="' + st2 + '">' + esc(u) + '</span>';
+  }
+  if (u) {
+    return '<span style="' + st2 + '">' + esc(u) + '</span>';
+  }
   return '<img src="' + DEFAULT_DISH_IMG + '" style="' + st + '" alt="' + esc(alt || '') + '" loading="lazy">';
 }
 
@@ -139,15 +145,19 @@ function safeFetch(url, opts) {
   opts = opts || {};
   // 离线检测(2026-10-16): 断网时立即返回模拟响应,不发无效请求
   if (typeof navigator.onLine !== 'undefined' && !navigator.onLine) {
-    return Promise.resolve(new Response(
-      JSON.stringify({ success: false, error: L('网络未连接，请检查网络', 'No network connection') }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
-    ));
+    return Promise.resolve(
+      new Response(JSON.stringify({ success: false, error: L('网络未连接，请检查网络', 'No network connection') }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
   }
   // 超时(2026-10-16): GET 15s / 写操作 20s——防请求无限挂住(配合 AbortController)
-  var timeoutMs = (opts.method || 'GET').toUpperCase() === 'GET' ? 15000 : 20000;
-  var controller = new AbortController();
-  var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+  const timeoutMs = (opts.method || 'GET').toUpperCase() === 'GET' ? 15000 : 20000;
+  const controller = new AbortController();
+  const timer = setTimeout(function () {
+    controller.abort();
+  }, timeoutMs);
   opts.signal = controller.signal;
 
   const fetcher = opts.method ? fetch(url, opts) : typeof url === 'string' ? fetch(url, opts) : url;
@@ -163,7 +173,8 @@ function safeFetch(url, opts) {
     })
     .catch((e) => {
       clearTimeout(timer);
-      var msg = e.name === 'AbortError' ? L('请求超时', 'Request timeout') : L('网络请求失败', 'Network request failed');
+      const msg =
+        e.name === 'AbortError' ? L('请求超时', 'Request timeout') : L('网络请求失败', 'Network request failed');
       return new Response(JSON.stringify({ success: false, error: msg }), {
         status: 503,
         headers: { 'Content-Type': 'application/json' },
@@ -182,10 +193,14 @@ function saveCart(c) {
   try {
     localStorage.setItem(STORE_KEYS.cart, JSON.stringify(c));
   } catch (e) {}
-  if (typeof updateCartBadge === 'function') updateCartBadge();
+  if (typeof updateCartBadge === 'function') {
+    updateCartBadge();
+  }
 }
 function minQtyOf(dish) {
-  if (!dish) return 1;
+  if (!dish) {
+    return 1;
+  }
   // 起售备注可能在 serving 或 description 字段（历史数据不一致）；量词不限于"个"——后台自建菜可能写 2盒起/3杯起
   const src = (dish.serving || '') + ' ' + (dish.description || '');
   const m = src.match(/(\d+)\s*[个盒杯碗瓶只块份包袋听支罐]?起/);
@@ -206,7 +221,9 @@ function addToCart(dish, qty) {
   if (inDrinksMode) {
     const s = window.tableSets[tableDrinksMode];
     s.chosenDrinkIds = s.chosenDrinkIds || [];
-    if (!s.chosenDrinkIds.includes(dish.id)) s.chosenDrinkIds.push(dish.id);
+    if (!s.chosenDrinkIds.includes(dish.id)) {
+      s.chosenDrinkIds.push(dish.id);
+    }
   }
   if (i >= 0) {
     cart[i].qty = (cart[i].qty || 1) + q;
@@ -218,13 +235,20 @@ function addToCart(dish, qty) {
     cart.push({ id: dish.id, name: dish.name, price: dish.price, qty: add, image: dish.image_url || '' });
     saveCart(cart);
     updateCartBadge();
-    if (add > q) showMessage('已加入购物车', '「' + dish.name + '」' + min + '个起售，已加 ' + add + ' 个', null, 2500);
-    else showMessage('已加入购物车', '「' + dish.name + '」已加入购物车', null, 2500);
+    if (add > q) {
+      showMessage('已加入购物车', '「' + dish.name + '」' + min + '个起售，已加 ' + add + ' 个', null, 2500);
+    } else {
+      showMessage('已加入购物车', '「' + dish.name + '」已加入购物车', null, 2500);
+    }
   }
   if (inDrinksMode) {
     const s = window.tableSets[tableDrinksMode];
-    if (typeof recalcTableSetTotals === 'function') recalcTableSetTotals(s);
-    if (typeof renderDrinksModeBanner === 'function') renderDrinksModeBanner();
+    if (typeof recalcTableSetTotals === 'function') {
+      recalcTableSetTotals(s);
+    }
+    if (typeof renderDrinksModeBanner === 'function') {
+      renderDrinksModeBanner();
+    }
   }
 }
 function addRiceToCart() {
@@ -249,7 +273,9 @@ function removeFromCart(id) {
 function updateCartQty(id, qty) {
   const cart = getCart();
   const i = cart.findIndex((x) => x.id === id);
-  if (i < 0) return;
+  if (i < 0) {
+    return;
+  }
   if (qty <= 0) {
     cart.splice(i, 1);
     saveCart(cart);
@@ -288,7 +314,9 @@ function updateCartBadge() {
 }
 function updateFloatBar() {
   const bar = document.getElementById('float-cart-bar');
-  if (!bar) return;
+  if (!bar) {
+    return;
+  }
   const c = getCartCount();
   const onEnd = document.getElementById('end-section')?.classList.contains('active');
   const onCart = document.getElementById('cart-section')?.classList.contains('active');
@@ -297,12 +325,18 @@ function updateFloatBar() {
     bar.style.display = 'flex';
     document.getElementById('float-cart-count').textContent = c;
     document.getElementById('float-cart-total').textContent = getCartTotal();
-    var unitEl = document.getElementById('float-cart-unit');
-    if (unitEl) unitEl.textContent = menuLang === 'en' ? 'items' : '件';
-    var fpre = document.getElementById('float-cart-pre');
-    if (fpre) fpre.textContent = menuLang === 'en' ? 'Total ' : '合计 ';
-    var fsuf = document.getElementById('float-cart-suf');
-    if (fsuf) fsuf.textContent = menuLang === 'en' ? '' : ' 元';
+    const unitEl = document.getElementById('float-cart-unit');
+    if (unitEl) {
+      unitEl.textContent = menuLang === 'en' ? 'items' : '件';
+    }
+    const fpre = document.getElementById('float-cart-pre');
+    if (fpre) {
+      fpre.textContent = menuLang === 'en' ? 'Total ' : '合计 ';
+    }
+    const fsuf = document.getElementById('float-cart-suf');
+    if (fsuf) {
+      fsuf.textContent = menuLang === 'en' ? '' : ' 元';
+    }
     // 一席成宴选饮品模式：仅在菜单页可见时（选饮品现场）显示提示与返回席面按钮
     const drinksBack = document.getElementById('float-drinks-back');
     const dsEl = document.getElementById('dataset-section');
@@ -334,9 +368,13 @@ function updateFloatBar() {
         }
         hint.style.display = active ? 'block' : 'none';
         hint.textContent = '🍹 正在为「' + s.style + '」选饮品 · 已选 ' + chosen.length + ' 件';
-      } else if (hint) hint.style.display = 'none';
+      } else if (hint) {
+        hint.style.display = 'none';
+      }
     }
-  } else bar.style.display = 'none';
+  } else {
+    bar.style.display = 'none';
+  }
 }
 
 // ═══ 中英双语（C11）：菜名/分类/描述按语言显示，切换记忆在 localStorage ═══
@@ -360,9 +398,13 @@ var CAT_EN = {
 };
 function dishNameOf(d) {
   if (menuLang === 'en' && d) {
-    if (d.name_en) return d.name_en;
+    if (d.name_en) {
+      return d.name_en;
+    }
     const m = String(d.name || '').match(/^(.+)\(([^()]+)\)$/);
-    if (m && d.name_en) return d.name_en;
+    if (m && d.name_en) {
+      return d.name_en;
+    }
   }
   return (d && d.name) || '';
 }
@@ -406,7 +448,14 @@ var TAB_EN = {
 };
 var SPICE_EN = { 不辣: 'Mild', 微辣: 'Mildly spicy', 中辣: 'Medium spicy', 重辣: 'Extra spicy' };
 var SALT_EN = { 清淡: 'Light', 适中: 'Just right', 偏咸: 'Salty' };
-var SWEET_EN = { 无味: 'Neither', 甜味: 'Sweet', 酸味: 'Sour', 酸甜: 'Sweet & sour', 偏甜: 'Sweet-ish', 偏酸: 'Sour-ish' };
+var SWEET_EN = {
+  无味: 'Neither',
+  甜味: 'Sweet',
+  酸味: 'Sour',
+  酸甜: 'Sweet & sour',
+  偏甜: 'Sweet-ish',
+  偏酸: 'Sour-ish',
+};
 var CAL_EN = { 高: 'Hearty', 中: 'Medium', 低: 'Light', 适中: 'Medium', 未知: 'Unknown' };
 // 规格数据级枚举（116 道菜固定值，DB serving/flavor 为中文）：英文模式渲染时转写，数据不动
 var SPEC_EN = {
@@ -433,8 +482,12 @@ var SPEC_EN = {
   盖碗: 'Gaiwan',
 };
 function specLang(s) {
-  if (menuLang !== 'en' || !s) return s;
-  if (SPEC_EN[s]) return SPEC_EN[s];
+  if (menuLang !== 'en' || !s) {
+    return s;
+  }
+  if (SPEC_EN[s]) {
+    return SPEC_EN[s];
+  }
   return s.replace(/^(\d+)年·(\d+m[lL])$/, '$1-yr · $2').replace(/^(\d+)年$/, '$1-yr');
 }
 var SUB_EN = {
@@ -448,7 +501,9 @@ var SUB_EN = {
 };
 // 轮次标签是存进 sessionStorage 的中文数据，渲染时按语言转写（数据不动）
 function roundLabelLang(s) {
-  if (menuLang !== 'en' || !s) return s;
+  if (menuLang !== 'en' || !s) {
+    return s;
+  }
   return s
     .replace(/^第(\d+)轮点餐$/, 'Round $1')
     .replace(/^第(\d+)轮加菜$/, 'Round $1 · added')
@@ -473,18 +528,25 @@ var REASON_EN = {
   你的口味档案专属推荐: 'Chosen from your taste profile',
 };
 function reasonZhToEn(s) {
-  if (!s) return s;
-  if (REASON_EN[s]) return REASON_EN[s];
+  if (!s) {
+    return s;
+  }
+  if (REASON_EN[s]) {
+    return REASON_EN[s];
+  }
   // 带辣度拼接的模板：开胃凉菜，X爽口解腻 / 风味热菜，X过瘾下饭；及"模板，AI 匹配度 N%"尾缀
   const m = s.match(/^(开胃凉菜，|风味热菜，)(.+)(爽口解腻|过瘾下饭)$/);
-  if (m)
+  if (m) {
     return (
       (m[1] === '开胃凉菜，' ? 'Appetizing cold dish, ' : 'Flavorful hot dish, ') +
       (SPICE_EN[m[2]] || m[2]) +
       (m[3] === '爽口解腻' ? ' and refreshing' : ' — great with rice')
     );
+  }
   const tail = s.match(/^(.*)，AI 匹配度 (\d+)%$/);
-  if (tail && REASON_EN[tail[1]]) return REASON_EN[tail[1]] + ', AI match ' + tail[2] + '%';
+  if (tail && REASON_EN[tail[1]]) {
+    return REASON_EN[tail[1]] + ', AI match ' + tail[2] + '%';
+  }
   return s;
 }
 function uiText(key) {
@@ -513,23 +575,31 @@ var ZH_EN = {
   确定: 'OK',
   // ── 隐私政策(逐节点精确匹配) ──
   '一、信息收集': '1. Information We Collect',
-  '唐猫庭院线上点餐与菜品推荐系统（下称"本系统"）在您使用过程中收集以下信息：': 'The Tang Cat Courtyard online ordering and dish recommendation system (the "System") collects the following information during your use:',
-  '1. 账户信息：您在注册时提供的用户名和加密后的密码': '1. Account info: the username and encrypted password you provide at registration',
-  '2. 口味偏好：您设置的辣度、咸淡、甜酸、价位、过敏源等个性化偏好': '2. Taste preferences: your personalized settings such as spice level, saltiness, sweetness, price range and allergens',
-  '3. 使用记录：您的订单信息、菜品评价反馈、推荐记录': '3. Usage records: your order information, dish ratings and feedback, and recommendation history',
-  '4. 设备信息：浏览器类型、操作系统等基本访问日志': '4. Device info: basic access logs such as browser type and operating system',
+  '唐猫庭院线上点餐与菜品推荐系统（下称"本系统"）在您使用过程中收集以下信息：':
+    'The Tang Cat Courtyard online ordering and dish recommendation system (the "System") collects the following information during your use:',
+  '1. 账户信息：您在注册时提供的用户名和加密后的密码':
+    '1. Account info: the username and encrypted password you provide at registration',
+  '2. 口味偏好：您设置的辣度、咸淡、甜酸、价位、过敏源等个性化偏好':
+    '2. Taste preferences: your personalized settings such as spice level, saltiness, sweetness, price range and allergens',
+  '3. 使用记录：您的订单信息、菜品评价反馈、推荐记录':
+    '3. Usage records: your order information, dish ratings and feedback, and recommendation history',
+  '4. 设备信息：浏览器类型、操作系统等基本访问日志':
+    '4. Device info: basic access logs such as browser type and operating system',
   '二、信息使用': '2. How We Use Information',
   '1. 用于为您提供个性化菜品推荐服务': '1. To provide personalized dish recommendations',
   '2. 用于改进推荐算法和菜品质量': '2. To improve our recommendation algorithms and dish quality',
   '3. 用于优化系统性能和用户体验': '3. To optimize system performance and user experience',
   '三、信息安全': '3. Information Security',
-  '您的密码使用 bcrypt 加密存储，绝不存储明文密码。所有敏感操作均通过 JWT 令牌认证，防止数据泄露。除法律要求外，本系统不会向任何第三方提供您的个人信息。': 'Your password is stored hashed with bcrypt — plaintext passwords are never kept. All sensitive operations are authenticated with JWT tokens to prevent data leaks. Except where required by law, the System will never share your personal information with any third party.',
+  '您的密码使用 bcrypt 加密存储，绝不存储明文密码。所有敏感操作均通过 JWT 令牌认证，防止数据泄露。除法律要求外，本系统不会向任何第三方提供您的个人信息。':
+    'Your password is stored hashed with bcrypt — plaintext passwords are never kept. All sensitive operations are authenticated with JWT tokens to prevent data leaks. Except where required by law, the System will never share your personal information with any third party.',
   '四、数据管理': '4. Data Management',
   '1. 您可在"我的"页面查看和修改个人偏好': '1. View and edit your preferences on the "My" page',
-  '2. 您可随时注销账户，注销后您的个人数据将被清除': '2. Delete your account at any time — your personal data will be removed',
+  '2. 您可随时注销账户，注销后您的个人数据将被清除':
+    '2. Delete your account at any time — your personal data will be removed',
   '3. 您可导出个人数据（通过管理后台）': '3. Export your personal data (via the admin console)',
   '五、更新与联系': '5. Updates & Contact',
-  '本系统可能不时更新隐私政策，更新后的政策将在本页面公布。如有疑问，请联系客服：029-8888-8888。': 'This policy may be updated from time to time; updates will be published on this page. Questions? Contact us: 029-8888-8888.',
+  '本系统可能不时更新隐私政策，更新后的政策将在本页面公布。如有疑问，请联系客服：029-8888-8888。':
+    'This policy may be updated from time to time; updates will be published on this page. Questions? Contact us: 029-8888-8888.',
   '本政策最后更新日期：2026年8月8日': 'Last updated: August 8, 2026',
   订单号: 'Order #',
   '· 桌号': '· Table',
@@ -866,7 +936,9 @@ function applyUiLang() {
   // ① data-i18n 声明式（骨架）
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const v = UI_STR[el.getAttribute('data-i18n')];
-    if (!v) return;
+    if (!v) {
+      return;
+    }
     const target = menuLang === 'en' ? v[1] : v[0];
     let replaced = false;
     el.childNodes.forEach((n) => {
@@ -875,17 +947,34 @@ function applyUiLang() {
         replaced = true;
       }
     });
-    if (!replaced && !el.children.length) el.textContent = target;
+    if (!replaced && !el.children.length) {
+      el.textContent = target;
+    }
   });
   const t = document.getElementById('lang-toggle-text');
-  if (t) t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  if (t) {
+    t.textContent = menuLang === 'zh' ? 'EN' : '中';
+  }
   // a11y: aria-label 需包含可见文本(EN/中),否则 Lighthouse label-content-name-mismatch(2026-10-19)
   const lt = document.getElementById('lang-toggle');
-  if (lt) lt.setAttribute('aria-label', menuLang === 'zh' ? '切换到英文 Switch to English EN' : '切换到中文 Switch to Chinese 中');
-  if (typeof updateTableStatusCard === 'function') updateTableStatusCard();
-  if (typeof syncPageTitle === 'function') syncPageTitle(); // 浏览器标签页标题随语言切换(2026-10-19 EN残留修复)
-  if (typeof window.renderCartLangAware === 'function') window.renderCartLangAware(); // 购物车参数化横幅/回执头(遍历式翻译够不着的模板)
-  if (typeof updateCartBadge === 'function') updateCartBadge(); // 悬浮条单位/合计标签
+  if (lt) {
+    lt.setAttribute(
+      'aria-label',
+      menuLang === 'zh' ? '切换到英文 Switch to English EN' : '切换到中文 Switch to Chinese 中'
+    );
+  }
+  if (typeof updateTableStatusCard === 'function') {
+    updateTableStatusCard();
+  }
+  if (typeof syncPageTitle === 'function') {
+    syncPageTitle();
+  } // 浏览器标签页标题随语言切换(2026-10-19 EN残留修复)
+  if (typeof window.renderCartLangAware === 'function') {
+    window.renderCartLangAware();
+  } // 购物车参数化横幅/回执头(遍历式翻译够不着的模板)
+  if (typeof updateCartBadge === 'function') {
+    updateCartBadge();
+  } // 悬浮条单位/合计标签
   // ② 遍历式：en 全页面扫描翻译；zh 只还原已翻译清单（免全文档扫描——中文模式每次按键渲染都会触发本函数）
   if (menuLang !== 'en') {
     __zhTranslated.forEach((n) => {
@@ -910,16 +999,27 @@ function applyUiLang() {
   } else {
     // ②-b 菜单筛选控件显式翻译：这些 option/按钮会被动态重渲染，文本节点不保证在路径②扫描时机内
     // （EN 模式曾出现 "All categories" 与 "全部辣度/默认排序" 中英混排）
-    ['menu-filter-cat', 'menu-filter-spice', 'menu-filter-price', 'menu-sort', 'menu-reset-filter', 'menu-search'].forEach((id) => {
+    [
+      'menu-filter-cat',
+      'menu-filter-spice',
+      'menu-filter-price',
+      'menu-sort',
+      'menu-reset-filter',
+      'menu-search',
+    ].forEach((id) => {
       const el = document.getElementById(id);
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       if (el.tagName === 'INPUT') {
         // 搜索框 placeholder：重渲染后路径③的时机同样不保证，这里按 PH_EN 兜底
         // （placeholder 可能带 emoji 前缀，用包含式命中替换）
         if (el.placeholder) {
           const hit = Object.keys(PH_EN).find((k) => el.placeholder.indexOf(k) >= 0);
           if (hit) {
-            if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder);
+            if (el.dataset.zhPh === undefined) {
+              el.setAttribute('data-zh-ph', el.placeholder);
+            }
             el.placeholder = el.placeholder.replace(hit, PH_EN[hit]);
           }
         }
@@ -930,9 +1030,13 @@ function applyUiLang() {
         const key = (o.textContent || '').trim();
         const en = ZH_EN[key];
         if (en) {
-          if (o.__zhOrigEl === undefined) o.__zhOrigEl = o.textContent;
+          if (o.__zhOrigEl === undefined) {
+            o.__zhOrigEl = o.textContent;
+          }
           o.textContent = en;
-          if (__zhElTranslated.indexOf(o) < 0) __zhElTranslated.push(o);
+          if (__zhElTranslated.indexOf(o) < 0) {
+            __zhElTranslated.push(o);
+          }
         }
       });
     });
@@ -941,10 +1045,14 @@ function applyUiLang() {
         n.nodeName === 'SCRIPT' || n.nodeName === 'STYLE' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
     });
     const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode);
+    }
     nodes.forEach((n) => {
       const raw = n.textContent;
-      if (!raw || !raw.trim()) return;
+      if (!raw || !raw.trim()) {
+        return;
+      }
       if (n.__zhOrig === undefined) {
         const key = raw.trim();
         if (ZH_EN[key]) {
@@ -959,7 +1067,9 @@ function applyUiLang() {
   document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach((el) => {
     if (menuLang === 'en') {
       if (PH_EN[el.placeholder]) {
-        if (el.dataset.zhPh === undefined) el.setAttribute('data-zh-ph', el.placeholder);
+        if (el.dataset.zhPh === undefined) {
+          el.setAttribute('data-zh-ph', el.placeholder);
+        }
         el.placeholder = PH_EN[el.placeholder];
       }
     } else if (el.dataset && el.dataset.zhPh !== undefined) {
@@ -1012,19 +1122,35 @@ function toggleMenuLang() {
   localStorage.setItem(STORE_KEYS.menuLang, menuLang);
   applyUiLang();
   const sec = document.querySelector('.section.active');
-  if (!sec) return;
+  if (!sec) {
+    return;
+  }
   if (sec.id === 'dataset-section') {
     const tb = document.getElementById('category-tabs');
-    if (tb) delete tb.dataset.cats;
-    if (typeof buildCategoryUI === 'function') buildCategoryUI();
+    if (tb) {
+      delete tb.dataset.cats;
+    }
+    if (typeof buildCategoryUI === 'function') {
+      buildCategoryUI();
+    }
     renderMenuTable();
   } else if (sec.id === 'recommendation-section') {
-    if (typeof displayRecommendations === 'function') displayRecommendations();
+    if (typeof displayRecommendations === 'function') {
+      displayRecommendations();
+    }
   } else if (sec.id === 'table-result-section') {
-    if (typeof renderTableSets === 'function') renderTableSets();
+    if (typeof renderTableSets === 'function') {
+      renderTableSets();
+    }
   } else if (sec.id === 'cart-section') {
-    if (typeof showCart === 'function') showCart();
+    if (typeof showCart === 'function') {
+      showCart();
+    }
   } else if (sec.id === 'profile-section') {
-    if (typeof showProfile === 'function') showProfile();
-  } else if (sec.id === 'home-section') showSection('home-section');
+    if (typeof showProfile === 'function') {
+      showProfile();
+    }
+  } else if (sec.id === 'home-section') {
+    showSection('home-section');
+  }
 }

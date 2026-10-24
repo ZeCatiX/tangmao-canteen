@@ -20,7 +20,9 @@ const purgeGuestOrders = argv.includes('--purge-guest-orders');
 const keep = new Set(['admin', '郑晨曦', 'zcx']);
 for (const a of argv) {
   const m = a.match(/^--keep=(.+)$/);
-  if (m) keep.add(m[1]);
+  if (m) {
+    keep.add(m[1]);
+  }
 }
 
 const pool = new Pool({
@@ -39,7 +41,11 @@ const pool = new Pool({
   const sample = victims.slice(0, 8);
   console.log(`用户总数 ${users.rows.length},白名单 ${keep.size},将清理测试用户 ${victims.length} 个`);
   console.log(`样例: ${sample.join(', ')}${victims.length > sample.length ? ' …' : ''}`);
-  if (victims.length === 0) { console.log(' nothing to do.'); await pool.end(); return; }
+  if (victims.length === 0) {
+    console.log(' nothing to do.');
+    await pool.end();
+    return;
+  }
 
   // 2) 统计关联数据
   const inList = victims.map((u) => `'${u.replace(/'/g, "''")}'`).join(',');
@@ -49,9 +55,13 @@ const pool = new Pool({
   const reclogC = await cnt(`SELECT count(*)::int AS c FROM recommendation_log WHERE user_id IN (${inList})`);
   let guestC = 0;
   if (purgeGuestOrders) {
-    guestC = await cnt(`SELECT count(*)::int AS c FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status IN ('completed','cancelled')`);
+    guestC = await cnt(
+      `SELECT count(*)::int AS c FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status IN ('completed','cancelled')`
+    );
   }
-  console.log(`关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC}` : ''}`);
+  console.log(
+    `关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC}` : ''}`
+  );
 
   if (!execute) {
     console.log('\n[DRY-RUN] 未做任何修改。确认无误后加 --execute 执行;建议先跑 node scripts/backup_db.js。');
@@ -65,17 +75,24 @@ const pool = new Pool({
     await cli.query('BEGIN');
     let total = 0;
     let r = await cli.query(`DELETE FROM orders WHERE user_id IN (${inList}) RETURNING id`);
-    total += r.rowCount; console.log(`删除测试用户订单 ${r.rowCount}`);
+    total += r.rowCount;
+    console.log(`删除测试用户订单 ${r.rowCount}`);
     if (purgeGuestOrders) {
-      r = await cli.query(`DELETE FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status IN ('completed','cancelled') RETURNING id`);
-      total += r.rowCount; console.log(`删除游客历史单 ${r.rowCount}`);
+      r = await cli.query(
+        `DELETE FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status IN ('completed','cancelled') RETURNING id`
+      );
+      total += r.rowCount;
+      console.log(`删除游客历史单 ${r.rowCount}`);
     }
     r = await cli.query(`DELETE FROM feedback WHERE user_id IN (${inList}) RETURNING id`);
-    total += r.rowCount; console.log(`删除测试反馈 ${r.rowCount}`);
+    total += r.rowCount;
+    console.log(`删除测试反馈 ${r.rowCount}`);
     r = await cli.query(`DELETE FROM recommendation_log WHERE user_id IN (${inList}) RETURNING id`);
-    total += r.rowCount; console.log(`删除测试推荐日志 ${r.rowCount}`);
+    total += r.rowCount;
+    console.log(`删除测试推荐日志 ${r.rowCount}`);
     r = await cli.query(`DELETE FROM users WHERE username IN (${inList}) RETURNING username`);
-    total += r.rowCount; console.log(`删除测试用户 ${r.rowCount}`);
+    total += r.rowCount;
+    console.log(`删除测试用户 ${r.rowCount}`);
     const remain = await cli.query('SELECT count(*)::int AS c FROM users');
     await cli.query('COMMIT');
     console.log(`\n[EXECUTED] 共清理 ${total} 行,剩余用户 ${remain.rows[0].c}(白名单: ${[...keep].join(', ')})`);
@@ -87,4 +104,7 @@ const pool = new Pool({
     cli.release();
     await pool.end();
   }
-})().catch((e) => { console.log('FAIL: ' + e.message); process.exit(1); });
+})().catch((e) => {
+  console.log('FAIL: ' + e.message);
+  process.exit(1);
+});

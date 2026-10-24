@@ -8,41 +8,64 @@ const path = require('path');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ROOT = path.join(__dirname, '..');
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('最后缺口覆盖检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 加载状态：页面加载时显示loading指示器 =====
   it('1.1 推荐结果加载时显示loading指示器', async () => {
@@ -67,17 +90,22 @@ describe('最后缺口覆盖检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
     // 清除购物车
-    await page.evaluate(() => { localStorage.removeItem('cart'); });
+    await page.evaluate(() => {
+      localStorage.removeItem('cart');
+    });
     // 打开购物车
     await page.evaluate(() => document.getElementById('nav-cart')?.click());
     await sleep(500);
     const emptyText = await page.evaluate(() => {
       const cart = document.getElementById('cart-section');
-      if (!cart) return 'no_cart_section';
+      if (!cart) {
+        return 'no_cart_section';
+      }
       return cart.textContent?.substring(0, 200) || '';
     });
-    const hasEmptyState = emptyText.includes('空') || emptyText.includes('无') || emptyText.includes('没有') || emptyText.includes('no');
-    assert.ok(true, '空购物车提示: ' + (emptyText.substring(0, 50)));
+    const hasEmptyState =
+      emptyText.includes('空') || emptyText.includes('无') || emptyText.includes('没有') || emptyText.includes('no');
+    assert.ok(true, '空购物车提示: ' + emptyText.substring(0, 50));
     assert.equal(realErrors().length, 0, '空购物车不应有错误');
   });
 
@@ -92,12 +120,16 @@ describe('最后缺口覆盖检查', () => {
     // 清空输入框直接提交
     await page.evaluate(() => {
       const btn = document.querySelector('#login-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const validationMsg = await page.evaluate(() => {
       // 检查是否有验证消息显示
-      const msg = document.querySelector('#login-section .alert, #login-section .text-danger, #login-section .error, #login-section [class*="message"]');
+      const msg = document.querySelector(
+        '#login-section .alert, #login-section .text-danger, #login-section .error, #login-section [class*="message"]'
+      );
       return msg ? msg.textContent?.substring(0, 100) : 'no_validation_msg';
     });
     // 检查是否触发了浏览器验证（HTML5 required）
@@ -117,7 +149,12 @@ describe('最后缺口覆盖检查', () => {
     // 检查是否有自动刷新机制
     const hasAutoRefresh = await page.evaluate(() => {
       const html = document.documentElement.outerHTML;
-      return html.includes('setInterval') || html.includes('setTimeout') || html.includes('loadOrders') || html.includes('autoRefresh');
+      return (
+        html.includes('setInterval') ||
+        html.includes('setTimeout') ||
+        html.includes('loadOrders') ||
+        html.includes('autoRefresh')
+      );
     });
     assert.ok(hasAutoRefresh, '厨房看板应有自动刷新机制');
     assert.equal(realErrors().length, 0, '厨房看板自动刷新不应有错误');
@@ -131,7 +168,9 @@ describe('最后缺口覆盖检查', () => {
     // 模拟添加菜品到购物车
     await page.evaluate(() => {
       localStorage.setItem('cart', JSON.stringify([{ id: 1, name: '测试菜品', price: 10, qty: 1 }]));
-      if (typeof updateCartBadge === 'function') updateCartBadge();
+      if (typeof updateCartBadge === 'function') {
+        updateCartBadge();
+      }
     });
     await sleep(200);
     const badgeText = await page.evaluate(() => {
@@ -169,7 +208,9 @@ describe('最后缺口覆盖检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(300);
     const focusableCount = await page.evaluate(() => {
-      return document.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])').length;
+      return document.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ).length;
     });
     assert.ok(focusableCount > 5, '应有至少5个可聚焦元素: ' + focusableCount);
     // Tab循环
@@ -181,7 +222,9 @@ describe('最后缺口覆盖检查', () => {
         const a = document.activeElement;
         return a ? a.tagName + (a.id ? '#' + a.id : '') : 'none';
       });
-      if (el !== 'BODY' && el !== 'none') focused++;
+      if (el !== 'BODY' && el !== 'none') {
+        focused++;
+      }
     }
     assert.ok(focused > 0, 'Tab键应能聚焦到元素, 聚焦了' + focused + '个');
     assert.equal(realErrors().length, 0, '焦点样式不应有错误');
@@ -200,9 +243,11 @@ describe('最后缺口覆盖检查', () => {
     // 依次切换页面，检查是否崩溃
     const pages = ['dashboard', 'dishes', 'users', 'feedback', 'preferences', 'analytics', 'model', 'apidocs'];
     for (const p of pages) {
-      await page.evaluate(pg => {
+      await page.evaluate((pg) => {
         const link = document.querySelector(`[data-page="${pg}"]`);
-        if (link) link.click();
+        if (link) {
+          link.click();
+        }
       }, p);
       await sleep(500);
       // 检查是否有错误
@@ -225,7 +270,9 @@ describe('最后缺口覆盖检查', () => {
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
-    await page.evaluate(() => document.getElementById('preference-form').querySelector('button[type="submit"]').click());
+    await page.evaluate(() =>
+      document.getElementById('preference-form').querySelector('button[type="submit"]').click()
+    );
     await sleep(5000);
     // 点击第一个推荐菜品
     const clicked = await page.evaluate(() => {

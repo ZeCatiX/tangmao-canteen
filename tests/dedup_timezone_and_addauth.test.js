@@ -11,8 +11,8 @@ const assert = require('node:assert/strict');
 require('dotenv').config();
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
-var adminToken = '';
-var createdOrderIds = [];
+let adminToken = '';
+const createdOrderIds = [];
 // 五常大米饭 id=2069(不参与推荐, 价格最低, 测试常客)
 const RICE = [{ id: 2069, qty: 1, name: '五常大米饭', note: '', type: '购物车', price: 3, matchRate: 0.5 }];
 
@@ -38,7 +38,9 @@ after(async () => {
   const H = { Authorization: 'Bearer ' + adminToken };
   for (const id of createdOrderIds) {
     await fetch(BASE + '/api/orders/' + id + '/status', {
-      method: 'PUT', headers: H, body: JSON.stringify({ status: 'cancelled' }),
+      method: 'PUT',
+      headers: H,
+      body: JSON.stringify({ status: 'cancelled' }),
     }).catch(() => {});
   }
 });
@@ -51,7 +53,7 @@ test('幂等窗口限时: 超10秒后同内容不同桌不得并单(时区错位
   assert.equal(a.body.success, true);
   createdOrderIds.push(a.body.orderId);
   // 越过10秒窗口——旧代码此处因时区错位依然命中并单
-  await new Promise(r => setTimeout(r, 11000));
+  await new Promise((r) => setTimeout(r, 11000));
   const b = await api('/api/order', {
     method: 'POST',
     body: JSON.stringify({ userId: 'guest', items: RICE, totalPrice: 3, tableNumber: '12' }),

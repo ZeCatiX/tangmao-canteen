@@ -8,7 +8,6 @@ const { spawnSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 
 describe('基础设施核心文件语法检查', () => {
-
   // ===== 1. auth.js 核心函数检查 =====
   it('1.1 auth.js 包含所有必需函数', () => {
     const content = fs.readFileSync(path.join(ROOT, 'auth.js'), 'utf8');
@@ -82,10 +81,17 @@ describe('基础设施核心文件语法检查', () => {
   // ===== 9. Python脚本语法检查 =====
   it('9.1 Python脚本语法正确', () => {
     // rgzn.py 已归档至 deprecated/(commit 47095d2),根目录不再保留旧训练脚本
-    const pyFiles = ['ml/predict_worker.py', 'ml/train_restaurant_model.py',
-      'ml/retrain_from_feedback.py', 'ml/get_metrics.py', 'ml/get_feature_importance.py',
-      'ml/save_importance.py', 'ml/convert_report.py', 'ml/create_optimized_report.py'];
-    let missing = [];
+    const pyFiles = [
+      'ml/predict_worker.py',
+      'ml/train_restaurant_model.py',
+      'ml/retrain_from_feedback.py',
+      'ml/get_metrics.py',
+      'ml/get_feature_importance.py',
+      'ml/save_importance.py',
+      'ml/convert_report.py',
+      'ml/create_optimized_report.py',
+    ];
+    const missing = [];
     for (const f of pyFiles) {
       const p = path.join(ROOT, f);
       if (!fs.existsSync(p)) {
@@ -139,9 +145,18 @@ describe('基础设施核心文件语法检查', () => {
 
   // ===== 15. 所有JS文件语法检查 =====
   it('15.1 所有JS文件语法正确', () => {
-    const jsFiles = ['server.js', 'auth.js', 'user_storage.js', 'db.js', 'logger.js',
-      'build.js', 'backup_db.js', 'vision_pipeline.js', 'vision_pipeline.js'];
-    let missing = [];
+    const jsFiles = [
+      'server.js',
+      'auth.js',
+      'user_storage.js',
+      'db.js',
+      'logger.js',
+      'build.js',
+      'backup_db.js',
+      'vision_pipeline.js',
+      'vision_pipeline.js',
+    ];
+    const missing = [];
     for (const f of jsFiles) {
       const p = path.join(ROOT, f);
       if (!fs.existsSync(p)) {
@@ -162,11 +177,12 @@ describe('基础设施核心文件语法检查', () => {
     const jsFiles = ['js/globals.js', 'js/menu.js', 'js/cart.js', 'js/core.js', 'js/recommendation.js', 'js/init.js'];
     for (const f of jsFiles) {
       const p = path.join(ROOT, f);
-      if (!fs.existsSync(p)) continue;
+      if (!fs.existsSync(p)) {
+        continue;
+      }
       const buf = fs.readFileSync(p);
       // 检查UTF-8 BOM
-      assert.ok(!(buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF),
-        `${f} 不应有UTF-8 BOM头`);
+      assert.ok(!(buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf), `${f} 不应有UTF-8 BOM头`);
     }
   });
 
@@ -175,14 +191,16 @@ describe('基础设施核心文件语法检查', () => {
     const htmlFiles = ['index.html', 'admin.html', 'kitchen.html'];
     for (const f of htmlFiles) {
       const content = fs.readFileSync(path.join(ROOT, f), 'utf8');
-      assert.ok(content.startsWith('<!DOCTYPE html>') || content.startsWith('<!doctype html>'),
-        `${f} 应以<!DOCTYPE html>开头`);
+      assert.ok(
+        content.startsWith('<!DOCTYPE html>') || content.startsWith('<!doctype html>'),
+        `${f} 应以<!DOCTYPE html>开头`
+      );
     }
   });
 });
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }

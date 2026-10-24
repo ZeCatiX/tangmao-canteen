@@ -5,40 +5,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('前端JS数值处理边界与边缘场景检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. formatPrice 函数边界 =====
   it('1.1 formatPrice 处理null/undefined', async () => {
@@ -52,7 +75,7 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
         zero: formatPrice(0),
         number: formatPrice(88),
         string: formatPrice('25.5'),
-        negative: formatPrice(-1)
+        negative: formatPrice(-1),
       };
     });
     assert.equal(result.null, '未知', 'null应返回"未知"');
@@ -75,7 +98,7 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
         bool: esc(true),
         str: esc('<script>alert(1)</script>'),
         empty: esc(''),
-        obj: esc({})
+        obj: esc({}),
       };
     });
     assert.equal(result.null, null, 'null应原样返回');
@@ -105,14 +128,20 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
 
   // ===== 4. getCartCount 边界 =====
   it('4.1 getCartCount 处理空购物车', async () => {
-    await page.evaluate(() => { localStorage.setItem('cart', '[]'); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', '[]');
+    });
     const count = await page.evaluate(() => getCartCount());
     assert.equal(count, 0, '空购物车应返回0');
     // 损坏数据
-    await page.evaluate(() => { localStorage.setItem('cart', 'invalid'); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', 'invalid');
+    });
     const count2 = await page.evaluate(() => getCartCount());
     assert.equal(count2, 0, '损坏数据应返回0');
-    await page.evaluate(() => { localStorage.setItem('cart', '[]'); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', '[]');
+    });
     assert.equal(realErrors().length, 0, 'getCartCount不应有错误');
   });
 
@@ -126,11 +155,14 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
   // ===== 6. 购物车添加后toFixed不崩溃 =====
   it('6.1 购物车价格toFixed安全', async () => {
     await page.evaluate(() => {
-      localStorage.setItem('cart', JSON.stringify([
-        { id: 999, name: '边界测试', price: NaN, qty: 1 },
-        { id: 998, name: '边界测试2', price: undefined, qty: 1 },
-        { id: 997, name: '边界测试3', price: null, qty: 1 }
-      ]));
+      localStorage.setItem(
+        'cart',
+        JSON.stringify([
+          { id: 999, name: '边界测试', price: NaN, qty: 1 },
+          { id: 998, name: '边界测试2', price: undefined, qty: 1 },
+          { id: 997, name: '边界测试3', price: null, qty: 1 },
+        ])
+      );
     });
     // 打开购物车不应崩溃
     await page.evaluate(() => showCart());
@@ -138,7 +170,10 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
     const total = await page.evaluate(() => document.getElementById('cart-total-price')?.textContent || '');
     assert.ok(total.length > 0, '总价应显示');
     assert.ok(!total.includes('NaN'), '总价不应为NaN: ' + total);
-    await page.evaluate(() => { localStorage.setItem('cart', '[]'); updateCartBadge(); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', '[]');
+      updateCartBadge();
+    });
     assert.equal(realErrors().length, 0, '购物车价格边界不应有错误');
   });
 
@@ -201,7 +236,10 @@ describe('前端JS数值处理边界与边缘场景检查', () => {
       return el ? el.textContent : '0';
     });
     assert.equal(badge, '3', '导航切换后角标应保持3');
-    await page.evaluate(() => { localStorage.setItem('cart', '[]'); updateCartBadge(); });
+    await page.evaluate(() => {
+      localStorage.setItem('cart', '[]');
+      updateCartBadge();
+    });
     assert.equal(realErrors().length, 0, '角标一致性不应有错误');
   });
 

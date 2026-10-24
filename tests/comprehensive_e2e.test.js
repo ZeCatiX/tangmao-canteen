@@ -6,12 +6,18 @@ const assert = require('node:assert/strict');
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 require('dotenv').config();
@@ -69,10 +75,19 @@ describe('1. 页面加载测试', () => {
 
   it('首页所有section容器存在', async () => {
     const { text } = await getText('/');
-    const sections = ['home-section', 'login-section', 'register-section',
-      'preference-section', 'profile-section', 'recommendation-section',
-      'feedback-section', 'cart-section', 'end-section', 'about-section',
-      'dataset-section'];
+    const sections = [
+      'home-section',
+      'login-section',
+      'register-section',
+      'preference-section',
+      'profile-section',
+      'recommendation-section',
+      'feedback-section',
+      'cart-section',
+      'end-section',
+      'about-section',
+      'dataset-section',
+    ];
     for (const s of sections) {
       assert.ok(hasElementWithId(text, s), '缺少section: ' + s);
     }
@@ -91,8 +106,16 @@ describe('1. 页面加载测试', () => {
 
   it('管理后台所有页面ID存在', async () => {
     const { text } = await getText('/admin');
-    const pages = ['page-dashboard', 'page-dishes', 'page-feedback',
-      'page-preferences', 'page-analytics', 'page-model', 'page-apidocs', 'page-users'];
+    const pages = [
+      'page-dashboard',
+      'page-dishes',
+      'page-feedback',
+      'page-preferences',
+      'page-analytics',
+      'page-model',
+      'page-apidocs',
+      'page-users',
+    ];
     for (const p of pages) {
       assert.ok(hasElementWithId(text, p), '缺少page: ' + p);
     }
@@ -159,10 +182,24 @@ describe('2. 首页交互元素', () => {
 
   it('偏好设置表单完整', async () => {
     const { text } = await getText('/');
-    const ids = ['preference-form', 'spiciness', 'saltiness', 'sweetness',
-      'price', 'calorie', 'religion', 'allergy-none', 'allergy-seafood',
-      'allergy-peanut', 'allergy-egg', 'allergy-soy', 'allergy-gluten',
-      'recommendation-mode', 'view-profile-btn', 'logout-btn'];
+    const ids = [
+      'preference-form',
+      'spiciness',
+      'saltiness',
+      'sweetness',
+      'price',
+      'calorie',
+      'religion',
+      'allergy-none',
+      'allergy-seafood',
+      'allergy-peanut',
+      'allergy-egg',
+      'allergy-soy',
+      'allergy-gluten',
+      'recommendation-mode',
+      'view-profile-btn',
+      'logout-btn',
+    ];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少偏好元素: ' + id);
     }
@@ -170,9 +207,16 @@ describe('2. 首页交互元素', () => {
 
   it('推荐结果页面按钮', async () => {
     const { text } = await getText('/');
-    const ids = ['recommendation-section', 'recommendation-loading',
-      'recommendation-result', 'dish-list', 'refresh-recommendations',
-      'end-recommendation', 'end-logout-btn', 'back-to-preference'];
+    const ids = [
+      'recommendation-section',
+      'recommendation-loading',
+      'recommendation-result',
+      'dish-list',
+      'refresh-recommendations',
+      'end-recommendation',
+      'end-logout-btn',
+      'back-to-preference',
+    ];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少推荐元素: ' + id);
     }
@@ -195,9 +239,17 @@ describe('2. 首页交互元素', () => {
 
   it('点餐完成页面', async () => {
     const { text } = await getText('/');
-    const ids = ['end-section', 'end-dish-count', 'end-avg-match',
-      'end-top-match', 'end-model-r2', 'end-satisfaction',
-      'end-sat-submit', 'new-recommendation', 'end-logout'];
+    const ids = [
+      'end-section',
+      'end-dish-count',
+      'end-avg-match',
+      'end-top-match',
+      'end-model-r2',
+      'end-satisfaction',
+      'end-sat-submit',
+      'new-recommendation',
+      'end-logout',
+    ];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少完成页元素: ' + id);
     }
@@ -205,9 +257,17 @@ describe('2. 首页交互元素', () => {
 
   it('全部菜单页面筛选功能', async () => {
     const { text } = await getText('/');
-    const ids = ['dataset-section', 'menu-search', 'menu-filter-cat',
-      'menu-filter-spice', 'menu-filter-price', 'menu-sort',
-      'menu-reset-filter', 'menu-count', 'dataset-table-body'];
+    const ids = [
+      'dataset-section',
+      'menu-search',
+      'menu-filter-cat',
+      'menu-filter-spice',
+      'menu-filter-price',
+      'menu-sort',
+      'menu-reset-filter',
+      'menu-count',
+      'dataset-table-body',
+    ];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少菜单元素: ' + id);
     }
@@ -220,10 +280,23 @@ describe('2. 首页交互元素', () => {
 describe('3. 管理后台元素', () => {
   it('菜品管理弹窗完整', async () => {
     const { text } = await getText('/admin');
-    const ids = ['dish-name', 'dish-description', 'dish-category',
-      'dish-spiciness', 'dish-price', 'dish-rating', 'dish-saltiness',
-      'dish-sweetness', 'dish-tags', 'dish-active', 'dish-image-file',
-      'dish-image-upload', 'dish-image-preview', 'save-dish-btn', 'delete-dish-btn'];
+    const ids = [
+      'dish-name',
+      'dish-description',
+      'dish-category',
+      'dish-spiciness',
+      'dish-price',
+      'dish-rating',
+      'dish-saltiness',
+      'dish-sweetness',
+      'dish-tags',
+      'dish-active',
+      'dish-image-file',
+      'dish-image-upload',
+      'dish-image-preview',
+      'save-dish-btn',
+      'delete-dish-btn',
+    ];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少弹窗元素: ' + id);
     }
@@ -239,8 +312,7 @@ describe('3. 管理后台元素', () => {
 
   it('数据分析页完整', async () => {
     const { text } = await getText('/admin');
-    const ids = ['daily-trend-chart', 'pref-pie-chart', 'user-activity-chart',
-      'worst-dishes-table', 'rec-log-table'];
+    const ids = ['daily-trend-chart', 'pref-pie-chart', 'user-activity-chart', 'worst-dishes-table', 'rec-log-table'];
     for (const id of ids) {
       assert.ok(hasElementWithId(text, id), '缺少分析元素: ' + id);
     }
@@ -293,11 +365,13 @@ describe('4. 公开API端点', () => {
 describe('5. 用户API', () => {
   it('POST /api/user/register 输入校验', async () => {
     const { status: s1 } = await api('/api/user/register', {
-      method: 'POST', body: JSON.stringify({ username: '', password: 'test123' }),
+      method: 'POST',
+      body: JSON.stringify({ username: '', password: 'test123' }),
     });
     assert.equal(s1, 400, '空用户名应返回400');
     const { status: s2 } = await api('/api/user/register', {
-      method: 'POST', body: JSON.stringify({ username: 'test_u', password: '123' }),
+      method: 'POST',
+      body: JSON.stringify({ username: 'test_u', password: '123' }),
     });
     assert.equal(s2, 400, '短密码应返回400');
   });
@@ -305,16 +379,19 @@ describe('5. 用户API', () => {
   it('POST /api/user/register + login 完整流程', async () => {
     const uname = 'e2e_' + Date.now();
     const { status: s1, body: b1 } = await api('/api/user/register', {
-      method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }),
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
     });
     assert.equal(s1, 200);
     assert.equal(b1.success, true);
     const { status: s2 } = await api('/api/user/register', {
-      method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }),
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
     });
     assert.equal(s2, 400, '重复注册应返回400');
     const { status: s3, body: b3 } = await api('/api/user/login', {
-      method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }),
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
     });
     assert.equal(s3, 200);
     assert.equal(b3.success, true);
@@ -325,11 +402,13 @@ describe('5. 用户API', () => {
 
   it('POST /api/user/login 错误处理', async () => {
     const { status: s1 } = await api('/api/user/login', {
-      method: 'POST', body: JSON.stringify({}),
+      method: 'POST',
+      body: JSON.stringify({}),
     });
     assert.equal(s1, 400, '空参数应返回400');
     const { status: s2 } = await api('/api/user/login', {
-      method: 'POST', body: JSON.stringify({ username: 'nobody', password: 'wrong' }),
+      method: 'POST',
+      body: JSON.stringify({ username: 'nobody', password: 'wrong' }),
     });
     assert.equal(s2, 401, '错误密码应返回401');
   });
@@ -341,15 +420,19 @@ describe('5. 用户API', () => {
 describe('6. 管理后台API', () => {
   let token = '';
 
-  before(async () => { token = await getAdminToken(); });
+  before(async () => {
+    token = await getAdminToken();
+  });
 
   it('POST /api/admin/login 验证', async () => {
     const { status: s1 } = await api('/api/admin/login', {
-      method: 'POST', body: JSON.stringify({}),
+      method: 'POST',
+      body: JSON.stringify({}),
     });
     assert.equal(s1, 401, '空参数应返回401');
     const { status: s3, body: b3 } = await api('/api/admin/login', {
-      method: 'POST', body: JSON.stringify({ username: ADMIN_USER, password: ADMIN_PASS }),
+      method: 'POST',
+      body: JSON.stringify({ username: ADMIN_USER, password: ADMIN_PASS }),
     });
     assert.equal(s3, 200);
     assert.equal(b3.success, true);
@@ -357,8 +440,7 @@ describe('6. 管理后台API', () => {
   });
 
   it('无token返回401', async () => {
-    const paths = ['/api/admin/stats', '/api/admin/popular-dishes',
-      '/api/admin/monitor', '/api/admin/model-info'];
+    const paths = ['/api/admin/stats', '/api/admin/popular-dishes', '/api/admin/monitor', '/api/admin/model-info'];
     for (const p of paths) {
       const { status } = await api(p);
       assert.equal(status, 401, p + ' 无token应返回401');
@@ -368,14 +450,14 @@ describe('6. 管理后台API', () => {
   it('带token正常工作', async () => {
     assert.ok(token, '需要token');
     const eps = [
-      { path: '/api/admin/stats', check: b => b.stats?.totalDishes > 0 },
-      { path: '/api/admin/popular-dishes', check: b => Array.isArray(b.dishes) },
-      { path: '/api/admin/model-info', check: b => b.model?.version },
-      { path: '/api/admin/monitor', check: b => b.monitor?.r2Trend },
+      { path: '/api/admin/stats', check: (b) => b.stats?.totalDishes > 0 },
+      { path: '/api/admin/popular-dishes', check: (b) => Array.isArray(b.dishes) },
+      { path: '/api/admin/model-info', check: (b) => b.model?.version },
+      { path: '/api/admin/monitor', check: (b) => b.monitor?.r2Trend },
     ];
     for (const ep of eps) {
       const { status, body } = await api(ep.path, {
-        headers: { 'Authorization': 'Bearer ' + token },
+        headers: { Authorization: 'Bearer ' + token },
       });
       assert.equal(status, 200, ep.path + ' 应返回200');
       assert.equal(body.success, true, ep.path + ' 应成功');
@@ -390,7 +472,8 @@ describe('6. 管理后台API', () => {
 describe('7. 订单与反馈API', () => {
   it('POST /api/order 空订单验证', async () => {
     const { status } = await api('/api/order', {
-      method: 'POST', body: JSON.stringify({ items: [] }),
+      method: 'POST',
+      body: JSON.stringify({ items: [] }),
     });
     assert.equal(status, 400);
   });
@@ -398,7 +481,11 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 创建订单', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'e2e_test', items: [{ id: dishPool[0].id, name: '测试', price: 18 }], totalPrice: 18 }),
+      body: JSON.stringify({
+        userId: 'e2e_test',
+        items: [{ id: dishPool[0].id, name: '测试', price: 18 }],
+        totalPrice: 18,
+      }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId, '应返回订单ID');
@@ -407,16 +494,30 @@ describe('7. 订单与反馈API', () => {
   it('POST /api/order 多菜品+桌号', async () => {
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      body: JSON.stringify({ userId: 'multi_test', items: [{ id: dishPool[0].id, name: 'A', price: 10 }, { id: dishPool[1].id, name: 'B', price: 20 }], totalPrice: 30, tableNumber: '29' }),
+      body: JSON.stringify({
+        userId: 'multi_test',
+        items: [
+          { id: dishPool[0].id, name: 'A', price: 10 },
+          { id: dishPool[1].id, name: 'B', price: 20 },
+        ],
+        totalPrice: 30,
+        tableNumber: '29',
+      }),
     });
     assert.equal(status, 200);
     assert.ok(body.orderId);
   });
 
   it('POST /api/feedback 评分边界', async () => {
-    const { status: s1 } = await api('/api/feedback', { method: 'POST', body: JSON.stringify({ dishId: 1, score: -1 }) });
+    const { status: s1 } = await api('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ dishId: 1, score: -1 }),
+    });
     assert.equal(s1, 400, '负数评分');
-    const { status: s2 } = await api('/api/feedback', { method: 'POST', body: JSON.stringify({ dishId: 1, score: 6 }) });
+    const { status: s2 } = await api('/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ dishId: 1, score: 6 }),
+    });
     assert.equal(s2, 400, '超范围评分');
     const { status: s3 } = await api('/api/feedback', { method: 'POST', body: JSON.stringify({}) });
     assert.equal(s3, 400, '缺少参数');
@@ -439,11 +540,19 @@ describe('8. 用户偏好API', () => {
   const uname = 'pref_e2' + Date.now();
 
   it('POST /api/user-preferences 保存偏好', async () => {
-    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
-    const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
+    await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
+    const login = await api('/api/user/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
     const token = login.body.token;
     const { status, body } = await api('/api/user-preferences', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ preferences: { spiciness: '微辣' } }),
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ preferences: { spiciness: '微辣' } }),
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -451,7 +560,8 @@ describe('8. 用户偏好API', () => {
 
   it('POST /api/preference-log 记录偏好日志', async () => {
     const { status, body } = await api('/api/preference-log', {
-      method: 'POST', body: JSON.stringify({ spiciness: '微辣', userId: 'e2e_test' }),
+      method: 'POST',
+      body: JSON.stringify({ spiciness: '微辣', userId: 'e2e_test' }),
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -504,7 +614,9 @@ describe('38. showProfile 认证头修复', () => {
     const path = require('path');
     const content = frontSrc();
     // 2026-09-17: 实现已改用 safeFetch 封装,断言放宽为"/api/orders 调用携带 authHeaders()"
-    const ordersLine = content.split('\n').find(l => l.includes('/api/orders?userId=') && l.includes('authHeaders()'));
+    const ordersLine = content
+      .split('\n')
+      .find((l) => l.includes('/api/orders?userId=') && l.includes('authHeaders()'));
     assert.ok(ordersLine, 'showProfile 的 /api/orders 请求应包含认证头');
   });
 
@@ -512,8 +624,7 @@ describe('38. showProfile 认证头修复', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    assert.ok(content.includes('encodeURIComponent(currentUser),{headers:authHeaders()})'),
-      '构建产物应包含认证头修复');
+    assert.ok(content.includes('encodeURIComponent(currentUser),{headers:authHeaders()})'), '构建产物应包含认证头修复');
   });
 });
 
@@ -556,7 +667,10 @@ describe('40. 拉黑虚假反馈移除', () => {
     const path = require('path');
     const content = frontSrc();
     // 拉黑后不应自动提交 score:2.0 的反馈
-    const blacklistBlock = content.substring(content.indexOf('function addToBlacklist'), content.indexOf('function deleteAccount'));
+    const blacklistBlock = content.substring(
+      content.indexOf('function addToBlacklist'),
+      content.indexOf('function deleteAccount')
+    );
     assert.ok(!blacklistBlock.includes('score:2.0'), '拉黑不应自动提交低分反馈');
     assert.ok(!blacklistBlock.includes("type:'dislike'"), '拉黑不应自动提交 dislike 反馈');
   });
@@ -583,8 +697,13 @@ describe('42. 用户删除数据清理', () => {
   it('server.js 用户删除时清理反馈和推荐日志', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
-    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf("app.get('/api/admin/notifications'"));
+    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
+    const toggleBlock = content.substring(
+      content.indexOf("app.post('/api/admin/users/:id/toggle'"),
+      content.indexOf("app.get('/api/admin/notifications'")
+    );
     assert.ok(toggleBlock.includes('DELETE FROM feedback'), '应清理用户反馈');
     assert.ok(toggleBlock.includes('DELETE FROM recommendation_log'), '应清理推荐日志');
     assert.ok(toggleBlock.includes('SELECT id, username'), '应先获取用户名');
@@ -593,12 +712,19 @@ describe('42. 用户删除数据清理', () => {
   it('server.js 用户删除清理逻辑正确', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
-    const toggleBlock = content.substring(content.indexOf("app.post('/api/admin/users/:id/toggle'"), content.indexOf("app.get('/api/admin/notifications'"));
+    const content = ['server.js', 'server/routes/users.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
+    const toggleBlock = content.substring(
+      content.indexOf("app.post('/api/admin/users/:id/toggle'"),
+      content.indexOf("app.get('/api/admin/notifications'")
+    );
     // 确保不是先删除用户再查询（会导致查询不到）
-    assert.ok(toggleBlock.indexOf('SELECT id, username') > toggleBlock.indexOf('DELETE FROM users WHERE') === false ||
-      toggleBlock.indexOf('SELECT id, username') < toggleBlock.indexOf('DELETE FROM users WHERE'),
-      '应先查询用户名再删除用户');
+    assert.ok(
+      toggleBlock.indexOf('SELECT id, username') > toggleBlock.indexOf('DELETE FROM users WHERE') === false ||
+        toggleBlock.indexOf('SELECT id, username') < toggleBlock.indexOf('DELETE FROM users WHERE'),
+      '应先查询用户名再删除用户'
+    );
   });
 });
 
@@ -627,8 +753,7 @@ describe('43. 前端 null 安全保护', () => {
     const path = require('path');
     // esbuild 压缩会改写局部变量名(rl/rr/$s),精确断言读模块源码
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(squashWS(content).includes('if(!rl||!rr)'),
-      '推荐入口应有 null 保护');
+    assert.ok(squashWS(content).includes('if(!rl||!rr)'), '推荐入口应有 null 保护');
   });
 });
 
@@ -640,16 +765,20 @@ describe('44. 用户删除完整流程', () => {
     const token = await getAdminToken();
     const uname = 'cleanup' + Date.now();
     // 注册用户
-    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
+    await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
     // 提交反馈
     await api('/api/feedback', { method: 'POST', body: JSON.stringify({ dishId: 1, score: 4, userId: uname }) });
     // 获取用户ID
-    const usersRes = await api('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + token } });
-    const user = usersRes.body.users.find(u => u.username === uname);
+    const usersRes = await api('/api/admin/users', { headers: { Authorization: 'Bearer ' + token } });
+    const user = usersRes.body.users.find((u) => u.username === uname);
     assert.ok(user, '用户应存在');
     // 删除用户
     const del = await api('/api/admin/users/' + user.id + '/toggle', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + token },
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(del.status, 200);
     assert.equal(del.body.success, true);
@@ -667,7 +796,10 @@ describe('45. recommendation.js DOM null 保护', () => {
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
     assert.ok(squashWS(content).includes('if(!rl||!rr)'), '应有 rl 和 rr 的 null 检查');
-    assert.ok(squashWS(content).includes("rl=$('recommendation-loading')"), '应有 loading 元素的 null 检查(prettier 后为 const rl 形态)');
+    assert.ok(
+      squashWS(content).includes("rl=$('recommendation-loading')"),
+      '应有 loading 元素的 null 检查(prettier 后为 const rl 形态)'
+    );
   });
 
   it('displayRecommendations 有 dish-list null 保护', () => {
@@ -681,7 +813,10 @@ describe('45. recommendation.js DOM null 保护', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'recommendation.js'), 'utf8');
-    assert.ok(content.includes('isFinite(d.matchRateDisplay'), '应有 isFinite 检查(量尺校准后守卫对象为 matchRateDisplay/matchRate 三元形态);');
+    assert.ok(
+      content.includes('isFinite(d.matchRateDisplay'),
+      '应有 isFinite 检查(量尺校准后守卫对象为 matchRateDisplay/matchRate 三元形态);'
+    );
   });
 
   it('script.js 构建产物包含 null 保护', () => {
@@ -711,7 +846,10 @@ describe('46. checkoutCart 修复验证', () => {
     const fs = require('fs');
     const path = require('path');
     const content = frontSrc();
-    const block = content.substring(content.indexOf('function endRecommendation'), content.indexOf('function displayRecommendations'));
+    const block = content.substring(
+      content.indexOf('function endRecommendation'),
+      content.indexOf('function displayRecommendations')
+    );
     assert.ok(block.includes('authHeaders()'), 'endRecommendation 应包含认证头');
   });
 
@@ -721,7 +859,10 @@ describe('46. checkoutCart 修复验证', () => {
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
     // 确认构建产物仍携带认证头调用(authHeaders 是 HTML onclick 引用的全局名,压缩不会改写);
     // 引号形态 esbuild 用双引号,断言按正则容忍两种引号
-    assert.ok(/['"]Content-Type['"]\s*:\s*['"]application\/json['"]\s*,\s*\.\.\.authHeaders\(\)/.test(bundle), '构建产物应有 authHeaders');
+    assert.ok(
+      /['"]Content-Type['"]\s*:\s*['"]application\/json['"]\s*,\s*\.\.\.authHeaders\(\)/.test(bundle),
+      '构建产物应有 authHeaders'
+    );
   });
 });
 
@@ -733,10 +874,13 @@ describe('47. submitStarFeedback null 保护', () => {
     const fs = require('fs');
     const path = require('path');
     const content = frontSrc();
-    const block = content.substring(content.indexOf('function submitStarFeedback'), content.indexOf('function openStarFeedback'));
+    const block = content.substring(
+      content.indexOf('function submitStarFeedback'),
+      content.indexOf('function openStarFeedback')
+    );
     assert.ok(block.includes('authHeaders()'), '评分反馈应有认证头');
-    assert.ok(squashWS(block).includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
-    assert.ok(squashWS(block).includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
+    assert.ok(squashWS(block).includes('if(h){h.textContent'), 'star-hint 应有 null 检查');
+    assert.ok(squashWS(block).includes('if(sb){sb.disabled'), 'star-submit-btn 应有 null 检查');
   });
 
   it('openStarFeedback 有 DOM null 保护', () => {
@@ -745,9 +889,9 @@ describe('47. submitStarFeedback null 保护', () => {
     const content = frontSrc();
     const idx = content.indexOf('function openStarFeedback');
     const slice = content.substring(idx, idx + 800);
-    assert.ok(squashWS(slice).includes('if(fd)fd.textContent'), 'star-feedback-dish 应有 null 检查');
-    assert.ok(squashWS(slice).includes('if(h)h.textContent'), 'star-hint 应有 null 检查');
-    assert.ok(squashWS(slice).includes('if(sb)sb.disabled'), 'star-submit-btn 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(fd){fd.textContent'), 'star-feedback-dish 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(h){h.textContent'), 'star-hint 应有 null 检查');
+    assert.ok(squashWS(slice).includes('if(sb){sb.disabled'), 'star-submit-btn 应有 null 检查');
   });
 
   it('script.js 构建产物包含评分安全保护', () => {
@@ -757,7 +901,7 @@ describe('47. submitStarFeedback null 保护', () => {
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
     assert.ok(bundle.includes('function submitStarFeedback'), '构建产物应保留 submitStarFeedback');
     const src = frontSrc();
-    assert.ok(squashWS(src).includes('if(h)h.textContent'), '源码应有 star-hint 保护');
+    assert.ok(squashWS(src).includes('if(h){h.textContent'), '源码应有 star-hint 保护');
   });
 });
 
@@ -768,17 +912,27 @@ describe('48. 购物车结算流程', () => {
   it('POST /api/order 带认证头正常创建', async () => {
     // 注册用户
     const uname = 'cart_te' + Date.now();
-    const reg = await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
+    const reg = await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
     assert.equal(reg.status, 200);
     // 登录获取 token
-    const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
+    const login = await api('/api/user/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
     assert.equal(login.status, 200);
     const token = login.body.token;
     // 用 token 创建订单
     const { status, body } = await api('/api/order', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ userId: uname, items: [{ id: dishPool[0].id, name: '购物车测试菜', price: 28, qty: 2 }], totalPrice: 56 }),
+      headers: { Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        userId: uname,
+        items: [{ id: dishPool[0].id, name: '购物车测试菜', price: 28, qty: 2 }],
+        totalPrice: 56,
+      }),
     });
     assert.equal(status, 200);
     assert.equal(body.success, true);
@@ -791,12 +945,18 @@ describe('48. 购物车结算流程', () => {
 describe('49. 评分 API 带认证头', () => {
   it('POST /api/feedback 带认证头正常提交', async () => {
     const uname = 'fb_auth' + Date.now();
-    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
-    const login = await api('/api/user/login', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
+    await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
+    const login = await api('/api/user/login', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
     const token = login.body.token;
     const { status, body } = await api('/api/feedback', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ dishId: 1, score: 4.5, userId: uname, userPreferences: { spiciness: '微辣' } }),
     });
     assert.equal(status, 200);
@@ -821,7 +981,15 @@ describe('50. ecosystem.config.js 配置', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'ecosystem.config.js'), 'utf8');
-    const required = ['name', 'script', 'max_memory_restart', 'restart_delay', 'max_restarts', 'kill_timeout', 'listen_timeout'];
+    const required = [
+      'name',
+      'script',
+      'max_memory_restart',
+      'restart_delay',
+      'max_restarts',
+      'kill_timeout',
+      'listen_timeout',
+    ];
     for (const r of required) {
       assert.ok(content.includes(r), '缺少配置项: ' + r);
     }
@@ -861,7 +1029,10 @@ describe('52. build.js esbuild 构建管线', () => {
     assert.ok(content.includes('minify: true'), '应开启压缩');
     // 内联 onclick 依赖顶层全局函数名,构建不得打包改名(transform 模式不重命名顶层标识符)
     const bundle = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-    assert.ok(bundle.includes('function checkoutCart') && bundle.includes('function addToCart'), '产物应保留全局函数名');
+    assert.ok(
+      bundle.includes('function checkoutCart') && bundle.includes('function addToCart'),
+      '产物应保留全局函数名'
+    );
   });
 
   it('构建产物语法正确', () => {
@@ -1053,20 +1224,35 @@ describe('61. 管理员查看所有订单', () => {
   it('server.js 中 admin 可查看所有订单', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
-    assert.ok(content.includes("req.user?.role === 'admin'") || content.includes("req.user?.role==='admin'"), '应识别 admin 角色(拆分后可能无空格)');
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
+    assert.ok(
+      content.includes("req.user?.role === 'admin'") || content.includes("req.user?.role==='admin'"),
+      '应识别 admin 角色(拆分后可能无空格)'
+    );
     assert.ok(content.includes('queryUserId'), '应支持 userId 查询参数');
   });
 
   it('管理员可查看所有订单（含非管理员创建的）', async () => {
     // 普通用户创建订单
     const uname = 'ordervi' + Date.now();
-    await api('/api/user/register', { method: 'POST', body: JSON.stringify({ username: uname, password: 'Test123!' }) });
-    const order = await api('/api/order', { method: 'POST', body: JSON.stringify({ userId: uname, items: [{ id: dishPool[0].id, name: '查看测试', price: 10 }], totalPrice: 10 }) });
+    await api('/api/user/register', {
+      method: 'POST',
+      body: JSON.stringify({ username: uname, password: 'Test123!' }),
+    });
+    const order = await api('/api/order', {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: uname,
+        items: [{ id: dishPool[0].id, name: '查看测试', price: 10 }],
+        totalPrice: 10,
+      }),
+    });
     assert.equal(order.status, 200);
     // 管理员查看所有订单
     const adminToken = await getAdminToken();
-    const res = await fetch(BASE + '/api/orders', { headers: { 'Authorization': 'Bearer ' + adminToken } });
+    const res = await fetch(BASE + '/api/orders', { headers: { Authorization: 'Bearer ' + adminToken } });
     const body = await res.json();
     assert.equal(res.status, 200);
     assert.equal(body.success, true);
@@ -1091,13 +1277,16 @@ describe('62. 数据导出带认证头', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
-    assert.ok(!content.includes("location.href='/api/admin/export/popular-dishes'"), '导出应使用 fetch 而非 location.href');
+    assert.ok(
+      !content.includes("location.href='/api/admin/export/popular-dishes'"),
+      '导出应使用 fetch 而非 location.href'
+    );
   });
 
   it('导出 API 带 token 正常返回 CSV', async () => {
     const adminToken = await getAdminToken();
     const res = await fetch(BASE + '/api/admin/export/popular-dishes', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(res.status, 200);
     const text = await res.text();
@@ -1112,7 +1301,7 @@ describe('63. 厨房看板订单 API', () => {
   it('管理员通过 status 过滤查看待处理订单', async () => {
     const adminToken = await getAdminToken();
     const res = await fetch(BASE + '/api/orders?status=pending,confirmed', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     const body = await res.json();
     assert.equal(res.status, 200);
@@ -1131,8 +1320,13 @@ describe('64. 重训练异步执行', () => {
     const fs = require('fs');
     const path = require('path');
     // retrain 路由已拆分至 server/routes/admin.js(2026-10-13 改造4)
-    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
-    const retrainBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
+    const retrainBlock = content.substring(
+      content.indexOf("app.post('/api/admin/retrain'"),
+      content.indexOf('// 推荐效果不佳')
+    );
     assert.ok(retrainBlock.includes('const { spawn } = require'), '应使用异步 spawn');
     assert.ok(retrainBlock.includes("proc.on('close', async (code)"), '应有 close 事件处理');
     assert.ok(!retrainBlock.includes('spawnSync'), '手动重训练不应使用 spawnSync');
@@ -1141,7 +1335,8 @@ describe('64. 重训练异步执行', () => {
   it('重训练立即返回不阻塞', async () => {
     const adminToken = await getAdminToken();
     const { status, body } = await api('/api/admin/retrain', {
-      method: 'POST', headers: { 'Authorization': 'Bearer ' + adminToken },
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     // 2026-09-17: 200=开始训练;409=重训开关关闭(未上线时反馈为测试数据的保护设计)或已在训练中
     assert.ok(status === 200 || status === 409, '重训练应响应 200 或 409(开关保护): ' + status);
@@ -1197,12 +1392,17 @@ describe('67. 自动重训练异步', () => {
   it('checkAndRetrain 使用异步 spawn 而非 spawnSync', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join(String.fromCharCode(10))
-    const block = content.substring(content.indexOf('async function checkAndRetrain'), content.indexOf('// 模型版本信息'));
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join(String.fromCharCode(10));
+    const block = content.substring(
+      content.indexOf('async function checkAndRetrain'),
+      content.indexOf('// 模型版本信息')
+    );
     assert.ok(block.includes('const { spawn } = require'), '自动重训练应使用异步 spawn');
     assert.ok(block.includes("proc.on('close', async (code)"), '应有 close 事件处理');
     assert.ok(!block.includes('spawnSync'), '不应使用 spawnSync');
-    assert.ok(block.includes('finally { _isRetrainingCheck = false'), '应有 finally 重置标志');
+    assert.ok(squashWS(block).includes('finally{_isRetrainingCheck=false'), '应有 finally 重置标志');
   });
 
   it('server.js 中无 spawnSync 用于重训练', () => {
@@ -1231,12 +1431,17 @@ describe('68. 服务器端代码质量', () => {
   it('checkAndRetrain 函数结构正确', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join(String.fromCharCode(10))
-    const block = content.substring(content.indexOf('async function checkAndRetrain'), content.indexOf('// 模型版本信息'));
+    const content = ['server.js', 'server/routes/admin.js', 'server/routes/orders.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join(String.fromCharCode(10));
+    const block = content.substring(
+      content.indexOf('async function checkAndRetrain'),
+      content.indexOf('// 模型版本信息')
+    );
     // 验证函数结构：if-newCount-branch（异步训练）和 else-branch（立即重置）
     assert.ok(block.includes('if (newCount >= 50'), '应有 newCount 检查');
     assert.ok(block.includes('} else {'), '应有 else 分支');
-    assert.ok(block.includes(') { _isRetrainingCheck = false;'), 'catch 应重置标志');
+    assert.ok(squashWS(block).includes('){_isRetrainingCheck=false'), 'catch 应重置标志');
   });
 });
 
@@ -1248,9 +1453,14 @@ describe('69. 无 spawnSync 阻塞', () => {
     const fs = require('fs');
     const path = require('path');
     // 重训练路由已拆至 server/routes/admin.js(改造4),与 server.js 联合读取
-    const content = ['server.js', 'server/routes/admin.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+    const content = ['server.js', 'server/routes/admin.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
     // 手动重训练区域
-    const manualBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
+    const manualBlock = content.substring(
+      content.indexOf("app.post('/api/admin/retrain'"),
+      content.indexOf('// 推荐效果不佳')
+    );
     assert.ok(manualBlock.includes('spawn('), '手动重训练应为异步');
     assert.ok(!manualBlock.includes('spawnSync'), '手动重训练不应有 spawnSync');
   });
@@ -1266,17 +1476,25 @@ describe('70. spawn stdout 泄漏防范', () => {
     const fs = require('fs');
     const path = require('path');
     // 重训练路由已拆至 server/routes/admin.js(改造4),与 server.js 联合读取
-    const content = ['server.js', 'server/routes/admin.js'].map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
-    const manualBlock = content.substring(content.indexOf("app.post('/api/admin/retrain'"), content.indexOf('// 推荐效果不佳'));
-    assert.ok(manualBlock.includes('stdio: [\'ignore\', \'ignore\', \'pipe\']'), '应使用 stdio 防止 stdout 泄漏');
+    const content = ['server.js', 'server/routes/admin.js']
+      .map((f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))
+      .join('\n');
+    const manualBlock = content.substring(
+      content.indexOf("app.post('/api/admin/retrain'"),
+      content.indexOf('// 推荐效果不佳')
+    );
+    assert.ok(manualBlock.includes("stdio: ['ignore', 'ignore', 'pipe']"), '应使用 stdio 防止 stdout 泄漏');
   });
 
   it('自动重训练 spawn 使用 stdio 防止 stdout 泄漏', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-    const autoBlock = content.substring(content.indexOf('async function checkAndRetrain'), content.indexOf('// 模型版本信息'));
-    assert.ok(autoBlock.includes('stdio: [\'ignore\', \'ignore\', \'pipe\']'), '自动重训练也应使用 stdio');
+    const autoBlock = content.substring(
+      content.indexOf('async function checkAndRetrain'),
+      content.indexOf('// 模型版本信息')
+    );
+    assert.ok(autoBlock.includes("stdio: ['ignore', 'ignore', 'pipe']"), '自动重训练也应使用 stdio');
   });
 });
 
@@ -1297,6 +1515,6 @@ console.log('✅ 全面E2E测试增强版 v12 加载完成，共 380+ 测试用�
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }

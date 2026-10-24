@@ -4,12 +4,18 @@ const assert = require('node:assert/strict');
 const { describe, it, before } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17:订单载荷不能用重播种前的幻影 ID)
-var dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
+let dishPool = [{ id: 2069, name: '测试菜品', price: 18 }];
 before(async () => {
   try {
-    var r = await fetch('http://localhost:3000/api/dishes').then(function(x) { return x.json(); });
-    var list = (r && (r.dishes || r)) || [];
-    if (list.length) dishPool = list.slice(0, 5).map(function(d) { return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 }; });
+    const r = await fetch('http://localhost:3000/api/dishes').then(function (x) {
+      return x.json();
+    });
+    const list = (r && (r.dishes || r)) || [];
+    if (list.length) {
+      dishPool = list.slice(0, 5).map(function (d) {
+        return { id: d.id, name: d.name, price: parseFloat(d.price) || 18 };
+      });
+    }
   } catch (e) {}
 });
 const fs = require('fs');
@@ -29,7 +35,6 @@ async function api(p, options = {}) {
 }
 
 describe('E2E 覆盖缺口补充测试', () => {
-
   // ── 检查点 3: 游客 vs 登录用户推荐差异 ──
   describe('3. 游客 vs 登录用户推荐差异', () => {
     it('游客推荐日志 user_type=guest', async () => {
@@ -57,9 +62,11 @@ describe('E2E 覆盖缺口补充测试', () => {
         body: JSON.stringify({ username: 'admin', password: ADMIN_PASS }),
       });
       const token = login.body.token || '';
-      if (!token) return;
+      if (!token) {
+        return;
+      }
       const { status, body } = await api('/api/admin/recommendation-stats', {
-        headers: { 'Authorization': 'Bearer ' + token },
+        headers: { Authorization: 'Bearer ' + token },
       });
       assert.equal(status, 200);
       // 统计应包含 guest 和 user 分类（字段可能存在）
@@ -89,7 +96,10 @@ describe('E2E 覆盖缺口补充测试', () => {
     it('订单接口 SQL 注入 payload 返回合理状态', async () => {
       const { status, body } = await api('/api/order', {
         method: 'POST',
-        body: JSON.stringify({ items: [{ id: "1 OR 1=1", name: "'; DROP TABLE dishes;--", price: 1, quantity: 1 }], total: 1 }),
+        body: JSON.stringify({
+          items: [{ id: '1 OR 1=1', name: "'; DROP TABLE dishes;--", price: 1, quantity: 1 }],
+          total: 1,
+        }),
       });
       assert.ok([200, 400, 404].includes(status), 'SQL注入订单应被拦截，实际: ' + status);
     });
@@ -101,7 +111,10 @@ describe('E2E 覆盖缺口补充测试', () => {
       const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
       assert.ok(css.includes('@media'), 'styles.css 应包含媒体查询');
       assert.ok(/@media[^{]*max-width:\s*768px/.test(css) || /@media[^{]*768px/.test(css), '应包含平板(768px)断点');
-      assert.ok(/@media[^{]*375px/.test(css) || /@media[^{]*576px/.test(css) || /@media[^{]*767px/.test(css), '应包含移动端断点');
+      assert.ok(
+        /@media[^{]*375px/.test(css) || /@media[^{]*576px/.test(css) || /@media[^{]*767px/.test(css),
+        '应包含移动端断点'
+      );
     });
 
     it('HTML 包含 viewport meta 标签', () => {
@@ -118,7 +131,7 @@ describe('E2E 覆盖缺口补充测试', () => {
       // 检查 label[for] 与 input[id] 配对
       const labels = html.match(/<label[^>]*for="([^"]+)"/g) || [];
       assert.ok(labels.length > 0, '应有表单 label');
-      labels.forEach(l => {
+      labels.forEach((l) => {
         const id = l.match(/for="([^"]+)"/)[1];
         assert.ok(html.includes(`id="${id}"`), `label for="${id}" 应对应有 input id="${id}"`);
       });
@@ -152,7 +165,11 @@ describe('E2E 覆盖缺口补充测试', () => {
       // 检查订单创建是否不需要 Cookie 即可完成（通过 Authorization header）
       const { status, body } = await api('/api/order', {
         method: 'POST',
-        body: JSON.stringify({ items: [{ id: dishPool[0].id, name: '测试', price: 1, quantity: 1 }], total: 1, userId: 'csrf_test' }),
+        body: JSON.stringify({
+          items: [{ id: dishPool[0].id, name: '测试', price: 1, quantity: 1 }],
+          total: 1,
+          userId: 'csrf_test',
+        }),
       });
       // 订单创建成功或返回合理错误，说明依赖 JSON body + 认证头而非隐藏 Cookie
       // 429 = 同桌/同IP频度防刷触发,同样是"正常响应而非依赖Cookie"的证据

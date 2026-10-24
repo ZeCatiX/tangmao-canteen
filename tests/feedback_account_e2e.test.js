@@ -6,16 +6,26 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -24,22 +34,32 @@ describe('评价反馈与账户管理测试', () => {
     browser = await puppeteer.launch({
       headless: 'new',
       executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('dialog', d => d.accept().catch(() => {}));
-    page.on('console', msg => {
-      if (msg.type() === 'error' && isRealError(msg.text())) page._consoleErrors.push(msg.text());
+    page.on('dialog', (d) => d.accept().catch(() => {}));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' && isRealError(msg.text())) {
+        page._consoleErrors.push(msg.text());
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 星级评价 =====
   it('1.1 注册登录后对菜品进行星级评价', async () => {
@@ -67,7 +87,10 @@ describe('评价反馈与账户管理测试', () => {
       // 表格行中的评分按钮
       const rows = document.querySelectorAll('#dataset-table-body .dish-card');
       const btn = rows[0]?.querySelector('button');
-      if (btn) { btn.click(); return { clicked: true, text: btn.textContent.trim() }; }
+      if (btn) {
+        btn.click();
+        return { clicked: true, text: btn.textContent.trim() };
+      }
       return { clicked: false };
     });
     console.log('评分按钮点击:', JSON.stringify(ratingButtons));
@@ -92,11 +115,14 @@ describe('评价反馈与账户管理测试', () => {
     });
     const regJson = await reg.json();
     console.log('API注册:', regJson.success ? '成功' : JSON.stringify(regJson));
-    if (!regJson.success) { console.log('跳过：注册失败'); return; }
+    if (!regJson.success) {
+      console.log('跳过：注册失败');
+      return;
+    }
 
     const fb = await fetch(BASE + '/api/feedback', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (regJson.token || '') },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (regJson.token || '') },
       body: JSON.stringify({ dishId: 1, score: 5, userPreferences: {} }),
     });
     const fbJson = await fb.json();

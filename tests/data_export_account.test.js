@@ -8,17 +8,29 @@ const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
@@ -87,7 +99,7 @@ describe('菜品数据完整性检查', () => {
   // ===== 5. 无重复菜品ID =====
   it('5.1 无重复菜品ID', async () => {
     const r = await api('/api/dishes');
-    const ids = r.body.dishes.map(d => d.id);
+    const ids = r.body.dishes.map((d) => d.id);
     const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
     assert.equal(dupes.length, 0, `有重复菜品ID: ${dupes.join(', ')}`);
   });
@@ -103,12 +115,14 @@ describe('菜品数据完整性检查', () => {
 
 describe('CSV导出功能深度检查', () => {
   let adminToken;
-  before(async () => { adminToken = await getAdminToken(); });
+  before(async () => {
+    adminToken = await getAdminToken();
+  });
 
   // ===== 7. 导出热门菜品CSV =====
   it('7.1 导出热门菜品CSV返回文件', async () => {
     const res = await fetch(BASE + '/api/admin/export/popular-dishes', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.equal(res.status, 200);
     const ct = res.headers.get('content-type') || '';
@@ -122,7 +136,7 @@ describe('CSV导出功能深度检查', () => {
   // ===== 8. 导出反馈CSV =====
   it('8.1 导出反馈CSV返回文件', async () => {
     const res = await fetch(BASE + '/api/admin/export/feedback', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.ok(res.status === 200 || res.status === 404, '导出反馈应返回200或404(无数据)');
   });
@@ -130,7 +144,7 @@ describe('CSV导出功能深度检查', () => {
   // ===== 9. 导出订单CSV =====
   it('9.1 导出订单CSV返回文件', async () => {
     const res = await fetch(BASE + '/api/admin/export/orders', {
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
     });
     assert.ok(res.status === 200 || res.status === 404, '导出订单应返回200或404(无数据)');
   });
@@ -155,13 +169,13 @@ describe('用户删除和账号注销流程', () => {
     const token = reg.body.token;
     // 用token访问需要认证的端点（确认token有效）
     const ordersRes = await api('/api/orders?userId=' + uniq, {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.ok(ordersRes.status === 200 || ordersRes.status === 404, 'token应有效');
     // 删除账号（2026-10-06:接口需密码二次确认防误触,见 /api/user/delete 的 password 校验）
     const delRes = await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: uniq, password: 'DelTest123!' }),
     });
     // 应成功删除或返回成功
@@ -169,7 +183,7 @@ describe('用户删除和账号注销流程', () => {
     assert.ok(delRes.body.success !== false, '删除应成功');
     // 删除后token应失效
     const afterDelRes = await api('/api/orders?userId=' + uniq, {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(afterDelRes.status, 401, '删除后token应失效');
   });
@@ -185,7 +199,7 @@ describe('用户删除和账号注销流程', () => {
     // 身份取自 JWT,body 里的 username 不被信任(IDOR 防护)——传别人的用户名也只会删自己
     const delRes = await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
       body: JSON.stringify({ username: 'nonexistent_user_xyz', password: 'Test1234!' }),
     });
     // 带正确密码 → 删除的是 JWT 本人,应成功;不崩溃
@@ -197,7 +211,7 @@ describe('用户删除和账号注销流程', () => {
     });
     const wrongPw = await api('/api/user/delete', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + reg2.body.token },
+      headers: { Authorization: 'Bearer ' + reg2.body.token },
       body: JSON.stringify({ password: 'WrongPass999!' }),
     });
     assert.equal(wrongPw.status, 400, '密码错误应返回400');
@@ -215,12 +229,12 @@ describe('用户删除和账号注销流程', () => {
     // 退出
     const logoutRes = await api('/api/user/logout', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.ok(logoutRes.status === 200 || logoutRes.status === 204, '退出应成功');
     // 退出后token应失效
     const afterRes = await api('/api/orders?userId=' + uniq, {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: { Authorization: 'Bearer ' + token },
     });
     assert.equal(afterRes.status, 401, '退出后token应失效');
   });
@@ -229,20 +243,27 @@ describe('用户删除和账号注销流程', () => {
 describe('浏览器前进后退和URL恢复', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
   // ===== 14. 浏览器后退不崩溃且恢复状态 =====
   it('14.1 导航→后退→前进不崩溃', async () => {
@@ -260,7 +281,12 @@ describe('浏览器前进后退和URL恢复', () => {
     await page.goBack();
     await sleep(500);
     // 前进（可能没有前进历史，try-catch处理）
-    try { await page.goForward(); await sleep(500); } catch (e) { /* 无前进历史 */ }
+    try {
+      await page.goForward();
+      await sleep(500);
+    } catch (e) {
+      /* 无前进历史 */
+    }
     const content = await page.content();
     assert.ok(!content.includes('Cannot read'), '前进后退不应崩溃');
     const jsErrors = page._consoleErrors.filter(isRealError);
@@ -317,7 +343,7 @@ describe('浏览器前进后退和URL恢复', () => {
     await sleep(300);
     // 拦截所有请求使其失败
     await page.setRequestInterception(true);
-    page.on('request', req => {
+    page.on('request', (req) => {
       if (req.url().includes('localhost:3000')) {
         req.continue();
       } else {

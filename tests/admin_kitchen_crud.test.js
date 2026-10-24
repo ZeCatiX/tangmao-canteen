@@ -6,15 +6,23 @@ const puppeteer = require('puppeteer');
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
   return true;
 }
 
@@ -30,23 +38,34 @@ async function adminLogin(page) {
 describe('管理后台CRUD深度测试', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 新增菜品完整流程 =====
   it('1.1 打开添加菜品模态框并填写字段', async () => {
@@ -58,16 +77,20 @@ describe('管理后台CRUD深度测试', () => {
     await sleep(500);
     const modalOpen = await page.evaluate(() => {
       const modal = document.getElementById('dishModal');
-      if (!modal) return false;
+      if (!modal) {
+        return false;
+      }
       return modal.classList.contains('show') || window.getComputedStyle(modal).display === 'block';
     });
     assert.ok(modalOpen, '菜品模态框应打开');
     // 检查所有表单字段存在
     const fields = await page.evaluate(() => {
       const modal = document.getElementById('dishModal');
-      if (!modal) return [];
+      if (!modal) {
+        return [];
+      }
       const inputs = modal.querySelectorAll('input,select,textarea');
-      return Array.from(inputs).map(i => i.id || i.name || i.type);
+      return Array.from(inputs).map((i) => i.id || i.name || i.type);
     });
     assert.ok(fields.length > 0, '模态框应包含表单字段');
     assert.equal(realErrors().length, 0, '打开模态框不应有错误: ' + realErrors().join('; '));
@@ -82,14 +105,19 @@ describe('管理后台CRUD深度测试', () => {
     // 点击第一个编辑按钮
     const editClicked = await page.evaluate(() => {
       const btn = document.querySelector('button[onclick*="editDish"]');
-      if (btn) { btn.click(); return true; }
+      if (btn) {
+        btn.click();
+        return true;
+      }
       return false;
     });
     assert.ok(editClicked, '应找到并点击编辑按钮');
     await sleep(500);
     const modalOpen = await page.evaluate(() => {
       const modal = document.getElementById('dishModal');
-      if (!modal) return false;
+      if (!modal) {
+        return false;
+      }
       return modal.classList.contains('show') || window.getComputedStyle(modal).display === 'block';
     });
     assert.ok(modalOpen, '编辑模态框应打开');
@@ -117,7 +145,9 @@ describe('管理后台CRUD深度测试', () => {
     await sleep(1500);
     // 检查是否有上下架按钮
     const toggleBtn = await page.evaluate(() => {
-      const btns = document.querySelectorAll('button[onclick*="toggle"], button[onclick*="active"], button[onclick*="status"]');
+      const btns = document.querySelectorAll(
+        'button[onclick*="toggle"], button[onclick*="active"], button[onclick*="status"]'
+      );
       return btns.length;
     });
     // 即使没有专用上下架按钮，状态徽章也应存在
@@ -152,25 +182,38 @@ describe('管理后台CRUD深度测试', () => {
 
 describe('厨房看板订单状态流转深度测试', () => {
   before(async () => {
-    if (browser) await browser.close();
+    if (browser) {
+      await browser.close();
+    }
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 厨房看板加载并显示时间 =====
   it('1.1 厨房看板加载时间显示正常', async () => {
@@ -192,8 +235,10 @@ describe('厨房看板订单状态流转深度测试', () => {
     await page.goto(BASE + '/kitchen', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const loginOverlay = await page.$('#login-overlay');
-    const isOverlayVisible = await page.evaluate(el => {
-      if (!el) return false;
+    const isOverlayVisible = await page.evaluate((el) => {
+      if (!el) {
+        return false;
+      }
       return el.style.display !== 'none';
     }, loginOverlay);
     if (isOverlayVisible) {

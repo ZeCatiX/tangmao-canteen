@@ -3,44 +3,63 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17)
-var dishPool = [];
+const dishPool = [];
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
   return true;
 }
 
 describe('错误处理与边界情况', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 空表单提交 =====
   it('1.1 空登录表单提交不崩溃', async () => {
@@ -52,7 +71,9 @@ describe('错误处理与边界情况', () => {
     // 不填写任何内容直接提交
     await page.evaluate(() => {
       const form = document.getElementById('login-form');
-      if (form) form.querySelector('button[type="submit"]').click();
+      if (form) {
+        form.querySelector('button[type="submit"]').click();
+      }
     });
     await sleep(500);
     // 不应崩溃，可能有错误提示
@@ -70,7 +91,9 @@ describe('错误处理与边界情况', () => {
     await sleep(400);
     await page.evaluate(() => {
       const form = document.getElementById('register-form');
-      if (form) form.querySelector('button[type="submit"]').click();
+      if (form) {
+        form.querySelector('button[type="submit"]').click();
+      }
     });
     await sleep(500);
     const content = await page.content();
@@ -90,8 +113,10 @@ describe('错误处理与边界情况', () => {
     await page.type('#register-confirm', 'PassTwo456!', { delay: 30 });
     const agreeCheckbox = await page.$('#agree-privacy');
     if (agreeCheckbox) {
-      const checked = await page.evaluate(el => el.checked, agreeCheckbox);
-      if (!checked) await agreeCheckbox.click();
+      const checked = await page.evaluate((el) => el.checked, agreeCheckbox);
+      if (!checked) {
+        await agreeCheckbox.click();
+      }
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -116,8 +141,10 @@ describe('错误处理与边界情况', () => {
     await page.type('#register-confirm', 'Duplicate123!', { delay: 30 });
     const agreeCheckbox = await page.$('#agree-privacy');
     if (agreeCheckbox) {
-      const checked = await page.evaluate(el => el.checked, agreeCheckbox);
-      if (!checked) await agreeCheckbox.click();
+      const checked = await page.evaluate((el) => el.checked, agreeCheckbox);
+      if (!checked) {
+        await agreeCheckbox.click();
+      }
     }
     await page.evaluate(() => {
       document.getElementById('register-form').querySelector('button[type="submit"]').click();
@@ -127,7 +154,7 @@ describe('错误处理与边界情况', () => {
     assert.ok(!content.includes('Cannot read'), '不应崩溃');
     // 重复注册返回409或错误响应是正常业务逻辑，不是bug
     // 只有真正的JS错误才是问题
-    const jsErrors = realErrors().filter(e => !e.includes('Failed to load resource') && !e.includes('409'));
+    const jsErrors = realErrors().filter((e) => !e.includes('Failed to load resource') && !e.includes('409'));
     assert.equal(jsErrors.length, 0, '重复注册不应有JS错误，实际错误: ' + realErrors().join('; '));
   });
 
@@ -156,7 +183,12 @@ describe('错误处理与边界情况', () => {
     await sleep(300);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     // 不选择任何过敏源，直接提交
     await page.select('#spiciness', '微辣');
@@ -201,7 +233,12 @@ describe('错误处理与边界情况', () => {
     await sleep(300);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
@@ -240,7 +277,12 @@ describe('错误处理与边界情况', () => {
     await sleep(300);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');

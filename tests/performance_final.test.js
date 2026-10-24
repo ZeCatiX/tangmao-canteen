@@ -6,7 +6,6 @@ require('dotenv').config();
 const BASE = 'http://localhost:3000';
 
 describe('性能基准测试', () => {
-
   // ===== 1. API响应时间基准 =====
   it('1.1 菜品API响应时间<500ms', async () => {
     const times = [];
@@ -47,8 +46,24 @@ describe('性能基准测试', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' },
-        dishes: [{ id: 1, name: 'test', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }]
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' },
+        dishes: [
+          {
+            id: 1,
+            name: 'test',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+        ],
       }),
     });
     const elapsed = Date.now() - start;
@@ -93,9 +108,7 @@ describe('性能基准测试', () => {
   // ===== 8. 并发请求 =====
   it('8.1 10个并发请求全部成功', async () => {
     const start = Date.now();
-    const results = await Promise.all(
-      Array.from({ length: 10 }, () => fetch(BASE + '/api/dishes'))
-    );
+    const results = await Promise.all(Array.from({ length: 10 }, () => fetch(BASE + '/api/dishes')));
     const elapsed = Date.now() - start;
     for (const r of results) {
       assert.equal(r.status, 200, '并发请求应全部200');
@@ -109,7 +122,9 @@ describe('性能基准测试', () => {
     let failed = 0;
     for (let i = 0; i < 20; i++) {
       const r = await fetch(BASE + '/api/worker-health');
-      if (r.status !== 200) failed++;
+      if (r.status !== 200) {
+        failed++;
+      }
     }
     assert.equal(failed, 0, '连续20次健康检查应全部成功');
     console.log('连续20次请求全部成功');
@@ -118,17 +133,27 @@ describe('性能基准测试', () => {
   // ===== 10. 大请求体处理 =====
   it('10.1 100个菜品推荐请求<2秒', async () => {
     const dishes = Array.from({ length: 100 }, (_, i) => ({
-      id: i + 1, name: '菜品' + i, spiciness: '微辣', saltiness: '适中',
-      sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false,
-      allergies: [], religion: '无特殊要求', calorie: '200', protein: '10'
+      id: i + 1,
+      name: '菜品' + i,
+      spiciness: '微辣',
+      saltiness: '适中',
+      sweetness: '酸甜',
+      rating: 4,
+      price: 20,
+      isHalal: false,
+      isVegetarian: false,
+      allergies: [],
+      religion: '无特殊要求',
+      calorie: '200',
+      protein: '10',
     }));
     const start = Date.now();
     const r = await fetch(BASE + '/api/predict-rf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' },
-        dishes
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' },
+        dishes,
       }),
     });
     const elapsed = Date.now() - start;
@@ -140,6 +165,6 @@ describe('性能基准测试', () => {
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }

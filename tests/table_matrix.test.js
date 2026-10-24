@@ -7,19 +7,22 @@ const assert = require('node:assert/strict');
 require('dotenv').config();
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
-const ALL_CN_KEY = { '海鲜': 'seafood', '花生': 'peanut', '鸡蛋': 'egg', '大豆': 'soy', '麸质': 'gluten' };
+const ALL_CN_KEY = { 海鲜: 'seafood', 花生: 'peanut', 鸡蛋: 'egg', 大豆: 'soy', 麸质: 'gluten' };
 const dishMap = new Map();
 
 before(async () => {
   try {
-    const dd = await fetch(BASE + '/api/dishes').then(r => r.json());
-    (dd.dishes || []).forEach(x => dishMap.set(x.id, x));
-  } catch (e) { /* 连不上时用例自身会失败并给出原因 */ }
+    const dd = await fetch(BASE + '/api/dishes').then((r) => r.json());
+    (dd.dishes || []).forEach((x) => dishMap.set(x.id, x));
+  } catch (e) {
+    /* 连不上时用例自身会失败并给出原因 */
+  }
 });
 
 async function gen(body) {
   const r = await fetch(BASE + '/api/recommend/table', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   return { status: r.status, data: await r.json() };
@@ -29,20 +32,30 @@ async function gen(body) {
 function assertInvariants(name, data, body) {
   const N = body.partySize;
   assert.equal(data.sets.length, 3, name + ': 应返回三套');
-  const idSets = data.sets.map(s => new Set(s.dishes.map(x => x.id)));
+  const idSets = data.sets.map((s) => new Set(s.dishes.map((x) => x.id)));
   for (const s of data.sets) {
-    const ids = s.dishes.map(x => x.id);
+    const ids = s.dishes.map((x) => x.id);
     assert.equal(new Set(ids).size, ids.length, name + '/' + s.style + ': 套内菜品重复');
-    const sum = s.dishes.reduce((a, x) => a + x.price, 0) + (s.autoItems || []).reduce((a, x) => a + x.price * x.qty, 0);
+    const sum =
+      s.dishes.reduce((a, x) => a + x.price, 0) + (s.autoItems || []).reduce((a, x) => a + x.price * x.qty, 0);
     assert.ok(Math.abs(sum - s.totalPrice) < 0.01, name + '/' + s.style + ': 总价与明细不符');
-    assert.ok(Math.abs(s.perPerson - Math.round(s.totalPrice / N * 100) / 100) < 0.02, name + '/' + s.style + ': 人均与总价不符');
+    assert.ok(
+      Math.abs(s.perPerson - Math.round((s.totalPrice / N) * 100) / 100) < 0.02,
+      name + '/' + s.style + ': 人均与总价不符'
+    );
     for (const x of s.dishes) {
       assert.ok(x.reason, name + '/' + s.style + ': ' + x.name + ' 缺理由');
-      assert.ok(['cold', 'hot', 'signature', 'staple'].includes(x.pool), name + '/' + s.style + ': ' + x.name + ' 非法池');
+      assert.ok(
+        ['cold', 'hot', 'signature', 'staple'].includes(x.pool),
+        name + '/' + s.style + ': ' + x.name + ' 非法池'
+      );
       const dd = dishMap.get(x.id);
       if (dd) {
-        assert.ok(!['飲品与酒水', '主食'].includes(dd.category), name + '/' + s.style + ': 饮品/米饭混入推荐(' + x.name + ')');
-        (body.allergies || []).forEach(cn => {
+        assert.ok(
+          !['飲品与酒水', '主食'].includes(dd.category),
+          name + '/' + s.style + ': 饮品/米饭混入推荐(' + x.name + ')'
+        );
+        (body.allergies || []).forEach((cn) => {
           const key = ALL_CN_KEY[cn];
           assert.ok(!(dd.allergies && dd.allergies[key]), name + '/' + s.style + ': 含过敏原(' + cn + '): ' + x.name);
         });
@@ -80,12 +93,14 @@ for (const sc of scenarios) {
 }
 
 test('矩阵: 并发5请求全部成功', async () => {
-  const all = await Promise.all([1, 2, 3, 4, 5].map(n => gen({ partySize: 4 })));
+  const all = await Promise.all([1, 2, 3, 4, 5].map((n) => gen({ partySize: 4 })));
   for (const c of all) {
     // 429 也是合理响应:tableLimiter 按 IP 限流(100/15min),全量套件里同 IP 的
     // 前序文件可能已占满预算;并发安全关注的是"不崩、结构一致",不是绕过限流
     assert.ok(c.status === 200 || c.status === 429, 'HTTP 应为 200 或 429(限流),实际: ' + c.status);
-    if (c.status === 200) assert.equal(c.data.success, true);
+    if (c.status === 200) {
+      assert.equal(c.data.success, true);
+    }
   }
 });
 
@@ -94,24 +109,34 @@ test('矩阵: 同池换菜穷尽后正确返回404', async () => {
   // 游客调用时服务端只排除 outId,池永远换不完。注册临时账号带 Bearer 才能验证穷尽语义。
   const uname = 'matrix_' + Date.now();
   const reg = await fetch(BASE + '/api/user/register', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username: uname, password: 'Matrix123!' }),
-  }).then(r => r.json());
-  const auth = reg && reg.token ? { 'Authorization': 'Bearer ' + reg.token } : {};
+  }).then((r) => r.json());
+  const auth = reg && reg.token ? { Authorization: 'Bearer ' + reg.token } : {};
   const g = await fetch(BASE + '/api/recommend/table', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...auth },
     body: JSON.stringify({ partySize: 4 }),
-  }).then(r => r.json());
+  }).then((r) => r.json());
   assert.equal(g.success, true);
-  let swaps = 0, exhausted = false;
-  const used = new Set(g.sets[0].dishes.map(x => x.id));
+  let swaps = 0,
+    exhausted = false;
+  const used = new Set(g.sets[0].dishes.map((x) => x.id));
   for (let i = 0; i < 40; i++) {
     const r = await fetch(BASE + '/api/recommend/table/swap', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ partySize: 4, pool: 'cold', excludeIds: [...used] }),
     });
     const d = await r.json();
-    if (d.success) { used.add(d.dish.id); swaps++; } else { exhausted = true; break; }
+    if (d.success) {
+      used.add(d.dish.id);
+      swaps++;
+    } else {
+      exhausted = true;
+      break;
+    }
   }
   assert.ok(exhausted, '换菜应能穷尽（池内无菜可换时返回404），实际换了 ' + swaps + ' 次未穷尽');
 });

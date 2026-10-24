@@ -5,42 +5,67 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 let testUser = null;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('最后一轮交互闭环验证', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
-    page.on('dialog', async dialog => { await dialog.accept(); });
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
+    page.on('dialog', async (dialog) => {
+      await dialog.accept();
+    });
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // 辅助：注册并登录用户
   async function registerAndLogin() {
@@ -52,23 +77,36 @@ describe('最后一轮交互闭环验证', () => {
     await sleep(400);
     await page.evaluate((u) => {
       const el = document.getElementById('register-username');
-      if (el) { el.value = u; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = u;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, testUser);
     await page.evaluate((p) => {
       const el = document.getElementById('register-password');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate((p) => {
       const el = document.getElementById('register-confirm');
-      if (el) { el.value = p; el.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (el) {
+        el.value = p;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, upass);
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.checked = true;
+      if (cb) {
+        cb.checked = true;
+      }
     });
     await page.evaluate(() => {
       const btn = document.querySelector('#register-section button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(1500);
   }
@@ -80,18 +118,22 @@ describe('最后一轮交互闭环验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(1500);
     const priceInfo = await page.evaluate(() => {
       const tbody = document.getElementById('dataset-table-body');
-      if (!tbody || !tbody.children[0]) return { found: false };
+      if (!tbody || !tbody.children[0]) {
+        return { found: false };
+      }
       const firstRowText = tbody.children[0].textContent;
       return {
         found: true,
         hasYuan: firstRowText.includes('元'),
         hasNumber: /\d+(\.\d+)?/.test(firstRowText),
-        text: firstRowText.substring(0, 80)
+        text: firstRowText.substring(0, 80),
       };
     });
     // 价格可能显示为"25元"或"¥25"或"25"
@@ -108,7 +150,9 @@ describe('最后一轮交互闭环验证', () => {
     // 进入个人资料
     await page.evaluate(() => {
       const link = document.getElementById('nav-profile');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     const profileInfo = await page.evaluate(() => {
@@ -125,26 +169,50 @@ describe('最后一轮交互闭环验证', () => {
     // 先获取推荐
     await page.evaluate(() => {
       const link = document.getElementById('nav-home');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(300);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    for (let wi = 0; wi < 25; wi++) {
+      await sleep(1000);
+      try {
+        if (
+          document.getElementById('recommendation-result') &&
+          !document.getElementById('recommendation-result').classList.contains('d-none')
+        ) {
+          break;
+        }
+      } catch (e) {}
+    }
     // 尝试收藏第一个菜品
     const favClicked = await page.evaluate(() => {
-      const btn = document.querySelector('#dish-list [onclick*="fav"], #dish-list [onclick*="收藏"], #dish-list [class*="fav"]');
-      if (btn) { btn.click(); return true; }
+      const btn = document.querySelector(
+        '#dish-list [onclick*="fav"], #dish-list [onclick*="收藏"], #dish-list [class*="fav"]'
+      );
+      if (btn) {
+        btn.click();
+        return true;
+      }
       return false;
     });
     await sleep(1000);
@@ -152,9 +220,11 @@ describe('最后一轮交互闭环验证', () => {
     const favState = await page.evaluate((uname) => {
       try {
         const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const user = users.find(u => u.username === uname);
-        return user ? (user.favorites || []) : [];
-      } catch(e) { return []; }
+        const user = users.find((u) => u.username === uname);
+        return user ? user.favorites || [] : [];
+      } catch (e) {
+        return [];
+      }
     }, testUser);
     if (favClicked) {
       assert.ok(favState.length >= 1, `收藏后favorites应有数据，实际: ${favState.length}`);
@@ -170,16 +240,24 @@ describe('最后一轮交互闭环验证', () => {
     // 进入个人资料查看收藏
     await page.evaluate(() => {
       const link = document.getElementById('nav-profile');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     // 点击取消收藏按钮（如果有）
     const cancelled = await page.evaluate(() => {
       const btn = document.getElementById('cancel-favorite-btn');
-      if (btn) { btn.click(); return true; }
+      if (btn) {
+        btn.click();
+        return true;
+      }
       // 尝试列表中的取消按钮
       const anyBtn = document.querySelector('#favorites-list .cancel-favorite, #favorites-list [class*="cancel"]');
-      if (anyBtn) { anyBtn.click(); return true; }
+      if (anyBtn) {
+        anyBtn.click();
+        return true;
+      }
       return false;
     });
     await sleep(800);
@@ -187,9 +265,11 @@ describe('最后一轮交互闭环验证', () => {
       const favState = await page.evaluate((uname) => {
         try {
           const users = JSON.parse(localStorage.getItem('users') || '[]');
-          const user = users.find(u => u.username === uname);
-          return user ? (user.favorites || []) : [];
-        } catch(e) { return []; }
+          const user = users.find((u) => u.username === uname);
+          return user ? user.favorites || [] : [];
+        } catch (e) {
+          return [];
+        }
       }, testUser);
       assert.ok(favState.length === 0, `取消收藏后favorites应为空，实际: ${favState.length}`);
     } else {
@@ -205,21 +285,41 @@ describe('最后一轮交互闭环验证', () => {
     await sleep(400);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(500);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
-    for (var wi = 0; wi < 25; wi++) { await sleep(1000); try { if (document.getElementById('recommendation-result') && !document.getElementById('recommendation-result').classList.contains('d-none')) break; } catch(e) {} }
+    for (let wi = 0; wi < 25; wi++) {
+      await sleep(1000);
+      try {
+        if (
+          document.getElementById('recommendation-result') &&
+          !document.getElementById('recommendation-result').classList.contains('d-none')
+        ) {
+          break;
+        }
+      } catch (e) {}
+    }
     // 点击第一个菜品卡片
     const clicked = await page.evaluate(() => {
       const item = document.querySelector('#dish-list .list-group-item');
-      if (item) { item.click(); return true; }
+      if (item) {
+        item.click();
+        return true;
+      }
       return false;
     });
     await sleep(500);
@@ -241,7 +341,11 @@ describe('最后一轮交互闭环验证', () => {
       for (const item of items) {
         const t = item.textContent;
         const m = t.match(/(\d{1,3})%/);
-        if (m) { hasMatch = true; matchText = m[0]; break; }
+        if (m) {
+          hasMatch = true;
+          matchText = m[0];
+          break;
+        }
       }
       return { hasMatch, matchText };
     });
@@ -259,7 +363,9 @@ describe('最后一轮交互闭环验证', () => {
     // 点击勾选框
     await page.evaluate(() => {
       const cb = document.getElementById('agree-privacy');
-      if (cb) cb.click();
+      if (cb) {
+        cb.click();
+      }
     });
     await sleep(200);
     const checked = await page.evaluate(() => {
@@ -295,13 +401,15 @@ describe('最后一轮交互闭环验证', () => {
     assert.ok(logoutExists, '偏好设置页应有退出按钮');
     await page.evaluate(() => {
       const btn = document.getElementById('logout-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(800);
     // 退出后应回到首页或preference-section隐藏
     const homeActive = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeActive || true, '退出后应正常');
     assert.equal(realErrors().length, 0, '偏好设置页退出不应有错误');
@@ -314,12 +422,14 @@ describe('最后一轮交互闭环验证', () => {
     // 点击"我的收藏"按钮
     await page.evaluate(() => {
       const btn = document.getElementById('view-profile-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(800);
     const profileVisible = await page.evaluate(() => {
       const section = document.getElementById('profile-section');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(profileVisible, '"我的收藏"按钮应进入个人资料页');
     assert.equal(realErrors().length, 0, '我的收藏按钮不应有错误');

@@ -8,7 +8,9 @@ const path = require('path');
 const BASE = 'http://localhost:3000';
 const ROOT = path.join(__dirname, '..');
 
-function read(f) { return fs.readFileSync(path.join(ROOT, f), 'utf8'); }
+function read(f) {
+  return fs.readFileSync(path.join(ROOT, f), 'utf8');
+}
 
 // 改造1 后 js/ 源码经 prettier 格式化,紧凑断言串需空白归一化后比较
 const sq = (s) => String(s).replace(/\s+/g, '');
@@ -18,7 +20,9 @@ function extractButtonIds(html) {
   const ids = [];
   const regex = /<button[^>]*\sid="([^"]+)"[^>]*>/g;
   let m;
-  while ((m = regex.exec(html)) !== null) ids.push(m[1]);
+  while ((m = regex.exec(html)) !== null) {
+    ids.push(m[1]);
+  }
   return ids;
 }
 
@@ -28,31 +32,73 @@ describe('深度UI检查 - 按钮可用性', () => {
     const html = read('index.html');
     const buttons = extractButtonIds(html);
     // 核心按钮必须存在
-    const required = ['guest-btn', 'login-btn', 'register-btn', 'back-to-home',
-      'back-to-home-from-register', 'back-from-about', 'back-from-dataset',
-      'back-from-privacy', 'view-profile-btn', 'logout-btn',
-      'cancel-favorite-btn', 'cancel-blacklist-btn', 'delete-account-btn',
-      'back-to-preference', 'new-recommendation', 'end-logout',
-      'back-to-recommendations', 'star-submit-btn', 'cart-close-btn',
-      'cart-clear-btn', 'cart-checkout-btn', 'end-sat-submit',
-      'menu-reset-filter', 'modal-close-btn', 'modal-confirm-btn'];
-    required.forEach(id => {
+    const required = [
+      'guest-btn',
+      'login-btn',
+      'register-btn',
+      'back-to-home',
+      'back-to-home-from-register',
+      'back-from-about',
+      'back-from-dataset',
+      'back-from-privacy',
+      'view-profile-btn',
+      'logout-btn',
+      'cancel-favorite-btn',
+      'cancel-blacklist-btn',
+      'delete-account-btn',
+      'back-to-preference',
+      'new-recommendation',
+      'end-logout',
+      'back-to-recommendations',
+      'star-submit-btn',
+      'cart-close-btn',
+      'cart-clear-btn',
+      'cart-checkout-btn',
+      'end-sat-submit',
+      'menu-reset-filter',
+      'modal-close-btn',
+      'modal-confirm-btn',
+    ];
+    required.forEach((id) => {
       assert.ok(buttons.includes(id), `首页缺少按钮: ${id}`);
     });
   });
 
   it('首页每个按钮在init.js中均有事件绑定', () => {
     const init = read('js/init.js');
-    const bindings = ['guest-btn', 'continue-btn', 'login-btn', 'register-btn',
-      'back-to-home', 'back-to-home-from-register', 'back-from-about',
-      'back-from-dataset', 'back-from-privacy', 'view-profile-btn',
-      'logout-btn', 'cancel-favorite-btn', 'cancel-blacklist-btn',
-      'delete-account-btn', 'back-to-preference', 'new-recommendation',
-      'end-logout', 'back-to-recommendations', 'nav-cart', 'cart-close-btn',
-      'cart-clear-btn', 'cart-checkout-btn', 'view-cached-btn',
-      'privacy-link', 'nav-home', 'nav-about', 'nav-dataset',
-      'nav-privacy', 'nav-user', 'nav-profile'];
-    bindings.forEach(id => {
+    const bindings = [
+      'guest-btn',
+      'continue-btn',
+      'login-btn',
+      'register-btn',
+      'back-to-home',
+      'back-to-home-from-register',
+      'back-from-about',
+      'back-from-dataset',
+      'back-from-privacy',
+      'view-profile-btn',
+      'logout-btn',
+      'cancel-favorite-btn',
+      'cancel-blacklist-btn',
+      'delete-account-btn',
+      'back-to-preference',
+      'new-recommendation',
+      'end-logout',
+      'back-to-recommendations',
+      'nav-cart',
+      'cart-close-btn',
+      'cart-clear-btn',
+      'cart-checkout-btn',
+      'view-cached-btn',
+      'privacy-link',
+      'nav-home',
+      'nav-about',
+      'nav-dataset',
+      'nav-privacy',
+      'nav-user',
+      'nav-profile',
+    ];
+    bindings.forEach((id) => {
       const pattern = `'${id}'`;
       assert.ok(init.includes(pattern), `init.js缺少 ${id} 事件绑定`);
     });
@@ -77,9 +123,15 @@ describe('深度UI检查 - 按钮可用性', () => {
   it('管理后台所有按钮存在', () => {
     const html = read('admin.html');
     const buttons = extractButtonIds(html);
-    const required = ['admin-login-btn', 'add-dish-btn', 'retrain-btn',
-      'delete-dish-btn', 'save-dish-btn', 'dish-image-upload'];
-    required.forEach(id => {
+    const required = [
+      'admin-login-btn',
+      'add-dish-btn',
+      'retrain-btn',
+      'delete-dish-btn',
+      'save-dish-btn',
+      'dish-image-upload',
+    ];
+    required.forEach((id) => {
       assert.ok(buttons.includes(id), `管理后台缺少按钮: ${id}`);
     });
   });
@@ -98,7 +150,7 @@ describe('深度UI检查 - 按钮可用性', () => {
   it('管理后台侧边栏导航完整', () => {
     const html = read('admin.html');
     const pages = ['dashboard', 'dishes', 'users', 'feedback', 'preferences', 'analytics', 'model', 'apidocs'];
-    pages.forEach(p => {
+    pages.forEach((p) => {
       assert.ok(html.includes(`data-page="${p}"`), `管理后台侧边栏缺少 ${p} 导航`);
     });
   });
@@ -148,7 +200,7 @@ describe('深度UI检查 - 显示与排版', () => {
   });
 
   it('所有页面有viewport meta', () => {
-    ['index.html', 'admin.html', 'kitchen.html'].forEach(f => {
+    ['index.html', 'admin.html', 'kitchen.html'].forEach((f) => {
       const html = read(f);
       assert.ok(html.includes('viewport'), `${f} 应有viewport meta`);
     });
@@ -179,7 +231,7 @@ describe('深度UI检查 - 显示与排版', () => {
   it('CSS变量定义完整', () => {
     const css = read('styles.css');
     const vars = ['--primary', '--gold', '--cream', '--brown', '--text', '--radius', '--ease'];
-    vars.forEach(v => {
+    vars.forEach((v) => {
       assert.ok(css.includes(v), `CSS缺少变量: ${v}`);
     });
   });
@@ -192,7 +244,10 @@ describe('深度UI检查 - 显示与排版', () => {
 
   it('CSS有Google Fonts加载', () => {
     const css = read('styles.css');
-    assert.ok(css.includes('Noto+Serif+SC') || css.includes('Noto+Sans+SC') || css.includes('noto-sans-sc'), 'CSS应加载Noto字体');
+    assert.ok(
+      css.includes('Noto+Serif+SC') || css.includes('Noto+Sans+SC') || css.includes('noto-sans-sc'),
+      'CSS应加载Noto字体'
+    );
   });
 
   it('CSS有触控优化', () => {
@@ -201,7 +256,7 @@ describe('深度UI检查 - 显示与排版', () => {
   });
 
   it('Bootstrap和Bootstrap Icons正确引用', () => {
-    ['index.html', 'admin.html', 'kitchen.html'].forEach(f => {
+    ['index.html', 'admin.html', 'kitchen.html'].forEach((f) => {
       const html = read(f);
       assert.ok(html.includes('bootstrap.min.css'), `${f} 应引用Bootstrap CSS`);
       assert.ok(html.includes('bootstrap-icons'), `${f} 应引用Bootstrap Icons`);
@@ -212,17 +267,21 @@ describe('深度UI检查 - 显示与排版', () => {
 describe('深度UI检查 - 崩溃风险', () => {
   it('index.html中所有onclick调用的函数存在', () => {
     const html = read('index.html');
-    const js = read('script.js') + read('index.html');  // 2026-09-17: 内联脚本(如 toggleDarkMode)也属 onclick 目标
+    const js = read('script.js') + read('index.html'); // 2026-09-17: 内联脚本(如 toggleDarkMode)也属 onclick 目标
     const onclickMatches = html.match(/onclick="([^"]+)"/g) || [];
-    onclickMatches.forEach(oc => {
+    onclickMatches.forEach((oc) => {
       const funcMatch = oc.match(/onclick="(\w+)/);
       if (funcMatch) {
         const funcName = funcMatch[1];
         // 2026-09-17: 跳过 JS 内建/上下文对象(onclick="event.stopPropagation();..." 会被正则误捕)
-        if (['event', 'this', 'window', 'document'].includes(funcName)) return;
+        if (['event', 'this', 'window', 'document'].includes(funcName)) {
+          return;
+        }
         // 检查函数是否存在（可以是全局函数或以window.开头）
-        assert.ok(js.includes(`function ${funcName}`) || js.includes(`${funcName}(`),
-          `index.html调用的函数 ${funcName} 不存在`);
+        assert.ok(
+          js.includes(`function ${funcName}`) || js.includes(`${funcName}(`),
+          `index.html调用的函数 ${funcName} 不存在`
+        );
       }
     });
   });
@@ -244,7 +303,10 @@ describe('深度UI检查 - 崩溃风险', () => {
   it('admin.html 关键函数有null保护', () => {
     const html = read('admin.html');
     // 评分chart
-    assert.ok(html.includes('renderRatingChart') && html.includes('if (!ctx) return'), 'renderRatingChart 应有 null 保护');
+    assert.ok(
+      html.includes('renderRatingChart') && html.includes('if (!ctx) return'),
+      'renderRatingChart 应有 null 保护'
+    );
     // 每日趋势chart
     assert.ok(html.includes('loadDailyTrend') && html.includes('if (!ctx) return'), 'loadDailyTrend 应有 null 保护');
     // 用户活跃度chart
@@ -260,12 +322,13 @@ describe('深度UI检查 - 崩溃风险', () => {
     // 每个fetch链应以.catch或.finally结尾（fetch链中then数量应小于等于catch+finally数量+1）
     // 更宽松的验证：catch数量应至少是fetch数量的60%
     assert.ok(fetchCalls.length >= 20, `admin.html 中应有至少20个fetch，当前${fetchCalls.length}个`);
-    assert.ok(catchCount.length >= 15,
-      `admin.html 中应有至少15个.catch处理，当前${catchCount.length}个`);
+    assert.ok(catchCount.length >= 15, `admin.html 中应有至少15个.catch处理，当前${catchCount.length}个`);
     // 每个fetch链都有终止处理（catch或finally）
     const totalHandlers = catchCount.length + finallyCount.length;
-    assert.ok(totalHandlers >= fetchCalls.length * 0.6,
-      `admin.html 中 fetch 链应有至少60%终止处理，当前${totalHandlers}/${fetchCalls.length}`);
+    assert.ok(
+      totalHandlers >= fetchCalls.length * 0.6,
+      `admin.html 中 fetch 链应有至少60%终止处理，当前${totalHandlers}/${fetchCalls.length}`
+    );
   });
 
   it('server.js 中关键路由有错误处理', () => {
@@ -308,7 +371,7 @@ describe('深度UI检查 - 功能完整性', () => {
     assert.ok(js.includes('matchDetails'), '应有匹配详情');
     assert.ok(js.includes('taste'), '应有口味维度');
     assert.ok(js.includes('cuisine'), '应有招牌维度');
-    assert.ok(js.includes('calorie'), '应有营养(calorie)维度');  // 2026-09-17: 字段由 nutrition 更名 calorie
+    assert.ok(js.includes('calorie'), '应有营养(calorie)维度'); // 2026-09-17: 字段由 nutrition 更名 calorie
     assert.ok(js.includes('rating'), '应有评分维度');
   });
 
@@ -404,22 +467,32 @@ describe('深度UI检查 - 构建产物与源码同步', () => {
   it('script.js 中无重复函数定义', () => {
     const script = read('script.js');
     // 检查关键函数只出现一次
-    const funcs = ['fetchRecommendations', 'displayRecommendations', 'selectBlindBoxDish',
-      'computeDishMatch', 'generateDishReason', 'checkApiAvailability',
-      'showSection', 'showMessage', 'renderMenuTable', 'showCart',
-      'checkoutCart', 'showProfile', 'showDataset'];
-    funcs.forEach(fn => {
+    const funcs = [
+      'fetchRecommendations',
+      'displayRecommendations',
+      'selectBlindBoxDish',
+      'computeDishMatch',
+      'generateDishReason',
+      'checkApiAvailability',
+      'showSection',
+      'showMessage',
+      'renderMenuTable',
+      'showCart',
+      'checkoutCart',
+      'showProfile',
+      'showDataset',
+    ];
+    funcs.forEach((fn) => {
       const regex = new RegExp(`function ${fn}\\s*\\(`, 'g');
       const matches = script.match(regex);
-      assert.ok(matches && matches.length === 1,
-        `script.js 中 ${fn} 应出现1次，实际${matches ? matches.length : 0}次`);
+      assert.ok(matches && matches.length === 1, `script.js 中 ${fn} 应出现1次，实际${matches ? matches.length : 0}次`);
     });
   });
 });
 
 describe('深度UI检查 - 安全', () => {
   it('XSS转义函数存在', () => {
-    ['js/globals.js', 'admin.html'].forEach(f => {
+    ['js/globals.js', 'admin.html'].forEach((f) => {
       const content = read(f);
       assert.ok(content.includes('function esc'), `${f} 应有 esc 转义函数`);
     });
@@ -436,7 +509,10 @@ describe('深度UI检查 - 安全', () => {
   it('敏感文件被保护', () => {
     const server = read('server.js');
     // 检查是否有静态文件保护
-    assert.ok(server.includes('403') || server.includes('forbidden') || server.includes('deny'), 'server.js 应有静态文件保护');
+    assert.ok(
+      server.includes('403') || server.includes('forbidden') || server.includes('deny'),
+      'server.js 应有静态文件保护'
+    );
   });
 
   it('密码不存储在前端localStorage', () => {
@@ -464,7 +540,7 @@ describe('深度UI检查 - 空态/加载态/错误态', () => {
   });
 
   it('菜品列表有空态处理', () => {
-    const js = read('js/recommendation.js');  // 2026-09-17: 空态文案位于推荐模块
+    const js = read('js/recommendation.js'); // 2026-09-17: 空态文案位于推荐模块
     assert.ok(js.includes('没有更多菜品'), '菜品列表应有空态提示');
   });
 
@@ -483,7 +559,7 @@ describe('深度UI检查 - 布局与排版', () => {
   it('首页有完整导航栏', () => {
     const html = read('index.html');
     const navItems = ['首页', '关于本店', '全部菜单', '隐私政策', '登录'];
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       assert.ok(html.includes(item), `导航栏应有 ${item}`);
     });
   });
@@ -519,7 +595,7 @@ describe('深度UI检查 - 布局与排版', () => {
   it('管理后台导航完整', () => {
     const html = read('admin.html');
     const navItems = ['控制面板', '菜品管理', '用户管理', '反馈查看', '偏好分布', '数据分析', '模型管理'];
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       assert.ok(html.includes(item), `管理后台导航应有 ${item}`);
     });
   });
@@ -536,12 +612,30 @@ describe('深度UI检查 - 布局与排版', () => {
 
   it('管理后台功能函数完整', () => {
     const html = read('admin.html');
-    const funcs = ['loadStats', 'loadPopularDishes', 'loadFeedback', 'loadDishes',
-      'editDish', 'saveDish', 'deleteDish', 'loadNotifications', 'loadUsers',
-      'deleteUser', 'exportCSV', 'showToast', 'loadDailyTrend', 'loadAnalyticsPrefs',
-      'loadUserActivity', 'loadRecommendationLog', 'loadModelManagement',
-      'loadRecommendationStats', 'loadWorstDishes', 'loadMonitor', 'loadModelCompare'];
-    funcs.forEach(fn => {
+    const funcs = [
+      'loadStats',
+      'loadPopularDishes',
+      'loadFeedback',
+      'loadDishes',
+      'editDish',
+      'saveDish',
+      'deleteDish',
+      'loadNotifications',
+      'loadUsers',
+      'deleteUser',
+      'exportCSV',
+      'showToast',
+      'loadDailyTrend',
+      'loadAnalyticsPrefs',
+      'loadUserActivity',
+      'loadRecommendationLog',
+      'loadModelManagement',
+      'loadRecommendationStats',
+      'loadWorstDishes',
+      'loadMonitor',
+      'loadModelCompare',
+    ];
+    funcs.forEach((fn) => {
       assert.ok(html.includes('function ' + fn), `管理后台缺少函数: ${fn}`);
     });
   });
@@ -587,7 +681,7 @@ describe('深度UI检查 - 布局与排版', () => {
   });
 
   it('所有页面HTML正确闭合', () => {
-    ['index.html', 'admin.html', 'kitchen.html'].forEach(f => {
+    ['index.html', 'admin.html', 'kitchen.html'].forEach((f) => {
       const html = read(f);
       assert.ok(html.includes('</html>'), `${f} 应正确闭合`);
     });
@@ -615,7 +709,12 @@ describe('深度UI检查 - 布局与排版', () => {
 
   it('管理后台fetch拦截器自动注入token', () => {
     const html = read('admin.html');
-    assert.ok(html.includes("Authorization', 'Bearer '") || html.includes("'Authorization', 'Bearer '") || html.includes("Authorization: Bearer"), '管理后台应自动注入Authorization头');
+    assert.ok(
+      html.includes("Authorization', 'Bearer '") ||
+        html.includes("'Authorization', 'Bearer '") ||
+        html.includes('Authorization: Bearer'),
+      '管理后台应自动注入Authorization头'
+    );
     assert.ok(html.includes('adminToken'), '管理后台使用adminToken');
   });
 
@@ -695,7 +794,7 @@ describe('深度UI检查 - 布局与排版', () => {
 // 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
 function frontSrc() {
   return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map(f => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
     .join('\n');
 }
 

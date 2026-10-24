@@ -16,7 +16,6 @@ async function api(p, options = {}) {
 }
 
 describe('业务规则深度测试', () => {
-
   // ===== 1. 密码复杂度策略：纯数字密码 =====
   it('1.1 纯数字密码被拒绝', async () => {
     const r = await api('/api/user/register', {
@@ -24,8 +23,7 @@ describe('业务规则深度测试', () => {
       body: JSON.stringify({ username: 'num_pw_only', password: '12345678' }),
     });
     // 若服务端校验存在则返回错误，否则注册成功也接受（前端minlength兜底）
-    assert.ok(r.status === 400 || r.body.success === false || r.status === 200,
-      '纯数字密码应被拒绝或正常返回');
+    assert.ok(r.status === 400 || r.body.success === false || r.status === 200, '纯数字密码应被拒绝或正常返回');
   });
 
   // ===== 2. 空密码注册 =====
@@ -34,8 +32,7 @@ describe('业务规则深度测试', () => {
       method: 'POST',
       body: JSON.stringify({ username: 'empty_pw_user', password: '' }),
     });
-    assert.ok(r.status === 400 || r.body.success === false || r.status === 200,
-      '空密码应被拒绝或正常返回');
+    assert.ok(r.status === 400 || r.body.success === false || r.status === 200, '空密码应被拒绝或正常返回');
   });
 
   // ===== 3. 用户名特殊字符 =====
@@ -62,17 +59,59 @@ describe('业务规则深度测试', () => {
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' },
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' },
         dishes: [
-          { id: 1, name: 'A', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: 'B', spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜', rating: 3, price: 15, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '300', protein: '15' },
-          { id: 3, name: 'C', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 5, price: 30, isHalal: true, isVegetarian: true, allergies: [], religion: '无特殊要求', calorie: '150', protein: '8' }
-        ]
+          {
+            id: 1,
+            name: 'A',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: 'B',
+            spiciness: '中辣',
+            saltiness: '偏咸',
+            sweetness: '咸鲜',
+            rating: 3,
+            price: 15,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '300',
+            protein: '15',
+          },
+          {
+            id: 3,
+            name: 'C',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 5,
+            price: 30,
+            isHalal: true,
+            isVegetarian: true,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '150',
+            protein: '8',
+          },
+        ],
       }),
     });
     assert.equal(r.status, 200);
     const preds = r.body.predictions || [];
-    const ids = preds.map(p => p.id);
+    const ids = preds.map((p) => p.id);
     const unique = new Set(ids);
     assert.equal(unique.size, ids.length, '推荐结果不应有重复ID');
   });
@@ -82,17 +121,47 @@ describe('业务规则深度测试', () => {
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜' },
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜' },
         dishes: [
-          { id: 1, name: 'A', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: 'B', spiciness: '中辣', saltiness: '偏咸', sweetness: '咸鲜', rating: 3, price: 15, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '300', protein: '15' }
-        ]
+          {
+            id: 1,
+            name: 'A',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: 'B',
+            spiciness: '中辣',
+            saltiness: '偏咸',
+            sweetness: '咸鲜',
+            rating: 3,
+            price: 15,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '300',
+            protein: '15',
+          },
+        ],
       }),
     });
     const preds = r.body.predictions || [];
     for (const p of preds) {
-      assert.ok(p.score !== undefined || p.matchRate !== undefined || p.matchIndex !== undefined,
-        `预测${p.id}应包含score或matchRate`);
+      assert.ok(
+        p.score !== undefined || p.matchRate !== undefined || p.matchIndex !== undefined,
+        `预测${p.id}应包含score或matchRate`
+      );
     }
   });
 
@@ -101,11 +170,39 @@ describe('业务规则深度测试', () => {
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '价格区间': '0-30' },
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜', 价格区间: '0-30' },
         dishes: [
-          { id: 1, name: 'A', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 10, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: 'B', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 80, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }
-        ]
+          {
+            id: 1,
+            name: 'A',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 10,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: 'B',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 80,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+        ],
       }),
     });
     assert.equal(r.status, 200);
@@ -118,11 +215,39 @@ describe('业务规则深度测试', () => {
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', '饮食_宗教': '清真' },
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜', 饮食_宗教: '清真' },
         dishes: [
-          { id: 1, name: 'A', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: true, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: 'B', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: [], religion: '无特殊要求', calorie: '200', protein: '10' }
-        ]
+          {
+            id: 1,
+            name: 'A',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: true,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: 'B',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: [],
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+        ],
       }),
     });
     assert.equal(r.status, 200);
@@ -134,11 +259,39 @@ describe('业务规则深度测试', () => {
     const r = await api('/api/predict-rf', {
       method: 'POST',
       body: JSON.stringify({
-        userPrefs: { '辣度': '微辣', '咸淡': '适中', '甜酸': '酸甜', allergies: ['海鲜'] },
+        userPrefs: { 辣度: '微辣', 咸淡: '适中', 甜酸: '酸甜', allergies: ['海鲜'] },
         dishes: [
-          { id: 1, name: 'A', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: { seafood: true }, religion: '无特殊要求', calorie: '200', protein: '10' },
-          { id: 2, name: 'B', spiciness: '微辣', saltiness: '适中', sweetness: '酸甜', rating: 4, price: 20, isHalal: false, isVegetarian: false, allergies: {}, religion: '无特殊要求', calorie: '200', protein: '10' }
-        ]
+          {
+            id: 1,
+            name: 'A',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: { seafood: true },
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+          {
+            id: 2,
+            name: 'B',
+            spiciness: '微辣',
+            saltiness: '适中',
+            sweetness: '酸甜',
+            rating: 4,
+            price: 20,
+            isHalal: false,
+            isVegetarian: false,
+            allergies: {},
+            religion: '无特殊要求',
+            calorie: '200',
+            protein: '10',
+          },
+        ],
       }),
     });
     assert.equal(r.status, 200);

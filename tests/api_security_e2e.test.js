@@ -64,7 +64,7 @@ describe('API边界情况与安全测试', () => {
     for (const name of specialNames) {
       const r = await api('/api/admin/dish', {
         method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + adminToken },
+        headers: { Authorization: 'Bearer ' + adminToken },
         body: JSON.stringify({
           name: name,
           category: '测试',
@@ -77,7 +77,7 @@ describe('API边界情况与安全测试', () => {
           isHalal: false,
           isVegetarian: false,
           allergies: [],
-          religion: '无特殊要求'
+          religion: '无特殊要求',
         }),
       });
       // 应成功创建或返回错误，但不崩溃
@@ -86,7 +86,7 @@ describe('API边界情况与安全测试', () => {
       if (r.status === 200 && r.body.dishId) {
         await api('/api/admin/dish/' + r.body.dishId + '/permanent', {
           method: 'DELETE',
-          headers: { 'Authorization': 'Bearer ' + adminToken },
+          headers: { Authorization: 'Bearer ' + adminToken },
         });
       }
     }
@@ -104,7 +104,7 @@ describe('API边界情况与安全测试', () => {
   // ===== 5. 无效token访问 =====
   it('5.1 无效token访问返回401', async () => {
     const r = await api('/api/admin/stats', {
-      headers: { 'Authorization': 'Bearer invalid_token_12345' },
+      headers: { Authorization: 'Bearer invalid_token_12345' },
     });
     assert.equal(r.status, 401, '无效token应返回401');
   });
@@ -113,7 +113,7 @@ describe('API边界情况与安全测试', () => {
   it('6.1 SQL注入在登录中被阻止', async () => {
     const r = await api('/api/user/login', {
       method: 'POST',
-      body: JSON.stringify({ username: "admin' OR '1'='1", password: "anything" }),
+      body: JSON.stringify({ username: "admin' OR '1'='1", password: 'anything' }),
     });
     assert.equal(r.body.success, false, 'SQL注入登录应失败');
     assert.ok(!r.body.token, '不应返回token');
@@ -125,7 +125,7 @@ describe('API边界情况与安全测试', () => {
     assert.equal(r.status, 200);
     const dishes = r.body.dishes || [];
     // 检查所有菜品名不含原始<script>标签
-    dishes.forEach(d => {
+    dishes.forEach((d) => {
       if (d.name) {
         assert.ok(!d.name.includes('<script>'), '菜品名不应包含原始script标签');
       }
@@ -154,7 +154,7 @@ describe('API边界情况与安全测试', () => {
   it('10.1 订单状态非法值被拒绝', async () => {
     const r = await api('/api/orders/99999/status', {
       method: 'PUT',
-      headers: { 'Authorization': 'Bearer ' + adminToken },
+      headers: { Authorization: 'Bearer ' + adminToken },
       body: JSON.stringify({ status: 'INVALID_STATUS' }),
     });
     assert.ok(r.status === 400 || r.status === 404, '非法订单状态应返回400或404');
@@ -203,7 +203,7 @@ describe('API边界情况与安全测试', () => {
     }
     const results = await Promise.all(promises);
     // 所有请求应成功或被限流，但不崩溃
-    results.forEach(r => {
+    results.forEach((r) => {
       assert.ok(r.status === 200 || r.status === 429, '快速请求应返回200或429');
     });
   });

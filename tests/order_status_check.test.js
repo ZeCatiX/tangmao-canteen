@@ -22,7 +22,10 @@ async function api(path, opt = {}) {
 
 test.before(async () => {
   // 管理员登录（口令从 env 读，禁止硬编码）
-  const l = await api('/api/admin/login', { method: 'POST', body: { username: process.env.ADMIN_USER || 'admin', password: process.env.ADMIN_PASS } });
+  const l = await api('/api/admin/login', {
+    method: 'POST',
+    body: { username: process.env.ADMIN_USER || 'admin', password: process.env.ADMIN_PASS },
+  });
   assert.equal(l.status, 200, '管理员登录失败');
   adminToken = l.body.token;
   // 造一条测试订单（真实菜品 2075 凉皮）
@@ -35,8 +38,14 @@ test.before(async () => {
 test.after(async () => {
   // 测试单取消清理（尽力而为，不污染退出码）
   try {
-    await api('/api/orders/' + orderId + '/status', { method: 'PUT', headers: { Authorization: 'Bearer ' + adminToken }, body: JSON.stringify({ status: 'cancelled' }) });
-  } catch (e) { /* 忽略 */ }
+    await api('/api/orders/' + orderId + '/status', {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + adminToken },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+  } catch (e) {
+    /* 忽略 */
+  }
 });
 
 test('同桌凭证可查，返回真实状态 pending', async () => {
@@ -66,7 +75,11 @@ test('非法 id 返回 400', async () => {
 
 test('订单取消后 status 变 cancelled（横幅自愈依据）', async () => {
   // 注意: api() 助手内部会 JSON.stringify,此处传对象——传预序列化字符串会双重编码 → 400 数据格式错误
-  const c = await api('/api/orders/' + orderId + '/status', { method: 'PUT', headers: { Authorization: 'Bearer ' + adminToken }, body: { status: 'cancelled' } });
+  const c = await api('/api/orders/' + orderId + '/status', {
+    method: 'PUT',
+    headers: { Authorization: 'Bearer ' + adminToken },
+    body: { status: 'cancelled' },
+  });
   assert.equal(c.status, 200, '取消PUT响应: ' + c.status + ' ' + JSON.stringify(c.body).slice(0, 120));
   const r = await api('/api/order/' + orderId + '/status-check?tableNumber=' + encodeURIComponent(tableId));
   assert.equal(r.body.exists, true);

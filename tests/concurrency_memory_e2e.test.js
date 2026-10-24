@@ -5,40 +5,63 @@ const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('404') && msg.includes('Failed to load resource')) return false;
-  if (msg.includes('409')) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('404') && msg.includes('Failed to load resource')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
   return true;
 }
 
 describe('并发与内存泄漏检查', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 快速连续导航不内存泄漏 =====
   it('1.1 快速连续导航后无内存泄漏迹象', async () => {
@@ -47,7 +70,9 @@ describe('并发与内存泄漏检查', () => {
     await sleep(300);
     // 获取初始内存
     const beforeMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     // 快速导航100次
@@ -59,9 +84,15 @@ describe('并发与内存泄漏检查', () => {
     }
     await sleep(1000);
     // 手动GC（如果可用）
-    await page.evaluate(() => { if (window.gc) window.gc(); });
+    await page.evaluate(() => {
+      if (window.gc) {
+        window.gc();
+      }
+    });
     const afterMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     if (beforeMem > 0 && afterMem > 0) {
@@ -80,7 +111,9 @@ describe('并发与内存泄漏检查', () => {
     await page.evaluate(() => document.getElementById('guest-btn')?.click());
     await sleep(400);
     const beforeMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     // 提交偏好5次
@@ -94,7 +127,9 @@ describe('并发与内存泄漏检查', () => {
       await sleep(2000);
     }
     const afterMem = await page.evaluate(() => {
-      if (performance.memory) return performance.memory.usedJSHeapSize;
+      if (performance.memory) {
+        return performance.memory.usedJSHeapSize;
+      }
       return 0;
     });
     if (beforeMem > 0 && afterMem > 0) {
@@ -142,7 +177,11 @@ describe('并发与内存泄漏检查', () => {
     const results = await page.evaluate(async () => {
       const promises = [];
       for (let i = 0; i < 10; i++) {
-        promises.push(fetch('/api/dishes').then(r => r.json()).catch(e => ({ error: e.message })));
+        promises.push(
+          fetch('/api/dishes')
+            .then((r) => r.json())
+            .catch((e) => ({ error: e.message }))
+        );
       }
       return Promise.all(promises);
     });
@@ -160,10 +199,8 @@ describe('并发与内存泄漏检查', () => {
     // 等待10秒模拟长时间运行
     await sleep(10000);
     // 检查是否有定时器产生的错误
-    const jsErrors = realErrors().filter(e =>
-      !e.includes('Failed to load resource') &&
-      !e.includes('ERR_') &&
-      !e.includes('favicon')
+    const jsErrors = realErrors().filter(
+      (e) => !e.includes('Failed to load resource') && !e.includes('ERR_') && !e.includes('favicon')
     );
     assert.equal(jsErrors.length, 0, '长时间运行不应有JS错误累积: ' + jsErrors.join('; '));
   });

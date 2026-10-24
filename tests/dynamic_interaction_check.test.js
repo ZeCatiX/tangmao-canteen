@@ -2,46 +2,69 @@
 const { describe, it, before, after } = require('node:test');
 
 // 真实菜品 ID 池(2026-09-17)
-var dishPool = [];
+const dishPool = [];
 const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
 const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
 
 function isRealError(msg) {
-  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) return false;
-  if (msg.includes('401 (Unauthorized)')) return false;
-  if (msg.includes('429 (Too Many Requests)')) return false;
-  if (msg.includes('404 (Not Found)')) return false;
-  if (msg.includes('409')) return false;
-  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) return false;
+  if (msg.includes('fonts.googleapis.com') || msg.includes('fonts.gstatic.com')) {
+    return false;
+  }
+  if (msg.includes('401 (Unauthorized)')) {
+    return false;
+  }
+  if (msg.includes('429 (Too Many Requests)')) {
+    return false;
+  }
+  if (msg.includes('404 (Not Found)')) {
+    return false;
+  }
+  if (msg.includes('409')) {
+    return false;
+  }
+  if (msg.includes('Failed to load resource') && msg.match(/\b[4-5]\d{2}\b/)) {
+    return false;
+  }
   return true;
 }
 
 describe('动态交互行为验证', () => {
   before(async () => {
     browser = await puppeteer.launch({
-      headless: 'new', executablePath: CHROME_PATH,
-      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: CHROME_PATH,
+      args: ['--no-sandbox', '--disable-gpu', '--disable-setuid-sandbox'],
     });
     page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     page._consoleErrors = [];
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const t = msg.text();
-      if (msg.type() === 'error' && isRealError(t)) page._consoleErrors.push(t);
+      if (msg.type() === 'error' && isRealError(t)) {
+        page._consoleErrors.push(t);
+      }
     });
-    page.on('pageerror', err => page._consoleErrors.push(err.message));
+    page.on('pageerror', (err) => page._consoleErrors.push(err.message));
   });
 
-  after(async () => { if (browser) await browser.close(); });
+  after(async () => {
+    if (browser) {
+      await browser.close();
+    }
+  });
 
-  function resetErrors() { page._consoleErrors = []; }
-  function realErrors() { return page._consoleErrors.filter(isRealError); }
+  function resetErrors() {
+    page._consoleErrors = [];
+  }
+  function realErrors() {
+    return page._consoleErrors.filter(isRealError);
+  }
 
   // ===== 1. 菜单实时搜索过滤 =====
   it('1.1 菜单搜索框输入文字后结果实时变化', async () => {
@@ -51,7 +74,9 @@ describe('动态交互行为验证', () => {
     // 进入全部菜单
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(1000);
     // 获取初始行数
@@ -62,7 +87,10 @@ describe('动态交互行为验证', () => {
     // 输入搜索关键词"鱼"（常见菜品）
     await page.evaluate(() => {
       const input = document.getElementById('menu-search');
-      if (input) { input.value = '鱼'; input.dispatchEvent(new Event('input', { bubbles: true })); }
+      if (input) {
+        input.value = '鱼';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     });
     await sleep(800);
     const filteredRows = await page.evaluate(() => {
@@ -82,7 +110,9 @@ describe('动态交互行为验证', () => {
     // 重置筛选
     await page.evaluate(() => {
       const btn = document.getElementById('menu-reset-filter');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const resetRows = await page.evaluate(() => {
@@ -103,28 +133,50 @@ describe('动态交互行为验证', () => {
     // 开始推荐
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
     // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
     // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
-    await page.waitForFunction(() => {
-      const el = document.getElementById('recommendation-result');
-      return el && !el.classList.contains('d-none');
-    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
+    await page
+      .waitForFunction(
+        () => {
+          const el = document.getElementById('recommendation-result');
+          return el && !el.classList.contains('d-none');
+        },
+        { timeout: 25000, polling: 1000 }
+      )
+      .catch(() => {
+        /* 超时视为未出结果,后续断言自行兜底 */
+      });
     // 查找加购按钮并点击
     const clicked = await page.evaluate(() => {
-      const btn = document.querySelector('#dish-list .add-to-cart, #dish-list [onclick*="addToCart"], #dish-list [class*="add"]');
-      if (btn) { btn.click(); return true; }
+      const btn = document.querySelector(
+        '#dish-list .add-to-cart, #dish-list [onclick*="addToCart"], #dish-list [class*="add"]'
+      );
+      if (btn) {
+        btn.click();
+        return true;
+      }
       // 也尝试直接调用全局函数
-      if (typeof addToCart === 'function') { addToCart(1); return true; }
+      if (typeof addToCart === 'function') {
+        addToCart(1);
+        return true;
+      }
       return false;
     });
     if (clicked) {
@@ -134,7 +186,9 @@ describe('动态交互行为验证', () => {
         try {
           const data = localStorage.getItem('cart');
           return data ? JSON.parse(data) : [];
-        } catch(e) { return []; }
+        } catch (e) {
+          return [];
+        }
       });
       assert.ok(cartData.length > 0, '加购后购物车应有商品');
       // 检查购物车徽标
@@ -162,7 +216,10 @@ describe('动态交互行为验证', () => {
     // 点击隐私政策链接
     const clicked = await page.evaluate(() => {
       const link = document.getElementById('privacy-link');
-      if (link) { link.click(); return true; }
+      if (link) {
+        link.click();
+        return true;
+      }
       return false;
     });
     if (clicked) {
@@ -172,7 +229,8 @@ describe('动态交互行为验证', () => {
         const modal = document.getElementById('message-modal');
         const modalVisible = modal && (modal.classList.contains('show') || modal.style.display === 'block');
         const privacySection = document.getElementById('privacy-section');
-        const privacyActive = privacySection && (privacySection.classList.contains('active') || privacySection.style.display !== 'none');
+        const privacyActive =
+          privacySection && (privacySection.classList.contains('active') || privacySection.style.display !== 'none');
         return modalVisible || privacyActive;
       });
       assert.ok(privacyShown, '隐私政策链接应显示隐私政策内容');
@@ -189,17 +247,21 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(1000);
     // 检查第一张菜品卡片的信息完整性(2026-09-17: 菜单已改卡片网格布局)
     const rowInfo = await page.evaluate(() => {
       const first = document.querySelector('#dataset-table-body .dish-card');
-      if (!first) return null;
+      if (!first) {
+        return null;
+      }
       const text = (first.innerText || '').replace(/\s+/g, ' ');
       return {
         cardCount: document.querySelectorAll('#dataset-table-body .dish-card').length,
-        combinedText: text
+        combinedText: text,
       };
     });
     if (rowInfo) {
@@ -217,7 +279,12 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     // 选择推荐模式
     await page.select('#recommendation-mode', 'balanced').catch(() => {});
@@ -227,20 +294,29 @@ describe('动态交互行为验证', () => {
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
     // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
     // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
-    await page.waitForFunction(() => {
-      const el = document.getElementById('recommendation-result');
-      return el && !el.classList.contains('d-none');
-    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
+    await page
+      .waitForFunction(
+        () => {
+          const el = document.getElementById('recommendation-result');
+          return el && !el.classList.contains('d-none');
+        },
+        { timeout: 25000, polling: 1000 }
+      )
+      .catch(() => {
+        /* 超时视为未出结果,后续断言自行兜底 */
+      });
     // 检查推荐结果区域显示
     const recoVisible = await page.evaluate(() => {
       const section = document.getElementById('recommendation-section');
       const result = document.getElementById('recommendation-result');
-      return section ? (section.classList.contains('active') || section.style.display !== 'none') : false;
+      return section ? section.classList.contains('active') || section.style.display !== 'none' : false;
     });
     assert.ok(recoVisible, '推荐结果应显示');
     assert.equal(realErrors().length, 0, '偏好提交不应有错误');
@@ -261,7 +337,9 @@ describe('动态交互行为验证', () => {
     // 关闭购物车
     await page.evaluate(() => {
       const btn = document.getElementById('cart-close-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(300);
     // 重新打开，检查数据
@@ -287,22 +365,26 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     // 显示模态框
     await page.evaluate(() => {
-      if (typeof showMessage === 'function') showMessage('标题', '内容');
+      if (typeof showMessage === 'function') {
+        showMessage('标题', '内容');
+      }
     });
     await sleep(500);
     const visibleBefore = await page.evaluate(() => {
       const modal = document.getElementById('message-modal');
-      return modal ? (modal.classList.contains('show') || modal.style.display === 'block') : false;
+      return modal ? modal.classList.contains('show') || modal.style.display === 'block' : false;
     });
     // 点击关闭按钮
     await page.evaluate(() => {
       const btn = document.getElementById('modal-close-btn');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const visibleAfter = await page.evaluate(() => {
       const modal = document.getElementById('message-modal');
-      return modal ? (modal.classList.contains('show') || modal.style.display === 'block') : false;
+      return modal ? modal.classList.contains('show') || modal.style.display === 'block' : false;
     });
     assert.ok(visibleBefore, '模态框应先显示');
     assert.ok(!visibleAfter, '模态框关闭按钮应隐藏模态框');
@@ -316,27 +398,46 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
     await sleep(400);
-    await page.evaluate(() => { const b = [...document.querySelectorAll('#table-picker-modal button')].find(x => x.textContent.trim() === '08'); if (b) b.click(); });
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('#table-picker-modal button')].find((x) => x.textContent.trim() === '08');
+      if (b) {
+        b.click();
+      }
+    });
     await sleep(400);
     await page.select('#spiciness', '微辣');
     await page.select('#saltiness', '适中');
     await page.select('#sweetness', '酸甜');
     await page.evaluate(() => {
       const btn = document.querySelector('#preference-form button[type="submit"]');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     // 2026-09-17: ML 可能冷启动,轮询等待推荐结果(最多 25s)
     // 轮询必须在页面上下文内执行(waitForFunction)——原实现把 document 写在 Node 作用域,
     // ReferenceError 被 try/catch 吞掉,等于无判断盲等 25 秒
-    await page.waitForFunction(() => {
-      const el = document.getElementById('recommendation-result');
-      return el && !el.classList.contains('d-none');
-    }, { timeout: 25000, polling: 1000 }).catch(() => { /* 超时视为未出结果,后续断言自行兜底 */ });
+    await page
+      .waitForFunction(
+        () => {
+          const el = document.getElementById('recommendation-result');
+          return el && !el.classList.contains('d-none');
+        },
+        { timeout: 25000, polling: 1000 }
+      )
+      .catch(() => {
+        /* 超时视为未出结果,后续断言自行兜底 */
+      });
     // 找到评分星星区域（可能在推荐的菜品项中）
     const starClicked = await page.evaluate(() => {
       // 尝试找到评分入口
-      const starBtn = document.querySelector('#dish-list .rate-btn, #dish-list [onclick*="rate"], #dish-list [onclick*="star"], #dish-list [class*="star"]');
-      if (starBtn) { starBtn.click(); return 'star_btn'; }
+      const starBtn = document.querySelector(
+        '#dish-list .rate-btn, #dish-list [onclick*="rate"], #dish-list [onclick*="star"], #dish-list [class*="star"]'
+      );
+      if (starBtn) {
+        starBtn.click();
+        return 'star_btn';
+      }
       return 'no_star_btn';
     });
     await sleep(500);
@@ -349,7 +450,9 @@ describe('动态交互行为验证', () => {
       // 点击第三颗星
       await page.evaluate(() => {
         const ratingEl = document.getElementById('star-rating');
-        if (ratingEl && ratingEl.children[2]) ratingEl.children[2].click();
+        if (ratingEl && ratingEl.children[2]) {
+          ratingEl.children[2].click();
+        }
       });
       await sleep(300);
       // 检查提交按钮是否可用
@@ -372,18 +475,22 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-dataset');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(800);
     // 点击返回按钮
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-dataset');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const homeActive = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeActive, '返回按钮应回到首页');
     assert.equal(realErrors().length, 0, '数据集返回按钮不应有错误');
@@ -396,17 +503,21 @@ describe('动态交互行为验证', () => {
     await sleep(400);
     await page.evaluate(() => {
       const link = document.getElementById('nav-about');
-      if (link) link.click();
+      if (link) {
+        link.click();
+      }
     });
     await sleep(500);
     await page.evaluate(() => {
       const btn = document.getElementById('back-from-about');
-      if (btn) btn.click();
+      if (btn) {
+        btn.click();
+      }
     });
     await sleep(500);
     const homeActive = await page.evaluate(() => {
       const home = document.getElementById('home-section');
-      return home ? (home.classList.contains('active') || home.style.display !== 'none') : false;
+      return home ? home.classList.contains('active') || home.style.display !== 'none' : false;
     });
     assert.ok(homeActive, '返回按钮应回到首页');
     assert.equal(realErrors().length, 0, '关于本店返回按钮不应有错误');

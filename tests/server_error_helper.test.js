@@ -22,7 +22,9 @@ function buildApp(dbStub) {
 test('serverError: 异常路径返回规整500 JSON而非栈溢出', async () => {
   const boom = new Error('db down (测试桩)');
   const dbStub = {
-    query: async () => { throw boom; },
+    query: async () => {
+      throw boom;
+    },
   };
   const app = buildApp(dbStub);
   const server = app.listen(0);
