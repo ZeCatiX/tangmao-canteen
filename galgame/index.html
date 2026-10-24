@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>唐猫庭院 · 千年陕菜谭</title>
+<meta name="description" content="唐猫庭院 galgame —— 一段发生在千年陕菜庭院里的小小奇遇。门店与点餐推荐系统的官方宣传视觉小说。">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 舞台：背景双层交叉淡入 -->
+  <div id="stage">
+    <div class="bg-layer" id="bgA"></div>
+    <div class="bg-layer" id="bgB"></div>
+    <div id="sprites"></div>
+    <div id="vignette"></div>
+    <div id="fx-flash"></div>
+  </div>
+
+  <!-- 章节大字 -->
+  <div id="chapter-title" class="hidden"><div class="ct-main"></div><div class="ct-sub"></div></div>
+
+  <!-- 顶部栏 -->
+  <div id="topbar" class="hidden">
+    <div id="chapter-name">序章</div>
+    <div id="controls">
+      <button id="btn-auto" title="自动播放">自动</button>
+      <button id="btn-skip" title="快进">快进</button>
+      <button id="btn-log" title="对话记录">记录</button>
+      <button id="btn-sound" title="声音">♪</button>
+    </div>
+  </div>
+
+  <!-- 对话框 -->
+  <div id="dialog" class="hidden">
+    <div id="namebox" class="hidden"></div>
+    <div id="text"></div>
+    <div id="next-indicator">▼</div>
+  </div>
+
+  <!-- 选项 -->
+  <div id="choices" class="hidden"></div>
+
+  <!-- 覆盖层：卡片 / 记录 / 结局 / 关于 -->
+  <div id="overlay" class="hidden"><div id="overlay-card"></div></div>
+
+  <!-- 标题画面 -->
+  <div id="title-screen">
+    <div id="title-bg"></div>
+    <div id="title-inner">
+      <div id="title-logo">
+        <div class="tl-seal">唐<br>猫</div>
+        <div class="tl-text">
+          <h1>唐猫庭院</h1>
+          <div class="tl-sub">千年陕菜谭</div>
+        </div>
+      </div>
+      <div id="title-menu">
+        <button id="t-start">开始游戏</button>
+        <button id="t-continue" disabled>继续旅程</button>
+        <button id="t-endings">结局收集</button>
+        <button id="t-about">关于</button>
+      </div>
+      <div id="title-foot">本地人的待客小宴 · 陕菜榜 N.1 · 千年陕菜</div>
+    </div>
+  </div>
+</div>
+
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/story.js"></script>
+<script src="js/engine.js"></script>
+</body>
+</html>
