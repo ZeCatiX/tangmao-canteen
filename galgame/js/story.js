@@ -682,13 +682,13 @@ const SCRIPT = [
   /* --- 破防：七年的名单 --- */
   { t: "say", who: "narr", text: "她讲完了。雨声填满沉默，像替谁把没说完的话咽了回去。" },
   { t: "say", who: "narr", text: "她没起身，抱着膝盖坐到檐下的石阶上，看着雨——然后忽然说了一句和故事无关的话。" },
-  { t: "say", who: "唐猫", expr: "sad", text: "「……说起来。上周三，王叔搬去上海了。带孙子。」" },
+  { t: "say", who: "唐猫", expr: "sad", text: "「……说起来。上周三，李叔搬去上海了。带孙子。」" },
   { t: "say", who: "唐猫", expr: "sad", text: "「七年，每周三，靠窗第二桌，中辣，八宝茶多一颗桂圆。本喵记了七年。」" },
   { t: "say", who: "唐猫", expr: "sad", text: "「他走的时候说：『猫猫，以后少来咧。』——是『少来』哦，不是『不来』。可本喵知道……那是一样的意思。」" },
   { t: "say", who: "唐猫", expr: "sad", text: "「七年里，本喵送走的『下次再来』，比记住的还多。旅人嘛，都这样的。本喵早该习惯了。」" },
   { t: "say", who: "narr", text: "她笑了一下。那个笑，没到眼睛里。" },
   { t: "choice", prompt: "她看着雨幕，侧脸浸在灯笼的光里，等你说话。", options: [
-    { text: "「王叔不会是最后一个离开的人。但我不会——我说了每周五，就是每周五。」", aff: 3, flag: "caught_her", goto: "night_caught" },
+    { text: "「李叔不会是最后一个离开的人。但我不会——我说了每周五，就是每周五。」", aff: 3, flag: "caught_her", goto: "night_caught" },
     { text: "「人来了又走，留下的人才会显得珍贵啊。」", aff: 1, goto: "night_phil" },
     { text: "「……行了，都打烊了。我走了。」", aff: -2, flag: "hurt_her", goto: "night_hurt" },
   ]},
