@@ -226,8 +226,8 @@
   function affFloat(n) {
     if (!n) return;
     const el = document.createElement("div");
-    el.className = "aff-float";
-    el.textContent = "+♥" + (n > 1 ? "×" + n : "");
+    el.className = "aff-float" + (n < 0 ? " neg" : "");
+    el.textContent = (n > 0 ? "+♥" : "-♥") + (Math.abs(n) > 1 ? "×" + Math.abs(n) : "");
     $("#app").appendChild(el);
     setTimeout(() => el.remove(), 1400);
   }
@@ -410,7 +410,7 @@
     openOverlay(
       "<h2>关于 · 唐猫庭院</h2>" +
       "<p>《唐猫庭院 · 千年陕菜谭》是一款网页视觉小说（galgame），为唐猫庭院餐厅与其点餐推荐系统而作。</p>" +
-      "<h3>怎么玩</h3><ul><li>点击画面推进对话；选项会影响看板猫对你的好感</li><li>六种结局（含两个隐藏），收集全部结局有彩蛋</li><li>支持自动播放 / 快进 / 对话记录；进度自动保存</li></ul>" +
+      "<h3>怎么玩</h3><ul><li>点击画面推进对话；选项会影响看板猫对你的好感——有些话，说错了会伤到她</li><li>七种结局（含两个隐藏），收集全部结局有彩蛋</li><li>支持自动播放 / 快进 / 对话记录；进度自动保存</li></ul>" +
       "<h3>运行方式</h3><p>零依赖纯前端：直接打开 index.html，或经由点餐系统访问 <code>/galgame/</code>。</p>" +
       "<h3>制作</h3><p>剧本 / 立绘 / 场景 / 音乐全部代码生成（SVG + WebAudio），无外部素材。菜品数据、菜单与图片素材由唐猫庭院提供。MIT License。</p>" +
       '<button class="oc-close">回到标题</button>', null
