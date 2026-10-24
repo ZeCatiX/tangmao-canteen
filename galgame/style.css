@@ -328,3 +328,69 @@ button { font-family: var(--font-cn); cursor: pointer; }
   #controls button { font-size: 12px; padding: 4px 8px; }
   #chapter-name { font-size: 13px; letter-spacing: 2px; }
 }
+
+/* ---------- 雨景动画 ---------- */
+.rain-a { animation: rainFall 0.7s linear infinite; }
+.rain-b { animation: rainFall 0.45s linear infinite; opacity: .8; }
+@keyframes rainFall { from { transform: translateY(-90px); } to { transform: translateY(90px); } }
+
+/* ---------- 好感浮动 ---------- */
+.aff-float {
+  position: absolute; left: 50%; bottom: 30%;
+  transform: translateX(-50%);
+  color: #f08080; font-size: 22px; letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(240,128,128,.8), 0 2px 4px #000;
+  pointer-events: none; z-index: 55;
+  animation: affUp 1.4s ease-out both;
+}
+@keyframes affUp {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(.7); }
+  18% { opacity: 1; transform: translate(-50%, -4px) scale(1.1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+}
+
+/* ---------- 猜菜名小游戏 ---------- */
+.quiz-card { text-align: center; }
+.quiz-card .quiz-no { color: #d9b26a; font-size: 13px; letter-spacing: 3px; margin: 4px 0 10px; }
+.quiz-card .quiz-dish svg { width: min(56vw, 260px); height: auto; filter: drop-shadow(0 6px 20px rgba(0,0,0,.55)); margin: 4px auto; }
+.quiz-card .quiz-q { font-size: 17px; line-height: 1.8; margin: 10px 0 14px; }
+.quiz-opt {
+  display: block; width: min(88%, 440px); margin: 9px auto;
+  background: rgba(30, 15, 18, .92); color: var(--paper);
+  border: 1px solid rgba(217, 178, 106, .6); border-radius: 8px;
+  font-size: 15.5px; letter-spacing: 1px; padding: 11px 16px; line-height: 1.6;
+  transition: all .15s;
+}
+.quiz-opt:hover { background: var(--tang-red-deep); border-color: var(--tang-gold-bright); }
+.quiz-verdict { font-size: 19px; letter-spacing: 4px; margin: 10px 0 6px; }
+.quiz-verdict.ok { color: #8fd48f; text-shadow: 0 0 10px rgba(143,212,143,.5); }
+.quiz-verdict.no { color: #e08080; text-shadow: 0 0 10px rgba(224,128,128,.5); }
+.quiz-explain { text-align: left; background: rgba(0,0,0,.3); border: 1px solid rgba(217,178,106,.3); border-radius: 8px; padding: 10px 14px; margin: 10px 0; }
+.quiz-cat { color: var(--tang-gold-bright); font-size: 14.5px; }
+
+/* ---------- 预算挑战小游戏 ---------- */
+.budget-card .bg-intro { text-align: center; color: #d9b26a; font-size: 14px; letter-spacing: 1px; margin: 6px 0 10px; }
+.bg-meter {
+  display: flex; justify-content: space-between; align-items: center;
+  border: 1px solid rgba(217,178,106,.5); border-radius: 8px;
+  padding: 8px 14px; font-size: 15px; background: rgba(0,0,0,.28);
+}
+.bg-meter b.gold { color: var(--tang-gold-bright); }
+.bg-meter b.red { color: #e08080; }
+.bg-warn { color: #e08080; font-size: 13.5px; margin-top: 6px; text-align: center; }
+.bg-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.bg-item {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(30,15,18,.9); color: var(--paper);
+  border: 1px solid rgba(217,178,106,.45); border-radius: 999px;
+  padding: 6px 13px; font-size: 14px; transition: all .15s;
+}
+.bg-item:hover { border-color: var(--tang-gold-bright); }
+.bg-item.on { background: rgba(140,31,40,.45); border-color: var(--tang-gold-bright); }
+.bg-item .bg-tag { color: var(--tang-gold); font-size: 12px; }
+.bg-item .bg-price { color: var(--tang-gold-bright); font-size: 13px; }
+.bg-empty { color: #f3e6c866; font-size: 13.5px; }
+.bg-actions { display: flex; justify-content: center; gap: 14px; margin-top: 14px; }
+.bg-actions .oc-close { margin: 0; }
+.bg-actions button[disabled] { opacity: .35; cursor: default; }

@@ -131,11 +131,16 @@
         if (cmd.flag) state.flags[cmd.flag] = cmd.value === undefined ? true : cmd.value;
         next(); break;
       case "jump": state.i = LABELS[cmd.id] + 1; next(); break;
-      case "if": if (state.aff >= cmd.affGte) { state.i = LABELS[cmd.goto] + 1; } next(); break;
+      case "if":
+        if (cmd.flagHas) { if (state.flags[cmd.flagHas]) state.i = LABELS[cmd.goto] + 1; }
+        else if (state.aff >= cmd.affGte) state.i = LABELS[cmd.goto] + 1;
+        next(); break;
       case "chapter": showChapter(cmd); break;
       case "dish": showDish(cmd.id); break;
       case "card": showCard(cmd.html); break;
       case "nameinput": showNameInput(); break;
+      case "quiz": showQuiz(cmd.id); break;
+      case "budget": showBudget(); break;
       case "choice": stopSkip(); showChoices(cmd); break;
       case "ending": doEnding(cmd.id); break;
       default: next();
@@ -217,6 +222,139 @@
     field.addEventListener("keydown", (e) => { if (e.key === "Enter") $("#name-ok").click(); });
   }
 
+  /* ---------- 好感浮动提示 ---------- */
+  function affFloat(n) {
+    if (!n) return;
+    const el = document.createElement("div");
+    el.className = "aff-float";
+    el.textContent = "+♥" + (n > 1 ? "×" + n : "");
+    $("#app").appendChild(el);
+    setTimeout(() => el.remove(), 1400);
+  }
+
+  /* ---------- 猜菜名小游戏 ---------- */
+  function showQuiz(id) {
+    stopSkip();
+    const q = STORY.QUIZZES[id];
+    if (!q) { next(); return; }
+    let idx = 0, score = 0;
+    const grade = () => {
+      const total = q.questions.length;
+      state.aff += score;
+      const tiers = q.results || {};
+      const tier = score === total ? tiers.perfect : score >= Math.ceil(total / 2) ? tiers.good : tiers.poor;
+      AudioSys.sfx(score === total ? "end" : "bell");
+      affFloat(score);
+      openOverlay(
+        '<div class="quiz-card"><h2>成绩 · ' + score + " / " + total + '</h2>' +
+        '<p style="text-align:center;color:#f0d49a;letter-spacing:2px;margin:10px 0">' + (tier ? tier.title : "") + '</p>' +
+        '<p>' + (tier ? fmt(tier.text) : "") + '</p>' +
+        '<button class="oc-close">继续</button></div>',
+        () => next()
+      );
+    };
+    const feedback = (item, chosen, ok) => {
+      const card = $("#overlay-card");
+      const d = item.dish ? STORY.DISH_INFO[item.dish] : null;
+      card.innerHTML =
+        '<div class="quiz-card">' +
+        (d ? '<div class="quiz-dish">' + ART.DISHES[item.dish]() + '</div>' : "") +
+        '<div class="quiz-verdict ' + (ok ? "ok" : "no") + '">' + (ok ? "✓ 答对了" : "✗ 是「" + item.options[item.answer] + "」") + '</div>' +
+        '<p class="quiz-explain">' + esc(fmt(item.explain || "")) + '</p>' +
+        '<p class="quiz-cat">' + esc(fmt(ok ? (item.praise || "「好眼力！」" ) : (item.tease || "「唔……再尝几道就懂了～」"))) + '</p>' +
+        '<button class="oc-close">' + (idx + 1 >= q.questions.length ? "看成绩" : "下一题") + '</button></div>';
+      card.querySelectorAll(".oc-close").forEach((b) => b.addEventListener("click", () => {
+        AudioSys.sfx("click");
+        idx++;
+        if (idx >= q.questions.length) { grade(); } else { renderQ(); }
+      }));
+    };
+    const renderQ = () => {
+      const item = q.questions[idx];
+      const d = item.dish ? STORY.DISH_INFO[item.dish] : null;
+      openOverlay(
+        '<div class="quiz-card">' +
+        '<h2>' + esc(q.title) + '</h2><div class="quiz-no">第 ' + (idx + 1) + " / " + q.questions.length + ' 题</div>' +
+        (d ? '<div class="quiz-dish">' + ART.DISHES[item.dish]() + '</div>' : "") +
+        '<p class="quiz-q">' + esc(fmt(item.question)) + '</p>' +
+        item.options.map((o, i) => '<button class="quiz-opt" data-i="' + i + '">' + esc(fmt(o)) + '</button>').join("") +
+        '</div>', null
+      );
+      $("#overlay").onclick = null;
+      document.querySelectorAll(".quiz-opt").forEach((btn) => btn.addEventListener("click", () => {
+        const i = +btn.dataset.i, ok = i === item.answer;
+        if (ok) score++;
+        AudioSys.sfx(ok ? "select" : "click");
+        feedback(item, i, ok);
+      }));
+    };
+    renderQ();
+  }
+
+  /* ---------- 预算挑战小游戏 ---------- */
+  function showBudget() {
+    stopSkip();
+    const G = STORY.BUDGET_GAME;
+    const sel = [];
+    const sum = () => sel.reduce((a, b) => a + b.price, 0);
+    const tagsOk = () => G.need.every((n) => sel.filter((s) => s.tag === n.tag).length >= n.min);
+    const render = () => {
+      const used = sum();
+      const over = used > G.limit;
+      const enough = sel.length >= G.minCount;
+      const pillBtn = (c) => {
+        const on = sel.includes(c);
+        return '<button class="bg-item' + (on ? " on" : "") + '" data-n="' + esc(c.name) + '">' +
+          '<span class="bg-name">' + esc(c.name) + '</span><span class="bg-tag">' + esc(c.tag) + '</span><span class="bg-price">' + c.price + "元</span></button>";
+      };
+      openOverlay(
+        '<div class="budget-card"><h2>' + esc(G.title) + '</h2>' +
+        '<p class="bg-intro">' + esc(fmt(G.intro)) + '</p>' +
+        '<div class="bg-meter' + (over ? " over" : "") + '"><span>预算 ' + G.limit + ' 元</span><b class="' + (over ? "red" : "gold") + '">已选 ' + used + " 元</b></div>" +
+        (over ? '<p class="bg-warn">⚠ 超出预算了——先去掉一道吧！</p>' : "") +
+        '<h3>候选菜品（点选加入 / 再点移除）</h3><div class="bg-list">' + G.candidates.map(pillBtn).join("") + '</div>' +
+        '<h3>本桌 · ' + sel.length + ' 道' + (G.need.length ? '（还差：' + G.need.filter((n) => sel.filter((s) => s.tag === n.tag).length < n.min).map((n) => n.tag + "×" + (n.min - sel.filter((s) => s.tag === n.tag).length)).join("、") + "）" : "") + '</h3>' +
+        '<div class="bg-list">' + (sel.length ? sel.map(pillBtn).join("") : '<span class="bg-empty">（还没选菜）</span>') + '</div>' +
+        '<div class="bg-actions"><button class="oc-close bg-reset">全部重选</button>' +
+        '<button class="oc-close bg-done"' + (!enough || over ? " disabled" : "") + '>就这一桌了</button></div></div>',
+        null
+      );
+      $("#overlay").onclick = null;
+      document.querySelectorAll(".bg-item").forEach((b) => b.addEventListener("click", () => {
+        const name = b.dataset.n;
+        const c = G.candidates.find((x) => x.name === name);
+        const i = sel.indexOf(c);
+        if (i >= 0) sel.splice(i, 1);
+        else {
+          if (sum() + c.price > G.limit) { AudioSys.sfx("click"); render(); return; }
+          sel.push(c);
+        }
+        AudioSys.sfx("select");
+        render();
+      }));
+      const rst = $("#overlay-card .bg-reset");
+      if (rst) rst.addEventListener("click", () => { sel.length = 0; AudioSys.sfx("click"); render(); });
+      const done = $("#overlay-card .bg-done");
+      if (done) done.addEventListener("click", () => {
+        const perfect = tagsOk();
+        const gain = perfect ? 3 : 1;
+        state.aff += gain;
+        affFloat(gain);
+        AudioSys.sfx(perfect ? "end" : "bell");
+        const tier = perfect ? G.reviews.perfect : G.reviews.ok;
+        openOverlay(
+          '<div class="budget-card"><h2>配桌结算 · ' + sum() + " 元 / " + G.limit + ' 元</h2>' +
+          '<p style="text-align:center;color:#f0d49a;letter-spacing:2px;margin:8px 0">' + tier.title + '</p>' +
+          '<div class="plan-row">' + sel.map((s) => '<span class="plan-pill">' + esc(s.name) + " " + s.price + "元</span>").join("") + '</div>' +
+          '<p style="margin-top:10px">' + esc(fmt(tier.text)) + '</p>' +
+          '<button class="oc-close">继续</button></div>',
+          () => next()
+        );
+      });
+    };
+    render();
+  }
+
   /* ---------- 选项 ---------- */
   function showChoices(cmd) {
     const box = $("#choices");
@@ -231,7 +369,7 @@
       b.textContent = fmt(op.text);
       b.addEventListener("click", () => {
         AudioSys.sfx("select");
-        if (op.aff) state.aff += op.aff;
+        if (op.aff) { state.aff += op.aff; affFloat(op.aff); }
         if (op.flag) state.flags[op.flag] = true;
         box.classList.add("hidden");
         state.i = LABELS[op.goto] + 1;
@@ -254,7 +392,7 @@
       '<div class="ending-screen">' +
       '<div class="es-seal">' + e.seal + '</div><h2>' + e.name + '</h2><div class="es-sub">' + e.sub + '</div>' +
       '<p>' + esc(fmt(e.desc)) + '</p>' +
-      '<p style="text-align:center;color:#d9b26a;margin-top:12px">已收集结局 ' + collected + ' / 4</p></div>' +
+      '<p style="text-align:center;color:#d9b26a;margin-top:12px">已收集结局 ' + collected + " / " + Object.keys(STORY.ENDINGS).length + '</p></div>' +
       '<div style="border-top:1px dashed rgba(217,178,106,.4);margin-top:8px"></div>' + STORY.promoHtml() +
       '<button class="oc-close">回到标题</button>',
       () => toTitle()
@@ -272,7 +410,7 @@
     openOverlay(
       "<h2>关于 · 唐猫庭院</h2>" +
       "<p>《唐猫庭院 · 千年陕菜谭》是一款网页视觉小说（galgame），为唐猫庭院餐厅与其点餐推荐系统而作。</p>" +
-      "<h3>怎么玩</h3><ul><li>点击画面推进对话；选项会影响看板猫对你的好感</li><li>四种结局，收集全部结局有彩蛋</li><li>支持自动播放 / 快进 / 对话记录；进度自动保存</li></ul>" +
+      "<h3>怎么玩</h3><ul><li>点击画面推进对话；选项会影响看板猫对你的好感</li><li>六种结局（含两个隐藏），收集全部结局有彩蛋</li><li>支持自动播放 / 快进 / 对话记录；进度自动保存</li></ul>" +
       "<h3>运行方式</h3><p>零依赖纯前端：直接打开 index.html，或经由点餐系统访问 <code>/galgame/</code>。</p>" +
       "<h3>制作</h3><p>剧本 / 立绘 / 场景 / 音乐全部代码生成（SVG + WebAudio），无外部素材。菜品数据、菜单与图片素材由唐猫庭院提供。MIT License。</p>" +
       '<button class="oc-close">回到标题</button>', null
@@ -280,12 +418,12 @@
   }
   function showEndings() {
     const got = getEndings();
-    const order = ["bad", "normal", "good", "true"];
+    const order = Object.keys(STORY.ENDINGS);
     const cells = order.map((id) => {
       const e = STORY.ENDINGS[id], on = got.includes(id);
       return '<div class="ending-cell ' + (on ? "unlocked" : "locked") + '"><div class="e-seal">' + (on ? e.seal : "？") + '</div><div class="e-name">' + (on ? e.name : "？？？") + '</div><div class="e-sub">' + (on ? e.sub : "尚未达成") + '</div></div>';
     }).join("");
-    const bonus = got.length >= 4 ? '<p style="text-align:center;color:#f0d49a;margin-top:14px">🐾 全结局达成！看板猫说：改天进店，报上名字，八宝茶给你多添一颗桂圆。</p>' : "";
+    const bonus = got.length >= order.length ? '<p style="text-align:center;color:#f0d49a;margin-top:14px">🐾 全结局达成！看板猫说：改天进店，报上名字，八宝茶给你多添一颗桂圆。</p>' : "";
     openOverlay("<h2>结局收集</h2><div class='endings-grid'>" + cells + "</div>" + bonus + '<button class="oc-close">回到标题</button>', null);
   }
 
@@ -321,7 +459,7 @@
   function refreshTitle() {
     $("#t-continue").disabled = !loadSave();
     const got = getEndings().length;
-    $("#t-endings").textContent = "结局收集 " + got + "/4";
+    $("#t-endings").textContent = "结局收集 " + got + "/" + Object.keys(STORY.ENDINGS).length;
   }
 
   /* ---------- 事件绑定 ---------- */
