@@ -429,7 +429,7 @@ const ART = (() => {
       '<path d="M150 150 h100 l-14 84 h-72z" fill="#2e3a4a"/>' +
       '<ellipse cx="200" cy="150" rx="50" ry="13" fill="#425270"/>' +
       '<ellipse cx="200" cy="148" rx="42" ry="10" fill="#54658a"/>' +
-      brush(178, 120, -8) + brush(200, 112, 0) + brush(222, 120, 8) +
+      brush(158, 130, -14) + brush(242, 130, 14) + brush(178, 120, -8) + brush(222, 120, 8) + brush(200, 112, -2) + brush(200, 126, 3) +
       '<ellipse cx="200" cy="236" rx="88" ry="15" fill="#1d1418"/>' +
       '<ellipse cx="200" cy="231" rx="80" ry="12" fill="#33262c"/>' +
       '<ellipse cx="200" cy="228" rx="64" ry="9" fill="#221a20"/>' +
