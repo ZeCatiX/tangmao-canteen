@@ -343,6 +343,7 @@ button { font-family: var(--font-cn); cursor: pointer; }
   pointer-events: none; z-index: 55;
   animation: affUp 1.4s ease-out both;
 }
+.aff-float.neg { color: #8fc8c0; text-shadow: 0 0 12px rgba(143,200,192,.8), 0 2px 4px #000; }
 @keyframes affUp {
   0% { opacity: 0; transform: translate(-50%, 10px) scale(.7); }
   18% { opacity: 1; transform: translate(-50%, -4px) scale(1.1); }
