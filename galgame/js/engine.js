@@ -49,7 +49,7 @@
       $("#sprites").appendChild(el);
     }
     if (who === "catgirl") el.innerHTML = ART.catGirl(expr || "normal");
-    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025f" alt="唐猫（白猫）" draggable="false">';
+    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025g" alt="唐猫（白猫）" draggable="false">';
     el.style.width = "clamp(220px, 60vmin, 400px)";
     requestAnimationFrame(() => { el.className = "sprite pos-" + (pos || "center") + " breathe"; });
   }
@@ -477,7 +477,8 @@
       { src: "images/chara_pout.webp", cap: "唐猫 · 哼" },
     ],
     bg: [
-      { src: "images/bg_street.jpg", cap: "不夜城街道" },
+      { src: "images/bg_avenue.jpg", cap: "不夜城华灯" },
+      { src: "images/bg_street.jpg", cap: "灯笼小巷" },
       { src: "images/bg_court.jpg", cap: "庭院夜话" },
       { src: "images/bg_table.jpg", cap: "一桌好菜" },
       { src: "images/bg_kitchen.jpg", cap: "后厨烟火" },
@@ -490,8 +491,8 @@
   };
   function galGrid(items) {
     return '<div class="gal-grid">' + items.map(g =>
-      '<figure class="gal-item" data-src="' + g.src + '?v=251025f" data-cap="' + g.cap + '">' +
-      '<img src="' + g.src + '?v=251025f" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
+      '<figure class="gal-item" data-src="' + g.src + '?v=251025g" data-cap="' + g.cap + '">' +
+      '<img src="' + g.src + '?v=251025g" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
     ).join("") + '</div>';
   }
   function showGallery() {
@@ -601,7 +602,7 @@
 
   /* ---------- 启动 ---------- */
   function boot() {
-    window.__GALGAME_VER = "251025f";
+    window.__GALGAME_VER = "251025g";
     $("#title-bg").innerHTML = ART.titleBg();
     bind();
     refreshTitle();
