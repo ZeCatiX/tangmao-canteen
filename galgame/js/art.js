@@ -91,7 +91,7 @@ const ART = (() => {
   };
   function catGirl(exprKey) {
     const img = CHARA_MAP[exprKey] || "smile";
-    return '<img class="chara-img" src="images/chara_' + img + '.webp?v=251025b" alt="唐猫" draggable="false">';
+    return '<img class="chara-img" src="images/chara_' + img + '.webp?v=251025c" alt="唐猫" draggable="false">';
   }
   /* 预加载全部差分，避免表情切换时闪白 */
   ["smile", "surprised", "sad", "soft", "cry", "excited", "shy", "smug"].forEach(n => {
@@ -189,7 +189,7 @@ const ART = (() => {
   /* ================= 场景背景（AI 厚涂竖版图包装为 svg，900x1600 与 9:16 生成图精确匹配） ================= */
   function photoBg(src, extra) {
     return '<svg viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<image href="images/' + src + '?v=251025b" width="900" height="1600"/>' + (extra || "") +
+      '<image href="images/' + src + '?v=251025c" width="900" height="1600"/>' + (extra || "") +
       '</svg>';
   }
 
