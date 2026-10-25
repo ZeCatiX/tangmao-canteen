@@ -117,7 +117,7 @@ function planHtml(ppl, budget) {
     html += "<h3>" + p.name + "<span style='float:right;font-size:12px;color:#f3e6c899'>" + p.note + "</span></h3>" +
       '<div class="plan-row">' + rows + '</div><div class="plan-total">合计 ' + sum + " 元（预算内 ✔）</div>";
   }
-  html += "<p style='margin-top:10px;font-size:13px;color:#f3e6c8aa'>※ 以上为点餐系统「AI 一桌菜」同款思路：忌口先过滤、结构保均衡、预算不超支，还可单道更换。</p>";
+  html += "<p style='margin-top:10px;font-size:13px;color:#f3e6c8aa'>※ 三套方案任选，可单道更换。</p>";
   return html;
 }
 
@@ -319,7 +319,7 @@ const SCRIPT = [
   { t: "say", who: "narr", text: "蒸笼揭开的瞬间，白雾扑了你满脸。雾里传来师傅的一声「小心」。" },
   { t: "say", who: "唐猫", expr: "serious", text: "「最后，炸。滚油一浇，皮脆声起——『咔嚓』，就是你在前厅听到的那种声音。」" },
   { t: "say", who: "me", text: "（原来一道葫芦鸡，要这样煮、蒸、炸，一步一步走过来。）" },
-  { t: "say", who: "唐猫", expr: "soft", text: "「陕菜的『功夫』两个字，就是这么来的。掌柜说：慢功夫，才对得起快节奏的客人。」" },
+  { t: "say", who: "唐猫", expr: "soft", text: "「陕菜的『功夫』两个字，就是这么来的。掌柜说，功夫就是功夫，快不得。」" },
   { t: "bg", id: "court" },
   { t: "say", who: "narr", text: "回到前厅时，你的锅子鱼正好上桌，酸汤还在咕嘟冒泡。" },
   { t: "jump", id: "ch1_after" },
@@ -328,11 +328,10 @@ const SCRIPT = [
   { t: "jump", id: "ch1_after" },
 
   { t: "label", id: "ch1_after" },
-  { t: "say", who: "唐猫", expr: "wink", text: "「记好了哦，{name} 的口味档案——在我们店的点餐网页上，每位登录的客人都有这样一份。」" },
+  { t: "say", who: "唐猫", expr: "wink", text: "「喏，{name} 的口味档案——在我们店的点餐网页上，每位登录的客人都有这样一份。」" },
   { t: "say", who: "唐猫", expr: "normal", text: "「辣度、咸淡、甜酸、预算、忌口……它都记得，比本喵的记性还好。」" },
   { t: "say", who: "me", text: "「连我的忌口它都知道？」" },
   { t: "say", who: "唐猫", expr: "smug", text: "「当然。它甚至会『学习』——你的每条评分反馈，都会让推荐更懂你一分。掌柜说那叫『梯度提升』，本喵觉得，就是一只特别勤快的电子猫。」" },
-  { t: "say", who: "唐猫", expr: "soft", text: "「对了，白天也可以来哦。庭院中午的太阳很好，八宝茶一坐就是一下午——老客人们都这样。」" },
 
   /* ===== 第二章 · 一桌菜 ===== */
   { t: "chapter", main: "第 二 章", sub: "一 桌 菜" },
@@ -387,8 +386,8 @@ const SCRIPT = [
 
   { t: "label", id: "ch2_after" },
   { t: "say", who: "me", text: "「话说回来，刚才那三套方案，你算了多久？」" },
-  { t: "say", who: "唐猫", expr: "smug", text: "「一眨眼～其实呀，这是我们点餐网页里真实的功能，就叫『AI 一桌菜』。」" },
-  { t: "say", who: "唐猫", expr: "normal", text: "「输入人数、预算、口味，三套方案马上端上来；忌口的菜根本不会出现，还能单道更换。同学聚餐、家宴、约会，都镇得住。」" },
+  { t: "say", who: "唐猫", expr: "smug", text: "「一眨眼～其实呀，本喵有位同行——店里的点餐网页上也有这么一手，就叫『AI 一桌菜』。」" },
+  { t: "say", who: "唐猫", expr: "normal", text: "「输入人数、预算、口味，三套方案马上端上来；忌口的菜，根本不会出现。」" },
   { t: "say", who: "me", text: "「……连预算都算得一分不超？」" },
   { t: "say", who: "唐猫", expr: "wink", text: "「电子猫的看家本领——一文钱，都不让你超。」" },
   { t: "jump", id: "ch2_plus" },
@@ -412,9 +411,8 @@ const SCRIPT = [
   { t: "say", who: "narr", text: "忽然，邻桌一阵小小的骚动——有位客人的菜，超了三十分钟还没上齐。" },
   { t: "say", who: "掌柜", text: "「这桌的菜迟了，按规矩——全单九折。怠慢了，怠慢了。」" },
   { t: "say", who: "me", text: "「诶？不用客人提，就这么主动打折？」" },
-  { t: "say", who: "唐猫", expr: "serious", text: "「庭院有四大承诺，就挂在门口——」" },
-  { t: "say", who: "唐猫", expr: "normal", text: "「上错菜品，免费赠送；菜品有问题，直接退换；超三十分钟菜未上齐，全单九折；打包菜品，免打包费。」" },
-  { t: "say", who: "唐猫", expr: "soft", text: "「千年陕菜传到今天，靠的从来不是招牌，是一桌一桌客人吃过之后的舌头。」" },
+  { t: "say", who: "唐猫", expr: "normal", text: "「规矩就是规矩。门口挂着四条承诺，哪条犯了照哪条赔——不用客人开口。」" },
+  { t: "say", who: "唐猫", expr: "soft", text: "「掌柜说，客人的舌头，比招牌金贵。」" },
   { t: "say", who: "narr", text: "你注意到，那位迟菜桌上的老先生临走时，又预订了下周的位置。" },
 
   /* --- 支线：拼桌大爷 --- */
@@ -868,7 +866,7 @@ const SCRIPT = [
     { text: "「谢谢款待。后会有期。」", aff: 1, goto: "fin_bye" },
   ]},
   { t: "label", id: "fin_family" },
-  { t: "say", who: "唐猫", expr: "happy", text: "「带爸妈来的客人，本喵最喜欢了！到时候『一桌菜』给你排一桌爸妈口味的——忌口提前告诉本喵哦。」" },
+  { t: "say", who: "唐猫", expr: "happy", text: "「带爸妈来的客人，本喵最喜欢了！到时候忌口提前告诉本喵——爸妈那桌，本喵亲自盯着。」" },
   { t: "jump", id: "fin_walk" },
   { t: "label", id: "fin_weekly" },
   { t: "say", who: "唐猫", expr: "surprised", text: "「每周五？！这么准时……好！窗边那桌，本喵给你写上名字！」" },
@@ -941,7 +939,7 @@ const SCRIPT = [
   { t: "say", who: "唐猫", expr: "cry", text: "「……真的？说、说定了哦。骗猫的话，是要被铃铛追着跑一辈子的哦。」" },
   { t: "say", who: "narr", text: "逆着烟花的光，你第一次看清了她的影子——是一只系着铃铛的白猫。" },
   { t: "say", who: "唐猫", expr: "smile", text: "「白天是猫，晚上是店小二。在唐猫讲的故事里，这院子就是这样开始的——一只赖着不走的小白猫，和一句『那就用你的名字』。」" },
-  { t: "say", who: "唐猫", expr: "happy", text: "「大众点评和美团的陕菜榜第一、西安名厨精英大赛的团体金奖、CCTV 上榜……掌柜总念叨这些。但本喵最骄傲的，是每个说过『下次再来』的客人，真的回来的那一刻。比如——以后每周五的你。」" },
+  { t: "say", who: "唐猫", expr: "happy", text: "「墙上那些奖牌和榜单，掌柜每天都擦得一尘不染。但本喵最骄傲的，是每个说过『下次再来』的客人，真的回来的那一刻。比如——以后每周五的你。」" },
   { t: "say", who: "唐猫", expr: "wink", text: "「{name}，以后你的口味档案，本喵亲自盯着。谁让算法不懂你呢——喵。」" },
   { t: "say", who: "narr", text: "烟花落尽，灯笼长明。这一晚，你把一家餐厅的名字，记进了旅途的年轮里。" },
   { t: "dish", id: "babaocha" },
