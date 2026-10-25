@@ -169,183 +169,25 @@ const ART = (() => {
       '</svg>';
   }
 
-  /* ================= 场景背景 ================= */
-  function lantern(x, y, s, hue) {
-    const c = hue || "#e0503c";
-    return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
-      '<circle r="46" fill="' + c + '" opacity=".16"/>' +
-      '<line x1="0" y1="-40" x2="0" y2="-28" stroke="#caa14e" stroke-width="3"/>' +
-      '<ellipse rx="22" ry="27" fill="' + c + '"/>' +
-      '<ellipse rx="22" ry="27" fill="none" stroke="#f5c96a" stroke-width="2" opacity=".7"/>' +
-      '<path d="M-22 0 h44 M-14 -20 q14 -5 28 0 M-14 20 q14 5 28 0" stroke="#a13626" stroke-width="2" fill="none" opacity=".7"/>' +
-      '<ellipse rx="16" ry="20" fill="#ffb35c" opacity=".45"/>' +
-      '<line x1="0" y1="27" x2="0" y2="40" stroke="#caa14e" stroke-width="3"/>' +
-      '</g>';
-  }
-
-  function pagoda(x, baseY, s, fill) {
-    let g = '<g transform="translate(' + x + ',' + baseY + ') scale(' + s + ')">';
-    const tiers = [[-46, 0, 92, 54], [-38, 54, 76, 50], [-31, 104, 62, 46], [-24, 150, 48, 42], [-17, 192, 34, 38], [-11, 230, 22, 30]];
-    g += '<rect x="-52" y="-14" width="104" height="18" fill="' + fill + '"/>';
-    for (const t of tiers) {
-      g += '<path d="M' + (t[0] - 8) + ' ' + t[1] + ' h' + (t[2] + 16) + ' l-8 -10 h-' + t[2] + 'z" fill="' + fill + '"/>' +
-        '<rect x="' + t[0] + '" y="' + t[1] + '" width="' + t[2] + '" height="' + t[3] + '" fill="' + fill + '"/>';
-    }
-    g += '<rect x="-14" y="260" width="28" height="60" fill="' + fill + '"/><circle cx="0" cy="252" r="12" fill="' + fill + '"/>' +
-      '<path d="M0 192 v-40 M-8 168 h16" stroke="' + fill + '" stroke-width="6"/>' +
-      '<circle cx="0" cy="330" r="7" fill="' + fill + '"/></g>';
-    return g;
-  }
-
-  function stars() {
-    let s = "";
-    const pts = [[80,120],[190,70],[300,150],[420,90],[520,200],[640,110],[710,240],[140,260],[560,320],[680,380],[60,420],[750,140]];
-    for (let i = 0; i < pts.length; i++) {
-      const o = 0.35 + (i % 4) * 0.15;
-      s += '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="' + (1.6 + (i % 3)) + '" fill="#fff" opacity="' + o + '"/>';
-    }
-    return s;
-  }
-
-  function sky(id, top, mid, bottom) {
-    return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + top + '"/><stop offset="0.55" stop-color="' + mid + '"/><stop offset="1" stop-color="' + bottom + '"/></linearGradient>';
+  /* ================= 场景背景（AI 厚涂竖版图包装为 svg，900x1600 与 9:16 生成图精确匹配） ================= */
+  function photoBg(src, extra) {
+    return '<svg viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
+      '<image href="images/' + src + '" width="900" height="1600"/>' + (extra || "") +
+      '</svg>';
   }
 
   function bgStreet(dawn) {
-    const d = !!dawn;
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("stSky", d ? "#2b2340" : "#0d0b1e", d ? "#5a3a52" : "#241735", d ? "#a06a5c" : "#452038") +
-      '<radialGradient id="stMoon" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6dc" stop-opacity=".9"/><stop offset=".35" stop-color="#ffe9b0" stop-opacity=".35"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></radialGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#stSky)"/>' + stars() +
-      (d ? "" : '<circle cx="600" cy="190" r="130" fill="url(#stMoon)"/><circle cx="600" cy="190" r="52" fill="#fdf3d7"/>') +
-      '<rect x="0" y="700" width="800" height="500" fill="' + (d ? "#3d2a3a" : "#160d20") + '" opacity=".9"/>' +
-      /* 远处城楼与塔 */
-      pagoda(180, 560, 0.9, d ? "#241826" : "#120a1a") +
-      '<path d="M420 720 h360 v-90 l-40 -30 -60 20 -40 -40 -80 30 -60 -20 -40 40 -40 -10z" fill="' + (d ? "#241826" : "#120a1a") + '"/>' +
-      /* 灯笼串 */
-      '<path d="M0 340 q200 90 400 0 t400 60" stroke="#5a4030" stroke-width="3" fill="none" opacity=".8"/>' +
-      lantern(70, 420, 1.1) + lantern(190, 470, 0.85) + lantern(310, 428, 1) + lantern(430, 480, 0.8) + lantern(560, 430, 1.05) + lantern(690, 480, 0.9) +
-      /* 地面 */
-      '<rect x="0" y="880" width="800" height="320" fill="' + (d ? "#2e2028" : "#0f0a14") + '"/>' +
-      '<path d="M0 880 q400 -60 800 0 v40 q-400 -60 -800 0z" fill="' + (d ? "#3a2830" : "#1a1122") + '"/>' +
-      /* 人群波光 */
-      '<g opacity=".55">' + bokeh() + '</g>' +
-      /* 前景大灯笼 */
-      lantern(700, 780, 2.2) + lantern(60, 820, 1.7, "#d98f5a") +
-      '</svg>';
-  }
-  function bokeh() {
-    let s = "";
-    const cs = ["#ffb35c", "#e0503c", "#f5c96a", "#d98f5a", "#f4a7b8"];
-    for (let i = 0; i < 26; i++) {
-      const x = (i * 137 + 40) % 780 + 10, y = 900 + (i * 53 % 260), r = 3 + (i % 4) * 2;
-      s += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + cs[i % 5] + '" opacity=".5"/>';
-    }
-    return s;
+    return photoBg(dawn ? "bg_dawn.jpg" : "bg_street.jpg");
   }
 
   function bgCourt() {
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("ctWall", "#4d141c", "#6d1a22", "#3a0f16") +
-      '<radialGradient id="ctLamp" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffcf7e" stop-opacity=".55"/><stop offset="1" stop-color="#ffcf7e" stop-opacity="0"/></radialGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#ctWall)"/>' +
-      /* 木柱 */
-      '<rect x="40" y="0" width="42" height="980" fill="#2b1410"/><rect x="718" y="0" width="42" height="980" fill="#2b1410"/>' +
-      '<rect x="40" y="0" width="42" height="980" fill="#00000022"/>' +
-      /* 花格窗与月 */
-      '<g><circle cx="612" cy="220" r="54" fill="#fdf3d7" opacity=".95"/>' +
-      '<rect x="512" y="110" width="200" height="240" fill="#00000000" stroke="#8a5416" stroke-width="7"/>' +
-      '<path d="M512 150 h200 M512 190 h200 M512 230 h200 M512 270 h200 M512 310 h200 M562 110 v240 M662 110 v240" stroke="#8a5416" stroke-width="5" opacity=".8"/></g>' +
-      '<rect x="88" y="110" width="200" height="240" fill="#00000030" stroke="#8a5416" stroke-width="7"/>' +
-      '<path d="M88 150 h200 M88 190 h200 M88 230 h200 M88 270 h200 M88 310 h200 M138 110 v240 M238 110 v240" stroke="#8a5416" stroke-width="5" opacity=".55"/>' +
-      /* 檐 */
-      '<rect x="0" y="0" width="800" height="60" fill="#1d0d0a"/>' +
-      '<path d="M0 60 h800 v18 h-800z" fill="#8a5416" opacity=".8"/>' +
-      /* 吊灯 */
-      lantern(280, 200, 1.5) + lantern(520, 160, 1.2) +
-      '<circle cx="280" cy="235" r="150" fill="url(#ctLamp)"/>' +
-      /* 桌与菜 */
-      tableSet(230, 880, 1.1) + tableSet(560, 1010, 1.35) +
-      /* 地面 */
-      '<rect x="0" y="980" width="800" height="220" fill="#200c0e"/>' +
-      '<path d="M0 980 q400 -40 800 0 v30 q-400 -36 -800 0z" fill="#2e1114"/>' +
-      /* 梅枝 */
-      '<path d="M-10 90 q120 30 150 130 q14 46 60 66" stroke="#3a2028" stroke-width="10" fill="none"/>' +
-      '<path d="M60 140 q40 -20 66 4 M96 190 q44 -14 64 16" stroke="#3a2028" stroke-width="6" fill="none"/>' +
-      blossoms() +
-      '</svg>';
+    return photoBg("bg_court.jpg");
   }
-  function blossoms() {
-    let s = "";
-    const pts = [[36,120],[92,150],[60,196],[150,220],[176,182],[128,262],[196,268],[214,214],[248,300],[168,300]];
-    for (const p of pts) {
-      s += '<g transform="translate(' + p[0] + ',' + p[1] + ')">' +
-        '<circle r="5" cx="-6" cy="0" fill="#f4a7b8"/><circle r="5" cx="6" cy="0" fill="#f4a7b8"/><circle r="5" cx="0" cy="-6" fill="#f7c0cc"/><circle r="5" cx="0" cy="6" fill="#f4a7b8"/><circle r="3.4" fill="#e8b64c"/></g>';
-    }
-    return s;
-  }
-  function tableSet(x, y, s) {
-    return '<g transform="translate(' + x + ',' + y + ') scale(' + s + ')">' +
-      '<ellipse rx="150" ry="34" cx="0" cy="10" fill="#1a0d08"/>' +
-      '<ellipse rx="150" ry="34" fill="#4a2818"/>' +
-      '<ellipse rx="150" ry="34" fill="none" stroke="#6b3a22" stroke-width="6"/>' +
-      '<rect x="-20" y="30" width="40" height="120" fill="#331c10"/>' +
-      '<ellipse cx="-80" cy="-4" rx="34" ry="10" fill="#efe7db"/><circle cx="-92" cy="-6" r="6" fill="#b04747"/><circle cx="-78" cy="-2" r="5" fill="#c9862e"/>' +
-      '<ellipse cx="-10" cy="-8" rx="40" ry="12" fill="#efe7db"/><path d="M-40 -12 q30 -14 60 0 q-30 8 -60 0z" fill="#d9772e"/><circle cx="-22" cy="-14" r="4" fill="#8a5416"/><circle cx="0" cy="-12" r="4" fill="#8a5416"/>' +
-      '<ellipse cx="70" cy="-4" rx="28" ry="9" fill="#efe7db"/><circle cx="62" cy="-8" r="6" fill="#4d8f4d"/><circle cx="78" cy="-6" r="5" fill="#e0503c"/>' +
-      '<path d="M-10 -24 q-8 -26 4 -44 M-6 -26 q10 -22 24 -30" stroke="#ffffff55" stroke-width="5" fill="none" stroke-linecap="round"/>' +
-      '</g>';
-  }
-
   function bgTable() {
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("tbSky", "#170a10", "#241019", "#31161a") +
-      '<radialGradient id="tbCandle" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffcf7e" stop-opacity=".7"/><stop offset="1" stop-color="#ffcf7e" stop-opacity="0"/></radialGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#tbSky)"/>' +
-      '<rect x="0" y="520" width="800" height="680" fill="#3a2014"/>' +
-      '<path d="M0 520 q400 -30 800 0 v30 q-400 -26 -800 0z" fill="#54321e"/>' +
-      '<path d="M0 640 h800 M0 820 h800 M0 1040 h800" stroke="#00000030" stroke-width="4"/>' +
-      '<path d="M120 560 l560 40 M0 900 l800 -60" stroke="#00000026" stroke-width="6"/>' +
-      '<circle cx="140" cy="480" r="150" fill="url(#tbCandle)"/>' +
-      '<rect x="128" y="470" width="24" height="40" fill="#e8e0d0"/>' +
-      '<ellipse cx="140" cy="466" rx="8" ry="16" fill="#ffcf5e"/><ellipse cx="140" cy="470" rx="4.4" ry="10" fill="#fff3c0"/>' +
-      /* 八宝茶盖碗 */
-      '<g transform="translate(400,620)">' +
-      '<ellipse cx="0" cy="86" rx="98" ry="22" fill="#220f10"/>' +
-      '<ellipse rx="96" ry="20" cy="76" fill="#cfd8dc"/>' +
-      '<path d="M-72 -18 q0 66 72 66 q72 0 72 -66z" fill="#efe7db"/>' +
-      '<path d="M-72 -18 q72 26 144 0" stroke="#c22b37" stroke-width="7" fill="none"/>' +
-      '<circle cx="-46" cy="16" r="7" fill="#e0503c"/><circle cx="-20" cy="26" r="6" fill="#d9772e"/><circle cx="18" cy="24" r="6" fill="#8a5416"/>' +
-      '<path d="M-80 -34 q80 -30 148 6 l-12 16 q-66 -30 -128 -4z" fill="#efe7db" stroke="#cfd8dc" stroke-width="3"/>' +
-      '<path d="M-8 -46 q14 -40 6 -70 M18 -44 q26 -30 34 -64" stroke="#ffffff44" stroke-width="6" fill="none" stroke-linecap="round"/>' +
-      '</g>' +
-      /* 小菜碟 */
-      '<g transform="translate(630,760)"><ellipse rx="72" ry="20" fill="#220f10"/><ellipse rx="70" ry="18" fill="#efe7db"/><circle cx="-30" cy="-4" r="10" fill="#b04747"/><circle cx="-6" cy="0" r="9" fill="#c9862e"/><circle cx="20" cy="-4" r="8" fill="#4d8f4d"/></g>' +
-      '<g transform="translate(190,800)"><ellipse rx="60" ry="17" fill="#220f10"/><ellipse rx="58" ry="15" fill="#efe7db"/><path d="M-40 -4 q40 -20 80 0 q-40 12 -80 0z" fill="#e8b64c"/></g>' +
-      '</svg>';
+    return photoBg("bg_table.jpg");
   }
-
   function bgFire() {
-    let fw = "";
-    const bursts = [[180, 220, "#f5c96a"], [560, 160, "#e0503c"], [400, 320, "#7ec8c0"], [660, 300, "#f4a7b8"], [120, 420, "#f5c96a"], [520, 460, "#7ec8c0"]];
-    for (const b of bursts) {
-      fw += '<g opacity=".9"><circle cx="' + b[0] + '" cy="' + b[1] + '" r="7" fill="' + b[2] + '"/>';
-      for (let a = 0; a < 12; a++) {
-        const ang = a * Math.PI / 6, r1 = 22, r2 = 44 + (a % 3) * 12;
-        fw += '<line x1="' + (b[0] + Math.cos(ang) * r1) + '" y1="' + (b[1] + Math.sin(ang) * r1) + '" x2="' + (b[0] + Math.cos(ang) * r2) + '" y2="' + (b[1] + Math.sin(ang) * r2) + '" stroke="' + b[2] + '" stroke-width="3" opacity=".7" stroke-linecap="round"/>';
-      }
-      fw += '</g>';
-    }
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("fwSky", "#0d0b1e", "#1c1230", "#3a1c38") + '</defs>' +
-      '<rect width="800" height="1200" fill="url(#fwSky)"/>' + stars() + fw +
-      '<rect x="0" y="700" width="800" height="500" fill="#120a1a" opacity=".9"/>' +
-      pagoda(400, 560, 1.1, "#120a1a") +
-      '<rect x="0" y="880" width="800" height="320" fill="#0f0a14"/>' +
-      '<path d="M0 880 q400 -60 800 0 v40 q-400 -60 -800 0z" fill="#1a1122"/>' +
-      '<g opacity=".4">' + bokeh() + '</g>' +
-      lantern(90, 800, 1.6) + lantern(710, 790, 1.8) +
-      '</svg>';
+    return photoBg("bg_fire.jpg");
   }
 
   /* 雨夜巷口：屋檐、雨丝、地面倒影 */
@@ -357,97 +199,29 @@ const ART = (() => {
     }
     return s;
   }
-  function bgRain() {
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("rnSky", "#0a0e1e", "#1a1c34", "#2c2438") +
-      '<linearGradient id="rnWet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12101f"/><stop offset="1" stop-color="#1e1626"/></linearGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#rnSky)"/>' + stars() +
-      /* 屋檐（前景上缘） */
-      '<path d="M-20 0 h340 l-26 64 q-144 34 -288 0z" fill="#241014"/><path d="M-20 64 q170 44 340 0 l-8 26 q-162 38 -324 0z" fill="#3a1a1c"/>' +
-      '<rect x="-20" y="86" width="350" height="14" fill="#8a5416" opacity=".8"/>' +
-      /* 远处塔与城郭剪影 */
-      pagoda(430, 480, 0.72, "#141024") +
-      '<path d="M0 760 h800 v-70 l-90 -26 -110 30 -140 -34 -120 26 -110 -22 -80 30 -150 -10z" fill="#141024"/>' +
-      /* 雨丝两层（CSS 动画下落） */
-      '<g class="rain-a">' + rainLines(0.5) + '</g>' +
-      '<g class="rain-b">' + rainLines(0.85) + '</g>' +
-      /* 巷口灯笼：雨中晕光 */
-      lantern(120, 320, 1.2) + lantern(650, 280, 1.0) + lantern(390, 240, 0.8, "#d98f5a") +
-      '<circle cx="120" cy="352" r="70" fill="#e0503c" opacity=".14"/>' +
-      /* 湿地面与倒影 */
-      '<rect x="0" y="900" width="800" height="300" fill="url(#rnWet)"/>' +
-      '<path d="M0 900 q400 -50 800 0 v36 q-400 -46 -800 0z" fill="#241a30"/>' +
-      '<g opacity=".5">' +
-      '<ellipse cx="120" cy="985" rx="52" ry="9" fill="#e0503c"/><ellipse cx="120" cy="1008" rx="34" ry="6" fill="#e0503c" opacity=".6"/>' +
-      '<ellipse cx="650" cy="1000" rx="44" ry="8" fill="#e0503c" opacity=".8"/><ellipse cx="650" cy="1022" rx="28" ry="5" fill="#e0503c" opacity=".5"/>' +
-      '<ellipse cx="430" cy="960" rx="120" ry="10" fill="#f5c96a" opacity=".25"/>' +
-      '</g>' +
-      '</svg>';
-  }
-
-  /* 白天庭院：亮暖红墙、蓝天窗、窗台白猫打盹 */
-  function bgDay() {
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("dyWall", "#a8564a", "#c06a52", "#8a3f38") +
-      '<linearGradient id="dySky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7db4dd"/><stop offset="1" stop-color="#cfe3ee"/></linearGradient>' +
-      '<linearGradient id="dySun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".5"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></linearGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#dyWall)"/>' +
-      /* 花格窗（蓝天白云） */
-      '<rect x="500" y="130" width="230" height="270" fill="url(#dySky)" stroke="#6b3a22" stroke-width="8"/>' +
-      '<ellipse cx="580" cy="200" rx="34" ry="14" fill="#fff" opacity=".92"/><ellipse cx="620" cy="196" rx="24" ry="11" fill="#fff" opacity=".92"/>' +
-      '<ellipse cx="670" cy="300" rx="28" ry="12" fill="#fff" opacity=".85"/>' +
-      '<path d="M500 176 h230 M500 222 h230 M500 268 h230 M500 314 h230 M500 360 h230 M558 130 v270 M672 130 v270" stroke="#6b3a22" stroke-width="5" opacity=".85"/>' +
-      /* 木柱与檐 */
-      '<rect x="40" y="0" width="42" height="1000" fill="#5a3018"/><rect x="718" y="0" width="42" height="1000" fill="#5a3018"/>' +
-      '<rect x="0" y="0" width="800" height="58" fill="#3d2010"/><path d="M0 58 h800 v16 h-800z" fill="#8a5416" opacity=".85"/>' +
-      /* 窗台打盹的白猫 */
-      '<g transform="translate(596,400) scale(0.62)">' + cat().replace("<svg ", '<svg width="240" height="200" ') + '</g>' +
-      '<ellipse cx="616" cy="536" rx="86" ry="10" fill="#00000022"/>' +
-      /* 桌与盖碗茶 */
-      tableSet(240, 900, 1.1) +
-      /* 阳光光斑 */
-      '<path d="M560 120 l180 260 -60 40 -180 -260z" fill="url(#dySun)"/>' +
-      '<ellipse cx="300" cy="760" rx="180" ry="26" fill="#ffe9b0" opacity=".18"/>' +
-      /* 地面 */
-      '<rect x="0" y="1000" width="800" height="200" fill="#5a3226"/>' +
-      '<path d="M0 1000 q400 -36 800 0 v26 q-400 -32 -800 0z" fill="#6b3c2c"/>' +
-      '</svg>';
-  }
-
-  /* 后厨：灶火、蒸笼、蒸汽 */
-  function bgKitchen() {
-    let steamK = "";
-    for (let i = 0; i < 3; i++) {
-      steamK += '<path d="M' + (300 + i * 120) + ' 560 q-16 -50 8 -96 q20 -40 -6 -88" stroke="#ffffff77" stroke-width="9" fill="none" stroke-linecap="round"/>';
+  /* 雨夜巷口：AI 图 + CSS 动画雨丝两层叠加增强动态 */
+  function rainLines(op) {
+    let s = "";
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 61 + 20) % 900, y = (i * 137) % 1450, len = 26 + (i % 4) * 9;
+      s += '<line x1="' + x + '" y1="' + y + '" x2="' + (x - 8) + '" y2="' + (y + len) + '" stroke="#aebfd8" stroke-width="' + (1 + (i % 3) * 0.7) + '" opacity="' + (op * (0.3 + (i % 5) * 0.1)).toFixed(2) + '"/>';
     }
-    return '<svg viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<defs>' + sky("ktWall", "#241410", "#38201a", "#1c0f0c") +
-      '<radialGradient id="ktFire" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffb35c" stop-opacity=".65"/><stop offset="1" stop-color="#ffb35c" stop-opacity="0"/></radialGradient></defs>' +
-      '<rect width="800" height="1200" fill="url(#ktWall)"/>' +
-      /* 挂灯笼串（剪影） */
-      '<path d="M0 120 q200 60 400 10 t400 40" stroke="#5a4030" stroke-width="3" fill="none" opacity=".7"/>' +
-      '<g opacity=".55">' + lantern(90, 190, 0.7) + lantern(310, 170, 0.6) + lantern(560, 190, 0.7) + lantern(750, 170, 0.55) + '</g>' +
-      /* 灶台 */
-      '<rect x="60" y="820" width="680" height="330" fill="#2b1a12"/>' +
-      '<rect x="60" y="820" width="680" height="26" fill="#4a2c1c"/>' +
-      /* 大锅（火） */
-      '<circle cx="240" cy="830" r="130" fill="url(#ktFire)"/>' +
-      '<ellipse cx="240" cy="826" rx="110" ry="26" fill="#1a0d08"/>' +
-      '<path d="M130 812 q110 -46 220 0 q10 46 -110 58 q-120 -12 -110 -58z" fill="#333"/><ellipse cx="240" cy="814" rx="100" ry="20" fill="#7a4a22"/>' +
-      '<path d="M170 806 q40 -16 140 -4" stroke="#ffcf5e" stroke-width="6" fill="none" opacity=".9"/>' +
-      /* 三层蒸笼 */
-      '<g transform="translate(540,750)">' +
-      '<ellipse cx="0" cy="120" rx="150" ry="24" fill="#00000055"/>' +
-      '<rect x="-128" y="76" width="256" height="34" rx="8" fill="#8a5c34"/><rect x="-128" y="76" width="256" height="10" fill="#a8764a"/>' +
-      '<rect x="-118" y="42" width="236" height="34" rx="8" fill="#96683e"/><rect x="-118" y="42" width="236" height="10" fill="#b4855a"/>' +
-      '<rect x="-108" y="8" width="216" height="34" rx="8" fill="#a2744a"/><rect x="-108" y="8" width="216" height="10" fill="#c09268"/>' +
-      '</g>' + steamK +
-      /* 案板与食材剪影 */
-      '<rect x="90" y="640" width="230" height="20" rx="6" fill="#6b452a"/><rect x="110" y="660" width="18" height="170" fill="#503320"/>' +
-      '<circle cx="150" cy="632" r="9" fill="#c9862e"/><circle cx="176" cy="630" r="8" fill="#b04747"/><ellipse cx="230" cy="630" rx="22" ry="7" fill="#4d8f4d"/>' +
-      /* 地面 */
-      '<rect x="0" y="1130" width="800" height="70" fill="#170c08"/>' +
-      '</svg>';
+    return s;
+  }
+  function bgRain() {
+    return photoBg("bg_rain.jpg",
+      '<g class="rain-a">' + rainLines(0.5) + '</g>' +
+      '<g class="rain-b">' + rainLines(0.85) + '</g>');
+  }
+
+  /* 白天庭院：室内望向窗外，窗台白猫打盹（AI 图自带） */
+  function bgDay() {
+    return photoBg("bg_day.jpg");
+  }
+
+  /* 后厨：灶火、蒸笼、蒸汽（AI 图自带） */
+  function bgKitchen() {
+    return photoBg("bg_kitchen.jpg");
   }
 
   const BGS = {
@@ -660,11 +434,9 @@ const ART = (() => {
       '</g>';
   }
 
-  /* ================= 标题背景 ================= */
+  /* ================= 标题背景（竖版主视觉：白猫坐石阶回望+灯笼庭院+大雁塔，上部深色天空留给标题文字） ================= */
   function titleBg() {
-    return bgStreet(false).replace("</svg>",
-      '<g transform="translate(560,880) scale(1.9)" opacity=".92">' +
-      '<g transform="translate(-120,-100)">' + cat().replace("<svg ", "<svg width=\"240\" height=\"200\" ") + '</g></g></svg>');
+    return photoBg("bg_title.jpg");
   }
 
   return { catGirl, cat, BGS, DISHES, titleBg };

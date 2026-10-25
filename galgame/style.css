@@ -275,6 +275,7 @@ button { font-family: var(--font-cn); cursor: pointer; }
 .tl-sub {
   color: var(--tang-gold-bright); letter-spacing: 10px; text-indent: 10px;
   font-size: clamp(14px, 2.6vmin, 19px); margin-top: 8px; opacity: .95;
+  text-shadow: 0 1px 8px rgba(0,0,0,.9), 0 0 20px rgba(0,0,0,.6);
 }
 #title-menu { display: flex; flex-direction: column; gap: 13px; animation: menuIn 1.2s ease both .5s; }
 @keyframes menuIn { from { opacity: 0; transform: translateY(16px); } }
@@ -286,10 +287,10 @@ button { font-family: var(--font-cn); cursor: pointer; }
   transition: all .2s; backdrop-filter: blur(3px);
 }
 #title-menu button:hover:not(:disabled) { background: linear-gradient(180deg, var(--tang-red), var(--tang-red-deep)); color: var(--tang-gold-bright); transform: translateX(4px); }
-#title-menu button:disabled { opacity: .35; cursor: default; }
+#title-menu button:disabled { opacity: .55; cursor: default; }
 #title-foot {
   position: absolute; bottom: max(16px, env(safe-area-inset-bottom)); left: 0; right: 0;
-  text-align: center; color: rgba(243,230,200,.6); font-size: 12.5px; letter-spacing: 3px;
+  text-align: center; color: rgba(243,230,200,.8); font-size: 12.5px; letter-spacing: 3px; text-shadow: 0 1px 6px rgba(0,0,0,.85);
 }
 
 /* 名字输入 */
