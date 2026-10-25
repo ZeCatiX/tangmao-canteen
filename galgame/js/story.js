@@ -158,7 +158,7 @@ const ENDINGS = {
 const SCRIPT = [
   /* ===== 序章 ===== */
   { t: "bgm", id: "night" },
-  { t: "bg", id: "street" },
+  { t: "bg", id: "avenue" },
   { t: "chapter", main: "序 章", sub: "长 安 夜" },
   { t: "say", who: "narr", text: "暮鼓已过，大唐不夜城的灯，一盏一盏亮了起来。" },
   { t: "say", who: "narr", text: "你来西安的第三天。兵马俑看了，城墙骑了，脚底板已经开始抗议。" },
@@ -179,6 +179,7 @@ const SCRIPT = [
   { t: "say", who: "me", text: "「喂，等等——你认识路吗？」" },
   { t: "say", who: "白猫", text: "「喵喵！」（尾巴竖得笔直，显然很满意）" },
   { t: "say", who: "narr", text: "白猫领着你拐进一条挂满灯笼的小巷。身后的喧嚣像退潮一样远去。" },
+  { t: "bg", id: "street" },
   { t: "jump", id: "gate" },
 
   { t: "label", id: "follow_b" },
@@ -186,6 +187,7 @@ const SCRIPT = [
   { t: "say", who: "narr", text: "「别排队了，来唐猫庭院吧。千年陕菜，猫比人多。」" },
   { t: "say", who: "白猫", text: "「喵。」（似乎在说：早搜啊）" },
   { t: "say", who: "narr", text: "白猫在前头带路，领着你拐进一条挂满灯笼的小巷。喧嚣像退潮一样远去。" },
+  { t: "bg", id: "street" },
 
   { t: "label", id: "gate" },
   { t: "say", who: "narr", text: "巷子尽头，一盏写有「唐」字的灯笼下，藏着一方安静的小院。" },
