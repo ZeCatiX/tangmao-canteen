@@ -589,6 +589,7 @@
 
   /* ---------- 启动 ---------- */
   function boot() {
+    window.__GALGAME_VER = "251025b";
     $("#title-bg").innerHTML = ART.titleBg();
     bind();
     refreshTitle();
