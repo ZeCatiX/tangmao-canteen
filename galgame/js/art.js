@@ -83,7 +83,24 @@ const ART = (() => {
     return "";
   }
 
+  /* ================= 猫娘立绘（AI 差分图：8 张覆盖 15 表情，映射见 CHARA_MAP） ================= */
+  const CHARA_MAP = {
+    normal: "smile", smile: "smile", happy: "excited", excited: "excited", wink: "excited",
+    shy: "shy", surprised: "surprised", soft: "soft", sleepy: "soft", serious: "soft",
+    smug: "smug", pout: "smug", sad: "sad", worried: "sad", cry: "cry",
+  };
   function catGirl(exprKey) {
+    const img = CHARA_MAP[exprKey] || "smile";
+    return '<img class="chara-img" src="images/chara_' + img + '.webp" alt="唐猫" draggable="false">';
+  }
+  /* 预加载全部差分，避免表情切换时闪白 */
+  ["smile", "surprised", "sad", "soft", "cry", "excited", "shy", "smug"].forEach(n => {
+    const im = new Image();
+    im.src = "images/chara_" + n + ".webp";
+  });
+
+  /* 旧 SVG 组合式立绘（AI 化前实现，保留备用；如需回退把 catGirl 改回调用此函数） */
+  function catGirlSVG(exprKey) {
     const f = Object.assign({}, FACES[exprKey] || FACES.normal);
     const blushO = f.blush;
     return '<svg viewBox="0 0 420 640" xmlns="http://www.w3.org/2000/svg">' +

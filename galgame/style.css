@@ -50,6 +50,7 @@ button { font-family: var(--font-cn); cursor: pointer; }
 .sprite.pos-right { transform: translateX(-8%) scale(0.92); }
 .sprite.dim { filter: brightness(0.66) saturate(0.85); }
 .sprite svg { display: block; width: 100%; height: auto; }
+.sprite img.chara-img { display: block; width: 100%; height: auto; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 6px 24px rgba(0,0,0,.45)); }
 .sprite.breathe { animation: breathe 4.2s ease-in-out infinite; }
 /* SVG 部件动画基准：transform-origin 相对整个 viewBox */
 .ear-l, .ear-r, .tail, .pibo, .cat-tail { transform-box: view-box; }
