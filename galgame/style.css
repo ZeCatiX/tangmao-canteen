@@ -196,6 +196,22 @@ button { font-family: var(--font-cn); cursor: pointer; }
 }
 #overlay-card .oc-close:hover { background: var(--tang-red-deep); }
 
+/* 画廊 */
+.gal-hint { text-align: center; color: rgba(243,230,200,.72); font-size: 12.5px; letter-spacing: 2px; margin: 2px 0 4px; }
+.gal-sec { color: var(--tang-gold-bright); font-size: 15px; letter-spacing: 4px; margin: 20px 0 10px !important; border-bottom: 1px solid rgba(217,178,106,.4) !important; padding-bottom: 7px; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.gal-item { margin: 0; cursor: pointer; border: 1px solid rgba(217,178,106,.4); border-radius: 8px; overflow: hidden; background: rgba(20,10,12,.5); transition: transform .15s ease, border-color .15s ease; }
+.gal-item:hover { transform: translateY(-2px); border-color: var(--tang-gold-bright); }
+.gal-item img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; background: #170a0d; }
+.gal-item figcaption { font-size: 11px; color: rgba(243,230,200,.85); text-align: center; padding: 4px 2px 6px; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#overlay-card .oc-back {
+  background: rgba(30,15,18,.85); color: var(--paper);
+  border: 1px solid rgba(217,178,106,.7); border-radius: 6px;
+  padding: 8px 22px; font-size: 14px; letter-spacing: 2px;
+}
+#overlay-card .oc-back:hover { background: var(--tang-red); color: var(--tang-gold-bright); }
+.bg-actions .oc-back { margin: 0; }
+
 /* 菜品卡 */
 .dish-card { text-align: center; }
 .dish-card svg { width: min(64vw, 300px); height: auto; filter: drop-shadow(0 8px 26px rgba(0,0,0,.6)); }

@@ -446,6 +446,59 @@
     openOverlay("<h2>结局收集</h2><div class='endings-grid'>" + cells + "</div>" + bonus + '<button class="oc-close">回到标题</button>', null);
   }
 
+  /* ---------- 画廊 ---------- */
+  const GALLERY = {
+    cg: [
+      { src: "images/cg_rain.jpg", cap: "雨夜 · 檐下的她" },
+      { src: "images/cg_bell.jpg", cap: "铃铛 · 系上手腕" },
+      { src: "images/cg_fire.jpg", cap: "烟花 · 告别之夜" },
+    ],
+    chara: [
+      { src: "images/cat_mascot.webp", cap: "白猫 · 庭院看板猫" },
+      { src: "images/chara_smile.webp", cap: "唐猫 · 微笑" },
+      { src: "images/chara_soft.webp", cap: "唐猫 · 温柔" },
+      { src: "images/chara_excited.webp", cap: "唐猫 · 兴奋" },
+      { src: "images/chara_surprised.webp", cap: "唐猫 · 惊讶" },
+      { src: "images/chara_shy.webp", cap: "唐猫 · 害羞" },
+      { src: "images/chara_smug.webp", cap: "唐猫 · 得意" },
+      { src: "images/chara_sad.webp", cap: "唐猫 · 难过" },
+      { src: "images/chara_cry.webp", cap: "唐猫 · 哭泣" },
+    ],
+    bg: [
+      { src: "images/bg_street.jpg", cap: "不夜城街道" },
+      { src: "images/bg_court.jpg", cap: "庭院夜话" },
+      { src: "images/bg_table.jpg", cap: "一桌好菜" },
+      { src: "images/bg_kitchen.jpg", cap: "后厨烟火" },
+      { src: "images/bg_rain.jpg", cap: "雨夜巷口" },
+      { src: "images/bg_fire.jpg", cap: "烟花之夜" },
+      { src: "images/bg_day.jpg", cap: "晌午窗边" },
+      { src: "images/bg_dawn.jpg", cap: "黎明告别" },
+      { src: "images/bg_title.jpg", cap: "庭院的门" },
+    ],
+  };
+  function galGrid(items) {
+    return '<div class="gal-grid">' + items.map(g =>
+      '<figure class="gal-item" data-src="' + g.src + '" data-cap="' + g.cap + '">' +
+      '<img src="' + g.src + '" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
+    ).join("") + '</div>';
+  }
+  function showGallery() {
+    openOverlay(
+      '<h2>画 廊</h2><p class="gal-hint">庭院纪念册 · 点击图片放大赏玩</p>' +
+      '<h3 class="gal-sec">剧情时刻</h3>' + galGrid(GALLERY.cg) +
+      '<h3 class="gal-sec">看板猫 · 唐猫</h3>' + galGrid(GALLERY.chara) +
+      '<h3 class="gal-sec">庭院风景</h3>' + galGrid(GALLERY.bg) +
+      '<button class="oc-close">回到标题</button>', null);
+    $("#overlay-card").querySelectorAll(".gal-item").forEach(f =>
+      f.addEventListener("click", () => { AudioSys.sfx("click"); galView(f.dataset.src, f.dataset.cap); }));
+  }
+  function galView(src, cap) {
+    openOverlay('<div class="cg-view"><img src="' + src + '" alt=""><div class="cg-caption">' + cap + '</div>' +
+      '<div class="bg-actions"><button class="oc-back">◀ 回画廊</button><button class="oc-close">关闭</button></div></div>', null);
+    const back = $("#overlay-card").querySelector(".oc-back");
+    if (back) back.addEventListener("click", () => { AudioSys.sfx("click"); showGallery(); });
+  }
+
   /* ---------- 游戏开始 / 继续 ---------- */
   function startGame(fromSave) {
     const sv = fromSave ? loadSave() : null;
@@ -508,6 +561,7 @@
     $("#t-start").addEventListener("click", () => { AudioSys.unlock(); AudioSys.sfx("select"); startGame(false); });
     $("#t-continue").addEventListener("click", () => { AudioSys.unlock(); AudioSys.sfx("select"); startGame(true); });
     $("#t-endings").addEventListener("click", () => { AudioSys.unlock(); AudioSys.sfx("click"); showEndings(); });
+    $("#t-gallery").addEventListener("click", () => { AudioSys.unlock(); AudioSys.sfx("click"); showGallery(); });
     $("#t-about").addEventListener("click", () => { AudioSys.unlock(); AudioSys.sfx("click"); showAbout(); });
 
     $("#btn-auto").addEventListener("click", (e) => {
