@@ -49,7 +49,7 @@
       $("#sprites").appendChild(el);
     }
     if (who === "catgirl") el.innerHTML = ART.catGirl(expr || "normal");
-    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025b" alt="唐猫（白猫）" draggable="false">';
+    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025c" alt="唐猫（白猫）" draggable="false">';
     el.style.width = "clamp(220px, 60vmin, 400px)";
     requestAnimationFrame(() => { el.className = "sprite pos-" + (pos || "center") + " breathe"; });
   }
@@ -171,12 +171,17 @@
     const ov = $("#overlay"), card = $("#overlay-card");
     card.innerHTML = html;
     ov.classList.remove("hidden");
+    // 标题屏在 DOM 中位于 overlay 之后会盖住弹层：打开时隐藏，关闭时恢复
+    const ts = $("#title-screen");
+    if (!ts.classList.contains("hidden")) ts.classList.add("hidden");
     ov.onclick = (e) => { if (e.target === ov) closeOverlay(onClose); };
     card.querySelectorAll(".oc-close").forEach((b) => b.addEventListener("click", () => { AudioSys.sfx("click"); closeOverlay(onClose); }));
   }
   function closeOverlay(onClose) {
     $("#overlay").classList.add("hidden");
     $("#overlay").classList.remove("ending");
+    // 未进入游戏时（标题上下文的弹层关闭），恢复标题屏
+    if (!state.playing) $("#title-screen").classList.remove("hidden");
     if (onClose) onClose();
   }
 
@@ -478,8 +483,8 @@
   };
   function galGrid(items) {
     return '<div class="gal-grid">' + items.map(g =>
-      '<figure class="gal-item" data-src="' + g.src + '?v=251025b" data-cap="' + g.cap + '">' +
-      '<img src="' + g.src + '?v=251025b" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
+      '<figure class="gal-item" data-src="' + g.src + '?v=251025c" data-cap="' + g.cap + '">' +
+      '<img src="' + g.src + '?v=251025c" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
     ).join("") + '</div>';
   }
   function showGallery() {
@@ -589,7 +594,7 @@
 
   /* ---------- 启动 ---------- */
   function boot() {
-    window.__GALGAME_VER = "251025b";
+    window.__GALGAME_VER = "251025c";
     $("#title-bg").innerHTML = ART.titleBg();
     bind();
     refreshTitle();
