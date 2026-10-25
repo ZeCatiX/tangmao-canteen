@@ -72,5 +72,18 @@
 <script src="js/audio.js?v=251025b"></script>
 <script src="js/story.js?v=251025b"></script>
 <script src="js/engine.js?v=251025b"></script>
+<script>
+/* 缓存自愈：若检测到旧版 engine（无版本标记）在跑，绕过缓存自动强刷一次（sessionStorage 防循环） */
+(function () {
+  setTimeout(function () {
+    if (window.__GALGAME_VER === "251025b") return;
+    try {
+      if (sessionStorage.getItem("_gv_healed")) return;
+      sessionStorage.setItem("_gv_healed", "1");
+    } catch (e) {}
+    location.replace(location.pathname + "?_r=" + Date.now());
+  }, 600);
+})();
+</script>
 </body>
 </html>
