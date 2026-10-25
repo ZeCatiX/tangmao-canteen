@@ -38,6 +38,7 @@
     backEl.innerHTML = ART.BGS[id] ? ART.BGS[id]() : "";
     backEl.classList.add("on"); frontEl.classList.remove("on");
     bgFront = bgFront === "A" ? "B" : "A";
+    AudioSys.rain(id === "rain");
   }
   function showSprite(who, expr, pos) {
     let el = document.getElementById("spr-" + who);
@@ -141,6 +142,8 @@
       case "nameinput": showNameInput(); break;
       case "quiz": showQuiz(cmd.id); break;
       case "budget": showBudget(); break;
+      case "dim": $("#stage").classList.toggle("spotlight", !!cmd.on); next(); break;
+      case "cg": showCg(cmd); break;
       case "choice": stopSkip(); showChoices(cmd); break;
       case "ending": doEnding(cmd.id); break;
       default: next();
@@ -173,6 +176,7 @@
   }
   function closeOverlay(onClose) {
     $("#overlay").classList.add("hidden");
+    $("#overlay").classList.remove("ending");
     if (onClose) onClose();
   }
 
@@ -355,6 +359,18 @@
     render();
   }
 
+  /* ---------- 全屏 CG（插画特写） ---------- */
+  function showCg(cmd) {
+    stopSkip();
+    openOverlay(
+      '<div class="cg-view">' +
+      '<img src="' + esc(cmd.src) + '" alt="">' +
+      (cmd.caption ? '<div class="cg-caption">' + esc(fmt(cmd.caption)) + '</div>' : "") +
+      '<button class="oc-close">继续</button></div>',
+      () => next()
+    );
+  }
+
   /* ---------- 选项 ---------- */
   function showChoices(cmd) {
     const box = $("#choices");
@@ -382,12 +398,15 @@
   }
 
   /* ---------- 结局 ---------- */
+  const END_BG = { bad: "table", silence: "rain", normal: "dawn", good: "court", true: "fire", zhiji: "day", bell: "fire" };
   function doEnding(id) {
     stopSkip(); state.playing = false; clearSave();
     addEnding(id);
     AudioSys.sfx("end");
+    if (END_BG[id]) setBg(END_BG[id]);
     const e = STORY.ENDINGS[id];
     const collected = getEndings().length;
+    $("#overlay").classList.add("ending");
     openOverlay(
       '<div class="ending-screen">' +
       '<div class="es-seal">' + e.seal + '</div><h2>' + e.name + '</h2><div class="es-sub">' + e.sub + '</div>' +

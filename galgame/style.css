@@ -395,3 +395,24 @@ button { font-family: var(--font-cn); cursor: pointer; }
 .bg-actions { display: flex; justify-content: center; gap: 14px; margin-top: 14px; }
 .bg-actions .oc-close { margin: 0; }
 .bg-actions button[disabled] { opacity: .35; cursor: default; }
+
+/* ---------- 演出：聚光压暗 ---------- */
+#stage.spotlight .bg-layer { filter: brightness(.38) saturate(.7); }
+#stage.spotlight #sprites .sprite:not(.dim) { filter: drop-shadow(0 0 18px rgba(255,220,150,.28)); }
+#stage.spotlight #vignette {
+  background:
+    radial-gradient(ellipse at 50% 38%, transparent 24%, rgba(6, 3, 5, .82) 88%),
+    linear-gradient(to top, rgba(8, 4, 6, .85) 0%, transparent 40%);
+}
+.bg-layer { transition: opacity 1s ease, filter .9s ease; }
+#vignette { transition: background .9s ease; }
+
+/* ---------- 全屏 CG ---------- */
+#overlay.ending { background: rgba(8, 4, 6, .6); }
+.cg-view { text-align: center; }
+.cg-view img {
+  max-width: 100%; max-height: 66vh; object-fit: contain;
+  border: 1px solid rgba(217, 178, 106, .6); border-radius: 8px;
+  box-shadow: 0 12px 60px rgba(0, 0, 0, .8);
+}
+.cg-caption { color: var(--tang-gold-bright); font-size: 14.5px; letter-spacing: 2px; margin-top: 12px; line-height: 1.8; }

@@ -164,9 +164,34 @@ const AudioSys = (() => {
     }
   }
 
+  /* 雨声：循环白噪 + 低通滤波，随开关淡入淡出 */
+  let rainNodes = null;
+  function rain(on) {
+    if (on) {
+      if (!ensure() || rainNodes) return;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 850;
+      const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 180;
+      const g = ctx.createGain(); g.gain.value = 0;
+      src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(master);
+      src.start();
+      g.gain.linearRampToValueAtTime(0.055, ctx.currentTime + 1.6);
+      rainNodes = { src, g };
+    } else if (rainNodes) {
+      const n = rainNodes; rainNodes = null;
+      n.g.gain.cancelScheduledValues(ctx.currentTime);
+      n.g.gain.setValueAtTime(n.g.gain.value, ctx.currentTime);
+      n.g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
+      setTimeout(() => { try { n.src.stop(); } catch (e) {} }, 1300);
+    }
+  }
+
   function toggle() {
     enabled = !enabled;
-    if (!enabled) stopBgm();
+    if (!enabled) { stopBgm(); rain(false); }
     else if (current) { const c = current; playBgm(c); }
     return enabled;
   }
@@ -174,5 +199,5 @@ const AudioSys = (() => {
   function isOn() { return enabled; }
   function unlock() { ensure(); }
 
-  return { playBgm, stopBgm, sfx, toggle, setVolume, isOn, unlock };
+  return { playBgm, stopBgm, sfx, toggle, setVolume, isOn, unlock, rain };
 })();
