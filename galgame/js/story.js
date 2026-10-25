@@ -516,6 +516,8 @@ const SCRIPT = [
   { t: "say", who: "唐猫", expr: "surprised", text: "「明、明天？！这么快？！」" },
   { t: "say", who: "me", text: "「不然呢？好店是要趁热二刷的。同学他们下午的火车，正好赶上晚饭。」" },
   { t: "say", who: "唐猫", expr: "happy", text: "「好！那本喵明天一早就去挑最精神的鱼——一言为定！」" },
+  { t: "say", who: "narr", text: "走出巷口时，你在台阶上捡到一只小小的、红绳系着的铜铃铛。" },
+  { t: "say", who: "me", text: "（先收着。总有一天，要物归原主。）" },
   { t: "jump", id: "day_start" },
 
   { t: "label", id: "f_solo" },
@@ -775,6 +777,7 @@ const SCRIPT = [
   { t: "say", who: "唐猫", expr: "sad", text: "「他走的时候说：『猫猫，以后少来咧。』——是『少来』哦，不是『不来』。可本喵知道……那是一样的意思。」" },
   { t: "say", who: "唐猫", expr: "sad", text: "「七年里，本喵送走的『下次再来』，比记住的还多。旅人嘛，都这样的。本喵早该习惯了。」" },
   { t: "say", who: "narr", text: "她笑了一下。那个笑，没到眼睛里。" },
+  { t: "say", who: "me", text: "（这个笑的影子——我见过。第一晚她自我介绍完、灯笼晃了一下的时候。）" },
   { t: "choice", prompt: "她看着雨幕，侧脸浸在灯笼的光里，等你说话。", options: [
     { text: "「李叔不会是最后一个离开的人。但我不会——我说了每周五，就是每周五。」", aff: 3, flag: "caught_her", goto: "night_caught" },
     { text: "「人来了又走，留下的人才会显得珍贵啊。」", aff: 1, goto: "night_phil" },
