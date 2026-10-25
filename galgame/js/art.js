@@ -85,16 +85,16 @@ const ART = (() => {
 
   /* ================= 猫娘立绘（AI 差分图：8 张覆盖 15 表情，映射见 CHARA_MAP） ================= */
   const CHARA_MAP = {
-    normal: "smile", smile: "smile", happy: "excited", excited: "excited", wink: "excited",
-    shy: "shy", surprised: "surprised", soft: "soft", sleepy: "soft", serious: "soft",
-    smug: "smug", pout: "smug", sad: "sad", worried: "sad", cry: "cry",
+    normal: "normal", smile: "smile", happy: "happy", excited: "excited", wink: "wink",
+    shy: "shy", surprised: "surprised", soft: "soft", sleepy: "sleepy", serious: "serious",
+    smug: "smug", pout: "pout", sad: "sad", worried: "worried", cry: "cry",
   };
   function catGirl(exprKey) {
     const img = CHARA_MAP[exprKey] || "smile";
-    return '<img class="chara-img" src="images/chara_' + img + '.webp?v=251025d" alt="唐猫" draggable="false">';
+    return '<img class="chara-img" src="images/chara_' + img + '.webp?v=251025e" alt="唐猫" draggable="false">';
   }
   /* 预加载全部差分，避免表情切换时闪白 */
-  ["smile", "surprised", "sad", "soft", "cry", "excited", "shy", "smug"].forEach(n => {
+  ["smile","normal","happy","excited","wink","shy","surprised","soft","sleepy","serious","smug","pout","sad","worried","cry"].forEach(n => {
     const im = new Image();
     im.src = "images/chara_" + n + ".webp";
   });
@@ -189,7 +189,7 @@ const ART = (() => {
   /* ================= 场景背景（AI 厚涂竖版图包装为 svg，900x1600 与 9:16 生成图精确匹配） ================= */
   function photoBg(src, extra) {
     return '<svg viewBox="0 0 900 1600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<image href="images/' + src + '?v=251025d" width="900" height="1600"/>' + (extra || "") +
+      '<image href="images/' + src + '?v=251025e" width="900" height="1600"/>' + (extra || "") +
       '</svg>';
   }
 
