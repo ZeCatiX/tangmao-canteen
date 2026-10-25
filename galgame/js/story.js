@@ -492,7 +492,7 @@ const SCRIPT = [
   { t: "jump", id: "night_farewell" },
   { t: "label", id: "h_family" },
   { t: "say", who: "me", text: "「（在心里记下：下次带爸妈来。葫芦鸡给他们，锅子鱼给妈，望塔酥给爱拍照的老爸。）」" },
-  { t: "say", who: "唐猫", expr: "happy", text: "「本喵都听到了哦～家庭聚餐的话，记得提前订位，再让『一桌菜』给你排一桌爸妈口味的！」" },
+  { t: "say", who: "唐猫", expr: "happy", text: "「本喵都听到了哦～带爸妈来的话，忌口提前告诉本喵——那桌，本喵亲自盯着。」" },
   { t: "jump", id: "night_farewell" },
 
   /* ===== 夜别（分流点） ===== */
