@@ -49,7 +49,7 @@
       $("#sprites").appendChild(el);
     }
     if (who === "catgirl") el.innerHTML = ART.catGirl(expr || "normal");
-    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025d" alt="唐猫（白猫）" draggable="false">';
+    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025e" alt="唐猫（白猫）" draggable="false">';
     el.style.width = "clamp(220px, 60vmin, 400px)";
     requestAnimationFrame(() => { el.className = "sprite pos-" + (pos || "center") + " breathe"; });
   }
@@ -467,7 +467,14 @@
       { src: "images/chara_shy.webp", cap: "唐猫 · 害羞" },
       { src: "images/chara_smug.webp", cap: "唐猫 · 得意" },
       { src: "images/chara_sad.webp", cap: "唐猫 · 难过" },
+      { src: "images/chara_worried.webp", cap: "唐猫 · 担心" },
       { src: "images/chara_cry.webp", cap: "唐猫 · 哭泣" },
+      { src: "images/chara_normal.webp", cap: "唐猫 · 平静" },
+      { src: "images/chara_happy.webp", cap: "唐猫 · 开心" },
+      { src: "images/chara_wink.webp", cap: "唐猫 · 眨眼" },
+      { src: "images/chara_sleepy.webp", cap: "唐猫 · 困倦" },
+      { src: "images/chara_serious.webp", cap: "唐猫 · 认真" },
+      { src: "images/chara_pout.webp", cap: "唐猫 · 哼" },
     ],
     bg: [
       { src: "images/bg_street.jpg", cap: "不夜城街道" },
@@ -483,8 +490,8 @@
   };
   function galGrid(items) {
     return '<div class="gal-grid">' + items.map(g =>
-      '<figure class="gal-item" data-src="' + g.src + '?v=251025d" data-cap="' + g.cap + '">' +
-      '<img src="' + g.src + '?v=251025d" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
+      '<figure class="gal-item" data-src="' + g.src + '?v=251025e" data-cap="' + g.cap + '">' +
+      '<img src="' + g.src + '?v=251025e" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
     ).join("") + '</div>';
   }
   function showGallery() {
@@ -594,7 +601,7 @@
 
   /* ---------- 启动 ---------- */
   function boot() {
-    window.__GALGAME_VER = "251025d";
+    window.__GALGAME_VER = "251025e";
     $("#title-bg").innerHTML = ART.titleBg();
     bind();
     refreshTitle();
