@@ -49,7 +49,7 @@
       $("#sprites").appendChild(el);
     }
     if (who === "catgirl") el.innerHTML = ART.catGirl(expr || "normal");
-    else el.innerHTML = ART.cat();
+    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp" alt="唐猫（白猫）" draggable="false">';
     el.style.width = "clamp(220px, 60vmin, 400px)";
     requestAnimationFrame(() => { el.className = "sprite pos-" + (pos || "center") + " breathe"; });
   }
