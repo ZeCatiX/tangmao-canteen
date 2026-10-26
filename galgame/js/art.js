@@ -245,7 +245,7 @@ const ART = (() => {
     avenue: () => photoBg("bg_avenue.jpg"),
     street: () => bgStreet(false),
     gate: () => photoBg("bg_title.jpg",
-      '<text x="462" y="733" text-anchor="middle" font-family="\'Noto Serif SC\',\'Songti SC\',serif" font-size="80" letter-spacing="12" fill="#f2d8a0" stroke="#2a1410" stroke-width="3" style="paint-order:stroke" font-weight="600">唐猫庭院</text>'),
+      '<text x="452" y="682" text-anchor="middle" font-family="\'Noto Serif SC\',\'Songti SC\',serif" font-size="64" letter-spacing="10" fill="#f2d8a0" stroke="#2a1410" stroke-width="3" style="paint-order:stroke" font-weight="600">唐猫庭院</text>'),
     dawn: () => bgStreet(true),
     court: bgCourt,
     table: bgTable,
