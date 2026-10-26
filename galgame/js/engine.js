@@ -49,7 +49,7 @@
       $("#sprites").appendChild(el);
     }
     if (who === "catgirl") el.innerHTML = ART.catGirl(expr || "normal");
-    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025k" alt="唐猫（白猫）" draggable="false">';
+    else el.innerHTML = '<img class="chara-img" src="images/cat_mascot.webp?v=251025l" alt="唐猫（白猫）" draggable="false">';
     el.style.width = "clamp(220px, 60vmin, 400px)";
     requestAnimationFrame(() => { el.className = "sprite pos-" + (pos || "center") + " breathe"; });
   }
@@ -491,8 +491,8 @@
   };
   function galGrid(items) {
     return '<div class="gal-grid">' + items.map(g =>
-      '<figure class="gal-item" data-src="' + g.src + '?v=251025k" data-cap="' + g.cap + '">' +
-      '<img src="' + g.src + '?v=251025k" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
+      '<figure class="gal-item" data-src="' + g.src + '?v=251025l" data-cap="' + g.cap + '">' +
+      '<img src="' + g.src + '?v=251025l" alt="" loading="lazy"><figcaption>' + g.cap + '</figcaption></figure>'
     ).join("") + '</div>';
   }
   function showGallery() {
@@ -602,7 +602,7 @@
 
   /* ---------- 启动 ---------- */
   function boot() {
-    window.__GALGAME_VER = "251025k";
+    window.__GALGAME_VER = "251025l";
     $("#title-bg").innerHTML = ART.titleBg();
     bind();
     refreshTitle();
