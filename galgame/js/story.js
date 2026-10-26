@@ -134,7 +134,7 @@ function profileHtml(spice) {
 function promoHtml() {
   return (
     '<div style="display:flex;gap:12px;align-items:center;margin:2px 0 10px">' +
-    '<img src="images/chara_smile.webp?v=251025y" alt="唐猫" style="width:74px;height:74px;object-fit:cover;object-position:top;border-radius:50%;border:2px solid rgba(217,178,106,.5);flex:none">' +
+    '<img src="images/chara_smile.webp?v=251025z" alt="唐猫" style="width:74px;height:74px;object-fit:cover;object-position:top;border-radius:50%;border:2px solid rgba(217,178,106,.5);flex:none">' +
     '<div style="flex:1;background:rgba(217,178,106,.10);border:1px solid rgba(217,178,106,.35);border-radius:12px;padding:10px 12px;line-height:1.7">「客人要走了吗……走之前，本喵再啰嗦几句。这家店你逛了一晚上，但有几件事，得本喵亲口说才算数。」</div>' +
     '</div>' +
     '<h3>🏮 这家店</h3>' +
@@ -203,9 +203,9 @@ const SCRIPT = [
   { t: "label", id: "gate" },
   { t: "bg", id: "gate" },
   { t: "hide", who: "cat" },
-  { t: "say", who: "narr", text: "巷子尽头，一盏写有「唐」字的灯笼下，藏着一方安静的小院。" },
+  { t: "say", who: "narr", text: "巷子尽头，灯笼的红光尽处，藏着一方安静的小院。" },
   { t: "sfx", id: "chapter" },
-  { t: "say", who: "narr", text: "门楣上三个字——「唐猫庭院」。白猫在台阶上坐定，回头看你，像在说：到了。" },
+  { t: "say", who: "narr", text: "门楣的匾额上四个字——「唐猫庭院」。白猫在台阶上坐定，回头看你，像在说：到了。" },
 
   /* ===== 相遇 ===== */
   { t: "bg", id: "court" },
