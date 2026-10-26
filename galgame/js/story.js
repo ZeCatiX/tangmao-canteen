@@ -184,7 +184,8 @@ const SCRIPT = [
 
   { t: "label", id: "follow_b" },
   { t: "say", who: "narr", text: "手机屏幕亮起。搜到的一条热评吸引了你——" },
-  { t: "say", who: "narr", text: "「别排队了，来唐猫庭院吧。千年陕菜，猫比人多。」" },
+  { t: "say", who: "narr", text: "「赛格那家排疯了，要吃去大雁塔旁的老店，清净。千年陕菜，猫比人多。」" },
+  { t: "say", who: "narr", text: "你抬头看了眼定位——唐猫庭院 · 大唐不夜城店，就在附近。" },
   { t: "say", who: "白猫", text: "「喵。」（似乎在说：早搜啊）" },
   { t: "say", who: "narr", text: "白猫在前头带路，领着你拐进一条挂满灯笼的小巷。喧嚣像退潮一样远去。" },
   { t: "bg", id: "street" },
