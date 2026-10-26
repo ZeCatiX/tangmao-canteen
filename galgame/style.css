@@ -305,11 +305,6 @@ button { font-family: var(--font-cn); cursor: pointer; }
   text-shadow: 0 0 36px rgba(217,178,106,.4), 0 3px 10px #000;
   animation: ctIn 1.6s ease both;
 }
-.tl-sub {
-  color: var(--tang-gold-bright); letter-spacing: 10px; text-indent: 10px;
-  font-size: clamp(14px, 2.6vmin, 19px); margin-top: 8px; opacity: .95;
-  text-shadow: 0 1px 8px rgba(0,0,0,.9), 0 0 20px rgba(0,0,0,.6);
-}
 #title-menu { display: flex; flex-direction: column; gap: 13px; animation: menuIn 1.2s ease both .5s; }
 @keyframes menuIn { from { opacity: 0; transform: translateY(16px); } }
 #title-menu button {
