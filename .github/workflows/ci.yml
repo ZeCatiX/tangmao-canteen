@@ -132,6 +132,12 @@ jobs:
           PG_DATABASE: tangmao_test
           PG_USER: postgres
           PG_PASSWORD: testpass
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-only-test-secret-0123456789abcdef' }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS || 'ci-admin-test-pass' }}
+          TABLE_SECRET: ${{ secrets.TABLE_SECRET || 'ci-table-secret-0123456789abcdef' }}
+          ADMIN_USER: admin
+          LOGIN_RATE_LIMIT_MAX: 200
+          ADMIN_LOGIN_RATE_LIMIT_MAX: 500
         run: node --test tests/admin_governance.test.js
 
       - name: Security audit
