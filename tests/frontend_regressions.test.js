@@ -27,7 +27,7 @@ test('回归-BUG1: 选桌后AI入口走 openAIRecommend 冷启动判定, 不再�
   assert.ok(fnBody.includes("showSection('preference-section')"), 'openAIRecommend 必须含偏好表单分支');
   // 选桌后续路由的 ai 分支必须走判定源, 不允许硬编码
   const pick = sq(core.slice(core.indexOf('function applyTableChoice'), core.indexOf('function showTableBill')));
-  assert.ok(pick.includes("intent==='ai')openAIRecommend()"), 'applyTableChoice 的 ai 分支必须调 openAIRecommend');
+  assert.ok(pick.includes("intent==='ai'){openAIRecommend()"), 'applyTableChoice 的 ai 分支必须调 openAIRecommend');
   assert.ok(
     !pick.includes("intent==='ai')showSection('preference-section')"),
     'ai 分支禁止硬编码跳偏好表单(会绕过冷启动)'
@@ -203,7 +203,7 @@ test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输�
 //       上一登录用户的选项残留给下一顾客(共享平板/扫码设备隐私问题)。
 test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖三分支)', () => {
   const c = frontSrc();
-  assert.ok(c.includes('else resetPreferenceForm();'), 'guest/未登录应走 resetPreferenceForm');
+  assert.ok(sq(c).includes('else{resetPreferenceForm();'), 'guest/未登录应走 resetPreferenceForm');
   assert.ok(!c.includes('else if(!currentUser)resetPreferenceForm();'), '旧条件(仅null重置)应已移除');
   assert.ok(c.includes("removeItem('savedPrefs')"), '退出登录应清 savedPrefs 偏好痕迹标记');
   assert.ok(
@@ -241,3 +241,10 @@ function frontSrc() {
 function frontSq() {
   return frontSrc().replace(/\s+/g, '');
 }
+
+// 2026-10-23 回归: 全局 $ 快捷选择器被死代码甄别误删( 正则对 $ 失效报假零引用),
+// 推荐链(一席成宴/猫掌柜)运行时 ReferenceError 静默失败——API 测试不覆盖,只有真浏览器能暴露
+test('globals.js 必须声明全局 $ 工具(js/ 多模块无局部定义时依赖它)', () => {
+  const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'globals.js'), 'utf8');
+  assert.ok(content.includes('const $ = (id) => document.getElementById(id)'), 'globals.js 应声明全局 $ 快捷选择器');
+});

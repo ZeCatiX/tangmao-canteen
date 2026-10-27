@@ -13,6 +13,9 @@ var apiAvailabilityCache = null,
   apiCacheTimestamp = 0;
 var dishData = []; // 菜品数据，从API加载
 // 客户端菜品准入：下架的与名称含「测试」的脏数据一律不进 dishData（防测试菜露出到菜单/推荐/盲盒）
+// 全局 $ 快捷选择器:各模块无局部 $ 时依赖此全局(2026-10-22 误删致推荐链 ReferenceError,恢复)
+const $ = (id) => document.getElementById(id);
+
 function filterVisibleDishes(list) {
   return (list || []).filter((x) => x.is_active !== false && !(x.name || '').includes('测试'));
 }
