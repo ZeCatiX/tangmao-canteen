@@ -115,7 +115,7 @@ describe('按钮可用性与显示检查', () => {
     // rec-history-list 有 null 保护
     assert.ok(js.includes('if(rh)') || js.includes('if (rh)'), 'rec-history-list 应有 null 保护');
     // message-modal 有 null 保护
-    assert.ok(init.includes('if(!me)return') || init.includes('if (!me) return'), 'closeModal 应有 me null 保护');
+    assert.ok(init.includes('if(!me)return') || init.includes('if (!me) {'), 'closeModal 应有 me null 保护');
     assert.ok(init.includes('if(me)') || init.includes('if (me)'), 'message-modal 应有 null 保护');
     // allergy-none 有 null 保护
     assert.ok(

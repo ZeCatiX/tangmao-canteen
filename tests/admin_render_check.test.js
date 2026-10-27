@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

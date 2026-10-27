@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
@@ -31,7 +31,9 @@ function isRealError(msg) {
 
 async function registerAndLogin(page, uniqUser, password) {
   await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
-  await sleep(300);
+  // 跳过品牌启动动画(fixed 遮罩会吃掉表单的坐标点击,注册勾选失效——2026-10-27)
+  await page.evaluate(() => document.getElementById('logo-intro-overlay').click());
+  await sleep(1200);
   // 注册
   await page.evaluate(() => document.getElementById('register-btn')?.click());
   await sleep(400);

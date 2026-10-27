@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS;
 const ROOT = path.join(__dirname, '..');

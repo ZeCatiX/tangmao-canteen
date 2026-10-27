@@ -323,7 +323,7 @@ describe('日志路径修复回归', () => {
   it('监控 API combined 日志使用日期文件名', () => {
     // 监控路由已拆至 server/routes/admin.js(改造4)
     const s = read('server/routes/admin.js');
-    assert.ok(s.includes("combined-'+today+'.log"), '应使用 combined-{today}.log 而非 combined.log');
+    assert.ok(s.includes("combined-' + today + '.log"), '应使用 combined-{today}.log 而非 combined.log');
     assert.ok(!s.includes("'logs', 'combined.log'"), '不应残留无日期的 combined.log');
   });
 });

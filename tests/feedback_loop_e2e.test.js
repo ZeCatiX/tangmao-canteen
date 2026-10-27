@@ -21,7 +21,7 @@ const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -314,7 +314,11 @@ describe('反馈环路与统计联动测试', () => {
     resetErrors();
     await page.setViewport({ width: 375, height: 812 });
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
-    await sleep(1000);
+    // 跳过品牌启动动画(遮罩约3.5秒,期间点击被 overlay 吃掉,汉堡不会展开——2026-10-27 时序修复)
+    // 模拟真实用户"点击任意处跳过"——点 overlay 本身触发 close(fixed 遮罩会吃掉页面其他坐标的点击)
+    await page.evaluate(() => document.getElementById('logo-intro-overlay').click());
+    await sleep(1200);
+    await sleep(2800);
     // 检查汉堡菜单按钮
     const toggler = await page.$('.navbar-toggler');
     assert.ok(toggler, '移动端应有汉堡菜单按钮');

@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
 require('dotenv').config();
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page;
