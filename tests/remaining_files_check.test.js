@@ -30,11 +30,9 @@ describe('剩余基础设施文件最终检查', () => {
     assert.ok(content.length > 100, '应有版本记录内容');
   });
 
-  // ===== 4. CHECKLIST.md 存在（2026-10-07 归档至 docs/archive/） =====
-  it('4.1 CHECKLIST.md 存在于归档目录且包含检查标题', () => {
-    const content = fs.readFileSync(path.join(ROOT, 'docs', 'archive', 'CHECKLIST.md'), 'utf8');
-    assert.ok(content.includes('##') || content.includes('检查'), '应包含检查标题');
-    assert.ok(content.length > 100, '应有实质内容');
+  // ===== 4. 归档目录已整体移除（2026-10-22 公开仓库隐私收敛,含 CHECKLIST.md）=====
+  it('4.1 docs/archive 归档目录已移除', () => {
+    assert.ok(!fs.existsSync(path.join(ROOT, 'docs', 'archive')), '归档目录应已移除,若恢复需同步更新本断言');
   });
 
   // ===== 5. CONTRIBUTING.md 存在 =====

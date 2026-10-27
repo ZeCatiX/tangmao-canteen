@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const ROOT = path.join(__dirname, '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -194,7 +194,7 @@ describe('页面交互细节深度检查', () => {
     await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
     await sleep(500);
     const logoOk = await page.evaluate(() => {
-      const img = document.querySelector('img[alt="餐馆Logo"]');
+      const img = document.querySelector('img[alt*="Logo"]');
       if (!img) {
         return false;
       }

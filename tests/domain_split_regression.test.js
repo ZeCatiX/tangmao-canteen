@@ -22,8 +22,8 @@ describe('域拆分内容断言(防回退/防复发)', () => {
     const content = read('server.js');
     assert.ok(content.includes('const runtimeSettings = { autoRetrain: false }'), 'server.js 应声明 runtimeSettings');
     assert.ok(
-      content.includes('runtimeSettings, saveRuntimeSettings'),
-      'admin 挂载应注入 runtimeSettings/saveRuntimeSettings'
+      content.includes('runtimeSettings,') && content.includes('saveRuntimeSettings,'),
+      'admin 挂载应注入 runtimeSettings/saveRuntimeSettings(prettier 可能拆行,按条目存在判定)'
     );
   });
 
@@ -43,7 +43,7 @@ describe('域拆分内容断言(防回退/防复发)', () => {
   it('ml-worker.js 有 fs require 且 ORD_MAPPINGS_CACHE 为 Map(HistGB 兜底曾连环 TypeError)', () => {
     const content = read('server/ml-worker.js');
     assert.ok(content.includes("require('fs')"), '兜底模型加载需要 fs');
-    assert.ok(content.includes("'辣度': new Map(["), '口味序数映射应为 Map(.get 调用点依赖)');
+    assert.ok(content.includes("'辣度': new Map([") || content.includes("辣度: new Map(["), '口味序数映射应为 Map(.get 调用点依赖)');
     assert.ok(
       content.includes("const ROOT = path.join(__dirname, '..');"),
       'server/ 一层深,ROOT 只回退一级(../.. 曾指到仓库外,worker 即退)'

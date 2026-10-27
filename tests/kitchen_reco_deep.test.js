@@ -4,7 +4,7 @@ const assert = require('node:assert');
 const puppeteer = require('puppeteer');
 
 const BASE = 'http://localhost:3000';
-const CHROME_PATH = 'C:\\Users\\Lenovo\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME_PATH = require('./_chrome_path');
 const ADMIN_PASS = process.env.ADMIN_PASS || 'tm_admin_f1e2d3c4b5a6978';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -281,28 +281,54 @@ describe('推荐逻辑深度检查', () => {
   // 该断言原属首页推荐流,已由 reco_admin_users/feedback_loop 等覆盖,厨房页不产生推荐缓存。
 
   // ===== 12. 换一批后菜品不重复 =====
-  it('12.1 换一批后菜品与之前不重复', async () => {
+  it('12.1 换一批后菜品与之前不重复(2026-10-27 重写:登录流+菜名提取,旧版依赖已废弃的内联onclick与guest流不存在的换一批按钮)', async () => {
     resetErrors();
-    const beforeIds = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map((el) => {
-        const btn = el.querySelector('button[onclick*="addToFavorites"]');
-        return btn ? btn.getAttribute('onclick').match(/\d+/)[0] : null;
-      });
-    });
-    await page.evaluate(() => document.getElementById('refresh-recommendations')?.click());
-    await sleep(3000);
-    const afterIds = await page.evaluate(() => {
-      return Array.from(document.querySelectorAll('#dish-list .list-group-item')).map((el) => {
-        const btn = el.querySelector('button[onclick*="addToFavorites"]');
-        return btn ? btn.getAttribute('onclick').match(/\d+/)[0] : null;
-      });
-    });
-    // 换一批后应有菜品
-    assert.ok(afterIds.length > 0, '换一批后应有菜品');
-    // 检查是否有重复（推荐过的菜品不应再推荐）
-    const overlap = afterIds.filter((id) => beforeIds.includes(id));
-    // 允许少量重复（当可用菜品不足时），但不应全部重复
-    assert.ok(overlap.length < afterIds.length, '换一批后不应全部是之前推荐过的菜品');
+    // 走登录用户偏好推荐流(操作区"换一批"按钮仅在该流渲染)
+    await page.goto(BASE + '/', { waitUntil: 'networkidle0', timeout: 15000 });
+    await page.evaluate(() => document.getElementById('logo-intro-overlay')?.click());
+    await sleep(1200);
+    const uname = 'reco12_' + Date.now().toString().slice(-6);
+    await page.evaluate(() => document.getElementById('register-btn')?.click());
+    await sleep(500);
+    await page.type('#register-username', uname, { delay: 20 });
+    await page.type('#register-password', 'TestPass123!', { delay: 20 });
+    await page.type('#register-confirm', 'TestPass123!', { delay: 20 });
+    const agree = await page.$('#agree-privacy');
+    if (agree) { const c = await page.evaluate((el) => el.checked, agree); if (!c) await agree.click(); }
+    await page.evaluate(() => document.getElementById('register-form').querySelector('button[type="submit"]').click());
+    await sleep(1500);
+    await page.evaluate(() => { const m = document.querySelector('.modal.show'); if (m) { const c = m.querySelector('.btn-close, [data-bs-dismiss="modal"]'); if (c) c.click(); } });
+    await sleep(600);
+    // 猫掌柜入口 → 偏好表单 → 提交
+    await page.evaluate(() => document.getElementById('ai-recommend-btn')?.click());
+    await sleep(1200);
+    await page.select('#spiciness', '微辣');
+    await page.select('#saltiness', '适中');
+    await page.select('#sweetness', '酸甜');
+    await page.evaluate(() => document.getElementById('preference-form').querySelector('button[type="submit"]').click());
+    // 轮询等推荐结果
+    for (let w = 0; w < 20; w++) {
+      await sleep(1000);
+      const ok = await page.evaluate(() => { const l = document.getElementById('recommendation-loading'); const d = document.getElementById('dish-list'); return l?.classList.contains('d-none') && d && d.children.length > 0; });
+      if (ok) break;
+    }
+    const names = () => page.evaluate(() => [...document.querySelectorAll('#dish-list .list-group-item')].map((el) => el.textContent.replace(/\s+/g, '').slice(0, 24)));
+    const before = await names();
+    assert.ok(before.length > 0, '推荐结果应有菜品');
+    // 点换一批(按钮在推荐结果操作区)
+    const hasBtn = await page.evaluate(() => !!document.getElementById('refresh-recommendations'));
+    assert.ok(hasBtn, '登录偏好流应有换一批按钮');
+    await page.evaluate(() => document.getElementById('refresh-recommendations').click());
+    // 轮询等待刷新(ML 冷启动首次推理可超 4.5s)
+    for (let w = 0; w < 20; w++) {
+      await sleep(1000);
+      const st = await page.evaluate(() => ({ loading: !document.getElementById('recommendation-loading')?.classList.contains('d-none') }));
+      if (!st.loading) { await sleep(600); break; }
+    }
+    const after = await names();
+    assert.ok(after.length > 0, '换一批后应有菜品');
+    const overlap = after.filter((n) => before.includes(n));
+    assert.ok(overlap.length < after.length, '换一批后不应全部是之前推荐过的菜品: ' + JSON.stringify({ before, after }).slice(0, 200));
     assert.equal(realErrors().length, 0, '换一批不应有错误');
   });
 

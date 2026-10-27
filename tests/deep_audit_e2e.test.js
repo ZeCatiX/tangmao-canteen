@@ -400,7 +400,7 @@ describe('2. 崩溃风险与边界情况审计', () => {
     const core = frontSq();
     assert.ok(core.includes('if(!mt||!mb)'), 'showMessage 应有 null 保护');
     assert.ok(core.includes('if(!el)'), 'showSection 应有 null 保护');
-    assert.ok(core.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
+    assert.ok(core.includes('if(!container)return') || core.includes('if(!container){return'), 'renderMenuTable 应有 null 保护');
     assert.ok(core.includes('if(!uEl||!pEl)'), 'login 应有 null 保护');
     assert.ok(core.includes('if(!uEl||!pEl||!cEl)'), 'register 应有 null 保护');
   });
@@ -1500,7 +1500,8 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('CORS配置限制方法和来源', () => {
     const server = read('server.js');
-    const corsConfig = server.substring(server.indexOf('app.use(cors'), server.indexOf('app.use(cors') + 300);
+    const corsAt = server.indexOf('cors({');
+    const corsConfig = server.substring(corsAt, corsAt + 300);
     assert.ok(corsConfig.includes('origin:'), 'CORS限制来源');
     assert.ok(corsConfig.includes('methods:'), 'CORS限制方法');
     assert.ok(corsConfig.includes("'GET'"), '允许GET方法');
@@ -1703,9 +1704,9 @@ describe('9. 后端逻辑健壮性审计', () => {
     assert.ok(server.includes('name.trim().length < 2'), '菜名验证');
     assert.ok(server.includes('priceNum < 0'), '价格验证');
     assert.ok(server.includes('ratingNum > 5'), '评分验证');
-    assert.ok(server.includes("spiciness||'不辣'"), '辣度默认值');
-    assert.ok(server.includes("saltiness||'适中'"), '咸淡默认值');
-    assert.ok(server.includes("sweetness||'无味'"), '甜酸默认值');
+    assert.ok(server.includes("spiciness || '不辣'"), '辣度默认值');
+    assert.ok(server.includes("saltiness || '适中'"), '咸淡默认值');
+    assert.ok(server.includes("sweetness || '无味'"), '甜酸默认值');
   });
 
   it('订单商品价格有验证', () => {
@@ -1761,7 +1762,7 @@ describe('9. 后端逻辑健壮性审计', () => {
     assert.ok(server.includes("req.user?.username || 'guest'"), '推荐日志userId默认值');
     assert.ok(server.includes("req.user ? 'user' : 'guest'"), '推荐日志userType取自登录态');
     // allergies 经参数化查询直接传数组(pg 对 jsonb 列自动转换),不再手工 JSON.stringify
-    assert.ok(server.includes('allergies||[]'), '偏好日志allergies默认值');
+    assert.ok(server.includes('allergies || []'), '偏好日志allergies默认值');
     assert.ok(
       server.includes("recommendationMode||'auto'") || server.includes("recommendationMode || 'auto'"),
       '偏好日志mode默认值'

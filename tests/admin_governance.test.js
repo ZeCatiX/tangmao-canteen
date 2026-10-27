@@ -124,7 +124,7 @@ test('管理员订单列表: 桌号模糊搜索生效', async () => {
   );
 });
 
-test('下单频度防刷: 同桌 60 秒内第 6 单应 429', async () => {
+test('下单频度防刷: 同桌 60 秒内第 6 单应 429', { skip: (parseInt(process.env.ORDER_FREQ_LIMIT || '5') > 100) ? '当前环境已放宽下单频控(ORDER_FREQ_LIMIT>100),频控回归由 CI(默认阈值5)执行' : false }, async () => {
   // 用独占桌号 '20' 避免影响其他测试; 用不同 qty 产生不同 items 绕过 10 秒幂等去重
   const H = { 'Content-Type': 'application/json' };
   const statuses = [];

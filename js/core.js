@@ -786,6 +786,27 @@ function updateModeDisplay() {
     '自动选择（优先API）';
 }
 
+// 登录/注册成功后的导航栏认证态切换(2026-10-27: 从弹窗"确定"回调提前到 API 成功时——
+// 用户点 X 关闭弹窗曾跳过回调,导航停留在"登录"态而实际已登录)
+function updateNavAuthState() {
+  const pi = document.getElementById('nav-profile-item'),
+    nu = document.getElementById('nav-user');
+  if (pi) {
+    pi.classList.remove('d-none');
+  }
+  if (nu) {
+    nu.classList.add('d-none');
+  }
+  const hlb = document.getElementById('login-btn'),
+    hrb = document.getElementById('register-btn');
+  if (hlb) {
+    hlb.classList.add('d-none');
+  }
+  if (hrb) {
+    hrb.classList.add('d-none');
+  }
+}
+
 function showMessage(title, msg, callback, autoClose) {
   const mt = document.getElementById('modal-title'),
     mb = document.getElementById('modal-body');
@@ -895,23 +916,7 @@ function login() {
       }
       saveUsers(users);
       showMessage(L('登录成功', 'Signed in'), L('欢迎回来，' + u + '！', 'Welcome back, ' + u + '!'), function () {
-        const pi = document.getElementById('nav-profile-item'),
-          nu = document.getElementById('nav-user');
-        if (pi) {
-          pi.classList.remove('d-none');
-        }
-        if (nu) {
-          nu.classList.add('d-none');
-        }
-        // 隐藏home区登录/注册按钮
-        const hlb = document.getElementById('login-btn'),
-          hrb = document.getElementById('register-btn');
-        if (hlb) {
-          hlb.classList.add('d-none');
-        }
-        if (hrb) {
-          hrb.classList.add('d-none');
-        }
+        updateNavAuthState();
         // 登录后重查首页两个"上次"按钮（页面加载时可能是游客态被隐藏）
         if (window.updateHomeButtons) {
           window.updateHomeButtons();
@@ -921,6 +926,7 @@ function login() {
           loadUserPreferences(d.user.preferences);
         }
       });
+      updateNavAuthState();
     })
     .catch(() => {
       showMessage('登录失败', '无法连接到服务器，请检查网络');
@@ -1049,27 +1055,13 @@ function register() {
       }
       saveUsers(users);
       showMessage(L('注册成功', 'Registered'), L('欢迎，' + u + '！', 'Welcome, ' + u + '!'), function () {
-        const pi = document.getElementById('nav-profile-item'),
-          nu = document.getElementById('nav-user');
-        if (pi) {
-          pi.classList.remove('d-none');
-        }
-        if (nu) {
-          nu.classList.add('d-none');
-        }
-        const hlb = document.getElementById('login-btn'),
-          hrb = document.getElementById('register-btn');
-        if (hlb) {
-          hlb.classList.add('d-none');
-        }
-        if (hrb) {
-          hrb.classList.add('d-none');
-        }
+        updateNavAuthState();
         if (window.updateHomeButtons) {
           window.updateHomeButtons();
         }
         showSection('preference-section');
       });
+      updateNavAuthState();
     })
     .catch(() => {
       showMessage('注册失败', '无法连接到服务器，请检查网络');

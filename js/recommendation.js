@@ -134,7 +134,16 @@ async function fetchRecommendations(isRefresh) {
       d.matchRate = rawRate;
     });
     dishes.sort((a, b) => b.matchIndex - a.matchIndex);
-    const top = dishes.slice(0, 5);
+    // 换一批: isRefresh 时排除历史已推荐(recommendedIds),让"换一批"真的换——参数曾被架空,
+    // 冷启动(无偏好)用户点换一批菜单纹丝不动;候选不足 5 道时回填高分菜兜底
+    let pool = dishes;
+    if (isRefresh) {
+      const fresh = dishes.filter((d) => !recommendedIds.includes(d.id));
+      if (fresh.length >= 5) {
+        pool = fresh;
+      }
+    }
+    const top = pool.slice(0, 5);
     top.forEach((d) => {
       d.reason = generateDishReason(prefs, d);
       d.type = '偏好推荐';

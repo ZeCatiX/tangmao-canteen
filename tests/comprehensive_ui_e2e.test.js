@@ -293,7 +293,7 @@ describe('深度UI检查 - 崩溃风险', () => {
     // showSection
     assert.ok(js.includes('if(!el)'), 'showSection 应有 null 保护');
     // renderMenuTable
-    assert.ok(js.includes('if(!container)return'), 'renderMenuTable 应有 null 保护');
+    assert.ok(js.includes('if(!container)return') || js.includes('if(!container){return'), 'renderMenuTable 应有 null 保护');
     // login
     assert.ok(js.includes('if(!uEl||!pEl)'), 'login 应有 null 保护');
     // register
@@ -348,7 +348,7 @@ describe('深度UI检查 - 崩溃风险', () => {
 
   it('displayRecommendations 有null保护', () => {
     const js = sq(read('js/recommendation.js'));
-    assert.ok(js.includes('if(!loading||!result)return'), 'displayRecommendations 应有 null 保护');
+    assert.ok(js.includes('if(!loading||!result)return') || js.includes('if(!loading||!result){return'), 'displayRecommendations 应有 null 保护');
     assert.ok(js.includes('if(!dl)'), 'displayRecommendations 应有 dish-list null 保护');
   });
 
