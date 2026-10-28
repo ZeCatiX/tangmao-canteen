@@ -17,6 +17,18 @@ const sq = (s) => String(s).replace(/\s+/g, '');
 // ZH_EN 词典键有带引号/不带引号两种书写形态,断言需双形态兼容
 const hasDictKey = (g, k) => g.includes("'" + k + "':") || new RegExp('^\\s*' + k + ':', 'm').test(g);
 
+// 前端源拼接工具(2026-10-19 core.js 拆分适配: 断言跨全部 js/ 模块搜索)
+function frontSrc() {
+  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
+    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
+    .join('\n');
+}
+
+// sq 语义: 去空白归一化形态匹配
+function frontSq() {
+  return frontSrc().replace(/\s+/g, '');
+}
+
 test('AI 入口一律先进偏好设置页(2026-10-27 产品决策:新客先填口味,老客微调)', () => {
   const core = frontSrc();
   assert.ok(core.includes('function openAIRecommend()'), 'core.js 必须定义唯一判定源 openAIRecommend');
@@ -30,6 +42,7 @@ test('AI 入口一律先进偏好设置页(2026-10-27 产品决策:新客先填�
   const init = read('js/init.js');
   assert.ok(/ai-recommend-btn[\s\S]*?openAIRecommend\(\)/.test(sq(init)), '首页 AI 按钮必须调 openAIRecommend');
 });
+
 test('回归-BUG2: 厨房完成按钮的二次确认状态按订单id记录, 重渲染后可恢复', () => {
   const kit = read('kitchen.html');
   assert.ok(kit.includes('var _armedCompletes'), '确认状态必须存在订单id级映射里');
@@ -55,10 +68,6 @@ test('回归-BUG3: 购物车行菜名走 dishNameOf(随英文菜单切换)', () 
   );
 });
 
-// ═══ 备注保存三重防线（2026-10-07 内置浏览器实测发现备注静默丢失）═══
-// 背景: 备注原只靠 change(失焦)事件保存, 自动填充/移动键盘收起等不触发 blur 的路径
-//       会让备注静默丢失(订单11196实测note为空)。修复: ①init.js input+change 双事件
-//       实时写车 ②core.js 结算前从 DOM 收口读取实际值。
 test('备注保存防线①: init.js 同时监听 input 与 change 事件写购物车', () => {
   const src = read('js/init.js');
   assert.ok(/addEventListener\('input'[\s\S]{0,200}cart-note-input/.test(src), 'init.js 应监听 input 事件保存备注');
@@ -74,10 +83,6 @@ test('备注保存防线②: 结算前从 .cart-note-input DOM 收口实际值',
   assert.ok(body.indexOf('saveCart(cart)') < body.indexOf('起售数量'), '兜底应在起售闸门之前写回购物车');
 });
 
-// ═══ UI 骨架 i18n（2026-10-07 用户实测反馈：切英文后首页/导航毫无变化，"中英文切换没有用"）═══
-// 根因: 翻译只覆盖菜品数据面(菜名/分类/描述), 导航/首页按钮/桌号卡/菜单页头全是写死中文,
-//       切换后唯一变化是折叠菜单里的小按钮文字——用户感知为零。
-// 修复: UI_STR 字典 + data-i18n 声明 + applyUiLang() 统一应用(切换与初始加载都调用)。
 test('UI骨架i18n①: 关键骨架元素带 data-i18n 声明', () => {
   const src = read('index.html');
   for (const id of [
@@ -108,7 +113,6 @@ test('UI骨架i18n②: 字典/应用函数/切换与初始加载接线', () => {
   assert.ok(i.includes('applyUiLang()'), '初始加载应应用已存语言');
 });
 
-// ═══ 遍历式 UI 翻译（2026-10-07 "都做"包：筛选下拉/表单选项/理由话术等动态面全量英文化）═══
 test('遍历式翻译①: ZH_EN 字典覆盖扫描出的残留串', () => {
   const g = read('js/globals.js');
   const must = [
@@ -154,7 +158,6 @@ test('遍历式翻译②: 动态渲染接入(下拉/meta/匹配指数/轮次/观
   assert.ok(i.includes('MutationObserver') && i.includes('applyUiLangGuarded'), '动态渲染应挂观察器补翻');
 });
 
-// ═══ 品牌面英译（2026-10-07 用户拍板：品牌资产也要翻，意译保唐韵；品牌名保留中文为主）═══
 test('品牌面英译: hero诗句/口号/关于本店/页脚双语并列', () => {
   const g = read('js/globals.js');
   for (const k of [
@@ -173,7 +176,6 @@ test('品牌面英译: hero诗句/口号/关于本店/页脚双语并列', () =>
   assert.ok(!g.includes("'🏮 大唐不夜城店"), '门店地址原文不应整体替换');
 });
 
-// ═══ 遍历器遮挡修复（2026-10-07 实测: 同段多文本节点只翻第一个）═══
 test('遍历器遮挡修复: 原文记忆挂文本节点自身而非父元素', () => {
   const g = read('js/globals.js');
   assert.ok(g.includes('n.__zhOrig'), '记忆应挂文本节点自身(__zhOrig)');
@@ -182,7 +184,6 @@ test('遍历器遮挡修复: 原文记忆挂文本节点自身而非父元素', 
   assert.ok(g.includes('本地人的待客小宴') && g.includes('the locals'), '尾句条目应存在(两种引号形态其一)');
 });
 
-// ═══ 推荐页动态拼接串双语（2026-10-07 用户实测 EN 推荐页残留三处）═══
 test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输出', () => {
   const c = frontSrc();
   assert.ok(c.includes('taste preferences not set'), 'core.js 偏好横幅应双语');
@@ -191,9 +192,6 @@ test('推荐页动态串①: 偏好横幅/当前使用行/米饭行按语言输�
   assert.ok(r.includes('Wuchang Steamed Rice') && r.includes('¥3/bowl'), '米饭行应双语');
 });
 
-// ═══ 偏好表单残留修复（2026-10-07 用户实测：退出登录后偏好选项残留给下一顾客）═══
-// 根因: 偏好回填三分支漏了 guest——currentUser='guest' 时既不回填账号偏好也不重置表单,
-//       上一登录用户的选项残留给下一顾客(共享平板/扫码设备隐私问题)。
 test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖三分支)', () => {
   const c = frontSrc();
   assert.ok(sq(c).includes('else{resetPreferenceForm();'), 'guest/未登录应走 resetPreferenceForm');
@@ -205,9 +203,6 @@ test('偏好表单残留修复①: guest 态也重置表单(回填条件覆盖�
   );
 });
 
-// ═══ 推荐卡双bug修复（2026-10-07 用户实测EN推荐页发现）═══
-// bug1: 评分按钮重复渲染两次(背靠背两个openStarFeedback按钮)
-// bug2: 无口味声明用户显示"80.9%匹配度"——未声明维度给中性分,菜品质量分冒充个性匹配分,语义误导
 test('推荐卡修复①: 评分按钮去重(只渲染一个)', () => {
   const r = read('js/recommendation.js');
   // prettier 后 dish-actions 行可能被拆分,直接全文统计评分按钮的渲染出现次数
@@ -219,25 +214,49 @@ test('推荐卡修复②: 无口味声明不显示匹配度%, 改显本店推荐
   const r = sq(read('js/recommendation.js'));
   assert.ok(r.includes('hasTasteSignal'), '应有口味信号判定');
   assert.ok(r.includes('House pick') || r.includes('本店推荐'), '无信号应显本店推荐徽标');
-  // processML 里声明数判定存在
-  assert.ok(r.includes("v&&v!=='无'&&v!=='无特殊要求'&&v!=='不限'"), '声明判定条件应存在');
+  // 2026-10-27 语义更新: '无所谓'/'无' = 都接受, 声明判定不再排除这些值(负责人拍板)
+  assert.ok(sq(r).includes('return!!prefs[k];'), '声明判定应接受包括无所谓在内的所有选择');
 });
 
-// 2026-10-19 core.js 拆分适配: 前端源断言改为跨全部 js/ 模块拼接搜索(任何未来的域拆分都不再破坏测试)
-function frontSrc() {
-  return ['globals', 'menu', 'cart', 'core', 'recommendation', 'init', 'logo-intro']
-    .map((f) => require('fs').readFileSync(require('path').join(__dirname, '..', 'js', f + '.js'), 'utf8'))
-    .join('\n');
-}
-
-// sq 语义恢复(2026-10-19): 原 sq(read('js/core.js'))/readSq 调用点需要去空白归一化形态
-function frontSq() {
-  return frontSrc().replace(/\s+/g, '');
-}
-
-// 2026-10-23 回归: 全局 $ 快捷选择器被死代码甄别误删( 正则对 $ 失效报假零引用),
-// 推荐链(一席成宴/猫掌柜)运行时 ReferenceError 静默失败——API 测试不覆盖,只有真浏览器能暴露
 test('globals.js 必须声明全局 $ 工具(js/ 多模块无局部定义时依赖它)', () => {
   const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'globals.js'), 'utf8');
   assert.ok(content.includes('const $ = (id) => document.getElementById(id)'), 'globals.js 应声明全局 $ 快捷选择器');
+});
+
+test('偏好表单枚举一致性: 重置值必须是各下拉的合法选项', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const formHtml = html.slice(html.indexOf('id="preference-form"'), html.indexOf('id="preference-form"') + 8000);
+  const pairs = [
+    ['spiciness', '无', '无所谓'],
+    ['saltiness', '无', '无所谓'],
+    ['sweetness', '无', '无所谓'],
+    ['price', '无', '不限'],
+    ['calorie', '无', '不限'],
+    ['religion', '无特殊要求', null],
+  ];
+  for (const [id, resetVal, altText] of pairs) {
+    const selStart = formHtml.indexOf('id="' + id + '"');
+    const selEnd = formHtml.indexOf('</select>', selStart);
+    const selHtml = formHtml.slice(selStart, selEnd);
+    const values = [];
+    let pos = 0;
+    while (true) {
+      const o = selHtml.indexOf('<option', pos);
+      if (o < 0) break;
+      const vMark = selHtml.indexOf('value="', o);
+      const vEnd = vMark > -1 ? selHtml.indexOf('"', vMark + 7) : -1;
+      if (vMark > -1 && vEnd > -1) values.push(selHtml.slice(vMark + 7, vEnd));
+      pos = selHtml.indexOf('</option>', o);
+    }
+    const textOk = altText ? selHtml.includes(altText) : false;
+    assert.ok(
+      values.includes(resetVal) || textOk,
+      id + ' 的重置值 "' + resetVal + '" 必须是该下拉的合法选项(现有 value: ' + values.join('/') + ')'
+    );
+  }
+  // resetPreferenceForm 的赋值须与上表一致
+  const core = frontSrc();
+  assert.ok(core.includes("$('price').value = '无'"), '预算重置值应为无(显示不限)');
+  assert.ok(core.includes("$('calorie').value = '无'"), '热量重置值应为无(显示不限)');
+  assert.ok(core.includes("$('religion').value = '无特殊要求'"), '饮食要求重置值应为无特殊要求');
 });
