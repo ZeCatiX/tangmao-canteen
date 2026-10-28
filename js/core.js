@@ -318,7 +318,9 @@ function selectBlindBoxDish(prefs, top, blk, isRefresh) {
   const eligible = dishData.filter(
     (d) =>
       !topIds.has(d.id) &&
-      !recommendedIds.includes(d.id) &&
+      // 盲盒候选的历史排除仅在换一批时生效——正常获取推荐必须确定(同口味同结果),
+      // 否则全局 recommendedIds 会让跨顾客/跨次的盲盒位漂移(2026-10-28)
+      (!isRefresh || !recommendedIds.includes(d.id)) &&
       !(blk && blk.includes(d.id)) &&
       !(r === '清真' && !d.isHalal) &&
       !(r === '素食' && !d.isVegetarian) &&
