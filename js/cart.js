@@ -254,13 +254,9 @@ function openAIRecommend() {
   if (!currentUser) {
     currentUser = 'guest';
   }
-  const prefs = currentUser !== 'guest' ? (getUserData(currentUser) || {}).preferences : null;
-  const filled = (prefs && Object.keys(prefs).length > 0) || sessionStorage.getItem('tasteFilled') === '1';
-  if (filled) {
-    showSection('preference-section');
-  } else {
-    coldStartHotRecommend();
-  }
+  // 2026-10-27 产品决策(负责人确认): AI 入口一律先进偏好设置页——新客首次填写口味,老客微调;
+  // 曾按"冷启动直达热门Top6免填表"设计,实测用户预期是先填偏好(直接出推荐被误读为AI失效)
+  showSection('preference-section');
 }
 function openTablePicker(intent) {
   _tablePickIntent = intent || null;
