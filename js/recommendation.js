@@ -149,7 +149,7 @@ async function fetchRecommendations(isRefresh) {
       d.reason = generateDishReason(prefs, d);
       d.type = '偏好推荐';
     });
-    const blind = selectBlindBoxDish(prefs, top, blk);
+    const blind = selectBlindBoxDish(prefs, top, blk, isRefresh);
     if (blind) {
       top.push(blind);
     }
@@ -197,7 +197,7 @@ async function fetchRecommendations(isRefresh) {
         if (d.success) {
           processML(d.predictions || []);
         } else {
-          fallback(prefs, blk, dishes);
+          fallback(prefs, blk, dishes, isRefresh);
         }
       })
       .catch(() => fallback(prefs, blk, dishes));
@@ -210,7 +210,7 @@ async function fetchRecommendations(isRefresh) {
         ? 'api'
         : 'auto';
   if (mode === 'local') {
-    fallback(prefs, blk, dishes);
+    fallback(prefs, blk, dishes, isRefresh);
     return;
   }
   checkApiAvailability(function () {
@@ -232,14 +232,14 @@ async function fetchRecommendations(isRefresh) {
       callAPI(dishes);
     } else if (mode === 'api') {
       showMessage('提示', 'API不可用，已自动切换为本地推荐模式');
-      fallback(prefs, blk, dishes);
+      fallback(prefs, blk, dishes, isRefresh);
     } else {
-      fallback(prefs, blk, dishes);
+      fallback(prefs, blk, dishes, isRefresh);
     }
   });
 }
 
-async function fallback(prefs, blk, dishes) {
+async function fallback(prefs, blk, dishes, isRefresh) {
   const start = Date.now();
   await loadDecisionTreeModel();
   dishes.forEach((d) => {
@@ -307,7 +307,7 @@ async function fallback(prefs, blk, dishes) {
   });
   dishes.sort((a, b) => b.matchIndex - a.matchIndex);
   const top = dishes.slice(0, 5);
-  const blind = selectBlindBoxDish(prefs, top, blk);
+  const blind = selectBlindBoxDish(prefs, top, blk, isRefresh);
   if (blind) {
     top.push(blind);
   }
