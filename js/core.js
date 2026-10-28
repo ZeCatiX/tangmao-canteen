@@ -113,23 +113,34 @@ function checkApiAvailability() {
     // 8s：公网隧道往返实测 5s+（本地毫秒级），3s 会把健康的 ML 误判为不可用而强制降级
     const c = new AbortController(),
       t = setTimeout(() => c.abort(), 8000);
-    safeFetch('/api/worker-health', { signal: c.signal, headers: { 'Cache-Control': 'no-cache' } })
-      .then((res) => res.json())
-      .then((d) => {
-        apiAvailabilityCache = !!(d && d.ready);
-        apiCacheTimestamp = now;
-        if (!apiAvailabilityCache) {
-          console.warn('[推荐] ML未就绪(worker加载中), 本次使用本地推荐');
-        }
-        r(apiAvailabilityCache);
-      })
-      .catch(() => {
-        apiAvailabilityCache = null;
-        apiCacheTimestamp = 0;
-        console.warn('[推荐] ML健康检查失败, 本次使用本地推荐');
-        r(false);
-      })
-      .finally(() => clearTimeout(t));
+    const probe = () =>
+      safeFetch('/api/worker-health', { signal: c.signal, headers: { 'Cache-Control': 'no-cache' } })
+        .then((res) => res.json())
+        .then((d) => !!(d && d.ready));
+    // 轮询等待 ML 就绪(最多 8s):刚打开页面/服务重启后 worker 加载模型需数秒,
+    // ready:false 时立即降级本地会让"第一次点AI推荐"永远回退本地计算(2026-10-27 修复)
+    const attempt = (left) => {
+      probe()
+        .then((ready) => {
+          if (ready || left <= 0) {
+            apiAvailabilityCache = ready;
+            apiCacheTimestamp = Date.now();
+            if (!ready) {
+              console.warn('[推荐] ML未就绪(worker加载中), 本次使用本地推荐');
+            }
+            r(ready);
+          } else {
+            setTimeout(() => attempt(left - 600), 600);
+          }
+        })
+        .catch(() => {
+          // 网络级失败(非未就绪)不重试,直接判不可用
+          apiAvailabilityCache = false;
+          apiCacheTimestamp = Date.now();
+          r(false);
+        });
+    };
+    attempt(8000);
   });
 }
 
