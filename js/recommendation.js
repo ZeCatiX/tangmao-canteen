@@ -297,7 +297,11 @@ async function fallback(prefs, blk, dishes) {
       return prefs[k] && prefs[k] !== '无' && prefs[k] !== '无特殊要求' && prefs[k] !== '不限';
     });
     d.hasTasteSignal = hasSig;
-    d.reason = hasSig ? d.reason : '本店人气招牌，最近大家都在点';
+    d.reason = hasSig
+      ? d.reason
+      : (d.order_count || 0) >= 30
+        ? '本店人气招牌，最近大家都在点'
+        : '本店招牌推荐，不知道吃什么就从这里选';
     d.type = hasSig ? '偏好推荐' : '热门推荐';
   });
   dishes.sort((a, b) => b.matchIndex - a.matchIndex);

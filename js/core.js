@@ -1187,21 +1187,25 @@ function coldStartHotRecommend() {
   if (rr) {
     rr.classList.remove('d-none');
   }
-  const hot = dishData
-    .filter(
-      (d) => d.is_active !== false && d.is_sold_out !== true && d.category !== '飲品与酒水' && d.category !== '主食'
-    )
+  const filteredHot = dishData.filter(
+    (d) => d.is_active !== false && d.is_sold_out !== true && d.category !== '飲品与酒水' && d.category !== '主食'
+  );
+  const hot = filteredHot
     .sort((a, b) => (b.order_count || 0) - (a.order_count || 0))
     .slice(0, 6)
-    .map((d) =>
-      Object.assign({}, d, {
-        reason: '本店人气招牌，最近大家都在点',
+    .map((d) => {
+      // 文案按真实订单量动态: 被点≥30次才说"最近大家都在点"(试运营初期数据不足时不说虚话——2026-10-27)
+      const realPopularity = (d.order_count || 0) >= 30;
+      return Object.assign({}, d, {
+        reason: realPopularity
+          ? '本店人气招牌，最近大家都在点'
+          : '本店招牌推荐，不知道吃什么就从这里选',
         matchRate: 0.5,
         matchIndex: 0.5,
         hasTasteSignal: false,
         type: '热门推荐',
-      })
-    );
+      });
+    });
   currentRecommendations = hot;
   const dl = $('dish-list');
   if (dl) {

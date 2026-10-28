@@ -527,6 +527,7 @@ var REASON_EN = {
   '猫掌柜点名的人气菜，闭眼点不踩雷': "Butler-approved favorite — you can't go wrong",
   猫掌柜依你的口味挑的家常热菜: 'Home-style hot dish picked for your taste',
   '本店人气招牌，最近大家都在点': 'House signature, trending lately',
+  '本店招牌推荐，不知道吃什么就从这里选': 'House picks — a safe place to start',
   根据你的口味偏好为你推荐: 'Picked to match your taste profile',
   你的口味档案专属推荐: 'Chosen from your taste profile',
 };
