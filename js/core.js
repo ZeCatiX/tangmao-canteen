@@ -97,7 +97,7 @@ function predictTreeNode(nodes, f) {
 }
 
 // ═══════════════ API 可用性检查 ═══════════════
-function checkApiAvailability() {
+function checkApiAvailability(onWaiting) {
   if (window.location.protocol === 'file:') {
     return Promise.resolve(false);
   }
@@ -122,6 +122,9 @@ function checkApiAvailability() {
     const attempt = (left) => {
       probe()
         .then((ready) => {
+          if (!ready && left > 0 && typeof onWaiting === 'function') {
+            try { onWaiting(); } catch (e) { /* UI 提示失败不影响判定 */ }
+          }
           if (ready || left <= 0) {
             apiAvailabilityCache = ready;
             apiCacheTimestamp = Date.now();
