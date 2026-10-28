@@ -121,9 +121,10 @@ async function fetchRecommendations(isRefresh) {
       const rule = Math.min(totalMatch / 14, 1);
       // 评分全为默认3.5时归一化会放大ML噪声, 用绝对分ml/5让规则主导
       const mlNorm = Math.max(0, Math.min(1, ml / 5));
+      // 2026-10-27 语义(负责人拍板): '无所谓'/'无' = 哪种口味都接受, 算有效信号(全匹配),
+      // 照常显示匹配度; 不再因此降级'本店推荐'徽标
       const declaredN = ['辣度', '咸淡', '甜酸', '热量', '价格'].filter(function (k) {
-        const v = prefs[k];
-        return v && v !== '无' && v !== '无特殊要求' && v !== '不限';
+        return !!prefs[k];
       }).length;
       d.hasTasteSignal = declaredN >= 1;
       const rawRate = rule * 0.6 + mlNorm * 0.4;
@@ -294,7 +295,7 @@ async function fallback(prefs, blk, dishes) {
     d.matchRate = total / 14;
     /* 无个性化信号(未声明口味)时排序退化为原序——按评分/招牌标记, 前端显"本店推荐"而非假匹配度 */
     const hasSig = Object.keys(prefs).some(function (k) {
-      return prefs[k] && prefs[k] !== '无' && prefs[k] !== '无特殊要求' && prefs[k] !== '不限';
+      return !!prefs[k];
     });
     d.hasTasteSignal = hasSig;
     d.reason = hasSig
