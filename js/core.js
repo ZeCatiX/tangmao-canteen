@@ -1095,11 +1095,16 @@ function loadUserPreferences(prefs) {
     return;
   }
   const $ = (id) => document.getElementById(id);
-  // 安全设置元素值（带 null 保护）
+  // 安全设置元素值（带 null 保护 + select 容错）
+  // 2026-10-27: 偏好档案里可能存有下拉选项之外的值(如口味填'无所谓'存进预算/热量字段),
+  // 直接赋值会 selectedIndex=-1 显示空白——赋值后无匹配则回退该下拉的默认项
   const setVal = (id, val) => {
     const el = $(id);
     if (el) {
       el.value = val;
+      if (el.tagName === 'SELECT' && el.selectedIndex === -1 && el.options.length > 0) {
+        el.selectedIndex = 0;
+      }
     }
   };
   const setChecked = (id, checked) => {
