@@ -1175,6 +1175,9 @@ function coldStartHotRecommend() {
     blindBoxMode: 'smart',
     coldStart: true,
   };
+  // 冷启动热门流按人气排序,不走 ML——模式标记须如实显示"热门推荐",
+  // 曾沿用全局默认"本地计算"误导用户以为 AI 失效回退(2026-10-27)
+  currentRecommendationMode = '热门推荐';
   showSection('recommendation-section');
   const rl = $('recommendation-loading'),
     rr = $('recommendation-result');
