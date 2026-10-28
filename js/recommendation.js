@@ -212,7 +212,21 @@ async function fetchRecommendations(isRefresh) {
     fallback(prefs, blk, dishes);
     return;
   }
-  checkApiAvailability().then((a) => {
+  checkApiAvailability(function () {
+    // ML 未就绪进入等待: 首次访问提示模型加载较慢(每会话提示一次,避免重复打扰)
+    const rlWait = $('recommendation-loading');
+    if (rlWait && !sessionStorage.getItem('mlWarmHintShown')) {
+      sessionStorage.setItem('mlWarmHintShown', '1');
+      const tip = rlWait.querySelector('.ml-warm-tip');
+      if (!tip) {
+        const p = document.createElement('p');
+        p.className = 'ml-warm-tip mt-2 mb-0';
+        p.style.cssText = 'font-size:0.85rem;color:var(--text-light);';
+        p.textContent = '首次加载 AI 模型会稍慢，猫掌柜正在热身…';
+        rlWait.appendChild(p);
+      }
+    }
+  }).then((a) => {
     if (a) {
       callAPI(dishes);
     } else if (mode === 'api') {
