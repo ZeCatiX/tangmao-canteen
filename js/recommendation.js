@@ -74,7 +74,9 @@ async function fetchRecommendations(isRefresh) {
         return false;
       }
     }
-    if (recommendedIds.includes(d.id)) {
+    // 已推荐排除仅在换一批时生效(2026-10-28 负责人语义): 正常获取推荐必须确定(同口味同结果),
+    // "换一批"才排除已推荐过的菜
+    if (isRefresh && recommendedIds.includes(d.id)) {
       return false;
     }
     if (blk.includes(d.id)) {
