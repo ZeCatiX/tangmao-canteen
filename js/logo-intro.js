@@ -363,9 +363,9 @@ var TangCatIntro = (function () {
       const t = el(g.labelLayer, 'text', {
         x: px.toFixed(1),
         y: (py + (s < -0.5 ? -4 : s > 0.5 ? 14 : 5)).toFixed(1),
-        'font-size': isUser ? 15 : 14,
-        'font-weight': isUser ? 700 : 400,
-        fill: isUser ? '#b83a2a' : '#2c1810',
+        'font-size': 15,
+        'font-weight': 700,
+        fill: '#b83a2a',
         'text-anchor': c > 0.3 ? 'start' : c < -0.3 ? 'end' : 'middle',
       });
       t.textContent = (EN ? EN_NAME[n] : n) + ' ' + W[n].toFixed(1) + '%';
