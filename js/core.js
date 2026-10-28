@@ -456,6 +456,8 @@ function updateUserNavbar() {
 
 function resetPreferenceForm() {
   const $ = (id) => document.getElementById(id);
+  // 重置值必须与各 select 实际 option 的 value 一致,否则赋值无匹配→selectedIndex=-1→显示空白
+  // (辣度/咸淡/甜酸的默认项 value='无' 显示'无所谓'; 预算/热量默认项 value='不限'; 饮食要求 value='无特殊要求')
   if ($('spiciness')) {
     $('spiciness').value = '无';
   }
@@ -466,13 +468,13 @@ function resetPreferenceForm() {
     $('sweetness').value = '无';
   }
   if ($('price')) {
-    $('price').value = '无';
+    $('price').value = '不限';
   }
   if ($('calorie')) {
-    $('calorie').value = '无';
+    $('calorie').value = '不限';
   }
   if ($('religion')) {
-    $('religion').value = '无';
+    $('religion').value = '无特殊要求';
   }
   if ($('allergy-none')) {
     $('allergy-none').checked = true;
