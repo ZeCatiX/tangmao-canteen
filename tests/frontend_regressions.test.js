@@ -17,26 +17,19 @@ const sq = (s) => String(s).replace(/\s+/g, '');
 // ZH_EN 词典键有带引号/不带引号两种书写形态,断言需双形态兼容
 const hasDictKey = (g, k) => g.includes("'" + k + "':") || new RegExp('^\\s*' + k + ':', 'm').test(g);
 
-test('回归-BUG1: 选桌后AI入口走 openAIRecommend 冷启动判定, 不再硬编码跳偏好表单', () => {
+test('AI 入口一律先进偏好设置页(2026-10-27 产品决策:新客先填口味,老客微调)', () => {
   const core = frontSrc();
   assert.ok(core.includes('function openAIRecommend()'), 'core.js 必须定义唯一判定源 openAIRecommend');
-  // openAIRecommend 内部必须包含冷启动判定(偏好已填→偏好表单, 否则热门Top6)
   const fnStart = core.indexOf('function openAIRecommend()');
-  const fnBody = core.slice(fnStart, core.indexOf('}', core.indexOf('coldStartHotRecommend', fnStart)) + 1);
-  assert.ok(fnBody.includes('coldStartHotRecommend'), 'openAIRecommend 必须含冷启动分支');
-  assert.ok(fnBody.includes("showSection('preference-section')"), 'openAIRecommend 必须含偏好表单分支');
-  // 选桌后续路由的 ai 分支必须走判定源, 不允许硬编码
+  const fnEnd = core.indexOf('function openTablePicker', fnStart);
+  const fnBody = core.slice(fnStart, fnEnd);
+  assert.ok(fnBody.includes("showSection('preference-section')"), 'AI 入口必须跳偏好设置页');
+  assert.ok(!fnBody.includes('coldStartHotRecommend'), '不得未填偏好直接热门推荐(负责人确认先填口味)');
   const pick = sq(core.slice(core.indexOf('function applyTableChoice'), core.indexOf('function showTableBill')));
   assert.ok(pick.includes("intent==='ai'){openAIRecommend()"), 'applyTableChoice 的 ai 分支必须调 openAIRecommend');
-  assert.ok(
-    !pick.includes("intent==='ai')showSection('preference-section')"),
-    'ai 分支禁止硬编码跳偏好表单(会绕过冷启动)'
-  );
-  // 首页按钮 handler 也走同一判定源
   const init = read('js/init.js');
   assert.ok(/ai-recommend-btn[\s\S]*?openAIRecommend\(\)/.test(sq(init)), '首页 AI 按钮必须调 openAIRecommend');
 });
-
 test('回归-BUG2: 厨房完成按钮的二次确认状态按订单id记录, 重渲染后可恢复', () => {
   const kit = read('kitchen.html');
   assert.ok(kit.includes('var _armedCompletes'), '确认状态必须存在订单id级映射里');
