@@ -309,7 +309,9 @@ function generateDishReason(prefs, dish) {
   return en ? 'Why this dish: ' + p.join(' | ') : '推荐理由：' + p.join(' | ');
 }
 
-function selectBlindBoxDish(prefs, top, blk) {
+function selectBlindBoxDish(prefs, top, blk, isRefresh) {
+  // 2026-10-28 确定性(负责人拍板): 同偏好应给同样的推荐, 随机性只留给"换一批"主动触发;
+  // isRefresh=false 时各分支取确定性候选(加权最高/首个), 顾客重复进入结果稳定不显随机
   const topIds = new Set(top.map((d) => d.id));
   const a = prefs['allergies'] || [],
     r = prefs['饮食_宗教'];
@@ -331,9 +333,9 @@ function selectBlindBoxDish(prefs, top, blk) {
   if (!eligible.length) {
     return null;
   }
-  // 纯随机模式
+  // 纯随机模式: 仅换一批时随机, 正常获取取首个(确定性)
   if (prefs['blindBoxMode'] === 'random') {
-    const d = eligible[Math.floor(Math.random() * eligible.length)];
+    const d = isRefresh ? eligible[Math.floor(Math.random() * eligible.length)] : eligible[0];
     return {
       ...d,
       reason: L('🔮 盲盒推荐：纯随机惊喜，试试这个吧！', '🔮 Blind box: pure random surprise — give it a try!'),
@@ -363,30 +365,27 @@ function selectBlindBoxDish(prefs, top, blk) {
     }
     return { d, score };
   });
-  // 按权重随机选择
+  // 按权重选择: 换一批时加权随机; 正常获取确定性取最高权重(同分取先出现)
   const totalScore = weighted.reduce((s, w) => s + w.score, 0);
-  let rand = Math.random() * totalScore;
-  for (const w of weighted) {
-    rand -= w.score;
-    if (rand <= 0) {
-      const d = w.d;
-      const m = computeDishMatch(prefs, d);
-      return {
-        ...d,
-        reason: L(
-          '🔮 盲盒推荐：试试这个吧，说不定有惊喜！',
-          '🔮 Blind box: try this one — you might be in for a surprise!'
-        ),
-        type: '盲盒尝鲜',
-        blindMode: 'smart',
-        matchIndex: Math.round(m.matchRate * 100) / 100,
-        matchRate: m.matchRate,
-        matchDetails: m.matchDetails,
-      };
-    }
+  if (!isRefresh) {
+    const bestW = weighted.reduce((a, b) => (b.score > a.score ? b : a));
+    const d = bestW.d;
+    const m = computeDishMatch(prefs, d);
+    return {
+      ...d,
+      reason: L(
+        '🔮 盲盒推荐：试试这个吧，说不定有惊喜！',
+        '🔮 Blind box: try this one — you might be in for a surprise!'
+      ),
+      type: '盲盒尝鲜',
+      blindMode: 'smart',
+      matchIndex: Math.round(m.matchRate * 100) / 100,
+      matchRate: m.matchRate,
+      matchDetails: m.matchDetails,
+    };
   }
   // 保底
-  const d = eligible[Math.floor(Math.random() * eligible.length)];
+  const d = isRefresh ? eligible[Math.floor(Math.random() * eligible.length)] : eligible[0];
   const m = computeDishMatch(prefs, d);
   return {
     ...d,
@@ -468,10 +467,10 @@ function resetPreferenceForm() {
     $('sweetness').value = '无';
   }
   if ($('price')) {
-    $('price').value = '不限';
+    $('price').value = '无';
   }
   if ($('calorie')) {
-    $('calorie').value = '不限';
+    $('calorie').value = '无';
   }
   if ($('religion')) {
     $('religion').value = '无特殊要求';
