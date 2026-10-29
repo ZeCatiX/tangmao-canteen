@@ -1142,7 +1142,10 @@ async function checkoutCart() {
       if (cl) {
         cl.innerHTML = '';
       }
-      const isAI = currentRecommendations && currentRecommendations.length > 0;
+      // 2026-10-28: AI 判定须含席面单——席面加购时已打 lastOrderAI 标记, 在清除前先捕获,
+      // 否则席面单(不走 currentRecommendations)会被错判为'自主点餐'(负责人实测反馈)
+      const wasAIFromTable = ssGet('lastOrderAI') === '1';
+      const isAI = (currentRecommendations && currentRecommendations.length > 0) || wasAIFromTable;
       document.querySelectorAll('#end-section .ai-stat').forEach((el) => (el.style.display = isAI ? '' : 'none'));
       const noAI2 = document.getElementById('end-no-ai');
       if (noAI2) {
