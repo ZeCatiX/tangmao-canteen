@@ -47,6 +47,19 @@ esbuild
       console.error('✗ 语法错误:', e.stderr.toString());
       process.exit(1);
     }
+    // 自动升级 index.html 的 script.js 版本号(2026-10-28: 版本号纪律自动化——
+    // 两次因忘升级导致用户浏览器拿旧缓存,其中一次造成演示事故)
+    let html = fs.readFileSync('index.html', 'utf8');
+    const stamp =
+      new Date().toISOString().slice(0, 10).replace(/-/g, '') +
+      Math.floor(Date.now() / 1000).toString(36).slice(-2);
+    const updated = html.replace(/script\.js\?v=[0-9a-z]+/, 'script.js?v=' + stamp);
+    if (updated !== html) {
+      fs.writeFileSync('index.html', updated);
+      console.log('✓ index.html 版本号已自动升级: ' + stamp);
+    } else {
+      console.warn('⚠ 未找到 script.js 版本号引用,请检查 index.html');
+    }
     if (r.warnings.length) {
       console.warn('⚠ esbuild 警告:');
       r.warnings.forEach((w) => console.warn(' ', w.text));
