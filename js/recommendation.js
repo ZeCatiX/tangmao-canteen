@@ -1261,6 +1261,9 @@ function addTableSetToCart(si) {
   if (!s || !s.dishes.length) {
     return;
   }
+  // AI 席面加购标记(2026-10-28 修复): 完成页凭 lastOrderAI 区分 AI 单/自主单——
+  // 席面是 AI 核心产出,不加标记会被完成页错标为'未经过 AI 推荐'
+  ssSet('lastOrderAI', '1');
   // 直接写购物车避免 addToCart 逐菜弹 toast，整桌只提示一次；米饭等自动搭配项按份数一并进车
   // 起售数量：X个起 的菜品整桌加购按席面默认数量(max(起售量,人数))入车（如4人桌核桃包→×4），并在提示中说明
   // 已选饮品（chosenDrinkIds）已在购物车中，不重复加
