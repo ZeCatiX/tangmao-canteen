@@ -4,11 +4,11 @@
 // ─── 分类元数据（唯一配置源：分类新增/改名只需改这里，下拉框/快捷按钮/图标/排序全部自动生成）───
 const CATEGORY_CONFIG = [
   { cat: '主食', emoji: '🍚', tab: '', icon: 'assets/icons/cat-staple.webp' },
-  { cat: '招牌与游西安必打卡', emoji: '🏆', tab: '招牌', icon: 'assets/icons/cat-signature.webp' },
+  { cat: '招牌', emoji: '🏆', tab: '招牌', icon: 'assets/icons/cat-signature.webp' },
   { cat: '热销菜品', emoji: '🔥', tab: '热销', icon: 'assets/icons/cat-hot.webp' },
   { cat: '传承陕菜', emoji: '🍲', tab: '陕菜', icon: 'assets/icons/cat-heritage.webp' },
   { cat: '江湖海鲜', emoji: '🦐', tab: '海鲜', icon: 'assets/icons/cat-seafood.webp' },
-  { cat: '田园时蔬·汤羹', emoji: '🥬', tab: '蔬羹', icon: 'assets/icons/cat-veggies.webp' },
+  { cat: '田园时蔬', emoji: '🥬', tab: '蔬羹', icon: 'assets/icons/cat-veggies.webp' },
   { cat: '特色凉菜', emoji: '🥗', tab: '凉菜', icon: 'assets/icons/cat-cold.webp' },
   { cat: '陕西小吃', emoji: '🥟', tab: '小吃', icon: 'assets/icons/cat-snacks.webp' },
   { cat: '飲品与酒水', emoji: '🍹', tab: '饮品', icon: 'assets/icons/cat-drinks.webp' },
