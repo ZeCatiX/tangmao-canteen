@@ -38,7 +38,8 @@
     .mobile-topbar { display: none; background: linear-gradient(135deg, var(--primary-dark), var(--primary)); padding: 0.7rem 1rem; }
     .mobile-topbar h5 { font-family: 'Noto Serif SC', serif; color: var(--gold); letter-spacing: 3px; margin: 0; font-size: 1rem; }
     .mobile-topbar .nav-links { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
-    .mobile-topbar .nav-links a { color: rgba(255,255,255,0.7); font-size: 0.8rem; padding: 0.3rem 0.7rem; letter-spacing: 1px; text-decoration: none; border-radius: 4px; }
+    .mobile-topbar .nav-links a { color: rgba(255,255,255,0.7); font-size: 0.8rem; padding: 0.3rem 0.7rem; letter-spacing: 1px; text-decoration: none; border-radius: 4px; border-left: 3px solid transparent; }
+    .mobile-topbar .nav-links a.active { background: rgba(255,255,255,0.18); color: #fff; font-weight: 600; border-left-color: #fff; }
     .mobile-topbar .nav-links a:hover { background: rgba(255,255,255,0.1); color: var(--gold); }
     @media (max-width: 768px) { .mobile-topbar { display: block; } .main-content { margin-left: 0; padding: 1rem; } }
     .stat-card { background: #fff; border-radius: 12px; border: 1px solid rgba(201,169,110,0.1); padding: 1.2rem 0.8rem; text-align: center; transition: all 0.3s; }
@@ -113,6 +114,11 @@
     html.dark-mode .dropdown-item { color: #e0d5c1; }
     html.dark-mode .dropdown-item:hover { background-color: #2a2a2a; }
     html.dark-mode .topbar-link, html.dark-mode .mobile-topbar { background: #0a0a0a; }
+    /* 深色模式顶栏导航: 与内容区拉开层次(#0f0f0f), 链接/激活态可辨(2026-11-02 用户反馈颜色区别不开) */
+    html.dark-mode .mobile-topbar { background: #141414; border-bottom: 1px solid #2a2a2a; }
+    html.dark-mode .mobile-topbar .nav-links a { color: var(--text-light); }
+    html.dark-mode .mobile-topbar .nav-links a:hover { background: rgba(201,169,110,0.08); color: var(--gold-light); }
+    html.dark-mode .mobile-topbar .nav-links a.active { background: rgba(201,169,110,0.15); color: var(--gold-light); font-weight: 600; border-left-color: var(--gold); }
     html.dark-mode [style*="border:1.5px solid #e4dbcf"], html.dark-mode [style*="border: 1.5px solid #e4dbcf"] { border-color: #2a2a2a !important; }
     html.dark-mode [style*="border:1px solid #ddd"], html.dark-mode [style*="border: 1px solid #ddd"] { border-color: #2a2a2a !important; }
     /* 深色模式：覆盖内联硬编码颜色（admin 内联统一，与 styles.css 方向1一致） */
