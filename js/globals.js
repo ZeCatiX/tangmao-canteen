@@ -792,7 +792,7 @@ var ZH_EN = {
   下单成功: 'Placed',
   当前轮: 'current',
   本轮推荐: 'This round',
-  '本轮未启用 AI — 普通点餐，无推荐分析': 'AI off this round — plain order, no match stats',
+  '本轮为自主点餐 — 未经过 AI 推荐，无推荐分析': 'Ordered from the menu — no AI match stats this round',
   模型评估: 'Model quality',
   决定系数: 'R² score',
   均方误差: 'MSE',
