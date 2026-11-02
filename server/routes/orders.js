@@ -1,7 +1,9 @@
 'use strict';
 // 唐猫庭院 · 点餐与反馈域(下单/加菜/订单状态/反馈提交与查询)——从 server.js 拆出(2026-10-13 可维护性改造4)
-// 含: 起售量校验/订单项重算/下单频度防刷(内存计数,定时清理已 unref)
+// 含: 起售量校验/订单项重算/下单频度防刷(内存计数,定时清理已 unref)/估清库存联动(2026-11-02)
 const rateLimit = require('express-rate-limit');
+const state = require('../state'); // 估清扣减后同步内存 dishData, 让 /api/dishes 立即反映剩余
+const { ensureStockDate } = require('../stock');
 
 function register(app, deps) {
   const { db, logger, softAuth, authMiddleware } = deps;
@@ -40,13 +42,100 @@ function register(app, deps) {
     return bad;
   }
 
+  // ─── 估清(库存联动, 2026-11-02 对标商龙库存扣减) ───
+  // 日切逻辑在共享模块 server/stock.js(挂点: 下单/加菜此处 + GET /api/dishes)
+
+  // 余量校验: 同单同菜多行(不同备注/赠菜)合并数量后对比剩余, 超出报"仅剩N份"
+  // 返回 null=通过; string=拒绝原因。校验与扣减之间有并发窗口, 真正防超卖在 deductStock 事务内条件更新。
+  async function checkStockRemain(pool, items) {
+    const need = new Map();
+    items.forEach((it) => {
+      const id = parseInt(it.id);
+      if (isNaN(id)) return;
+      const q = parseInt(it.qty !== undefined ? it.qty : it.quantity) || 1;
+      need.set(id, (need.get(id) || 0) + q);
+    });
+    if (!need.size) return null;
+    const r = await pool.query('SELECT id, name, daily_stock, sold_today FROM dishes WHERE id = ANY($1::int[])', [
+      [...need.keys()],
+    ]);
+    const info = new Map(r.rows.map((x) => [parseInt(x.id), x]));
+    for (const [id, q] of need) {
+      const d = info.get(id);
+      if (!d || d.daily_stock === null || d.daily_stock === undefined) continue;
+      const remain = d.daily_stock - (parseInt(d.sold_today) || 0);
+      if (q > remain) {
+        return `「${d.name || '菜品' + id}」今日仅剩 ${Math.max(0, remain)} 份，请调整数量`;
+      }
+    }
+    return null;
+  }
+
+  // 扣减: 必须在订单事务内调用。按菜聚合数量, 条件更新天然防并发超卖;
+  // 卖完自动置 is_sold_out=true(复用现有售罄展示/加购禁用链路)。
+  // 返回 { err: null, applied }——applied 是每菜扣减结果, 供事务 COMMIT 后同步内存 dishData;
+  // err 非空=某菜并发售空(调用方必须回滚事务)。
+  async function deductStock(client, items) {
+    const byId = new Map();
+    items.forEach((it) => {
+      const id = parseInt(it.id);
+      if (isNaN(id)) return;
+      byId.set(id, (byId.get(id) || 0) + (parseInt(it.qty) || 1));
+    });
+    const applied = [];
+    for (const [id, qty] of byId) {
+      const r = await client.query(
+        `UPDATE dishes SET sold_today = sold_today + $1
+         WHERE id = $2 AND (daily_stock IS NULL OR sold_today + $1 <= daily_stock)
+         RETURNING daily_stock, sold_today`,
+        [qty, id]
+      );
+      if (r.rows.length === 0) {
+        // 并发窗口内被抢完: 查最新剩余给出拒绝原因, 由调用方回滚事务
+        const d = await client.query('SELECT name, daily_stock, sold_today FROM dishes WHERE id=$1', [id]);
+        const dd = d.rows[0] || {};
+        const remain =
+          dd.daily_stock === null || dd.daily_stock === undefined
+            ? null
+            : dd.daily_stock - (parseInt(dd.sold_today) || 0);
+        return {
+          err: `「${dd.name || '菜品' + id}」今日仅剩 ${remain === null ? '?' : Math.max(0, remain)} 份，请调整数量`,
+        };
+      }
+      const d = r.rows[0];
+      let soldOut = false;
+      if (d.daily_stock !== null && d.daily_stock !== undefined && parseInt(d.sold_today) >= d.daily_stock) {
+        await client.query('UPDATE dishes SET is_sold_out = TRUE WHERE id = $1 AND is_sold_out = FALSE', [id]);
+        soldOut = true;
+      }
+      applied.push({ id, soldToday: parseInt(d.sold_today) || 0, dailyStock: d.daily_stock, soldOut });
+    }
+    return { err: null, applied };
+  }
+
+  // 事务成功后同步内存 dishData: /api/dishes 的内存快照立即反映剩余与售罄
+  function syncStockToMemory(applied) {
+    for (const a of applied || []) {
+      const mem = state.dishData.find((x) => parseInt(x.id) === a.id);
+      if (!mem) continue;
+      mem.sold_today = a.soldToday;
+      if (a.dailyStock !== null && a.dailyStock !== undefined) {
+        mem.daily_stock = parseInt(a.dailyStock);
+        if (a.soldOut) mem.is_sold_out = true;
+      }
+    }
+  }
+
   // 服务端重算订单价格：按 dish id 查 DB，拒绝客户端价格；赠菜受方(giftFrom)记 0 元
   async function recomputeOrderItems(pool, items) {
     const ids = items.map((i) => parseInt(i.id)).filter((n) => !isNaN(n));
     const priceMap = {};
     const soldOutNames = [];
     if (ids.length) {
-      const pr = await pool.query('SELECT id, price, is_sold_out, name FROM dishes WHERE id = ANY($1::int[])', [ids]);
+      const pr = await pool.query(
+        'SELECT id, price, is_sold_out, name, daily_stock, sold_today FROM dishes WHERE id = ANY($1::int[])',
+        [ids]
+      );
       pr.rows.forEach((r) => {
         priceMap[r.id] = parseFloat(r.price);
         if (r.is_sold_out === true) {
@@ -118,6 +207,8 @@ function register(app, deps) {
   // 订单 API（软身份验证）
   app.post('/api/order', softAuth, async (req, res) => {
     try {
+      // 估清日切先于一切校验: 隔天首单必须先复位昨日售罄态, 否则 recompute 撞旧 is_sold_out 误拒
+      await ensureStockDate(pool, state, logger);
       const { items, tableNumber } = req.body; // userId 取 JWT、totalPrice 服务端重算，均不信任客户端
       if (!items || !items.length) {
         return res.status(400).json({ success: false, error: '订单不能为空' });
@@ -166,21 +257,43 @@ function register(app, deps) {
       if (existing.rows.length > 0) {
         return res.json({ success: true, message: '订单已存在（防重复提交）', orderId: existing.rows[0].id });
       }
+      // 估清: 余量校验(同单同菜合并口径; 日切已在 handler 开头做过)
+      const stockErr = await checkStockRemain(pool, validatedItems);
+      if (stockErr) {
+        return res.status(400).json({ success: false, error: stockErr });
+      }
       // 检查 orders 表是否有 table_number 列
       const colCheck = await pool.query(
         "SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'"
       );
+      // 建单与库存扣减同事务: 扣减遇并发售空则整体回滚, 绝不出现"单建了菜超卖"
+      const client = await pool.connect();
       let result;
-      if (colCheck.rows.length > 0) {
-        result = await pool.query(
-          'INSERT INTO orders (user_id, items, total_price, dish_count, table_number) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-          [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length, tableNumber || null]
-        );
-      } else {
-        result = await pool.query(
-          'INSERT INTO orders (user_id, items, total_price, dish_count) VALUES ($1,$2,$3,$4) RETURNING id',
-          [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length]
-        );
+      try {
+        await client.query('BEGIN');
+        if (colCheck.rows.length > 0) {
+          result = await client.query(
+            'INSERT INTO orders (user_id, items, total_price, dish_count, table_number) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+            [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length, tableNumber || null]
+          );
+        } else {
+          result = await client.query(
+            'INSERT INTO orders (user_id, items, total_price, dish_count) VALUES ($1,$2,$3,$4) RETURNING id',
+            [effectiveUserId, JSON.stringify(validatedItems), totalPrice, validatedItems.length]
+          );
+        }
+        const deduct = await deductStock(client, validatedItems);
+        if (deduct.err) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, error: deduct.err });
+        }
+        await client.query('COMMIT');
+        syncStockToMemory(deduct.applied);
+      } catch (txErr) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw txErr;
+      } finally {
+        client.release();
       }
       res.json({ success: true, message: '订单已创建', orderId: result.rows[0].id });
     } catch (e) {
@@ -192,6 +305,7 @@ function register(app, deps) {
   // 加菜：往现有订单追加菜品（同订单累计，一张小票）
   app.post('/api/order/:id/add', softAuth, async (req, res) => {
     try {
+      await ensureStockDate(pool, state, logger); // 估清日切先于校验(同下单)
       const orderId = parseInt(req.params.id);
       const { items, tableNumber } = req.body;
       if (!orderId || !items || !items.length) {
@@ -258,12 +372,36 @@ function register(app, deps) {
       if (minBad.length) {
         return res.status(400).json({ success: false, error: '起售数量不足：' + minBad.join('；') });
       }
-      const upd = await pool.query(
-        "UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4 AND status NOT IN ('completed','cancelled')",
-        [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]
-      );
-      if (upd.rowCount === 0) {
-        return res.status(400).json({ success: false, error: '订单状态已变化，不能加菜' });
+      // 估清: 余量校验按本次加菜数量(已有订单的菜已扣过库存, 只校验增量); 日切已在 handler 开头
+      const stockErr = await checkStockRemain(pool, addItems);
+      if (stockErr) {
+        return res.status(400).json({ success: false, error: stockErr });
+      }
+      // 更新订单与扣减库存同事务: 并发售空则整体回滚
+      const client = await pool.connect();
+      let upd;
+      try {
+        await client.query('BEGIN');
+        upd = await client.query(
+          "UPDATE orders SET items=$1, total_price=$2, dish_count=$3 WHERE id=$4 AND status NOT IN ('completed','cancelled')",
+          [JSON.stringify(mergedItems), newTotal, mergedItems.length, orderId]
+        );
+        if (upd.rowCount === 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, error: '订单状态已变化，不能加菜' });
+        }
+        const deduct = await deductStock(client, addItems);
+        if (deduct.err) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ success: false, error: deduct.err });
+        }
+        await client.query('COMMIT');
+        syncStockToMemory(deduct.applied);
+      } catch (txErr) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw txErr;
+      } finally {
+        client.release();
       }
       res.json({
         success: true,
@@ -432,6 +570,29 @@ function register(app, deps) {
       }
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, error: '订单不存在或无权限' });
+      }
+      // 积分入账(2026-11-02 对标商龙会员域): 推进到 completed 时登录用户按 1元=1分 入账;
+      // point_logs.order_id 部分唯一索引防重复入账(重复完成/回退再完成都不加); 游客单无账户不积分
+      if (status === 'completed') {
+        try {
+          const od = await pool.query('SELECT user_id, total_price FROM orders WHERE id=$1', [orderId]);
+          const uid = od.rows[0]?.user_id;
+          if (uid && uid !== 'guest') {
+            const pts = Math.max(0, Math.round(parseFloat(od.rows[0].total_price) || 0));
+            if (pts > 0) {
+              const ins = await pool.query(
+                `INSERT INTO point_logs (user_id, delta, reason, order_id) VALUES ($1,$2,'订单完成奖励',$3)
+                 ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING RETURNING id`,
+                [uid, pts, orderId]
+              );
+              if (ins.rows.length > 0) {
+                await pool.query('UPDATE users SET points = COALESCE(points,0) + $1 WHERE username=$2', [pts, uid]);
+              }
+            }
+          }
+        } catch (pErr) {
+          logger.error('积分入账失败(不阻塞状态更新): ' + pErr.message);
+        }
       }
       res.json({ success: true, message: '订单状态已更新' });
     } catch (e) {

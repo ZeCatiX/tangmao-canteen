@@ -150,6 +150,7 @@
     <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i> 控制面板</a>
     <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i> 菜品管理</a>
     <a href="#" data-page="orders"><i class="bi bi-receipt"></i> 订单管理</a>
+    <a href="#" data-page="tables"><i class="bi bi-grid-3x3-gap"></i> 桌态总览</a>
     <a href="#" data-page="report"><i class="bi bi-journal-text"></i> 营业日报</a>
     <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i> 桌码管理</a>
     <a href="#" data-page="users"><i class="bi bi-people"></i> 用户管理</a>
@@ -194,6 +195,7 @@
       <a class="active" href="#" data-page="dashboard"><i class="bi bi-speedometer2"></i>控制面板</a>
       <a href="#" data-page="dishes"><i class="bi bi-list-ul"></i>菜品管理</a>
       <a href="#" data-page="orders"><i class="bi bi-receipt"></i>订单管理</a>
+      <a href="#" data-page="tables"><i class="bi bi-grid-3x3-gap"></i>桌态总览</a>
       <a href="#" data-page="report"><i class="bi bi-journal-text"></i>营业日报</a>
       <a href="#" data-page="qrcodes"><i class="bi bi-qr-code"></i>桌码管理</a>
       <a href="#" data-page="users"><i class="bi bi-people"></i>用户管理</a>
@@ -711,6 +713,27 @@
 </div>
 
 
+<!-- 桌态总览页(2026-11-02 对标商龙桌台管理): 30桌网格实时聚合未完结订单, 支持并台 -->
+<div class="page" id="page-tables">
+  <div class="page-title"><span>桌态总览</span></div>
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>实时桌态（未完结订单按桌聚合，60 秒自动刷新）</span>
+      <button class="btn btn-sm btn-outline-secondary" onclick="loadTables()" style="border-radius:6px;">⟳ 刷新</button>
+    </div>
+    <div class="card-body">
+      <div id="tables-grid" class="d-flex flex-wrap gap-2">加载中…</div>
+      <div id="table-detail" style="margin-top:1rem;"></div>
+      <div id="table-merge-bar" class="d-flex flex-wrap align-items-end gap-2" style="margin-top:1rem;padding-top:0.8rem;border-top:1px dashed #e4dbcf;">
+        <div><label class="form-label" style="font-size:0.8rem;margin-bottom:2px;">并台：源桌</label><input type="number" id="merge-from" class="form-control form-control-sm" min="1" max="30" style="width:90px;" placeholder="如 5"></div>
+        <div><label class="form-label" style="font-size:0.8rem;margin-bottom:2px;">目标桌</label><input type="number" id="merge-to" class="form-control form-control-sm" min="1" max="30" style="width:90px;" placeholder="如 6"></div>
+        <button class="btn btn-sm" id="merge-btn" style="background:var(--primary);color:#fff;border-radius:6px;padding:0.4rem 0.9rem;">并台（源桌全部未完结单挪到目标桌）</button>
+        <div style="font-size:0.75rem;color:#8b7a6a;">单单转台请在订单管理用改桌号功能</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 订单管理页 -->
 <div class="page" id="page-orders">
   <div class="page-title"><span>订单管理</span></div>
@@ -853,6 +876,9 @@ document.querySelectorAll('[data-page]').forEach(a => {
     }
     if (a.dataset.page === 'orders') {
       setTimeout(() => { if (typeof loadAdminOrders === 'function') loadAdminOrders(); }, 100);
+    }
+    if (a.dataset.page === 'tables') {
+      setTimeout(() => { if (typeof loadTables === 'function') loadTables(); }, 100);
     }
     if (a.dataset.page === 'report') {
       // 营业日报：进入 tab 时默认查今天（若无值先填今天）
@@ -1345,8 +1371,8 @@ function loadDishes() {
   fetch('/api/dishes').then(r => r.json()).then(d => {
     if (!d.success) return;
     document.querySelector('#dish-table-body').innerHTML = d.dishes.map(x =>
-      `<tr><td>${esc(x.id)}</td><td>${x.image_url?(x.image_url.startsWith('/')||x.image_url.startsWith('http')?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:`<span style="font-size:1.3rem;margin-right:6px;vertical-align:middle;">${esc(x.image_url)}</span>`):""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span>${x.is_sold_out===true?' <span class="badge bg-danger" style="border-radius:4px;">售罄</span>':''}</td>
-        <td><button class="btn btn-sm ${x.is_sold_out?'btn-success':'btn-outline-danger'}" onclick="toggleSoldOut(${esc(x.id)}, ${x.is_sold_out===true})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;" title="售罄菜当日不进菜单与推荐">${x.is_sold_out?'补货':'售罄'}</button><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
+      `<tr><td>${esc(x.id)}</td><td>${x.image_url?(x.image_url.startsWith('/')||x.image_url.startsWith('http')?`<img src="${esc(x.image_url)}" style="width:32px;height:32px;border-radius:4px;object-fit:cover;margin-right:6px;vertical-align:middle;" alt="${esc(x.name)}" onerror="this.style.display='none'">`:`<span style="font-size:1.3rem;margin-right:6px;vertical-align:middle;">${esc(x.image_url)}</span>`):""}${esc(x.name)}</td><td>${esc(x.category||'-')}</td><td>${esc(x.spiciness||'-')}</td><td>${esc(x.saltiness||'-')}</td><td>${esc(x.sweetness||'-')}</td><td>${x.price!=null?esc(x.price):'-'}</td><td>${esc(x.rating)}</td><td><span class="badge ${x.is_active===false?'bg-secondary':'bg-success'}" style="border-radius:4px;">${x.is_active===false?'已下架':'已上架'}</span>${x.is_sold_out===true?' <span class="badge bg-danger" style="border-radius:4px;">售罄</span>':''}${x.daily_stock!=null?` <span style="font-size:0.7rem;color:#8b7a6a;">备${esc(x.daily_stock)}·已售${esc(x.sold_today||0)}</span>`:''}</td>
+        <td><button class="btn btn-sm ${x.is_sold_out?'btn-success':'btn-outline-danger'}" onclick="toggleSoldOut(${esc(x.id)}, ${x.is_sold_out===true})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;" title="售罄菜当日不进菜单与推荐">${x.is_sold_out?'补货':'售罄'}</button><button class="btn btn-sm btn-outline-secondary" onclick="editDailyStock(${esc(x.id)}, ${x.daily_stock===null||x.daily_stock===undefined?'null':esc(x.daily_stock)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;margin-right:4px;" title="设今日备量，卖完自动售罄">备量</button><button class="btn btn-sm btn-outline-primary" onclick="editDish(${esc(x.id)})" style="font-size:0.72rem;padding:2px 8px;border-radius:4px;"><i class="bi bi-pencil"></i> 编辑</button></td></tr>`
     ).join('');
   }).catch(() => { console.warn('数据加载失败'); });
 }
@@ -1359,6 +1385,81 @@ function toggleSoldOut(id, cur) {
       else showToast(d.error || '操作失败', 'error');
     }).catch(() => showToast('网络错误', 'error'));
 }
+
+// 估清备量(2026-11-02): 设今日备量, 卖完自动售罄; 取消/清空=不限量
+function editDailyStock(id, cur) {
+  const input = prompt(
+    '设「菜品 #' + id + '」今日备量（卖完自动售罄，次日自动恢复）\n留空并确定 = 不限量' + (cur !== null ? '\n当前备量: ' + cur : ''),
+    cur === null ? '' : String(cur)
+  );
+  if (input === null) return;
+  const token = localStorage.getItem('adminToken');
+  const val = input.trim() === '' ? null : parseInt(input);
+  if (val !== null && (isNaN(val) || val < 1 || val > 9999)) {
+    showToast('备量需为 1-9999 的整数，留空表示不限量', 'error');
+    return;
+  }
+  fetch('/api/admin/dish/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ daily_stock: val }) })
+    .then(r => r.json()).then(d => {
+      if (d.success) { setTimeout(loadDishes, 500); showToast(val === null ? '已设为不限量' : '今日备量已设为 ' + val + ' 份', 'success'); }
+      else showToast(d.error || '操作失败', 'error');
+    }).catch(() => showToast('网络错误', 'error'));
+}
+
+// ─── 桌态总览(2026-11-02 对标商龙桌台管理): 30桌网格+并台 ───
+let _tablesTimer = null;
+function loadTables() {
+  const token = localStorage.getItem('adminToken');
+  fetch('/api/admin/tables/status', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.json()).then(d => {
+      if (!d.success) return;
+      const grid = document.getElementById('tables-grid');
+      if (!grid) return;
+      grid.innerHTML = d.tables.map(t => {
+        const occ = t.occupied;
+        const mins = occ && t.orders && t.orders[0] ? Math.max(0, Math.round((Date.now() - new Date(t.orders[0].createdAt).getTime()) / 60000)) : 0;
+        return '<div class="card" style="width:110px;padding:0.5rem;border-radius:10px;cursor:pointer;' +
+          (occ ? 'border:2px solid #b83a2a;background:rgba(184,58,42,0.05);' : 'border:1px solid #e4dbcf;opacity:0.7;') + '"' +
+          ' onclick="showTableDetail(' + t.table + ')">' +
+          '<div style="font-weight:700;color:' + (occ ? '#b83a2a' : '#8b7a6a') + ';">' + t.table + ' 号桌</div>' +
+          '<div style="font-size:0.75rem;color:#8b7a6a;">' + (occ ? esc(t.orderCount) + ' 单 · ¥' + esc(t.amount) + (mins ? ' · ' + mins + '分' : '') : '空桌') + '</div>' +
+          '</div>';
+      }).join('');
+      // 60秒自动刷新(重复进入页面只挂一个定时器)
+      if (_tablesTimer) clearInterval(_tablesTimer);
+      _tablesTimer = setInterval(() => {
+        if (!document.getElementById('page-tables')?.classList.contains('active')) { clearInterval(_tablesTimer); _tablesTimer = null; return; }
+        loadTables();
+      }, 60000);
+    }).catch(() => {});
+}
+function showTableDetail(tableNo) {
+  const token = localStorage.getItem('adminToken');
+  fetch('/api/admin/tables/status', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.json()).then(d => {
+      if (!d.success) return;
+      const t = d.tables.find(x => x.table === tableNo);
+      const el = document.getElementById('table-detail');
+      if (!t || !t.occupied) { el.innerHTML = '<div style="color:#8b7a6a;font-size:0.85rem;">' + tableNo + ' 号桌：空桌</div>'; return; }
+      el.innerHTML = '<div class="card"><div class="card-header">' + tableNo + ' 号桌 · ' + esc(t.orderCount) + ' 个进行中订单 · 合计 ¥' + esc(t.amount) +
+        '</div><div class="card-body" style="font-size:0.82rem;">' +
+        t.orders.map(o => '<div style="margin-bottom:4px;">#' + esc(o.id) + ' · ¥' + esc(o.total) + ' · ' + ({pending:'待处理',confirmed:'已确认',preparing:'制作中',cooking:'烹饪中'}[o.status] || esc(o.status)) + '</div>').join('') +
+        '<button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById(\'merge-from\').value=' + tableNo + '" style="border-radius:6px;">并到其他桌 →填到源桌</button>' +
+        '</div></div>';
+    }).catch(() => {});
+}
+document.getElementById('merge-btn')?.addEventListener('click', function () {
+  const from = parseInt(document.getElementById('merge-from').value);
+  const to = parseInt(document.getElementById('merge-to').value);
+  if (!from || !to) { showToast('请填源桌与目标桌号', 'error'); return; }
+  if (!confirm('确认把 ' + from + ' 号桌的全部进行中订单并入 ' + to + ' 号桌？')) return;
+  const token = localStorage.getItem('adminToken');
+  fetch('/api/admin/tables/merge', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ fromTable: from, toTable: to }) })
+    .then(r => r.json()).then(d => {
+      if (d.success) { showToast('并台成功：' + d.mergedOrders + ' 单已挪到 ' + to + ' 号桌', 'success'); loadTables(); document.getElementById('table-detail').innerHTML = ''; }
+      else showToast(d.error || '并台失败', 'error');
+    }).catch(() => showToast('网络错误', 'error'));
+});
 
 function editDish(id) {
   fetch('/api/dishes/' + id).then(r => r.json()).then(d => {
@@ -1924,10 +2025,14 @@ function loadDailyReport(date){
     if(!d.success){showToast(d.error||'加载失败','error');return;}
     const s=d.stats;
     document.getElementById('report-stats').innerHTML=
-      '<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">有效单量</div><h4 style="margin:0;">'+s.totalOrders+'</h4></div></div>'
-     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">营业额</div><h4 style="margin:0;">'+s.revenue+' 元</h4></div></div>'
+      '<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">有效单量</div><h4 style="margin:0;">'+s.totalOrders+(s.ordersChange!==null&&s.ordersChange!==undefined?' <small style="font-size:0.7rem;color:'+(s.ordersChange>=0?'#2d8a6e':'#b3261e')+';">'+(s.ordersChange>=0?'↑':'↓')+Math.abs(s.ordersChange)+'%</small>':'')+'</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">营业额</div><h4 style="margin:0;">'+s.revenue+' 元'+(s.revenueChange!==null&&s.revenueChange!==undefined?' <small style="font-size:0.7rem;color:'+(s.revenueChange>=0?'#2d8a6e':'#b3261e')+';">'+(s.revenueChange>=0?'↑':'↓')+Math.abs(s.revenueChange)+'%</small>':'')+'</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">客单价</div><h4 style="margin:0;">'+s.avgTicket+' 元</h4></div></div>'
-     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>';
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">翻台率(30桌)</div><h4 style="margin:0;">'+(s.turnoverRate||'-')+' <small style="font-size:0.7rem;color:#8b7a6a;">动用'+(s.usedTables||0)+'桌</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">桌均营收</div><h4 style="margin:0;">'+(s.avgPerTable||0)+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日营收</div><h4 style="margin:0;">'+(s.prevRevenue||0)+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日单量</div><h4 style="margin:0;">'+(s.prevOrders||0)+'</h4></div></div>';
     const tb=document.querySelector('#report-dishes tbody');
     tb.innerHTML=d.dishes.length?d.dishes.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+x.revenue+' 元</td></tr>').join(''):'<tr><td colspan="3" style="color:#8b7a6a;">当日无动销</td></tr>';
     const maxC=Math.max(1,...d.hours.map(h=>h.cnt));

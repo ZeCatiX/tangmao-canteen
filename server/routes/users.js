@@ -3,7 +3,7 @@
 const logger = require('../../logger');
 
 function register(app, deps) {
-  const { userStorage, generateToken, authMiddleware } = deps;
+  const { userStorage, generateToken, authMiddleware, db } = deps;
   app.post('/api/user/register', async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -74,10 +74,42 @@ function register(app, deps) {
           preferences: user.preferences || {},
           favorites: user.favorites || [],
           blacklist: user.blacklist || [],
+          points: parseInt(user.points) || 0,
         },
       });
     } catch (e) {
       logger.error('登录失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器错误' });
+    }
+  });
+
+  // 我的积分(2026-11-02 对标商龙会员域): 当前积分+最近流水
+  app.get('/api/user/points', authMiddleware, async (req, res) => {
+    try {
+      const username = req.user?.username;
+      if (!username || username === 'guest') {
+        return res.status(401).json({ success: false, error: '请先登录' });
+      }
+      const u = await userStorage.findUserByUsername(username);
+      if (!u) {
+        return res.status(404).json({ success: false, error: '用户不存在' });
+      }
+      const logs = await db.query(
+        'SELECT delta, reason, order_id, created_at FROM point_logs WHERE user_id=$1 ORDER BY created_at DESC LIMIT 10',
+        [username]
+      );
+      res.json({
+        success: true,
+        points: parseInt(u.points) || 0,
+        logs: logs.rows.map((x) => ({
+          delta: parseInt(x.delta),
+          reason: x.reason,
+          orderId: x.order_id,
+          createdAt: x.created_at,
+        })),
+      });
+    } catch (e) {
+      logger.error('积分查询失败:', e.message);
       res.status(500).json({ success: false, error: '服务器错误' });
     }
   });

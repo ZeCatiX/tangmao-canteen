@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS dishes (
   is_sold_out BOOLEAN DEFAULT FALSE,
   name_en TEXT,
   description_en TEXT,
+  daily_stock INT,
+  sold_today INT DEFAULT 0,
+  stock_date DATE,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -37,9 +40,20 @@ CREATE TABLE IF NOT EXISTS users (
   favorites INTEGER[] DEFAULT ARRAY[]::INTEGER[],
   blacklist INTEGER[] DEFAULT ARRAY[]::INTEGER[],
   rating_history JSONB DEFAULT '[]'::JSONB,
+  points INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT NOW(),
   last_login TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS point_logs (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(100) NOT NULL,
+  delta INT NOT NULL,
+  reason VARCHAR(100) NOT NULL,
+  order_id INT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_point_logs_order ON point_logs(order_id) WHERE order_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS feedback (
   id SERIAL PRIMARY KEY,
@@ -117,8 +131,21 @@ ALTER TABLE dishes ADD COLUMN IF NOT EXISTS price_unit VARCHAR;
 ALTER TABLE dishes ADD COLUMN IF NOT EXISTS is_sold_out BOOLEAN DEFAULT FALSE;
 ALTER TABLE dishes ADD COLUMN IF NOT EXISTS name_en TEXT;
 ALTER TABLE dishes ADD COLUMN IF NOT EXISTS description_en TEXT;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS daily_stock INT;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS sold_today INT DEFAULT 0;
+ALTER TABLE dishes ADD COLUMN IF NOT EXISTS stock_date DATE;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(50) DEFAULT '单菜推荐';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
+CREATE TABLE IF NOT EXISTS point_logs (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(100) NOT NULL,
+  delta INT NOT NULL,
+  reason VARCHAR(100) NOT NULL,
+  order_id INT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_point_logs_order ON point_logs(order_id) WHERE order_id IS NOT NULL;
 
 -- 示例用户
 INSERT INTO users (username, password, preferences, created_at) VALUES
