@@ -298,6 +298,7 @@ function register(app, deps) {
         price_unit,
         serving,
         is_sold_out,
+        daily_stock,
         name_en,
         description_en,
       } = req.body;
@@ -395,6 +396,19 @@ function register(app, deps) {
       if (is_sold_out !== undefined) {
         sets.push(`is_sold_out = $${idx++}`);
         vals.push(is_sold_out === true);
+      }
+      // 估清备量(2026-11-02): null=改回不限量; 1-9999=设今日备量(即时生效, sold_today 不清零)
+      if (daily_stock !== undefined) {
+        let v = null;
+        if (daily_stock !== null) {
+          const n = parseInt(daily_stock);
+          if (isNaN(n) || n < 1 || n > 9999) {
+            return res.status(400).json({ success: false, error: '备量需为 1-9999 的整数，留空表示不限量' });
+          }
+          v = n;
+        }
+        sets.push(`daily_stock = $${idx++}`);
+        vals.push(v);
       }
       if (name_en !== undefined) {
         sets.push(`name_en = $${idx++}`);
@@ -1240,6 +1254,73 @@ function register(app, deps) {
       res.json({ success: true, notifications });
     } catch (e) {
       logger.error('API错误:', e.message);
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+
+  // ─── 桌态总览 + 并台(2026-11-02 对标商龙桌台管理) ───
+  // 无新表: 桌态 = 未完结订单按 table_number 实时聚合(1-30 号桌, "打包"单不在网格内)
+  const TABLE_COUNT = 30;
+  const isValidTable = (t) => {
+    const n = parseInt(String(t).trim(), 10);
+    return String(t).trim() !== '' && !isNaN(n) && n >= 1 && n <= TABLE_COUNT ? n : null;
+  };
+
+  app.get('/api/admin/tables/status', async (req, res) => {
+    try {
+      const r = await db.query(
+        `SELECT table_number,
+                COUNT(*)::int AS order_count,
+                COALESCE(SUM(total_price),0)::float AS amount,
+                MIN(created_at) AS first_at,
+                jsonb_agg(jsonb_build_object('id', id, 'total', total_price, 'status', status, 'createdAt', created_at)) AS orders
+         FROM orders
+         WHERE status NOT IN ('completed','cancelled') AND table_number ~ '^[0-9]+$'
+         GROUP BY table_number ORDER BY table_number`
+      );
+      const occupied = new Map(
+        r.rows.map((x) => [parseInt(x.table_number), {
+          orderCount: x.order_count,
+          amount: Math.round(x.amount * 100) / 100,
+          firstAt: x.first_at,
+          orders: x.orders,
+        }])
+      );
+      const tables = [];
+      for (let i = 1; i <= TABLE_COUNT; i++) {
+        tables.push({ table: i, occupied: occupied.has(i), ...(occupied.get(i) || { orderCount: 0, amount: 0, orders: [] }) });
+      }
+      res.json({ success: true, tableCount: TABLE_COUNT, tables });
+    } catch (e) {
+      logger.error('桌态查询失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+
+  // 并台: fromTable 的全部未完结订单挪到 toTable(婚宴/拼桌场景一次并整桌; 单单挪走用现有 PATCH /api/order/:id/table)
+  app.post('/api/admin/tables/merge', async (req, res) => {
+    try {
+      const { fromTable, toTable } = req.body;
+      const from = isValidTable(fromTable);
+      const to = isValidTable(toTable);
+      if (!from || !to) {
+        return res.status(400).json({ success: false, error: '桌号需为 1-30 的数字桌' });
+      }
+      if (from === to) {
+        return res.status(400).json({ success: false, error: '源桌与目标桌相同' });
+      }
+      const r = await db.query(
+        `UPDATE orders SET table_number=$1
+         WHERE table_number=$2 AND status NOT IN ('completed','cancelled') RETURNING id`,
+        [String(to), String(from)]
+      );
+      if (r.rowCount === 0) {
+        return res.status(400).json({ success: false, error: `源桌 ${from} 没有进行中的订单` });
+      }
+      logger.info(`并台: ${from} 号桌 ${r.rowCount} 单并入 ${to} 号桌`);
+      res.json({ success: true, from, to, mergedOrders: r.rowCount, orderIds: r.rows.map((x) => x.id) });
+    } catch (e) {
+      logger.error('并台失败:', e.message);
       res.status(500).json({ success: false, error: '服务器内部错误' });
     }
   });

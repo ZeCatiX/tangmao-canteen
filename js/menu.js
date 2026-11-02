@@ -273,6 +273,19 @@ function showDishDetail(id) {
   m.show();
 }
 
+// 估清"仅剩N份"提示(2026-11-02 对标商龙): 备量菜剩余≤3且未售罄时显示(制造紧迫感); 0份由售罄徽章覆盖
+function stockBadgeHtml(d) {
+  const remain = typeof stockRemainOf === 'function' ? stockRemainOf(d) : null;
+  if (remain === null || remain <= 0 || remain > 3 || d.is_sold_out === true) {
+    return '';
+  }
+  return (
+    '<span style="font-size:0.75rem;color:#b8860b;background:rgba(184,134,11,0.1);padding:2px 8px;border-radius:10px;white-space:nowrap;">仅剩 ' +
+    remain +
+    ' 份</span>'
+  );
+}
+
 // 数量步进器统一渲染(菜单普通卡/规格行/局部刷新共用唯一副本——改样式只改这里)
 function qtyStepperHtml(id, qty) {
   return (
@@ -526,15 +539,20 @@ function renderMenuTable() {
       const c2 = cart.find((c) => c.id === d2.id);
       const q2 = c2 ? c2.qty || 1 : 0;
       const so = d2.is_sold_out === true;
-      const ctrl = so
-        ? '<span style="font-size:0.8rem;color:#b3261e;background:rgba(179,38,30,0.08);padding:3px 10px;border-radius:10px;white-space:nowrap;">已售罄</span>'
-        : q2 > 0
-          ? '<span class="d-inline-flex align-items-center gap-1">' + qtyStepperHtml(d2.id, q2) + '</span>'
-          : '<button class="btn btn-sm add-to-cart-btn" data-id="' +
-            d2.id +
-            '" title="' +
-            (menuLang === 'en' ? 'Add' : '加入购物车') +
-            '" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 10px;font-weight:600;white-space:nowrap;">＋<span class="add-txt"> 加入</span></button>';
+      let ctrl;
+      if (so) {
+        ctrl = '<span style="font-size:0.8rem;color:#b3261e;background:rgba(179,38,30,0.08);padding:3px 10px;border-radius:10px;white-space:nowrap;">已售罄</span>';
+      } else {
+        ctrl =
+          stockBadgeHtml(d2) +
+          (q2 > 0
+            ? '<span class="d-inline-flex align-items-center gap-1">' + qtyStepperHtml(d2.id, q2) + '</span>'
+            : '<button class="btn btn-sm add-to-cart-btn" data-id="' +
+              d2.id +
+              '" title="' +
+              (menuLang === 'en' ? 'Add' : '加入购物车') +
+              '" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:2px 10px;font-weight:600;white-space:nowrap;">＋<span class="add-txt"> 加入</span></button>');
+      }
       return (
         '<div class="d-flex justify-content-between align-items-center spec-row" style="margin-top:4px;gap:6px;' +
         (so ? 'opacity:0.65;' : '') +
@@ -563,6 +581,7 @@ function renderMenuTable() {
         '<div class="d-flex justify-content-between align-items-center"><strong style="color:var(--primary);font-size:1.05rem;">' +
         esc(formatPrice(d)) +
         '</strong>' +
+        stockBadgeHtml(d) +
         (qty > 0
           ? qtyStepperHtml(d.id, qty)
           : '<button class="btn btn-sm add-to-cart-btn" data-id="' +

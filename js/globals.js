@@ -209,11 +209,35 @@ function minQtyOf(dish) {
   const m = src.match(/(\d+)\s*[个盒杯碗瓶只块份包袋听支罐]?起/);
   return m ? Math.max(1, parseInt(m[1], 10)) : 1;
 }
+// 估清余量(2026-11-02 对标商龙库存联动): 备量菜(daily_stock!=null)剩余可购数; null=不限量
+function stockRemainOf(dish) {
+  if (!dish || dish.daily_stock === null || dish.daily_stock === undefined) {
+    return null;
+  }
+  return Math.max(0, parseInt(dish.daily_stock) - (parseInt(dish.sold_today) || 0));
+}
+
 function addToCart(dish, qty) {
   const cart = getCart();
   const i = cart.findIndex((x) => x.id === dish.id);
   const min = minQtyOf(dish);
   const q = typeof qty === 'number' && qty > 0 ? qty : 1;
+  // 估清限购: 加购环节就拦(而非等到下单被拒), 购物车已有数量+本次增量不超剩余
+  const remain = stockRemainOf(dish);
+  if (remain !== null) {
+    const inCart = i >= 0 ? cart[i].qty || 1 : 0;
+    if (inCart + q > remain) {
+      showMessage(
+        '今日备量有限',
+        remain <= 0
+          ? '「' + dish.name + '」今日已售罄'
+          : '「' + dish.name + '」今日仅剩 ' + remain + ' 份' + (inCart >= remain ? '（购物车已加满）' : ''),
+        null,
+        2500
+      );
+      return;
+    }
+  }
   // 一席成宴选饮品模式：饮品自动挂到当前席面（先记录，再入车，保证浮窗/横幅读到最新）
   const inDrinksMode =
     typeof tableDrinksMode !== 'undefined' &&
@@ -290,6 +314,17 @@ function updateCartQty(id, qty) {
   const min = minQtyOf(dish);
   if (qty < min) {
     showMessage('起售数量', '「' + (cart[i].name || '该菜品') + '」' + min + '个起售，数量不能低于 ' + min + ' 个');
+    return;
+  }
+  // 估清限购：数量上限=今日剩余备量
+  const remain = stockRemainOf(dish);
+  if (remain !== null && qty > remain) {
+    showMessage(
+      '今日备量有限',
+      '「' + (cart[i].name || '该菜品') + '」今日仅剩 ' + remain + ' 份',
+      null,
+      2500
+    );
     return;
   }
   cart[i].qty = qty;

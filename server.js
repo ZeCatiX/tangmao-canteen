@@ -13,6 +13,7 @@ const multer = require('multer');
 const logger = require('./logger');
 const db = require('./db');
 const state = require('./server/state');
+const { ensureStockDate } = require('./server/stock'); // 估清日切(菜单接口懒挂点)
 
 // 带 BOM 剥离的 JSON 文件读取
 function readJSON(filePath) {
@@ -478,6 +479,8 @@ async function loadDishData() {
         allergies: d.allergies || {},
         is_active: d.is_active,
         is_sold_out: d.is_sold_out === true,
+        daily_stock: d.daily_stock === null || d.daily_stock === undefined ? null : parseInt(d.daily_stock),
+        sold_today: parseInt(d.sold_today) || 0,
         name_en: d.name_en || null,
         description_en: d.description_en || null,
         description: d.description || '',
@@ -574,7 +577,11 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'kitchen.html')));
 app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'assets', 'brand', 'favicon-64.png')));
-app.get('/api/dishes', (req, res) => res.json({ success: true, dishes: state.dishData }));
+app.get('/api/dishes', (req, res) => {
+  // 估清日切懒挂点: 隔天首个菜单请求自动复位昨日售罄(DB+内存), 无需重启/定时任务
+  ensureStockDate(db, state, logger);
+  res.json({ success: true, dishes: state.dishData });
+});
 app.get('/api/dishes/:id', (req, res) => {
   const id = parseInt(req.params.id);
   const dish = state.dishData.find((d) => d.id === id);
@@ -1093,6 +1100,18 @@ db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ`)
 db.query(`ALTER TABLE preference_log ALTER COLUMN price TYPE VARCHAR(20)`)
   .then(() => logger.info('preference_log.price 列宽就绪'))
   .catch((e) => logger.error('preference_log.price 迁移失败: ' + e.message));
+
+// 幂等迁移：dishes 估清三列（2026-11-02 对标商龙库存联动）——daily_stock=今日备量(NULL=不限量)、
+// sold_today=今日已售、stock_date=日切戳(懒式日切依据)。扣减/日切逻辑在 orders.js，这里是列保障。
+db
+  .query(
+    `ALTER TABLE dishes
+     ADD COLUMN IF NOT EXISTS daily_stock INT,
+     ADD COLUMN IF NOT EXISTS sold_today INT DEFAULT 0,
+     ADD COLUMN IF NOT EXISTS stock_date DATE`
+  )
+  .then(() => logger.info('dishes 估清三列就绪'))
+  .catch((e) => logger.error('dishes 估清列迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
