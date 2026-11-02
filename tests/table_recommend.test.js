@@ -28,8 +28,8 @@ function deepPools() {
     cold: Array.from({ length: 6 }, (_, i) => mkDish(100 + i, `凉菜${i}`, '特色凉菜', 20, i % 2 ? '微辣' : '不辣')),
     hot: Array.from({ length: 8 }, (_, i) => mkDish(200 + i, `热菜${i}`, '传承陕菜', 40, i % 3 ? '不辣' : '微辣')),
     signature: [
-      mkDish(301, '招牌甲', '招牌与游西安必打卡', 58, '不辣', { tags: ['招牌'] }),
-      mkDish(302, '招牌乙', '招牌与游西安必打卡', 59, '不辣', { tags: ['招牌'] }),
+      mkDish(301, '招牌甲', '招牌', 58, '不辣', { tags: ['招牌'] }),
+      mkDish(302, '招牌乙', '招牌', 59, '不辣', { tags: ['招牌'] }),
     ],
     staple: [mkDish(401, '油泼面', '陕西小吃', 16, '微辣'), mkDish(403, '肉夹馍', '陕西小吃', 6, '不辣')],
   };
@@ -99,7 +99,7 @@ test('buildTableSets: 池子不足自动缩配额且不炸', () => {
   const pools = {
     cold: [mkDish(1, '唯一凉菜', '特色凉菜', 20, '不辣')],
     hot: [mkDish(2, '唯一热菜', '传承陕菜', 40, '不辣')],
-    signature: [mkDish(3, '唯一招牌', '招牌与游西安必打卡', 58, '不辣', { tags: ['招牌'] })],
+    signature: [mkDish(3, '唯一招牌', '招牌', 58, '不辣', { tags: ['招牌'] })],
     staple: [],
   };
   const sets = tr.buildTableSets({ pools: score(pools, {}), partySize: 10, budgetPerPerson: 80 });
@@ -145,11 +145,11 @@ test('pickFromPool: 主料不重复——有替代时让位，无替代时可重
 test('reasonFor: 招牌/凉菜/时蔬模板各归其位', () => {
   const v = tr.VARIANTS[2]; // 打卡版
   assert.match(
-    tr.reasonFor(mkDish(1, '葫芦鸡', '招牌与游西安必打卡', 98, '不辣', { tags: ['招牌'] }), 'signature', v, 4),
+    tr.reasonFor(mkDish(1, '葫芦鸡', '招牌', 98, '不辣', { tags: ['招牌'] }), 'signature', v, 4),
     /打卡/
   );
   assert.match(tr.reasonFor(mkDish(2, '凉菜', '特色凉菜', 20, '不辣'), 'cold', v, 4), /凉菜/);
-  assert.match(tr.reasonFor(mkDish(3, '时蔬', '田园时蔬·汤羹', 28, '不辣'), 'hot', v, 4), /荤素/);
+  assert.match(tr.reasonFor(mkDish(3, '时蔬', '田园时蔬', 28, '不辣'), 'hot', v, 4), /荤素/);
   assert.match(tr.reasonFor(mkDish(4, '米饭', '主食', 3, '不辣'), 'staple', v, 4), /主食/);
 });
 
@@ -515,10 +515,10 @@ test('buildTableSets: 跨套差异化——深池下三套不再雷同', () => {
     cold: Array.from({ length: 8 }, (_, i) => mkDish(100 + i, `凉菜${i}`, '特色凉菜', 30, i % 2 ? '微辣' : '不辣')),
     hot: Array.from({ length: 16 }, (_, i) => mkDish(200 + i, `热菜${i}`, '传承陕菜', 50, i % 3 ? '不辣' : '微辣')),
     signature: [
-      mkDish(301, '招牌甲', '招牌与游西安必打卡', 58, '不辣', { tags: ['招牌'] }),
-      mkDish(302, '招牌乙', '招牌与游西安必打卡', 59, '不辣', { tags: ['招牌'] }),
-      mkDish(303, '招牌丙', '招牌与游西安必打卡', 78, '微辣', { tags: ['招牌'] }),
-      mkDish(304, '招牌丁', '招牌与游西安必打卡', 98, '不辣', { tags: ['招牌'] }),
+      mkDish(301, '招牌甲', '招牌', 58, '不辣', { tags: ['招牌'] }),
+      mkDish(302, '招牌乙', '招牌', 59, '不辣', { tags: ['招牌'] }),
+      mkDish(303, '招牌丙', '招牌', 78, '微辣', { tags: ['招牌'] }),
+      mkDish(304, '招牌丁', '招牌', 98, '不辣', { tags: ['招牌'] }),
     ],
     staple: Array.from({ length: 6 }, (_, i) => mkDish(400 + i, `面点${i}`, '陕西小吃', 15, '不辣')),
   };
@@ -550,7 +550,7 @@ test('buildTableSets: 预算感知保结构——天价硬菜不挤垮热菜配�
       mkDish(7, '热菜E', '传承陕菜', 40, '微辣'),
       mkDish(8, '热菜F', '热销菜品', 36, '不辣'),
     ],
-    signature: [mkDish(9, '招牌甲', '招牌与游西安必打卡', 78, '微辣', { tags: ['招牌'] })],
+    signature: [mkDish(9, '招牌甲', '招牌', 78, '微辣', { tags: ['招牌'] })],
     staple: [mkDish(10, '油泼面', '陕西小吃', 16, '微辣'), mkDish(11, '肉夹馍', '陕西小吃', 6, '不辣')],
   };
   for (const key of Object.keys(pools)) {

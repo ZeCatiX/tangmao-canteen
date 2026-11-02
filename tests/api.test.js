@@ -1427,7 +1427,7 @@ describe('分类过滤', () => {
   it('GET /api/dishes 返回的菜品分类应完整', async () => {
     const { body } = await api('/api/dishes');
     const categories = [...new Set(body.dishes.map((d) => d.category))];
-    assert.ok(categories.includes('招牌与游西安必打卡'), '应包含招牌(全名)');
+    assert.ok(categories.includes('招牌'), '应包含招牌(全名)');
     assert.ok(categories.includes('传承陕菜'), '应包含传承陕菜');
     assert.ok(categories.includes('陕西小吃'), '应包含陕西小吃');
     assert.ok(categories.includes('特色凉菜'), '应包含特色凉菜');

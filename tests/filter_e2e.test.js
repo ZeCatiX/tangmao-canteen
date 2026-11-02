@@ -54,7 +54,7 @@ describe('菜单筛选器测试', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
     // 2026-09-17: 分类选项值为全名
-    await page.select('#menu-filter-cat', '招牌与游西安必打卡');
+    await page.select('#menu-filter-cat', '招牌');
     await sleep(600);
     const info = await page.evaluate(() => {
       const count = document.getElementById('menu-count')?.textContent || '';
@@ -76,7 +76,7 @@ describe('菜单筛选器测试', () => {
     assert.ok(info.rows >= 1 && info.rows <= 69, '筛选后行数应1-69: ' + info.rows);
     assert.ok(
       info.cats.every(function (c) {
-        return c === '招牌与游西安必打卡';
+        return c === '招牌';
       }),
       '所有行都应是招牌: ' + info.cats.join(',')
     );
@@ -125,7 +125,7 @@ describe('菜单筛选器测试', () => {
     await page.evaluate(() => document.getElementById('nav-dataset')?.click());
     await sleep(800);
     // 先筛选，再重置
-    await page.select('#menu-filter-cat', '招牌与游西安必打卡');
+    await page.select('#menu-filter-cat', '招牌');
     await sleep(400);
     await page.evaluate(() => document.getElementById('menu-reset-filter')?.click());
     await sleep(600);
