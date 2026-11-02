@@ -26,7 +26,11 @@
     .sidebar-brand { padding: 1.5rem 1.2rem 1rem; border-bottom: 1px solid rgba(201,169,110,0.1); text-align: center; }
     .sidebar-brand h5 { font-family: 'Noto Serif SC', serif; color: var(--gold); letter-spacing: 4px; font-size: 1.05rem; margin: 0; }
     .sidebar-brand small { color: rgba(201,169,110,0.35); letter-spacing: 2px; font-size: 0.65rem; }
-    .sidebar-nav { flex: 1; padding: 0.5rem 0; }
+    /* 导航项增多后超出100vh: nav区内部滚动, footer固定不挤丢(2026-11-02 用户反馈横版侧栏少选项) */
+    .sidebar-nav { flex: 1; padding: 0.5rem 0; overflow-y: auto; min-height: 0; }
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.25); border-radius: 2px; }
+    .sidebar-nav { scrollbar-width: thin; scrollbar-color: rgba(201,169,110,0.25) transparent; }
     .sidebar-nav a { display: flex; align-items: center; gap: 10px; color: rgba(201,169,110,0.5); text-decoration: none; padding: 0.75rem 1.2rem; font-size: 0.85rem; letter-spacing: 1px; transition: all 0.25s; border-left: 3px solid transparent; }
     .sidebar-nav a:hover { background: rgba(201,169,110,0.06); color: var(--gold); }
     .sidebar-nav a.active { background: rgba(201,169,110,0.08); color: var(--gold); border-left-color: var(--gold); }
