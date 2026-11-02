@@ -134,8 +134,8 @@ describe('估清·库存联动', () => {
 });
 
 describe('桌态总览+并台', () => {
-  const T_FROM = 29;
-  const T_TO = 30;
+  const T_FROM = 8; // 1-9号桌不在任何测试桌池(uniqTable循环10-30), 并发安全
+  const T_TO = 9;
   let orderIdFrom = 0;
 
   before(async () => {
