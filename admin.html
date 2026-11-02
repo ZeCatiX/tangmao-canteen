@@ -114,6 +114,17 @@
     html.dark-mode .dropdown-item { color: #e0d5c1; }
     html.dark-mode .dropdown-item:hover { background-color: #2a2a2a; }
     html.dark-mode .topbar-link, html.dark-mode .mobile-topbar { background: #0a0a0a; }
+    /* 深色模式表单: 深底浅字配对(--bs-body-color浅字但--bs-body-bg仍是白, 曾出现白底浅字反向不可读; placeholder用中灰保持示例弱化) */
+    html.dark-mode .form-control, html.dark-mode .form-select {
+      background-color: #1a1a1a;
+      color: #e0d5c1;
+      border-color: #2a2a2a;
+    }
+    html.dark-mode .form-control:focus, html.dark-mode .form-select:focus {
+      background-color: #1a1a1a;
+      color: #e0d5c1;
+    }
+    html.dark-mode .form-control::placeholder { color: #a89880; opacity: 1; }
     /* 深色模式顶栏导航: 与内容区拉开层次(#0f0f0f), 链接/激活态可辨(2026-11-02 用户反馈颜色区别不开) */
     html.dark-mode .mobile-topbar { background: #141414; border-bottom: 1px solid #2a2a2a; }
     html.dark-mode .mobile-topbar .nav-links a { color: var(--text-light); }
