@@ -1431,7 +1431,7 @@ function loadTables() {
         if (!document.getElementById('page-tables')?.classList.contains('active')) { clearInterval(_tablesTimer); _tablesTimer = null; return; }
         loadTables();
       }, 60000);
-    }).catch(() => {});
+    }).catch(function (e) { console.warn('桌态加载失败:', e); });
 }
 function showTableDetail(tableNo) {
   const token = localStorage.getItem('adminToken');
@@ -1446,7 +1446,7 @@ function showTableDetail(tableNo) {
         t.orders.map(o => '<div style="margin-bottom:4px;">#' + esc(o.id) + ' · ¥' + esc(o.total) + ' · ' + ({pending:'待处理',confirmed:'已确认',preparing:'制作中',cooking:'烹饪中'}[o.status] || esc(o.status)) + '</div>').join('') +
         '<button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById(\'merge-from\').value=' + tableNo + '" style="border-radius:6px;">并到其他桌 →填到源桌</button>' +
         '</div></div>';
-    }).catch(() => {});
+    }).catch(function (e) { console.warn('桌态详情加载失败:', e); });
 }
 document.getElementById('merge-btn')?.addEventListener('click', function () {
   const from = parseInt(document.getElementById('merge-from').value);
