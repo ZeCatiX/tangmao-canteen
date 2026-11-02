@@ -468,9 +468,13 @@ function register(app, deps) {
       const allAllergyKeys = new Set(params.allergyKeys);
       profileAllergyKeys.forEach((k) => allAllergyKeys.add(k));
       const { pools } = tableRecommend.buildPools(state.dishData || [], [...allAllergyKeys]);
-      // 已点排除仅登录用户(与主接口同规——游客无身份,不继承他人记录); 换菜本体 outId 任何身份都必须排除,防"换出同款"
+      // 排除集分两类: ①席面上下文(现有菜+换出历史, params.excludeIds)——与身份无关, 任何身份都排除,
+      //   否则游客换菜会在两道菜间来回变(换出的立刻回池又被换回);
+      // ②已点历史(collectOrderedDishIds)——身份数据, 仅登录用户(与主接口同规)
       const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
-      const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
+      const orderedIds = new Set(
+        Array.isArray(params.excludeIds) ? params.excludeIds.map((n) => parseInt(n, 10)).filter(Number.isFinite) : []
+      );
       const outId = parseInt(req.body.outId, 10);
       if (Number.isFinite(outId)) {
         orderedIds.add(outId);
