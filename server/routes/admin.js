@@ -94,6 +94,24 @@ function register(app, deps) {
        FROM orders WHERE created_at::date = $1::date AND status <> 'cancelled' GROUP BY hr ORDER BY hr`,
         [date]
       );
+      // 桌数维度(2026-11-02 对齐商龙报表口径): 翻台率=非打包完成单去重桌数/30桌; 桌均=营收/去重桌数
+      const tableAgg = await db.query(
+        `SELECT COUNT(DISTINCT table_number)::int AS tables
+       FROM orders WHERE created_at::date = $1::date AND status = 'completed' AND table_number ~ '^[0-9]+$'`,
+        [date]
+      );
+      const usedTables = tableAgg.rows[0]?.tables || 0;
+      const TABLE_COUNT = 30;
+      // 环比昨日: 营收与单数
+      const prev = await db.query(
+        `SELECT COUNT(*)::int AS cnt, COALESCE(SUM(total_price),0)::float AS revenue
+       FROM orders WHERE created_at::date = ($1::date - INTERVAL '1 day') AND status <> 'cancelled'`,
+        [date]
+      );
+      const prevOrders = prev.rows[0]?.cnt || 0;
+      const prevRevenue = parseFloat(prev.rows[0]?.revenue) || 0;
+      const revenueChange = prevRevenue > 0 ? Math.round(((revenue - prevRevenue) / prevRevenue) * 1000) / 10 : null;
+      const ordersChange = prevOrders > 0 ? Math.round(((totalOrders - prevOrders) / prevOrders) * 1000) / 10 : null;
       res.json({
         success: true,
         date,
@@ -104,6 +122,13 @@ function register(app, deps) {
           cancelled,
           cancelledAmount: Math.round(cancelledAmount * 100) / 100,
           pendingConfirmed,
+          usedTables,
+          turnoverRate: Math.round((usedTables / TABLE_COUNT) * 100) + '%',
+          avgPerTable: usedTables ? Math.round((revenue / usedTables) * 100) / 100 : 0,
+          prevRevenue: Math.round(prevRevenue * 100) / 100,
+          prevOrders,
+          revenueChange,
+          ordersChange,
         },
         dishes: dishes.rows.map((r) => ({ name: r.name, qty: r.qty, revenue: Math.round(r.revenue * 100) / 100 })),
         hours: hours.rows.map((r) => ({ hr: r.hr, cnt: r.cnt, amount: Math.round(r.amount * 100) / 100 })),

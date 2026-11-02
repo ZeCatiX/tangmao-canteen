@@ -825,6 +825,22 @@ function rebuildEndView() {
       displayFeatureImportance();
     }, 150);
   }
+  // 积分提示(2026-11-02 对标商龙会员域): 登录用户在完成页显示当前积分(订单完成时已按 1元=1分 入账)
+  const endPoints = document.getElementById('end-points-line');
+  if (endPoints) {
+    const token = localStorage.getItem('userToken');
+    if (token) {
+      safeFetch('/api/user/points', { headers: { Authorization: 'Bearer ' + token } })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) {
+            endPoints.textContent = '🎁 当前积分 ' + d.points;
+            endPoints.style.display = '';
+          }
+        })
+        .catch(() => {});
+    }
+  }
   showSection('end-section');
 }
 

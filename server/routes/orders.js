@@ -571,6 +571,29 @@ function register(app, deps) {
       if (result.rowCount === 0) {
         return res.status(404).json({ success: false, error: '订单不存在或无权限' });
       }
+      // 积分入账(2026-11-02 对标商龙会员域): 推进到 completed 时登录用户按 1元=1分 入账;
+      // point_logs.order_id 部分唯一索引防重复入账(重复完成/回退再完成都不加); 游客单无账户不积分
+      if (status === 'completed') {
+        try {
+          const od = await pool.query('SELECT user_id, total_price FROM orders WHERE id=$1', [orderId]);
+          const uid = od.rows[0]?.user_id;
+          if (uid && uid !== 'guest') {
+            const pts = Math.max(0, Math.round(parseFloat(od.rows[0].total_price) || 0));
+            if (pts > 0) {
+              const ins = await pool.query(
+                `INSERT INTO point_logs (user_id, delta, reason, order_id) VALUES ($1,$2,'订单完成奖励',$3)
+                 ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING RETURNING id`,
+                [uid, pts, orderId]
+              );
+              if (ins.rows.length > 0) {
+                await pool.query('UPDATE users SET points = COALESCE(points,0) + $1 WHERE username=$2', [pts, uid]);
+              }
+            }
+          }
+        } catch (pErr) {
+          logger.error('积分入账失败(不阻塞状态更新): ' + pErr.message);
+        }
+      }
       res.json({ success: true, message: '订单状态已更新' });
     } catch (e) {
       logger.error('API错误:', e.message);

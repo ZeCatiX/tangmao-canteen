@@ -722,7 +722,7 @@ require('./server/routes/admin').register(app, {
 // 菜品管理 API
 
 // 用户域(注册/登录/偏好/收藏/黑名单/登出/注销)拆分至 server/routes/users.js(2026-10-13 改造4)
-require('./server/routes/users').register(app, { userStorage, generateToken, authMiddleware, logger });
+require('./server/routes/users').register(app, { userStorage, generateToken, authMiddleware, logger, db });
 // 偏好/推荐埋点(preference-log/recommendation-log)拆分至 server/routes/recommend.js(2026-10-13 改造4)
 
 // 偏好统计 API
@@ -1112,6 +1112,24 @@ db
   )
   .then(() => logger.info('dishes 估清三列就绪'))
   .catch((e) => logger.error('dishes 估清列迁移失败: ' + e.message));
+
+// 幂等迁移：积分体系(2026-11-02 对标商龙会员域)——users.points + point_logs 流水表
+// (order_id 部分唯一索引防重复入账, 入账逻辑在 orders.js 状态流转 completed 时)
+db
+  .query(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 0;
+     CREATE TABLE IF NOT EXISTS point_logs (
+       id SERIAL PRIMARY KEY,
+       user_id VARCHAR(100) NOT NULL,
+       delta INT NOT NULL,
+       reason VARCHAR(100) NOT NULL,
+       order_id INT,
+       created_at TIMESTAMP DEFAULT NOW()
+     );
+     CREATE UNIQUE INDEX IF NOT EXISTS idx_point_logs_order ON point_logs(order_id) WHERE order_id IS NOT NULL`
+  )
+  .then(() => logger.info('积分表结构就绪'))
+  .catch((e) => logger.error('积分迁移失败: ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';

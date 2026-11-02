@@ -2025,10 +2025,14 @@ function loadDailyReport(date){
     if(!d.success){showToast(d.error||'加载失败','error');return;}
     const s=d.stats;
     document.getElementById('report-stats').innerHTML=
-      '<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">有效单量</div><h4 style="margin:0;">'+s.totalOrders+'</h4></div></div>'
-     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">营业额</div><h4 style="margin:0;">'+s.revenue+' 元</h4></div></div>'
+      '<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">有效单量</div><h4 style="margin:0;">'+s.totalOrders+(s.ordersChange!==null&&s.ordersChange!==undefined?' <small style="font-size:0.7rem;color:'+(s.ordersChange>=0?'#2d8a6e':'#b3261e')+';">'+(s.ordersChange>=0?'↑':'↓')+Math.abs(s.ordersChange)+'%</small>':'')+'</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">营业额</div><h4 style="margin:0;">'+s.revenue+' 元'+(s.revenueChange!==null&&s.revenueChange!==undefined?' <small style="font-size:0.7rem;color:'+(s.revenueChange>=0?'#2d8a6e':'#b3261e')+';">'+(s.revenueChange>=0?'↑':'↓')+Math.abs(s.revenueChange)+'%</small>':'')+'</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">客单价</div><h4 style="margin:0;">'+s.avgTicket+' 元</h4></div></div>'
-     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>';
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">翻台率(30桌)</div><h4 style="margin:0;">'+(s.turnoverRate||'-')+' <small style="font-size:0.7rem;color:#8b7a6a;">动用'+(s.usedTables||0)+'桌</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">桌均营收</div><h4 style="margin:0;">'+(s.avgPerTable||0)+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日营收</div><h4 style="margin:0;">'+(s.prevRevenue||0)+' 元</h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日单量</div><h4 style="margin:0;">'+(s.prevOrders||0)+'</h4></div></div>';
     const tb=document.querySelector('#report-dishes tbody');
     tb.innerHTML=d.dishes.length?d.dishes.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+x.revenue+' 元</td></tr>').join(''):'<tr><td colspan="3" style="color:#8b7a6a;">当日无动销</td></tr>';
     const maxC=Math.max(1,...d.hours.map(h=>h.cnt));
