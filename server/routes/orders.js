@@ -267,10 +267,23 @@ function register(app, deps) {
         "SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='table_number'"
       );
       // 建单与库存扣减同事务: 扣减遇并发售空则整体回滚, 绝不出现"单建了菜超卖"
+      // 幂等闸原子化(2026-11-02 压测抓到的竞态): 检查-插入之间的并发窗口可产生重复单——
+      // 事务内对同 key(user+桌+内容) 加 advisory lock 串行化, 后到者拿锁后重查必见先到者的单
       const client = await pool.connect();
       let result;
       try {
         await client.query('BEGIN');
+        await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          effectiveUserId + '|' + (tableNumber || '') + '|' + itemsStr,
+        ]);
+        const existing2 = await client.query(
+          "SELECT id FROM orders WHERE user_id = $1 AND items = $2::jsonb AND created_at > NOW() - INTERVAL '10 seconds' AND status IN ('pending','confirmed') AND table_number IS NOT DISTINCT FROM $3 LIMIT 1",
+          [effectiveUserId, itemsStr, tableNumber || null]
+        );
+        if (existing2.rows.length > 0) {
+          await client.query('COMMIT');
+          return res.json({ success: true, message: '订单已存在（防重复提交）', orderId: existing2.rows[0].id });
+        }
         if (colCheck.rows.length > 0) {
           result = await client.query(
             'INSERT INTO orders (user_id, items, total_price, dish_count, table_number) VALUES ($1,$2,$3,$4,$5) RETURNING id',
