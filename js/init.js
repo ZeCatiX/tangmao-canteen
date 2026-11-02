@@ -71,7 +71,11 @@ document.addEventListener('DOMContentLoaded', function () {
         ov.style.display = 'none';
       }, 520);
     }
-    ov.addEventListener('click', close);
+    // 跳过加固(2026-11-02 压测发现遮罩可卡死): 捕获阶段接click+pointerdown(动画canvas吞事件也不怕),
+    // 外加8秒硬兜底——动画进度走rAF累加, 合成/后台环境rAF极慢时onDone迟迟不来, 用户会被困在启动画面
+    ov.addEventListener('click', close, true);
+    ov.addEventListener('pointerdown', close, true);
+    setTimeout(close, 8000);
     TangCatIntro.play(stage, {
       duration: 4200,
       onDone: function () {
