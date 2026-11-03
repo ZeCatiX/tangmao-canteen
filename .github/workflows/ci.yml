@@ -52,7 +52,7 @@ jobs:
         run: |
           # sample_data.sql 只建表+示例用户；末尾示例 feedback 会因菜品未插入报 FK 错（预期，psql 默认不中断）
           PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -f sample_data.sql
-          # 116 道正式菜品快照（TRUNCATE CASCADE 顺带清掉空的 feedback 表）
+          # 110 道正式菜品快照（与券码菜单一致；TRUNCATE CASCADE 顺带清掉空的 feedback 表）
           PGPASSWORD=testpass psql -h localhost -U postgres -d tangmao_test -v ON_ERROR_STOP=1 -f dishes_seed.sql
 
       - name: Train model (CI fixture)

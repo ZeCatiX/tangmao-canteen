@@ -495,7 +495,7 @@ var SWEET_EN = {
   偏酸: 'Sour-ish',
 };
 var CAL_EN = { 高: 'Hearty', 中: 'Medium', 低: 'Light', 适中: 'Medium', 未知: 'Unknown' };
-// 规格数据级枚举（116 道菜固定值，DB serving/flavor 为中文）：英文模式渲染时转写，数据不动
+// 规格数据级枚举（110 道菜固定值，DB serving/flavor 为中文）：英文模式渲染时转写，数据不动
 var SPEC_EN = {
   '6颗': '6 pcs',
   '6个': '6 pcs',

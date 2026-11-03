@@ -37,8 +37,12 @@ async function main() {
   }
   try {
     const like = TEST_PATTERNS.map((_, i) => `name LIKE $${i + 1}`).join(' OR ');
+    // 订单 items 里存在注入测试塞的非数字 item id（如 '1 OR 1=1'，pending 毒单上线清洗也不删），
+    // ::int 直接强转会整查询崩掉——先 CASE 甄别数字再转，非数字视为无引用
     const cand = await pool.query(
-      `SELECT id, name, EXISTS (SELECT 1 FROM orders o, jsonb_array_elements(o.items) e WHERE (e->>'id')::int = d.id) AS has_order FROM dishes d WHERE ${like} ORDER BY id`,
+      `SELECT id, name, EXISTS (SELECT 1 FROM orders o, jsonb_array_elements(o.items) e
+        WHERE CASE WHEN (e->>'id') ~ '^[0-9]+$' THEN (e->>'id')::int ELSE -1 END = d.id) AS has_order
+        FROM dishes d WHERE ${like} ORDER BY id`,
       TEST_PATTERNS
     );
     if (!cand.rows.length) {

@@ -4,10 +4,10 @@
 // 用法:
 //   node scripts/cleanup_production_data.js                 # 默认 dry-run,只打印将清理的内容
 //   node scripts/cleanup_production_data.js --execute       # 真正执行
-//   node scripts/cleanup_production_data.js --execute --purge-guest-orders  # 连游客历史单(已完成/已取消)一起清
+//   node scripts/cleanup_production_data.js --execute --purge-guest-orders  # 连游客历史单(已完成/已取消)及其反馈/推荐日志一起清
 // 范围:
 //   1) 白名单外用户(测试账号)及其 orders/feedback/recommendation_log
-//   2) 可选: 游客(user_id 空/'guest')已完成/已取消订单
+//   2) 可选: 游客(user_id 空/'guest')已完成/已取消订单 + 其全部反馈/推荐日志
 // 保护: username='admin' 与 --keep 指定名单永不删除;默认 dry-run;pending 订单永不删。
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { Pool } = require('pg');
@@ -54,13 +54,22 @@ const pool = new Pool({
   const feedbackC = await cnt(`SELECT count(*)::int AS c FROM feedback WHERE user_id IN (${inList})`);
   const reclogC = await cnt(`SELECT count(*)::int AS c FROM recommendation_log WHERE user_id IN (${inList})`);
   let guestC = 0;
+  let guestFeedbackC = 0;
+  let guestReclogC = 0;
   if (purgeGuestOrders) {
     guestC = await cnt(
       `SELECT count(*)::int AS c FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status IN ('completed','cancelled')`
     );
+    // 游客（未登录）的反馈与推荐日志随单一起清——上线前口径：库中只留白名单用户的真实数据
+    guestFeedbackC = await cnt(
+      `SELECT count(*)::int AS c FROM feedback WHERE user_id IS NULL OR user_id IN ('','guest')`
+    );
+    guestReclogC = await cnt(
+      `SELECT count(*)::int AS c FROM recommendation_log WHERE user_id IS NULL OR user_id IN ('','guest')`
+    );
   }
   console.log(
-    `关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC}` : ''}`
+    `关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC} | 游客反馈 ${guestFeedbackC} | 游客推荐日志 ${guestReclogC}` : ''}`
   );
 
   if (!execute) {
@@ -83,6 +92,16 @@ const pool = new Pool({
       );
       total += r.rowCount;
       console.log(`删除游客历史单 ${r.rowCount}`);
+      r = await cli.query(
+        `DELETE FROM feedback WHERE user_id IS NULL OR user_id IN ('','guest') RETURNING id`
+      );
+      total += r.rowCount;
+      console.log(`删除游客反馈 ${r.rowCount}`);
+      r = await cli.query(
+        `DELETE FROM recommendation_log WHERE user_id IS NULL OR user_id IN ('','guest') RETURNING id`
+      );
+      total += r.rowCount;
+      console.log(`删除游客推荐日志 ${r.rowCount}`);
     }
     r = await cli.query(`DELETE FROM feedback WHERE user_id IN (${inList}) RETURNING id`);
     total += r.rowCount;
