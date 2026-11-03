@@ -1349,6 +1349,49 @@ function register(app, deps) {
       res.status(500).json({ success: false, error: '服务器内部错误' });
     }
   });
+
+  // 客群标签(2026-11-02 对标商龙六大智能标签): 按用户聚合订单数/消费额分三档(常客≥5/回头客2-4/新客1) + 口味偏好分布
+  app.get('/api/admin/user-segments', async (req, res) => {
+    try {
+      const agg = await db.query(
+        `SELECT user_id,
+                COUNT(*)::int AS order_count,
+                COALESCE(SUM(total_price),0)::float AS total_spend,
+                MAX(created_at) AS last_seen
+         FROM orders
+         WHERE status <> 'cancelled' AND user_id IS NOT NULL AND user_id <> 'guest' AND user_id <> ''
+         GROUP BY user_id`
+      );
+      const segments = { regular: 0, returning: 0, newcomer: 0 };
+      const regulars = [];
+      for (const row of agg.rows) {
+        const n = row.order_count;
+        if (n >= 5) {
+          segments.regular++;
+          if (regulars.length < 10) {
+            regulars.push({ username: row.user_id, orders: n, spend: Math.round(row.total_spend * 100) / 100, lastSeen: row.last_seen });
+          }
+        } else if (n >= 2) segments.returning++;
+        else segments.newcomer++;
+      }
+      regulars.sort((a, b) => b.spend - a.spend);
+      // 口味分布: preference_log 最近一条/用户 的辣度
+      const taste = await db.query(
+        `SELECT spiciness, COUNT(*)::int AS n FROM preference_log
+         WHERE spiciness IS NOT NULL AND spiciness <> ''
+         GROUP BY spiciness ORDER BY n DESC LIMIT 5`
+      );
+      res.json({
+        success: true,
+        segments,
+        tasteTop: taste.rows.map((x) => ({ label: x.spiciness, n: x.n })),
+        topRegulars: regulars,
+      });
+    } catch (e) {
+      logger.error('客群标签失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
 }
 
 module.exports = { register };

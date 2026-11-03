@@ -1091,9 +1091,9 @@ db.query(`ALTER TABLE recommendation_log ADD COLUMN IF NOT EXISTS mode VARCHAR(5
 
 // 幂等迁移：orders 补 completed_at 列（厨房看板"当日已完成"按完成时间归档，
 // 原来回退用 created_at 近似——跨天完成的单会被归错档）。GET /api/orders 走 SELECT * 自动带出。
-db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ`)
-  .then(() => logger.info('orders.completed_at 列就绪'))
-  .catch((e) => logger.error('orders.completed_at 迁移失败: ' + e.message));
+db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS rush_requested_at TIMESTAMPTZ`)
+  .then(() => logger.info('orders.completed_at/rush_requested_at 列就绪'))
+  .catch((e) => logger.error('orders 时间列迁移失败: ' + e.message));
 
 // 幂等迁移：preference_log.price 放宽到 VARCHAR(20)——价格档全称「标准型（12-20元）」11 字符
 // 曾超 VARCHAR(10)，选标准型/品质型的用户一存偏好就 500

@@ -1,6 +1,42 @@
 // 购物车与结算域(2026-10-19 自 core.js 拆出): 购物车渲染/桌台选择/账单/赠菜轮次/加菜/结算全流程
 // 纯整体搬移零逻辑改动;构建顺序见 build.js(共享顶层全局,内联 onclick 依赖顶层函数名)
 
+// 催菜按钮(2026-11-02 对标商龙KDS): 点击发催菜请求, 门槛(满10分钟/30分钟冷却)由服务端把关, 前端toast结果
+document.addEventListener('click', function (e) {
+  const rushBtn = e.target.closest('#banner-rush-btn');
+  if (!rushBtn || rushBtn.disabled) {
+    return;
+  }
+  const oid = ssGet('lastOrderId');
+  const tbl = ssGet('lockedTable') || '';
+  if (!oid) {
+    return;
+  }
+  rushBtn.disabled = true;
+  safeFetch('/api/order/' + encodeURIComponent(oid) + '/rush', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ tableNumber: tbl }),
+  })
+    .then((r) => r.json())
+    .then((d) => {
+      if (d.success) {
+        showMessage(L('已催菜', 'Rush sent'), d.message || L('已通知厨房加急处理', 'Kitchen notified'), null, 3000);
+        rushBtn.textContent = '🔔 已催菜';
+      } else {
+        showMessage(L('无法催菜', 'Cannot rush'), d.error || '', null, 3500);
+        rushBtn.disabled = false;
+        if (d.waitMinutes) {
+          rushBtn.textContent = '🔔 ' + d.waitMinutes + ' 分钟后可催';
+        }
+      }
+    })
+    .catch(() => {
+      showMessage(L('网络错误', 'Network error'), L('催菜失败，请重试', 'Rush failed, retry'));
+      rushBtn.disabled = false;
+    });
+});
+
 // ═══════════════ 购物车功能 ═══════════════
 // 购物车三处参数化文案(加菜横幅/赠菜横幅/回执头)的语言感知渲染——遍历式翻译只做整节点精确匹配,够不着带动态值的模板,须渲染路径自理
 // showCart 与 applyUiLang(切语言)都会调用;2026-10-16 修复 EN 模式残留中文(A4 同类)
@@ -41,6 +77,24 @@ window.renderCartLangAware = function () {
           .then((chk) => {
             if (window._orderChkCache && window._orderChkCache.oid === loB) {
               window._orderChkCache.verdict = chk && chk.success && chk.exists ? chk.status : 'gone';
+            }
+            // 催菜按钮(2026-11-02 对标商龙KDS): 进行中且下单满10分钟才亮出, 未满10分钟灰置带倒计时
+            const rushBtn = document.getElementById('banner-rush-btn');
+            if (rushBtn) {
+              if (chk && chk.success && chk.exists && ['pending', 'confirmed'].indexOf(chk.status) >= 0 && chk.created_at) {
+                const elapsedMin = (Date.now() - new Date(chk.created_at).getTime()) / 60000;
+                if (elapsedMin >= 10) {
+                  rushBtn.style.display = '';
+                  rushBtn.disabled = false;
+                  rushBtn.textContent = '🔔 催菜';
+                } else {
+                  rushBtn.style.display = '';
+                  rushBtn.disabled = true;
+                  rushBtn.textContent = '🔔 催菜（' + Math.ceil(10 - elapsedMin) + ' 分钟后可催）';
+                }
+              } else {
+                rushBtn.style.display = 'none';
+              }
             }
             if (chk && chk.success && (!chk.exists || ['completed', 'cancelled'].indexOf(chk.status) >= 0)) {
               [
