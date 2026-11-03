@@ -9,7 +9,7 @@
 // 其余是席面的烟火气；米饭（主食分类）不进池，由 withAutoRice 按人数自动配。
 const POOL_CATEGORIES = {
   cold: ['特色凉菜'],
-  hot: ['传承陕菜', '热销菜品', '江湖海鲜', '田园时蔬·汤羹'],
+  hot: ['传承陕菜', '热销菜品', '江湖海鲜', '田园时蔬'],
 };
 const STAPLE_CATEGORIES = ['陕西小吃'];
 
@@ -72,7 +72,7 @@ function buildPools(dishes, allergyKeys) {
     if (typeof d.name === 'string' && d.name.includes('测试')) { excluded++; continue; }
     if (dishHasAllergy(d, allergyKeys)) { excluded++; continue; }
     const tags = Array.isArray(d.tags) ? d.tags : [];
-    if (tags.includes('招牌') || d.category === '招牌与游西安必打卡') pools.signature.push(d);
+    if (tags.includes('招牌') || d.category === '招牌') pools.signature.push(d);
     if (POOL_CATEGORIES.cold.includes(d.category)) pools.cold.push(d);
     if (POOL_CATEGORIES.hot.includes(d.category)) pools.hot.push(d);
     // 小吃池排除招牌菜：招牌菜专属招牌池（毛笔酥这类特色点心归打卡/招牌位，不当代小吃散配）
@@ -207,7 +207,7 @@ function reasonFor(dish, pool, variant, partySize) {
     if (/面|饭|馍|皮|包/.test(name)) return partySize > 3 ? '主食收口，管饱又实惠' : '主食收口，分量正合适';
     return '陕味小吃，席面的烟火气';
   }
-  if (dish.category === '田园时蔬·汤羹') return '时蔬汤羹，一桌荤素平衡全靠它';
+  if (dish.category === '田园时蔬') return '时蔬汤羹，一桌荤素平衡全靠它';
   if (pool === 'cold') {
     return isSpicy ? `开胃凉菜，${spicy}爽口解腻` : '开胃凉菜，清爽解腻';
   }

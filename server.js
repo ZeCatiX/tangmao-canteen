@@ -1131,6 +1131,16 @@ db
   .then(() => logger.info('积分表结构就绪'))
   .catch((e) => logger.error('积分迁移失败: ' + e.message));
 
+// 幂等迁移：分类改名数据对齐（2026-11-02 招牌/田园时蔬全链改名的数据侧兜底，2026-11-03 CI 首跑抓到种子漂移补上）——
+// 旧种子/旧库起来的环境启动即对齐 js/menu.js CATEGORY_CONFIG 配置源；已改名的库 WHERE 不中，零开销
+db
+  .query(
+    `UPDATE dishes SET category = '招牌' WHERE category = '招牌与游西安必打卡';
+     UPDATE dishes SET category = '田园时蔬' WHERE category = '田园时蔬·汤羹'`
+  )
+  .then(() => logger.info('分类改名数据对齐就绪'))
+  .catch((e) => logger.error('分类改名数据迁移失败: ' + e.message));
+
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
 const SSL_CERT = process.env.SSL_CERT || '';
