@@ -30,11 +30,12 @@
 2. **启动遮罩卡死**：动画 onDone 走 rAF 累加，慢环境迟迟不来 + 点击跳过被 canvas 吞 → 8 秒硬兜底 + pointerdown 捕获（intro_e2e 钉死）
 3. **DB 与代码 schema 漂移**：dishes 三列缺失导致下单/admin CRUD 500 → 启动幂等迁移机制已有，新增列务必同步 sample_data.sql 迁移段 + server.js 启动迁移 + 真实 DB 三处
 4. **分类改名漂移**：DB 改名代码没跟 → CATEGORY_CONFIG（js/menu.js）是唯一配置源，改名只改这里 + globals.js 词条
+   **【2026-11-03 CI 首跑补充】**"只改配置源"不够——改名当时漏了 `dishes_seed.sql`（CI 建库种子，首跑即红）和 `table_recommend.js`（热菜池/招牌匹配，真回归：田园时蔬 4 道菜不进热菜池，幸有 tags 兜底）。**改分类名五件套**：js/menu.js CATEGORY_CONFIG + js/globals.js 词条 + dishes_seed.sql 种子 + server.js 启动幂等数据迁移（`4c5cc85` 已加，旧库启动自愈）+ table_recommend.js 池子引用。三类只读文件不改：scripts/update_menu_from_md.js（改名映射）、唐猫庭院_完整菜单.md（店家原始数据）、docs/ 历史文档
 
 ## 四、遗留事项（新会话优先处理）
 
-1. **🔴 admin 登录页明文密码提示**（admin.html 登录框下方印着账号密码文字）——测试便利提示，**上线前必删**，本轮测试发现后用户未下指令修
-2. **CI 远端首跑未验证**：本地 npm test 117 + test:all 304 + 新增 3 个测试文件全绿，但推送后 CI（含 tangmao_test 库 seed）未实测
+1. ~~**🔴 admin 登录页明文密码提示**~~ **✅ 2026-11-03 接续会话核实不存在**：pickaxe 全历史检索 + 登录 JS 预填检查 + 浏览器实测渲染 DOM 三重证据均无凭据文字；上轮所见疑为浏览器保存密码自动填充下拉或旧缓存。上线前目检一次即可
+2. ~~**CI 远端首跑未验证**~~ **✅ 2026-11-03 已验证**：首跑暴露 dishes_seed.sql 分类旧名（见三.4 补充），修复后 run `41645421500` 全绿（1m35s，含四个新套件在默认频控下通过）；deploy job 仅 main 分支触发，推 master 不部署
 3. **puppeteer 浏览器 e2e 不在 CI 入口**（CI 无 Chrome，本地真跑）——既有决策，intro_e2e/filter_e2e 等靠本地纪律
 4. 厨房看板"完成"二次确认会被 10 秒自动刷新重置（确认窗口 <10 秒内点两次才有效）——既有行为，未改
 
@@ -53,3 +54,10 @@
 3. 测试桌号用 **1-9 号**（其他测试占 10-30 池）；本地频控被 ORDER_FREQ_LIMIT 放宽，频控断言需环境感知（见 chaos C1 写法）
 4. 异步兜底铁律已入 COLLABORATION.md + AGENTS.md（并发路径原子化 / UI 关闭挂 setTimeout 硬兜底 / 浏览器修复配 puppeteer 回归）
 5. tests/chaos_collab、rush_visit、stock_tables 的造数均自清理；实验菜惯用 2082（回坊酸辣汤）
+
+## 七、接续进展（2026-11-03 下午会话）
+
+- **CI 通道打通**：push master → GitHub Actions 为正式验证通道（此前 AGENTS.md/COLLABORATION.md"无 origin"说法过时，已纠正——两文件均 gitignore 不入库，改动直接落盘）。CI 全绿 run：`41645421500`
+- **分类改名漂移三处收口**（提交 `4c5cc85`）：dishes_seed.sql 种子对齐 + table_recommend.js 池子对齐（含 210 行策略文案选择器，专项测试当场抓到第一次漏改）+ server.js 启动幂等数据迁移
+- **遗留清单状态**：四.1 已核实不存在、四.2 已验证，见上
+- **未动的已知事项**：ppt_decks/（主目录三个未跟踪演示文稿目录，非仓库内容，未处理）； kitchen 四.4 维持不改
