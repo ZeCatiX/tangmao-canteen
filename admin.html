@@ -786,6 +786,11 @@
 <!-- 用户管理页 -->
 <div class="page" id="page-users">
   <div class="page-title"><span>用户管理</span></div>
+  <!-- 客群概览(2026-11-02 对标商龙六大智能标签): 常客/回头客/新客三档+口味分布 -->
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header">客群概览</div>
+    <div class="card-body" id="user-segments-body" style="font-size:0.85rem;">加载中…</div>
+  </div>
   <div class="card">
     <div class="card-header">全部用户</div>
     <div class="card-body" style="padding:0;">
@@ -893,7 +898,7 @@ document.querySelectorAll('[data-page]').forEach(a => {
       setTimeout(() => { loadModelManagement(); loadModelCompare(); }, 100);
     }
     if (a.dataset.page === 'users') {
-      setTimeout(loadUsers, 100);
+      setTimeout(function () { loadUsers(); if (typeof loadUserSegments === 'function') loadUserSegments(); }, 100);
     }
     if (a.dataset.page === 'orders') {
       setTimeout(() => { if (typeof loadAdminOrders === 'function') loadAdminOrders(); }, 100);
@@ -1827,6 +1832,27 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
 
   // 加载用户列表
   var usersCache = [];
+  // 客群概览(2026-11-02 对标商龙六大智能标签): 三档客群+口味分布+常客TOP
+  function loadUserSegments() {
+    const token = localStorage.getItem('adminToken');
+    fetch('/api/admin/user-segments', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.json()).then(d => {
+        if (!d.success) return;
+        const el = document.getElementById('user-segments-body');
+        if (!el) return;
+        const s = d.segments;
+        el.innerHTML =
+          '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;">'
+          + '<span class="badge" style="background:rgba(184,58,42,0.12);color:#b83a2a;padding:4px 12px;border-radius:12px;">常客(≥5单): ' + s.regular + '</span>'
+          + '<span class="badge" style="background:rgba(201,169,110,0.15);color:#8b7a6a;padding:4px 12px;border-radius:12px;">回头客(2-4单): ' + s.returning + '</span>'
+          + '<span class="badge" style="background:rgba(45,138,110,0.12);color:#2d8a6e;padding:4px 12px;border-radius:12px;">新客(1单): ' + s.newcomer + '</span>'
+          + '</div>'
+          + (d.tasteTop.length ? '<div style="font-size:0.78rem;color:#8b7a6a;">口味偏好: ' + d.tasteTop.map(t => esc(t.label) + '×' + t.n).join(' · ') + '</div>' : '')
+          + (d.topRegulars.length ? '<details style="margin-top:6px;"><summary style="cursor:pointer;color:#c9a96e;font-size:0.78rem;">常客 TOP（按消费额）</summary><div style="margin-top:4px;font-size:0.78rem;">'
+            + d.topRegulars.map(u => esc(u.username) + ' · ' + u.orders + '单 · ' + u.spend + '元').join('<br>') + '</div></details>' : '');
+      }).catch(function (e) { console.warn('客群加载失败', e); });
+  }
+
   function loadUsers(q) {
     const token = localStorage.getItem('adminToken');
     document.querySelector('#user-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center;color:#8b7a6a;padding:20px;">加载中...</td></tr>';

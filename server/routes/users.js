@@ -83,6 +83,62 @@ function register(app, deps) {
     }
   });
 
+  // 常客记忆(2026-11-02 对标商龙VIP到店关怀): 回头客识别+上次点过的菜(前台欢迎条/再来一单数据源)
+  app.get('/api/user/visit-summary', authMiddleware, async (req, res) => {
+    try {
+      const username = req.user?.username;
+      if (!username || username === 'guest') {
+        return res.status(401).json({ success: false, error: '请先登录' });
+      }
+      const cnt = await db.query(
+        "SELECT COUNT(*)::int AS n FROM orders WHERE user_id=$1 AND status <> 'cancelled'",
+        [username]
+      );
+      const visitCount = cnt.rows[0]?.n || 0;
+      if (visitCount === 0) {
+        return res.json({ success: true, visitCount: 0, lastOrderItems: [], lastOrderAt: null });
+      }
+      const last = await db.query(
+        `SELECT id, created_at, items FROM orders WHERE user_id=$1 AND status <> 'cancelled' ORDER BY created_at DESC LIMIT 1`,
+        [username]
+      );
+      const row = last.rows[0];
+      const rawItems = Array.isArray(row.items) ? row.items : JSON.parse(row.items || '[]');
+      // 同菜合并数量, 取前6道(欢迎条横滑容量)
+      const merged = new Map();
+      for (const it of rawItems) {
+        if (it.giftTo || it.giftFrom) continue; // 赠菜行不进"上次点过"
+        const id = parseInt(it.id);
+        if (!Number.isFinite(id)) continue;
+        const ex = merged.get(id);
+        if (ex) ex.qty += parseInt(it.qty || it.quantity) || 1;
+        else merged.set(id, { id, name: it.name || '', price: parseFloat(it.price) || 0, qty: parseInt(it.qty || it.quantity) || 1, image: it.image || '' });
+      }
+      // name兜底: 早期订单items可能没存name(客户端只发id/qty), 从dishes表补齐
+      const missing = [...merged.values()].filter((x) => !x.name).map((x) => x.id);
+      if (missing.length) {
+        const nm = await db.query('SELECT id, name, image_url FROM dishes WHERE id = ANY($1::int[])', [missing]);
+        for (const d of nm.rows) {
+          const m = merged.get(d.id);
+          if (m) {
+            m.name = d.name || m.name;
+            m.image = m.image || d.image_url || '';
+          }
+        }
+      }
+      res.json({
+        success: true,
+        visitCount,
+        lastOrderAt: row.created_at,
+        lastOrderId: row.id,
+        lastOrderItems: [...merged.values()].slice(0, 6),
+      });
+    } catch (e) {
+      logger.error('常客记忆查询失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器错误' });
+    }
+  });
+
   // 我的积分(2026-11-02 对标商龙会员域): 当前积分+最近流水
   app.get('/api/user/points', authMiddleware, async (req, res) => {
     try {

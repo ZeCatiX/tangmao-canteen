@@ -166,7 +166,8 @@
           const staleBanner = document.querySelector('#order-list .conn-lost');
           if (staleBanner) staleBanner.remove();
           // 渲染签名：数据没变化就跳过整表重建——每10秒无谓重绘会打断"完成"二次确认、页面闪烁
-          var renderSig = JSON.stringify((d.orders || []).map(function(o) { return o.id + ':' + o.status; }));
+          // rush_requested_at 必须进签名：催菜不改status, 不进签名则催菜徽章要等下次状态变化才出现
+          var renderSig = JSON.stringify((d.orders || []).map(function(o) { return o.id + ':' + o.status + ':' + (o.rush_requested_at || ''); }));
           if (renderSig === _lastRenderSig) return;
           _lastRenderSig = renderSig;
           const container = document.getElementById('order-list');
@@ -186,8 +187,10 @@
               return '<div class="item"><span>' + esc(i.name || '未知') + ' × ' + qty + '</span><span>' + (parseFloat(i.price) || 0) + '元</span></div>' + (i.note ? '<div class="item" style="color:#e67e22;font-size:0.82em;">📝 顾客要求：' + esc(i.note) + '</div>' : '');
             }).join('');
             const time = (o.completed_at || o.created_at) ? new Date(o.completed_at || o.created_at).toLocaleTimeString() : '';
+            // 催菜单(2026-11-02 对标商龙KDS): rush_requested_at非空且未完成 → 红框高亮+🔥徽章, 让后厨一眼看到加急单
+            const rushed = o.rush_requested_at && o.status !== 'completed';
             const doneBadge = o.status === 'completed' ? '<span class="status" style="color:#27ae60;">✅ 已完成</span>' : '<span class="status">' + (o.status === 'confirmed' ? '✅ 已确认' : '📌 待处理') + '</span>';
-            return '<div class="order-card" data-id="' + o.id + '" style="' + (o.status === 'completed' ? 'opacity:0.7;' : '') + '">'
+            return '<div class="order-card" data-id="' + o.id + '" style="' + (o.status === 'completed' ? 'opacity:0.7;' : '') + (rushed ? 'border:2px solid #e74c3c;background:rgba(231,76,60,0.06);' : '') + '">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
               + '<span class="table-num">' + esc(o.table_number ? (o.table_number === '打包' ? '🥡 打包带走' : '桌号 ' + o.table_number) : '外卖') + '</span>'
               + '<span class="time">' + time + '</span>'
@@ -195,11 +198,18 @@
               + '<div class="items">' + items + '</div>'
               + '<div style="display:flex;justify-content:space-between;align-items:center;">'
               + doneBadge
+              + (rushed ? '<span style="color:#e74c3c;font-size:0.85em;font-weight:700;">🔥 已催菜</span>' : '')
               + (o.status !== 'completed' ? (_armedCompletes[o.id] ? '<button class="btn-complete" style="background:#e74c3c;" onclick="completeOrder(' + o.id + ', this)">再点确认</button>' : '<button class="btn-complete" onclick="completeOrder(' + o.id + ', this)">完成</button>') : '')
               + '</div>'
               + '</div>';
           };
-          const active = d.orders.filter(o => o.status !== 'completed');
+          // 催过的进行中单置顶(rush_requested_at DESC), 其余按下单时间
+          const active = d.orders.filter(o => o.status !== 'completed').sort((a, b) => {
+            const ra = a.rush_requested_at ? new Date(a.rush_requested_at).getTime() : 0;
+            const rb = b.rush_requested_at ? new Date(b.rush_requested_at).getTime() : 0;
+            if (ra !== rb) return rb - ra;
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
           const doneToday = d.orders.filter(o => o.status === 'completed' && isToday(o));
           container.innerHTML = active.map(cardOf).join('')
             + (doneToday.length ? '<details style="margin-top:16px;"><summary style="cursor:pointer;color:#c9a96e;font-size:0.85em;">🗂 今日已完成（' + doneToday.length + ' 单）</summary><div style="margin-top:8px;">' + doneToday.map(cardOf).join('') + '</div></details>' : '');

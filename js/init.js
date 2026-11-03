@@ -9,6 +9,52 @@ document.addEventListener('DOMContentLoaded', function () {
   if (savedUser && getUserData(savedUser)) {
     currentUser = savedUser;
   }
+  // 常客记忆欢迎条(2026-11-02 对标商龙VIP到店关怀): 登录回头客→光临次数+上次点过的菜+再来一单
+  (function () {
+    const card = document.getElementById('welcome-back-card');
+    if (!card) return;
+    const token = localStorage.getItem('userToken');
+    if (!token) return; // 游客不显示
+    safeFetch('/api/user/visit-summary', { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success || !d.visitCount || !d.visitCount >= 1 || !(d.lastOrderItems || []).length) return;
+        document.getElementById('welcome-visit-text').textContent =
+          menuLang === 'en'
+            ? 'Welcome back · Visit #' + d.visitCount
+            : '欢迎回来 · 第 ' + d.visitCount + ' 次光临';
+        const list = document.getElementById('welcome-last-items');
+        list.innerHTML = (d.lastOrderItems || [])
+          .map(function (it) {
+            return (
+              '<div style="flex:0 0 auto;text-align:center;min-width:64px;">' +
+              '<div style="width:52px;height:52px;border-radius:10px;background:rgba(201,169,110,0.15);display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto;">' +
+              (it.image && it.image.startsWith('/')
+                ? '<img src="' + esc(it.image) + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentNode.textContent=\'🍽\'">'
+                : '<span style="font-size:1.4rem;">' + esc(it.image || '🍽') + '</span>') +
+              '</div>' +
+              '<div style="font-size:0.72rem;color:var(--text-light);margin-top:3px;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+              esc(it.name) +
+              '</div></div>'
+            );
+          })
+          .join('');
+        card.style.display = 'block';
+        document.getElementById('reorder-last-btn').onclick = function () {
+          let skipped = 0;
+          (d.lastOrderItems || []).forEach(function (it) {
+            const dish = (typeof dishData !== 'undefined' ? dishData : []).find(function (x) { return x.id === it.id; });
+            if (!dish || dish.is_sold_out === true || dish.is_active === false) { skipped++; return; }
+            addToCart(dish, it.qty || 1);
+          });
+          if (skipped) {
+            showMessage('部分菜品不可用', skipped + ' 道菜已售罄或下架，已自动跳过', null, 3000);
+          }
+          if (typeof showCart === 'function') showCart();
+        };
+      })
+      .catch(function () {});
+  })();
   // 恢复登录态 UI：导航"我的"显示/登录入口隐藏 + 首页登录/注册按钮隐藏（此前只覆盖登录动作瞬间，刷新后按钮复活）
   if (currentUser && savedUser) {
     const pi = document.getElementById('nav-profile-item'),

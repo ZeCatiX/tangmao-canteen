@@ -491,7 +491,7 @@ function register(app, deps) {
         return res.status(400).json({ success: false, error: '参数无效' });
       }
       const tableNumber = req.query.tableNumber || '';
-      const r = await pool.query('SELECT status, table_number, user_id FROM orders WHERE id=$1', [orderId]);
+      const r = await pool.query('SELECT status, table_number, user_id, created_at FROM orders WHERE id=$1', [orderId]);
       if (r.rows.length === 0) {
         return res.json({ success: true, exists: false });
       }
@@ -503,9 +503,75 @@ function register(app, deps) {
       if (!isAdmin && !isOwner && !isTableMatch) {
         return res.json({ success: true, exists: false });
       }
-      res.json({ success: true, exists: true, status: row.status, table_number: row.table_number });
+      res.json({ success: true, exists: true, status: row.status, table_number: row.table_number, created_at: row.created_at });
     } catch (e) {
       logger.error('订单存活校验API错误:', e.message);
+      serverError(res);
+    }
+  });
+
+  // 催菜(2026-11-02 对标商龙KDS配套): 顾客对进行中订单催单 → 厨房看板红色徽章+置顶
+  // 门槛: 进行中(pending/confirmed) 且 下单≥10分钟 且 距上次催≥30分钟; 归属校验同status-check口径
+  const rushLimiter = rateLimit({
+    windowMs: 60000,
+    max: 30, // 业务侧有10分钟门槛+30分钟冷却双保险, IP限流只防脚本滥用; 30/分与status-check同款
+    message: { success: false, error: '请求过于频繁' },
+  });
+  app.post('/api/order/:id/rush', rushLimiter, softAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (!orderId || isNaN(orderId) || orderId <= 0) {
+        return res.status(400).json({ success: false, error: '参数无效' });
+      }
+      const r = await pool.query(
+        'SELECT status, table_number, user_id, created_at, rush_requested_at FROM orders WHERE id=$1',
+        [orderId]
+      );
+      if (r.rows.length === 0) {
+        return res.status(404).json({ success: false, error: '订单不存在' });
+      }
+      const row = r.rows[0];
+      const effectiveUserId = getUser(req);
+      const isAdmin = req.user?.role === 'admin';
+      const isOwner = effectiveUserId !== 'guest' && row.user_id === effectiveUserId;
+      const tableNumber = (req.body && req.body.tableNumber) || '';
+      const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
+      if (!isAdmin && !isOwner && !isTableMatch) {
+        return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
+      }
+      if (!['pending', 'confirmed'].includes(row.status)) {
+        const label = row.status === 'completed' ? '已完成' : row.status === 'cancelled' ? '已取消' : '已进入制作尾段';
+        return res.status(400).json({ success: false, error: '订单' + label + '，无需催菜' });
+      }
+      const elapsedMin = (Date.now() - new Date(row.created_at).getTime()) / 60000;
+      if (elapsedMin < 10) {
+        return res.status(400).json({
+          success: false,
+          error: '下单还不到 10 分钟，厨房正在准备，再等等～',
+          waitMinutes: Math.ceil(10 - elapsedMin),
+        });
+      }
+      if (row.rush_requested_at) {
+        const sinceRushMin = (Date.now() - new Date(row.rush_requested_at).getTime()) / 60000;
+        if (sinceRushMin < 30) {
+          return res.status(400).json({
+            success: false,
+            error: '已催过啦，厨房正在加急，' + Math.ceil(30 - sinceRushMin) + ' 分钟后可再次催',
+            waitMinutes: Math.ceil(30 - sinceRushMin),
+          });
+        }
+      }
+      const upd = await pool.query(
+        "UPDATE orders SET rush_requested_at = NOW() WHERE id=$1 AND status IN ('pending','confirmed') RETURNING rush_requested_at",
+        [orderId]
+      );
+      if (upd.rows.length === 0) {
+        return res.status(400).json({ success: false, error: '订单状态已变化' });
+      }
+      logger.info('催菜: 订单#' + orderId + '（' + (row.table_number || '无桌号') + '）');
+      res.json({ success: true, message: '已通知厨房加急处理', rushRequestedAt: upd.rows[0].rush_requested_at });
+    } catch (e) {
+      logger.error('催菜API错误:', e.message);
       serverError(res);
     }
   });
