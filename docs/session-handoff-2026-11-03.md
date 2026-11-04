@@ -68,7 +68,7 @@
 - **cleanup_test_dishes.js 修复**：订单 items 里的注入毒单（id='1 OR 1=1'，guest pending，永不删）曾把引用判定 SQL 的 `::int` 强转打崩，测试菜清不掉——改为 CASE 甄别数字再转。已跑 posttest 删净脏菜，**现库 110 道、测试菜 0 残留**
 - **dishes_seed.sql 对齐 110**（剔除上述 6 道重复/下架行），ci.yml/globals.js 注释同步；种子与库、券码菜单三方一致
 - **cleanup_production_data.js 补缺口**：`--purge-guest-orders` 现在连游客反馈/推荐日志一起清。dry-run 口径：ASCII 测试用户 197 个（订单 4/反馈 2/推荐日志 24）+ 游客历史单 1596（已完成/已取消）+ 游客反馈 1623 + 游客推荐日志 4982。**未执行**，上线时先 `backup_db.js` 再 `--execute --purge-guest-orders`
-- **⚠️ 上线前待决策**：游客 pending 单约 2100 张，脚本按安全设计永不删 pending——不处理会在厨房看板挂满假单；可考虑给脚本加显式 `--purge-guest-pending`（仅游客+仅 pending）
+- ~~**⚠️ 上线前待决策**：游客 pending 单积压~~ **✅ 2026-11-04 双管齐下已解决**。积压真相：1924 张游客 pending（8/20-21 旧原型 E2E 马拉松一次灌了 ~1600 张，引用的 dish id=1 早已不存在；另 7-8 月零星 ~300 张）；一直清不掉的原因是 cleanup_test_orders 走管理 API 而 `/api/orders?status=` 为保看板性能 **LIMIT 100**，每轮只够得着最新 100 张，8 月死单永远在窗口外。**修复①** cleanup_test_orders 改直连 SQL（绕开 LIMIT，不依赖服务在线），首次运行取消 1932 张一次清光，此后每轮只清本轮自产（验证：第二次跑仅 6 张）；**修复②** cleanup_production_data 加显式 `--purge-guest-pending`（仅游客+仅 pending，默认永不删的安全设计不变），上线时与 `--purge-guest-orders` 一起物理删除。上线清洗全流程：`backup_db.js` → `cleanup_production_data.js --execute --purge-guest-orders --purge-guest-pending`
 
 ## 九、规格变体机制修复（2026-11-04 追加）
 
