@@ -49,7 +49,11 @@ describe('积分体系', () => {
     assert.equal(login.body.user.points, 0, '新用户积分应为 0');
     // 动态选菜
     const menu = await api('/api/dishes');
-    const d = (menu.body.dishes || []).find((x) => x.is_active !== false && x.is_sold_out !== true);
+    // 取最后一道可用菜: 避开与 stock_tables(并行跑, --test-concurrency=2)同选"第一道"——
+    // 两者同菜会互踩估清计数(CI run 41844604455 实证: points 的 qty1 插进 stock 的 setStock(3,0)
+    // 与下单校验之间, "备量3下3份"误判"仅剩2份"); 本测试只下单不改库存, 用尾菜彻底错开
+    const avail = (menu.body.dishes || []).filter((x) => x.is_active !== false && x.is_sold_out !== true);
+    const d = avail[avail.length - 1];
     assert.ok(d, '应存在可用菜品');
     dishId = d.id;
   });
