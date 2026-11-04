@@ -5,9 +5,11 @@
 //   node scripts/cleanup_production_data.js                 # 默认 dry-run,只打印将清理的内容
 //   node scripts/cleanup_production_data.js --execute       # 真正执行
 //   node scripts/cleanup_production_data.js --execute --purge-guest-orders  # 连游客历史单(已完成/已取消)及其反馈/推荐日志一起清
+//   node scripts/cleanup_production_data.js --execute --purge-guest-pending # 再加: 游客 pending 死单(2026-08 E2E马拉松留下的~1900张,引用的菜已不存在)一次清掉
 // 范围:
 //   1) 白名单外用户(测试账号)及其 orders/feedback/recommendation_log
 //   2) 可选: 游客(user_id 空/'guest')已完成/已取消订单 + 其全部反馈/推荐日志
+//   3) 可选: 游客 pending 订单(pending 默认永不删是运营期安全设计;此开关供上线清洗时显式打开)
 // 保护: username='admin' 与 --keep 指定名单永不删除;默认 dry-run;pending 订单永不删。
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const { Pool } = require('pg');
@@ -15,6 +17,7 @@ const { Pool } = require('pg');
 const argv = process.argv.slice(2);
 const execute = argv.includes('--execute');
 const purgeGuestOrders = argv.includes('--purge-guest-orders');
+const purgeGuestPending = argv.includes('--purge-guest-pending');
 // 白名单:admin + 已知真实用户(郑晨曦 2026-04 建档/zcx,均有过真实登录) + --keep 扩展。
 // 双保险:含非 ASCII(中文)的用户名一律视为真实用户保留,不进清理名单。
 const keep = new Set(['admin', '郑晨曦', 'zcx']);
@@ -68,8 +71,14 @@ const pool = new Pool({
       `SELECT count(*)::int AS c FROM recommendation_log WHERE user_id IS NULL OR user_id IN ('','guest')`
     );
   }
+  let guestPendingC = 0;
+  if (purgeGuestPending) {
+    guestPendingC = await cnt(
+      `SELECT count(*)::int AS c FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status = 'pending'`
+    );
+  }
   console.log(
-    `关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC} | 游客反馈 ${guestFeedbackC} | 游客推荐日志 ${guestReclogC}` : ''}`
+    `关联数据: 订单 ${ordersC} | 反馈 ${feedbackC} | 推荐日志 ${reclogC}${purgeGuestOrders ? ` | 游客历史单 ${guestC} | 游客反馈 ${guestFeedbackC} | 游客推荐日志 ${guestReclogC}` : ''}${purgeGuestPending ? ` | 游客pending死单 ${guestPendingC}` : ''}`
   );
 
   if (!execute) {
@@ -102,6 +111,13 @@ const pool = new Pool({
       );
       total += r.rowCount;
       console.log(`删除游客推荐日志 ${r.rowCount}`);
+    }
+    if (purgeGuestPending) {
+      r = await cli.query(
+        `DELETE FROM orders WHERE (user_id IS NULL OR user_id IN ('','guest')) AND status = 'pending' RETURNING id`
+      );
+      total += r.rowCount;
+      console.log(`删除游客pending死单 ${r.rowCount}`);
     }
     r = await cli.query(`DELETE FROM feedback WHERE user_id IN (${inList}) RETURNING id`);
     total += r.rowCount;
