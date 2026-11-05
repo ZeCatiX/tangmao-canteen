@@ -3,19 +3,19 @@
   "importance": [
     {
       "feature": "用户辣度",
-      "importance": 0.1767
+      "importance": 0.1819
     },
     {
       "feature": "用户价格",
-      "importance": 0.149
+      "importance": 0.152
     },
     {
       "feature": "用户甜酸",
-      "importance": 0.1202
+      "importance": 0.1216
     },
     {
       "feature": "价格",
-      "importance": 0.1037
+      "importance": 0.1023
     },
     {
       "feature": "用户咸淡",
@@ -23,11 +23,11 @@
     },
     {
       "feature": "用户热量",
-      "importance": 0.0935
+      "importance": 0.0932
     },
     {
       "feature": "辣度",
-      "importance": 0.08
+      "importance": 0.0769
     },
     {
       "feature": "热量",
@@ -35,19 +35,19 @@
     },
     {
       "feature": "咸淡",
-      "importance": 0.0615
+      "importance": 0.0623
     },
     {
       "feature": "甜酸",
-      "importance": 0.0408
+      "importance": 0.0316
     },
     {
       "feature": "招牌",
-      "importance": 0.0044
+      "importance": 0.0076
     },
     {
       "feature": "评分",
-      "importance": 0.0
+      "importance": 0.0003
     }
   ]
 }
