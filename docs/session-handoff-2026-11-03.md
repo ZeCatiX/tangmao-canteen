@@ -88,6 +88,7 @@
 - **验证**：`tests/retrain_implicit.test.js` 三例（去重/编码 y=0.2/空偏好跳过，psycopg2 取 jsonb `'{}'` 出来是**空 dict 不是字符串**的坑已修）纳入 test:all；实跑完整重训 292 条有效（隐式 285）诚实 R² 0.9404，行为级验证：含隐式模型 vs 纯合成对照对葫芦鸡预测 +0.104（方向=收藏信号）
 - **模型当前状态（重要）**：该模型吃的是**测试噪声**（285 条隐式里 284 条来自 fav_*/blk_* 历史测试账号假收藏）→ **已回滚至纯合成干净版**（重跑 `train_restaurant_model.py`，诚实 R² 0.9462，metrics 无 implicit 键）。**原则：未上线阶段模型只吃真数据**。上线清洗（cleanup_production_data 清掉 fav_*/blk_* 测试账号）后，真实顾客的收藏/拉黑/评分走同一管线自然喂模型
 - metrics 新键：`explicit_count` / `implicit_count`（model_metrics.json 与 pkl 内均有）
+- **席面数据飞轮第一步埋点已上线（2026-11-05 深夜，CI 绿 42031553174）**：新表 `table_set_log`（show/adopt 双事件，params+三套 sets 完整 JSONB 入库，server.js 启动幂等建表）；席面响应带 `tableLogId/tableNonce`，采纳上报端点 `POST /api/recommend/table/adopt`（nonce+logId 回链防伪造，埋点失败静默）；前端整桌加购/逐菜加购挂 `reportTableAdopt` 上报。回归 `tests/table_set_log.test.js` 三例纳入 test:all。**第 2 步统计利用（采纳率/热门组合进日报）与第 3 步席面模型（partySize/budget 进 14 维特征）都从这张表取数——表结构已为两者预留完整数据**
 
 ## 十一、系统性边角补齐（2026-11-05 深夜，提交 `待查`）
 
