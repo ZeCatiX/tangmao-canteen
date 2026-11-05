@@ -1141,6 +1141,31 @@ db
   .then(() => logger.info('分类改名数据对齐就绪'))
   .catch((e) => logger.error('分类改名数据迁移失败: ' + e.message));
 
+// 幂等迁移：席面采纳埋点表（2026-11-05，为席面数据飞轮铺路——2026-11-03 对标商龙 KDS/会员域）。
+// event_type='show'：一次席面生成（params 摘要 + 三套席面完整内容）；'adopt_set'/'adopt_dish'：用户采纳
+// （整桌加购/逐菜加购，log_id+nonce 回链 show 行）。统计层（采纳率/热门组合）与未来席面模型
+// （partySize/budget 进特征）都从这张表取数——先记录，利用方式等数据积累后再定。
+db
+  .query(
+    `CREATE TABLE IF NOT EXISTS table_set_log (
+       id SERIAL PRIMARY KEY,
+       user_type VARCHAR(10) NOT NULL DEFAULT 'guest',
+       user_id VARCHAR(100) NOT NULL DEFAULT 'guest',
+       event_type VARCHAR(20) NOT NULL,
+       log_id INTEGER,
+       nonce VARCHAR(40),
+       set_key VARCHAR(30),
+       dish_id INTEGER,
+       params JSONB,
+       sets JSONB,
+       created_at TIMESTAMP DEFAULT NOW()
+     );
+     CREATE INDEX IF NOT EXISTS idx_table_set_log_user ON table_set_log(user_id);
+     CREATE INDEX IF NOT EXISTS idx_table_set_log_event ON table_set_log(event_type, created_at)`
+  )
+  .then(() => logger.info('席面采纳埋点表就绪'))
+  .catch((e) => logger.error('席面埋点表迁移失败: ' + e.message));
+
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';
 const SSL_CERT = process.env.SSL_CERT || '';

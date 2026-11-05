@@ -912,7 +912,13 @@ async function submitTableBuilder() {
         s._adjusted = adjusted;
       });
       tableSwappedOut = [];
-      lastTableMeta = { excludedOrdered: d.excludedOrdered || 0, usedProfile: !!d.usedProfile };
+      // 席面数据飞轮(2026-11-05): 响应带的 logId+nonce 供采纳上报回链服务端 table_set_log
+      lastTableMeta = {
+        excludedOrdered: d.excludedOrdered || 0,
+        usedProfile: !!d.usedProfile,
+        logId: d.tableLogId || null,
+        nonce: d.tableNonce || '',
+      };
       renderTableSets();
       showSection('table-result-section');
     } else {
@@ -1241,6 +1247,22 @@ function setTableRiceQty(si, qty) {
   s.perPerson = ps ? Math.round((s.totalPrice / ps) * 100) / 100 : 0;
   renderTableSets();
 }
+// 席面采纳上报(2026-11-05 数据飞轮): 整桌加购/逐菜加购时回链 table_set_log——fire-and-forget 静默失败, 不影响主流程
+function reportTableAdopt(payload) {
+  const meta = typeof lastTableMeta !== 'undefined' ? lastTableMeta : null;
+  if (!meta || !meta.logId || !meta.nonce) {
+    return; // 无席面埋点上下文(直接搜索/单菜推荐路径)不上报
+  }
+  safeFetch('/api/recommend/table/adopt', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(
+      Object.assign({ logId: meta.logId, nonce: meta.nonce }, payload)
+    ),
+  }).catch(function (e) {
+    console.warn('席面采纳上报失败:', e);
+  });
+}
 function addTableDishToCart(si, dishId) {
   const s = tableSets[si];
   if (!s) {
@@ -1255,6 +1277,7 @@ function addTableDishToCart(si, dishId) {
   // 按步进器调好的数量加购（未动过的起售菜默认 max(起售量,人数)，其余默认 1）
   const q = d._qty || minQtyOf(d) || 1;
   addToCart({ id: d.id, name: d.name, price: d.price, image_url: d.image_url, serving: d.serving }, q);
+  reportTableAdopt({ setKey: s.key, dishId: dishId }); // 逐菜采纳信号
 }
 function addTableSetToCart(si) {
   const s = tableSets[si];
@@ -1319,6 +1342,7 @@ function addTableSetToCart(si) {
     null,
     4000
   );
+  reportTableAdopt({ setKey: s.key }); // 整桌采纳信号(2026-11-05 数据飞轮)
 }
 // ═══════════════ 一桌菜分享图（canvas 手绘，固定浅色品牌配色，不受暗色模式影响） ═══════════════
 function loadCanvasImg(src) {

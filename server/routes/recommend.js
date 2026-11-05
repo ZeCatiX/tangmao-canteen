@@ -476,10 +476,81 @@ function register(app, deps) {
       logger.info(
         `一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excludedOrdered} 已点排除=${excludedOrdered}`
       );
-      res.json({ success: true, sets: finalSets, excludedAllergy: excluded, excludedOrdered, usedProfile: !!profile });
+      // 席面展示埋点（2026-11-05 数据飞轮第一步）：参数摘要+三套席面完整内容入库，响应带 logId+nonce
+      // 供采纳上报回链（nonce 防伪造刷量）；guest 也记录（灰度期主力样本来源）
+      const userType = req.user ? 'user' : 'guest';
+      const logUserId = (req.user && req.user.username) || 'guest';
+      const nonce = require('crypto').randomBytes(16).toString('hex');
+      const showParams = {
+        partySize: params.partySize,
+        budgetPerPerson: params.budgetPerPerson,
+        spiciness: params.spiciness,
+        saltiness: params.saltiness,
+        sweetness: params.sweetness,
+        calorie: params.calorie,
+        religion: params.religion,
+        allergyKeys: [...allAllergyKeys],
+        usedProfile: !!profile,
+        source,
+      };
+      const showSets = finalSets.map((s) => ({
+        key: s.key,
+        style: s.style,
+        dishIds: (s.dishes || []).map((x) => x.id),
+        totalPrice: s.totalPrice,
+      }));
+      const logRes = await db.query(
+        `INSERT INTO table_set_log (user_type, user_id, event_type, nonce, params, sets)
+         VALUES ($1, $2, 'show', $3, $4::jsonb, $5::jsonb) RETURNING id`,
+        [userType, logUserId, nonce, JSON.stringify(showParams), JSON.stringify(showSets)]
+      );
+      const tableLogId = logRes.rows[0] ? logRes.rows[0].id : null;
+      res.json({
+        success: true,
+        sets: finalSets,
+        excludedAllergy: excluded,
+        excludedOrdered,
+        usedProfile: !!profile,
+        tableLogId,
+        tableNonce: nonce,
+      });
     } catch (e) {
       logger.error('一桌菜推荐API错误: ' + e.message);
       res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+
+  // 席面采纳上报（2026-11-05 数据飞轮）：整桌加购=adopt_set、逐菜加购=adopt_dish。
+  // nonce+logId 回链校验防伪造；失败静默返回 success=true——埋点不应影响用户主流程
+  app.post('/api/recommend/table/adopt', softAuth, async (req, res) => {
+    try {
+      const body = req.body || {};
+      const logId = parseInt(body.logId, 10);
+      const nonce = String(body.nonce || '');
+      const setKey = String(body.setKey || '').slice(0, 30);
+      const dishId = Number.isFinite(parseInt(body.dishId, 10)) ? parseInt(body.dishId, 10) : null;
+      const eventType = dishId ? 'adopt_dish' : 'adopt_set';
+      if (!Number.isFinite(logId) || !nonce || !setKey) {
+        return res.status(400).json({ success: false, error: '参数不完整' });
+      }
+      const chk = await db.query('SELECT id, nonce, user_id FROM table_set_log WHERE id = $1 AND event_type = $2', [
+        logId,
+        'show',
+      ]);
+      if (!chk.rows[0] || chk.rows[0].nonce !== nonce) {
+        return res.status(400).json({ success: false, error: '无效的席面引用' });
+      }
+      const userType = req.user ? 'user' : 'guest';
+      const adoptUser = (req.user && req.user.username) || chk.rows[0].user_id || 'guest';
+      await db.query(
+        `INSERT INTO table_set_log (user_type, user_id, event_type, log_id, set_key, dish_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userType, adoptUser, eventType, logId, setKey, dishId]
+      );
+      res.json({ success: true });
+    } catch (e) {
+      logger.error('席面采纳上报失败: ' + e.message);
+      res.json({ success: true }); // 埋点失败不影响主流程
     }
   });
 
