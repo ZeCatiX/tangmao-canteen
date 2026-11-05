@@ -262,6 +262,29 @@ function register(app, deps) {
     }
   }
 
+  // 拉黑菜排除（2026-11-05）：席面此前只在单菜推荐前端过滤拉黑，一席成宴组合从未排除——
+  // 顾客拉黑的菜会被排进三套席面。登录用户读 users.blacklist（integer[]），游客无身份无拉黑
+  async function getBlacklistedIds(req) {
+    const ids = new Set();
+    if (!req.user || !req.user.id) {
+      return ids;
+    }
+    try {
+      const r = await db.query('SELECT blacklist FROM users WHERE id = $1', [req.user.id]);
+      const list = r.rows[0] && r.rows[0].blacklist;
+      if (Array.isArray(list)) {
+        list.forEach((id) => {
+          if (Number.isFinite(Number(id))) {
+            ids.add(Number(id));
+          }
+        });
+      }
+    } catch (e) {
+      logger.error('读取用户拉黑列表失败: ' + e.message);
+    }
+    return ids;
+  }
+
   // 已点菜排除：本桌进行中订单必避（消灭加菜轮重复推荐）；登录用户可选避开近 N 天吃过的（会所版防重复）
   async function collectOrderedDishIds({ tableNumber, avoidRecentDays, req }) {
     const ids = new Set();
@@ -386,6 +409,8 @@ function register(app, deps) {
       // 登录用户：客户端 excludeIds + 本桌进行中订单 +（可选）近 N 天吃过
       const isLoggedIn = req.user && req.user.username && req.user.username !== 'guest';
       const orderedIds = new Set(isLoggedIn ? params.excludeIds : []);
+      // 拉黑菜排除（2026-11-05）：席面此前从未排除 users.blacklist，顾客拉黑的菜会被排进三套席面
+      const blacklistedIds = await getBlacklistedIds(req);
       if (isLoggedIn) {
         (
           await collectOrderedDishIds({ tableNumber: params.tableNumber, avoidRecentDays: params.avoidRecentDays, req })
@@ -394,10 +419,15 @@ function register(app, deps) {
       // 跨池按 id 去重后浅克隆打分（不污染共享缓存 state.dishData）
       const union = [];
       const seen = new Set();
+      let excludedBlack = 0;
       for (const key of TABLE_POOL_KEYS) {
         for (const d of effPools[key]) {
           if (!seen.has(d.id)) {
             seen.add(d.id);
+            if (blacklistedIds.has(d.id)) {
+              excludedBlack++;
+              continue;
+            }
             union.push({ ...d });
           }
         }
