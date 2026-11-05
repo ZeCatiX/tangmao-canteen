@@ -88,3 +88,13 @@
 - **验证**：`tests/retrain_implicit.test.js` 三例（去重/编码 y=0.2/空偏好跳过，psycopg2 取 jsonb `'{}'` 出来是**空 dict 不是字符串**的坑已修）纳入 test:all；实跑完整重训 292 条有效（隐式 285）诚实 R² 0.9404，行为级验证：含隐式模型 vs 纯合成对照对葫芦鸡预测 +0.104（方向=收藏信号）
 - **模型当前状态（重要）**：该模型吃的是**测试噪声**（285 条隐式里 284 条来自 fav_*/blk_* 历史测试账号假收藏）→ **已回滚至纯合成干净版**（重跑 `train_restaurant_model.py`，诚实 R² 0.9462，metrics 无 implicit 键）。**原则：未上线阶段模型只吃真数据**。上线清洗（cleanup_production_data 清掉 fav_*/blk_* 测试账号）后，真实顾客的收藏/拉黑/评分走同一管线自然喂模型
 - metrics 新键：`explicit_count` / `implicit_count`（model_metrics.json 与 pkl 内均有）
+
+## 十一、系统性边角补齐（2026-11-05 深夜，提交 `待查`）
+
+三组新回归 + 一个真缺口修复，全部纳入 test:all：
+
+- **🟢 修真缺口：席面(/api/recommend/table)服务端拉黑排除**——此前拉黑过滤只在单菜推荐前端（js/recommendation.js:82），**一席成宴三套席面从未排除 users.blacklist**（前后端都没有），顾客拉黑的菜会被排进席面。修复：recommend.js 新增 `getBlacklistedIds(req)`（登录读 users.blacklist，游客空集），union 构建时排除并计数。API 回归 `tests/table_recommend_blacklist.test.js`：登录→拉黑葫芦鸡(2071)→席面断言无该菜
+- **🟢 断网缓存渲染回归**：`tests/offline_cache.test.js`（puppeteer）——拦截 /api/dishes abort 后 reload，缓存经 `localStorage['dishDataCache']` 进入渲染管线（dishData>50、菜品名入 DOM）。js/init.js:171 的弱网兜底链路（缓存先渲染→10s race→catch 保持）实测生效
+- **🟢 盲盒枯竭契约**：候选全被排除时 `selectBlindBoxDish` 返回 null（调用方 `if (blind)` 已保护），正常数据返回盲盒菜——evaluate 钉死双面契约
+- **🟢 席面组合层边角**：`tests/table_recommend_edge.test.js` 四例——招牌池全空（拉黑/售罄后）席面降级不崩、忌口拉满四池枯竭空席面、partySize=1 简餐模式、quotasFor 自动缩池。组合层本就健壮（quotasFor min 缩池），钉死防重构回退
+- **测试侧教训**：body.innerText 对 display:none 区不含文本（菜单 section 未激活时"菜单未见"≠未渲染，要查 DOM 行数）；`buildPools` 返回 `{pools, excluded}` 包装；psycopg2 取 jsonb `'{}'` 是空 dict 非字符串
