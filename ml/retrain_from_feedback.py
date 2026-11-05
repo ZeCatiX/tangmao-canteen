@@ -18,7 +18,9 @@ ORD_MAPPINGS = {
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
                  '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量']
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'recommendation_model.pkl')
+# 项目根的模型（与 server.js worker 的 MODEL_PATH 同路径——2026-11-05 修: 原指向 ml/ 下,
+# worker 从不读那里, 重训产物静默不生效, 且首次无旧模型时 predict 直接 NotFittedError 崩）
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'recommendation_model.pkl')
 
 
 def load_feedback_from_db():
@@ -32,7 +34,8 @@ def load_feedback_from_db():
     # 获取有user_preferences的反馈，同时关联菜品数据
     cur.execute('''
         SELECT f.dish_id, f.rating, f.user_preferences, f.created_at,
-               d.spiciness, d.saltiness, d.sweetness, d.price, d.rating as dish_rating, d.tags, d.calorie
+               d.spiciness, d.saltiness, d.sweetness, d.price, d.rating as dish_rating, d.tags, d.calorie,
+               f.user_id
         FROM feedback f
         JOIN dishes d ON f.dish_id = d.id
         WHERE f.user_preferences IS NOT NULL
@@ -43,6 +46,72 @@ def load_feedback_from_db():
     rows = cur.fetchall()
     conn.close()
     return rows
+
+
+def load_implicit_from_db(explicit_pairs):
+    """从 users 表读收藏/拉黑，折算隐式评分样本（2026-11-05 接入）。
+
+    收藏=5分（强正样本）、拉黑=1分（强负样本）；用户特征取档案 preferences
+    （键名与 feedback.user_preferences 同构，encode_feedback 直接可编）。
+    显式评分优先：同一 (user, dish) 已打过分的组合不重复喂（explicit_pairs
+    由调用侧从显式反馈收集），避免"拉黑了又打过 4 星"这类矛盾信号互相拉扯。
+    档案无偏好的用户跳过——与"评分没问卷被丢弃"同一纪律，模型只学有口味上下文的行为。
+    """
+    import psycopg2
+    conn = psycopg2.connect(
+        host='localhost', port=5432, database='tangmao',
+        user='postgres', password=os.environ.get('PG_PASSWORD', '')
+    )
+    cur = conn.cursor()
+    cur.execute('SELECT id, spiciness, saltiness, sweetness, price, rating, tags, calorie, category FROM dishes')
+    dish_map = {}
+    for r in cur.fetchall():
+        dish_map[r[0]] = r
+    cur.execute('SELECT username, preferences, favorites, blacklist FROM users')
+    samples = []
+    skipped_dup, skipped_nopref = 0, 0
+    for username, prefs, favs, blks in cur.fetchall():
+        # 空偏好判定: psycopg2 取 jsonb '{}' 出来是空 dict 而非字符串, 统一按 falsy 兜底
+        if not prefs or prefs == '{}':
+            skipped_nopref += 1
+            continue
+        blk_ids, fav_ids = _id_list(blks), _id_list(favs)
+        for dish_id in fav_ids + blk_ids:
+            if (username, dish_id) in explicit_pairs:
+                skipped_dup += 1
+                continue
+            d = dish_map.get(dish_id)
+            if not d or d[8] in ('飲品与酒水', '主食'):
+                continue
+            rating = 1.0 if dish_id in blk_ids else 5.0  # 拉黑优先于收藏（负信号强且推荐侧已硬过滤）
+            # 行结构与 load_feedback_from_db 一致（末位 user_id 供去重/追踪）
+            samples.append((dish_id, rating, prefs, None,
+                            d[1], d[2], d[3], d[4], d[5], d[6], d[7], username))
+    conn.close()
+    return samples, skipped_dup, skipped_nopref
+
+
+def _id_list(raw):
+    """favorites/blacklist 字段容错解析为 int id 列表（历史数据可能是 JSON 数组文本/已是列表/含字符串数字）"""
+    if raw in (None, '', '{}'):
+        return []
+    if isinstance(raw, (list, tuple)):
+        vals = raw
+    else:
+        import json as j
+        try:
+            vals = j.loads(raw)
+        except Exception:
+            return []
+        if not isinstance(vals, list):
+            return []
+    out = []
+    for v in vals:
+        try:
+            out.append(int(v))
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 def parse_tags(tags):
@@ -58,8 +127,9 @@ def parse_tags(tags):
 
 
 def encode_feedback(fb_row):
-    """将一条反馈数据编码为11维特征 + 目标值（特征顺序/映射须与线上模型 train_restaurant_model.py 的 encode_dish 严格一致）"""
-    dish_id, rating, user_prefs, created_at, spiciness, saltiness, sweetness, price, dish_rating, tags, calorie = fb_row
+    """将一条反馈数据编码为11维特征 + 目标值（特征顺序/映射须与线上模型 train_restaurant_model.py 的 encode_dish 严格一致）
+    2026-11-05: 行末可能带第 12 列 user_id（显式评分行/隐式样本行都有），只取前 11 列编码"""
+    dish_id, rating, user_prefs, created_at, spiciness, saltiness, sweetness, price, dish_rating, tags, calorie = fb_row[:11]
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
     price_val = float(price) if price and float(price) > 0 else 20.0
@@ -113,8 +183,17 @@ def main():
 
     # 加载真实反馈
     print('加载真实反馈数据...', file=sys.stderr)
-    feedbacks = load_feedback_from_db()
-    print(f'  找到 {len(feedbacks)} 条有偏好的反馈', file=sys.stderr)
+    feedbacks = list(load_feedback_from_db())
+    print(f'  找到 {len(feedbacks)} 条有偏好的显式评分', file=sys.stderr)
+
+    # 隐式样本（2026-11-05 收藏/拉黑接入）：显式评分优先，同(user,dish)去重
+    explicit_count = len(feedbacks)
+    explicit_pairs = set((fb[11], fb[0]) for fb in feedbacks if len(fb) > 11)
+    implicit, skipped_dup, skipped_nopref = load_implicit_from_db(explicit_pairs)
+    if implicit:
+        feedbacks.extend(implicit)
+    print(f'  隐式样本: 收藏/拉黑折算 {len(implicit)} 条'
+          f'（跳过已有显式评分 {skipped_dup} 条、档案无偏好 {skipped_nopref} 个用户）', file=sys.stderr)
 
     if len(feedbacks) == 0:
         print('没有可用的反馈数据，退出', file=sys.stderr)
@@ -137,9 +216,13 @@ def main():
     # 用真实反馈数据微调模型
     # 方法：用现有模型预测作为基础，结合真实反馈做增量训练
     if hasattr(model, 'predict'):
-        y_pred_base = model.predict(X_fb)
-        errors = np.abs(y_fb - y_pred_base)
-        print(f'  当前模型在反馈数据上的平均误差: {np.mean(errors):.4f}', file=sys.stderr)
+        try:
+            y_pred_base = model.predict(X_fb)
+            errors = np.abs(y_fb - y_pred_base)
+            print(f'  当前模型在反馈数据上的平均误差: {np.mean(errors):.4f}', file=sys.stderr)
+        except Exception as e:
+            # 首次无旧模型(新建 HistGB 未 fit)时没有基线可比——跳过, 后面 fit 会补上
+            print(f'  无已拟合基线模型, 跳过误差对比({type(e).__name__})', file=sys.stderr)
 
     # 合并训练：生成合成数据 + 真实反馈数据
     from train_restaurant_model import generate_training_data, load_dishes_from_db, USER_PROFILES, export_feature_importance
@@ -181,7 +264,9 @@ def main():
         'r2': float(r2), 'mse': float(mse),
         'rmse': float(np.sqrt(mse)),
         'mae': float(np.mean(np.abs(y_fb - y_pred))),
-        'real_feedback_count': len(feedbacks),
+        'real_feedback_count': explicit_count,
+        'explicit_count': explicit_count,
+        'implicit_count': len(implicit),  # 收藏=5分/拉黑=1分折算（2026-11-05 接入）
         'training_samples': len(X_combined),
         'feature_count': 12,
         'feature_names': FEATURE_NAMES,
@@ -213,7 +298,8 @@ def main():
                 'mae': float(np.mean(np.abs(y_te - yp_te))),
                 'feature_count': 12,
                 'training_samples': len(X_combined),
-                'real_feedback_count': len(feedbacks),
+                'real_feedback_count': explicit_count,
+                'implicit_count': len(implicit),  # 收藏=5分/拉黑=1分折算（2026-11-05 接入）
                 'trained_at': datetime.datetime.now().isoformat(),
             }, f, ensure_ascii=False, indent=2)
         with open(os.path.join(_dir, 'feature_importance.json'), 'w', encoding='utf-8') as f:
