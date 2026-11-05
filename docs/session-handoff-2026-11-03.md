@@ -80,3 +80,11 @@
 - **EN 入口手机端可达性（2026-11-05 双端验证收口）**：手机布局下语言切换按钮收进汉堡菜单（Bootstrap `#navbarNav` 折叠区，展开后为菜单底部 EN 圆钮），展开态会保持——标准响应式设计非 bug。实测手机端全路径：汉堡 → EN → 汉堡面板/hero 全站翻译生效（Home/About Us/Full Menu/Tang Elegance…）。**排障注意**：验证前先看汉堡是否展开过，"按钮不可见"≠按钮不存在；另发现 Clash Verge 内核僵死时所有出境流量恰在 5 秒整被掐（含 api.github.com 直连），重启内核即愈——远程推送失败时先区分"节点断"与"内核僵死"
 - **【勘误】看板"完成"确认窗口是 3 秒不是 10 秒**：`completeOrder` 的 arm 定时器 `setTimeout 3000`（kitchen.html），10 秒只是自动刷新周期——自动化/慢手操作"点了没反应"先想到这个窗口
 - **admin 过期 token 登录死锁调查（2026-11-05，结论：非产品缺陷）**：IAB 自动化里"过期 token 加载 admin 后正确凭据点击登录无反应"经四层二分（服务端 API 同凭据成功/空 Bearer 也成功/DOM `el.click()` 成功/真 Chrome puppeteer 回归 2/2 绿），定性为 **IAB 自动化输入层偶发不触发 DOM click 事件**（合成点击与真 Chrome 均正常）。防御性修复保留：`showAdmin` 给登录页加 `z-index:3000` 压过 fixed 侧栏（过期弹回后侧栏溢出元素曾命中登录按钮坐标的 hit-test）。回归钉死：`tests/admin_expired_token.test.js`（真 Chrome，种过期 token→登录→断言进面板，已纳入 test:all；CI 无 Chrome 自动 skip）
+
+## 十、重训管线接入收藏/拉黑隐式样本（2026-11-05 晚，提交 `bdfa67a`/`2aa3412`）
+
+- **数据口径**：`retrain_from_feedback.py` 新增 `load_implicit_from_db()`——users 表收藏折 **5 分**、拉黑折 **1 分**，用户特征取档案 preferences（键名与 feedback.user_preferences 同构）；**三条纪律**：①显式评分优先（同 (user,dish) 去重，防矛盾信号互拉）②拉黑优先于收藏 ③档案无偏好跳过
+- **顺手修两个既有真 bug**：①重训模型路径指向 ml/ 而 worker 读根目录——**历史每次重训产物从未生效**，且首次无旧模型时 NotFittedError 直接崩（predict 基线已加兜底）②两处 psycopg2 连接硬编码 `tangmao` 库名——CI 的 tangmao_test 连不上。均改环境变量驱动
+- **验证**：`tests/retrain_implicit.test.js` 三例（去重/编码 y=0.2/空偏好跳过，psycopg2 取 jsonb `'{}'` 出来是**空 dict 不是字符串**的坑已修）纳入 test:all；实跑完整重训 292 条有效（隐式 285）诚实 R² 0.9404，行为级验证：含隐式模型 vs 纯合成对照对葫芦鸡预测 +0.104（方向=收藏信号）
+- **模型当前状态（重要）**：该模型吃的是**测试噪声**（285 条隐式里 284 条来自 fav_*/blk_* 历史测试账号假收藏）→ **已回滚至纯合成干净版**（重跑 `train_restaurant_model.py`，诚实 R² 0.9462，metrics 无 implicit 键）。**原则：未上线阶段模型只吃真数据**。上线清洗（cleanup_production_data 清掉 fav_*/blk_* 测试账号）后，真实顾客的收藏/拉黑/评分走同一管线自然喂模型
+- metrics 新键：`explicit_count` / `implicit_count`（model_metrics.json 与 pkl 内均有）
