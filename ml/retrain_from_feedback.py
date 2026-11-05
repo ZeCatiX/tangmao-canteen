@@ -27,8 +27,9 @@ def load_feedback_from_db():
     """从PostgreSQL加载真实反馈数据"""
     import psycopg2
     conn = psycopg2.connect(
-        host='localhost', port=5432, database='tangmao',
-        user='postgres', password=os.environ.get('PG_PASSWORD', '')
+        host=os.environ.get('PG_HOST', 'localhost'), port=int(os.environ.get('PG_PORT', '5432')),
+        database=os.environ.get('PG_DATABASE', 'tangmao'),
+        user=os.environ.get('PG_USER', 'postgres'), password=os.environ.get('PG_PASSWORD', '')
     )
     cur = conn.cursor()
     # 获取有user_preferences的反馈，同时关联菜品数据
@@ -59,8 +60,9 @@ def load_implicit_from_db(explicit_pairs):
     """
     import psycopg2
     conn = psycopg2.connect(
-        host='localhost', port=5432, database='tangmao',
-        user='postgres', password=os.environ.get('PG_PASSWORD', '')
+        host=os.environ.get('PG_HOST', 'localhost'), port=int(os.environ.get('PG_PORT', '5432')),
+        database=os.environ.get('PG_DATABASE', 'tangmao'),
+        user=os.environ.get('PG_USER', 'postgres'), password=os.environ.get('PG_PASSWORD', '')
     )
     cur = conn.cursor()
     cur.execute('SELECT id, spiciness, saltiness, sweetness, price, rating, tags, calorie, category FROM dishes')
