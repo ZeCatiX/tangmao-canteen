@@ -1672,7 +1672,13 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   const appWrap = document.querySelector('.app-wrap');
   
   function showAdmin(show) {
-    if (loginPage) loginPage.style.display = show ? 'none' : 'flex';
+    if (loginPage) {
+      loginPage.style.display = show ? 'none' : 'flex';
+      // 登录页置顶(2026-11-05: 过期token弹回登录页后, fixed侧栏(z-index:100)的溢出内容
+      // 曾截获登录按钮的真实点击致"正确凭据也登不进"死锁——登录页压到侧栏之上, 双端可达)
+      loginPage.style.zIndex = show ? '' : '3000';
+      loginPage.style.position = show ? '' : 'relative';
+    }
     if (appWrap) appWrap.style.display = show ? 'flex' : 'none';
   }
   
