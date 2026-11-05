@@ -106,3 +106,7 @@ script.js
 AGENTS.md
 COLLABORATION.md
 .agents/
+
+# ml/ 训练脚本运行时产物(2026-11-05: train脚本metrics/重要性写ml/, 根目录版才是server读的)
+ml/model_metrics.json
+ml/feature_importance.json
