@@ -188,10 +188,10 @@ function showDishDetail(id) {
       : '咸淡' + esc(d.saltiness) + ' · 甜酸' + esc(d.sweetness) + ' · 热量' + esc(d.calorie || '未知')) +
     '</p>' +
     (menuLang === 'en' && d.description_en
-      ? '<p style="font-size:0.9rem;color:var(--text);">' + esc(d.description_en) + '</p>'
+      ? '<p class="dish-detail-desc" style="font-size:0.9rem;color:var(--text);">' + esc(d.description_en) + '</p>'
       : '') +
-    (d.description ? '<p style="font-size:0.9rem;">' + esc(d.description) + '</p>' : '') +
-    '<div style="font-size:1.2rem;color:var(--primary);font-weight:700;margin:6px 0;">' +
+    (d.description ? '<p class="dish-detail-desc" style="font-size:0.9rem;">' + esc(d.description) + '</p>' : '') +
+    '<div class="dish-detail-price" style="font-size:1.2rem;color:var(--primary);font-weight:700;margin:6px 0;">' +
     esc(formatPrice(d)) +
     '</div>' +
     specs +
@@ -260,6 +260,15 @@ function showDishDetail(id) {
         big.disabled = so;
         big.style.background = so ? '#ccc' : 'var(--primary-accent)';
         big.style.color = so ? '#888' : '#fff';
+      }
+      // 顶部描述/价格随选中规格同步(2026-11-05: 原先只切高亮和大按钮, 顶部仍显示默认规格文案)
+      const descP = el.querySelector('.dish-detail-desc');
+      if (descP && sp) {
+        descP.textContent = menuLang === 'en' ? sp.description_en || sp.description || '' : sp.description || '';
+      }
+      const priceEl = el.querySelector('.dish-detail-price');
+      if (priceEl && sp) {
+        priceEl.textContent = formatPrice(sp);
       }
       return;
     }
