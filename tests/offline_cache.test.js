@@ -12,12 +12,12 @@ const CHROME_PATH = require('./_chrome_path');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let browser, page, interceptor;
+const CAN_RUN = Boolean(CHROME_PATH);
 
 describe('断网缓存渲染与盲盒枯竭', () => {
   before(async function () {
-    if (!CHROME_PATH) {
+    if (!CAN_RUN) {
       console.log('  skip: 本地无 Chrome');
-      this.skip();
       return;
     }
     browser = await puppeteer.launch({
@@ -33,7 +33,8 @@ describe('断网缓存渲染与盲盒枯竭', () => {
     if (browser) await browser.close();
   });
 
-  it('首次加载写入 dishDataCache', async () => {
+  it('首次加载写入 dishDataCache', async function () {
+    if (!CAN_RUN) { this.skip(); return; }
     await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
     await sleep(2500); // 等菜单数据加载+缓存写入
     const cached = await page.evaluate(() => {
@@ -44,7 +45,8 @@ describe('断网缓存渲染与盲盒枯竭', () => {
     assert.ok(cached.hasHuluji, '缓存应含葫芦鸡');
   });
 
-  it('拦截 /api/dishes 后 reload, 菜单应从本地缓存渲染(断网兜底)', async () => {
+  it('拦截 /api/dishes 后 reload, 菜单应从本地缓存渲染(断网兜底)', async function () {
+    if (!CAN_RUN) { this.skip(); return; }
     await page.setRequestInterception(true);
     interceptor = (req) => {
       if (req.url().includes('/api/dishes')) {
@@ -74,7 +76,8 @@ describe('断网缓存渲染与盲盒枯竭', () => {
     assert.ok(state.rowsInTable > 0 || state.dishVisibleAnywhere, '菜单应有渲染产出');
   });
 
-  it('盲盒候选全被排除时 selectBlindBoxDish 返回 null(枯竭契约)', async () => {
+  it('盲盒候选全被排除时 selectBlindBoxDish 返回 null(枯竭契约)', async function () {
+    if (!CAN_RUN) { this.skip(); return; }
     await page.goto(BASE + '/index.html', { waitUntil: 'domcontentloaded' });
     await sleep(1500);
     const r = await page.evaluate(() => {
