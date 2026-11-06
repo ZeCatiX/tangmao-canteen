@@ -154,6 +154,9 @@ async function fetchRecommendations(isRefresh) {
     const blind = selectBlindBoxDish(prefs, top, blk, isRefresh);
     if (blind) {
       top.push(blind);
+      blindBoxEmptyFlag = false;
+    } else {
+      blindBoxEmptyFlag = true; // 枯竭(2026-11-05): 推荐页标注盲盒位空缺, 不默默消失
     }
     currentRecommendations = top;
     top.forEach((d) => {
@@ -312,6 +315,9 @@ async function fallback(prefs, blk, dishes, isRefresh) {
   const blind = selectBlindBoxDish(prefs, top, blk, isRefresh);
   if (blind) {
     top.push(blind);
+    blindBoxEmptyFlag = false;
+  } else {
+    blindBoxEmptyFlag = true; // 枯竭(2026-11-05): 推荐页标注盲盒位空缺, 不默默消失
   }
   currentRecommendations = top;
   top.forEach((d) => {
@@ -738,6 +744,15 @@ function displayRecommendations() {
   if (window.TangCatIntro) {
     TangCatIntro.stop();
   }
+  // 盲盒枯竭标注(2026-11-05): 候选全被忌口/拉黑/top占满排除时盲盒位空缺, 明示顾客而非默默消失
+  if (blindBoxEmptyFlag) {
+    const blindNote =
+      menuLang === 'en'
+        ? '<div class="text-center text-muted small py-2">🔮 Blind-box slot empty — candidates exhausted by your taste settings, allergies or blocklist</div>'
+        : '<div class="text-center text-muted small py-2">🔮 盲盒位空缺——候选已被您的口味设置、忌口或拉黑排尽，可换个口味再试</div>';
+    result.insertAdjacentHTML('beforeend', blindNote);
+    blindBoxEmptyFlag = false; // 防重复渲染叠加
+  }
   loading.classList.add('d-none');
   result.classList.remove('d-none');
 }
@@ -749,6 +764,7 @@ var tableSets = []; // 当前三套方案
 var lastTableParams = null; // 生成时的入参，换单道时复用
 var tableDrinksMode = null; // 一席成宴"去选饮品"模式：当前正在配饮品的席面下标
 var lastTableMeta = null; // 服务端返回的元信息（已点排除数/是否用了口味档案）
+var blindBoxEmptyFlag = false; // 盲盒候选枯竭标记(2026-11-05): 枯竭时推荐页标注"盲盒位空缺"，不默默消失
 // 席面口径默认数量: "X个起"的按个卖菜至少给到用餐人数(4人桌核桃包×4而非起售的×3,不够分不如不排);
 // 非起售菜与束缚型规格(4个/笼、3碗、6块——"份"不可拆)不按人数补齐,仍为 1 份
 function tableDefaultQtyOf(dish) {
@@ -915,6 +931,7 @@ async function submitTableBuilder() {
       // 席面数据飞轮(2026-11-05): 响应带的 logId+nonce 供采纳上报回链服务端 table_set_log
       lastTableMeta = {
         excludedOrdered: d.excludedOrdered || 0,
+        excludedBlack: d.excludedBlack || 0, // 拉黑排除数(2026-11-05): 席面页标注让顾客可见
         usedProfile: !!d.usedProfile,
         logId: d.tableLogId || null,
         nonce: d.tableNonce || '',
@@ -953,6 +970,9 @@ function renderTableSets() {
     const notes = [];
     if (lastTableMeta.excludedOrdered > 0) {
       notes.push('已自动避开本桌已点/购物车中的 ' + lastTableMeta.excludedOrdered + ' 道菜');
+    }
+    if (lastTableMeta.excludedBlack > 0) {
+      notes.push('已按您的拉黑排除 ' + lastTableMeta.excludedBlack + ' 道菜'); // 拉黑排除标注(2026-11-05)
     }
     if (lastTableMeta.usedProfile) {
       notes.push('已结合你的口味档案');

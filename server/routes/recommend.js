@@ -442,7 +442,9 @@ function register(app, deps) {
       });
       if (!candidates.length) {
         const msg =
-          excludedOrdered > 0 ? '候选菜品都被忌口或已点排除，请调整条件后重试' : '当前没有可推荐的菜品，请稍后再试';
+          excludedOrdered > 0 || excludedBlack > 0
+            ? '候选菜品都被忌口、拉黑或已点排除，请调整条件后重试'
+            : '当前没有可推荐的菜品，请稍后再试';
         return res.status(503).json({ success: false, error: msg });
       }
       const source = await scoreTableCandidates(tableRecommend.buildTableUserPrefs(params, profile), candidates);
@@ -474,7 +476,7 @@ function register(app, deps) {
       const finalSets = tableRecommend.withAutoRice(sets, riceDish, params.partySize);
       logRecommendationMode(req, '一桌菜组合');
       logger.info(
-        `一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excludedOrdered} 已点排除=${excludedOrdered}`
+        `一桌菜推荐: ${params.partySize}人/人均${params.budgetPerPerson}元 来源=${source} 忌口排除=${excluded} 拉黑排除=${excludedBlack} 已点排除=${excludedOrdered}`
       );
       // 席面展示埋点（2026-11-05 数据飞轮第一步）：参数摘要+三套席面完整内容入库，响应带 logId+nonce
       // 供采纳上报回链（nonce 防伪造刷量）；guest 也记录（灰度期主力样本来源）
@@ -510,6 +512,7 @@ function register(app, deps) {
         sets: finalSets,
         excludedAllergy: excluded,
         excludedOrdered,
+        excludedBlack, // 拉黑排除数(2026-11-05): 前端席面标注"已按您的拉黑排除N道菜"
         usedProfile: !!profile,
         tableLogId,
         tableNonce: nonce,

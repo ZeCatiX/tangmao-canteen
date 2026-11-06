@@ -98,4 +98,27 @@ describe('断网缓存渲染与盲盒枯竭', () => {
     assert.equal(r.nullCase, true, '候选枯竭应返回 null');
     assert.equal(r.okCase, true, '正常数据应返回盲盒菜');
   });
+
+  it('盲盒枯竭标注: 推荐页尾部应显示"盲盒位空缺"提示(2026-11-05 标注)', async function () {
+    if (!CAN_RUN) { this.skip(); return; }
+    // 模拟枯竭态渲染: 有推荐数据 + blindBoxEmptyFlag=true → displayRecommendations 尾部应追加标注
+    await page.evaluate(() => {
+      const dish = (window.dishData || [])[0] || { id: 9999, name: '测试菜', category: '传承陕菜', price: 10, spiciness: '不辣', image_url: '' };
+      window.currentRecommendations = [{ ...dish, type: '偏好推荐', matchIndex: 4, hasTasteSignal: true }];
+      window.blindBoxEmptyFlag = true;
+      window.menuLang = 'zh';
+      window.displayRecommendations();
+    });
+    await sleep(600);
+    const has = await page.evaluate(() => document.getElementById('recommendation-result').innerText.indexOf('盲盒位空缺') !== -1);
+    // 反向: flag=false 重新渲染不应有标注
+    await page.evaluate(() => {
+      window.blindBoxEmptyFlag = false;
+      window.displayRecommendations();
+    });
+    await sleep(600);
+    const gone = await page.evaluate(() => document.getElementById('recommendation-result').innerText.indexOf('盲盒位空缺') === -1);
+    assert.equal(has, true, '标注应出现');
+    assert.equal(gone, true, 'flag复位后标注应消失');
+  });
 });
