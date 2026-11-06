@@ -75,6 +75,7 @@ describe('一席成宴 拉黑排除', () => {
     });
     assert.equal(r.status, 200, '席面请求应成功: ' + r.status + ' ' + JSON.stringify(r.body).slice(0, 120));
     assert.equal(r.body.success, true, '席面应成功: ' + JSON.stringify(r.body).slice(0, 120));
+    assert.ok(r.body.excludedBlack >= 1, '响应应带拉黑排除数标注: ' + JSON.stringify(r.body.excludedBlack));
     const sets = r.body.sets || r.body.data && r.body.data.sets || [];
     assert.ok(sets.length > 0, '应返回席面组合');
     const all = sets.flatMap((s) => s.dishes || []);
