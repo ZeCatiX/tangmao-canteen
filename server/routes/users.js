@@ -215,7 +215,7 @@ function register(app, deps) {
 
   app.post('/api/user-blacklist', authMiddleware, async (req, res) => {
     try {
-      const { blacklist } = req.body;
+      const { blacklist, mode } = req.body;
       const username = req.user.username;
       if (!username) {
         return res.status(400).json({ success: false, error: '缺少用户名' });
@@ -227,6 +227,17 @@ function register(app, deps) {
             .filter((n) => Number.isInteger(n) && n > 0)
             .slice(0, 500)
         : [];
+      // mode='add'/'remove'（2026-11-05）：PG array_cat/array_remove 单语句原子更新，
+      // 消除"读当前名单→应用→全量写回"的丢失更新窗口（同用户双设备并发场景）；
+      // 缺省 'set' 保持整体覆盖语义（前端契约不变，全量写回无竞态问题）
+      if ((mode === 'add' || mode === 'remove') && list.length) {
+        const sql =
+          mode === 'add'
+            ? `UPDATE users SET blacklist = ARRAY(SELECT DISTINCT unnest(blacklist || $1::int[])) WHERE username = $2`
+            : `UPDATE users SET blacklist = COALESCE(ARRAY(SELECT DISTINCT x FROM unnest(blacklist) AS x WHERE NOT (x = ANY($1::int[]))), '{}'::int[]) WHERE username = $2`;
+        await db.query(sql, [list, username]);
+        return res.json({ success: true, message: mode === 'add' ? '黑名单已追加' : '黑名单已移除' });
+      }
       await userStorage.updateUser(username, { blacklist: list });
       res.json({ success: true, message: '黑名单已同步' });
     } catch (e) {

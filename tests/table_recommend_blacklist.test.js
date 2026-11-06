@@ -7,6 +7,15 @@
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 require('dotenv').config();
+const { Pool } = require('pg');
+
+const db = new Pool({
+  host: process.env.PG_HOST || 'localhost',
+  port: +(process.env.PG_PORT || 5432),
+  user: process.env.PG_USER || 'postgres',
+  password: process.env.PG_PASSWORD,
+  database: process.env.PG_DATABASE || 'tangmao',
+});
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
 const USER = 'bl_tes_1105';
@@ -65,6 +74,34 @@ describe('一席成宴 拉黑排除', () => {
         body: JSON.stringify({ username: USER, blacklist: [] }),
       }).catch(() => {});
     }
+    await db.end().catch(() => {});
+  });
+
+  it('mode=add 增量追加: 原子合并不覆盖既有名单(2026-11-05 优化)', async () => {
+    // 既有拉黑=[2071](before设置), 追加2069 → 应为[2069,2071]而非覆盖
+    const r = await api('/api/user-blacklist', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ username: USER, blacklist: [2069], mode: 'add' }),
+    });
+    assert.equal(r.body.success, true, '追加失败: ' + JSON.stringify(r.body));
+    const q = await db.query('SELECT blacklist FROM users WHERE username = $1', [USER]);
+    const cur = (q.rows[0] || {}).blacklist || [];
+    assert.ok(cur.includes(2071), '既有拉黑保留');
+    assert.ok(cur.includes(2069), '新增拉黑并入');
+  });
+
+  it('mode=remove 增量移除: 精确摘除单菜', async () => {
+    const r = await api('/api/user-blacklist', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ username: USER, blacklist: [2069], mode: 'remove' }),
+    });
+    assert.equal(r.body.success, true);
+    const q = await db.query('SELECT blacklist FROM users WHERE username = $1', [USER]);
+    const cur = (q.rows[0] || {}).blacklist || [];
+    assert.ok(!cur.includes(2069), '2069应被移除');
+    assert.ok(cur.includes(2071), '葫芦鸡仍在');
   });
 
   it('拉黑葫芦鸡后, 一席成宴三套席面不得出现该菜', async () => {
