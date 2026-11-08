@@ -240,9 +240,10 @@
 
   <main class="main-content">
 <div id="admin-toast-container" style="position:fixed;top:20px;right:20px;z-index:9999;"></div>
-<div id="notification-bar" style="display:none;margin-bottom:12px;"></div>
 
     <div class="page active" id="page-dashboard">
+      <!-- 预警横幅在控制面板页内(2026-11-08: 原在main级压所有页面顶部, 挪入面板归位) -->
+      <div id="notification-bar" style="display:none;margin-bottom:12px;"></div>
       <div class="row g-3 mb-4" id="stat-cards"></div>
       <div class="content-row">
         <div class="col-main">
@@ -1741,7 +1742,10 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
       loginPage.style.zIndex = show ? '' : '3000';
       loginPage.style.position = show ? '' : 'relative';
     }
-    if (appWrap) appWrap.style.display = show ? 'flex' : 'none';
+    // 2026-11-08 关键修复: app-wrap 不得用 flex——sidebar 是 position:fixed 不参与流,
+    // main 靠 margin-left:220 定位; flex 化会让 main 变成随内容收缩的 flex 项,
+    // 内容窄的页面(反馈查看等)整个后台塌缩到左半边, 右侧大片空白
+    if (appWrap) appWrap.style.display = show ? 'block' : 'none';
   }
   
   // 拦截 fetch 自动注入 admin token，遇 401 自动登出（幂等：重复登录只注册一次）
