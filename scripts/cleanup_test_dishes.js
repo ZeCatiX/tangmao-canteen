@@ -8,7 +8,7 @@ require('dotenv').config();
 const { Pool } = require('pg');
 
 const BASE = process.env.TEST_BASE_URL || 'http://localhost:3000';
-const TEST_PATTERNS = ['测试%', '诊断%', 'E2E%', 'e2e%'];
+const TEST_PATTERNS = ['测试%', '诊断%', 'E2E%', 'e2e%', '验证%'];
 
 async function main() {
   // ① pg 只读: 找候选与订单引用(引用判定 SQL 精确,API 无此能力)
