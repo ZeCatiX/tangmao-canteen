@@ -157,7 +157,7 @@ const LOGIN_RATE_LIMIT_MAX =
 const loginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
   max: LOGIN_RATE_LIMIT_MAX,
-  message: { success: false, error: '登录过于频繁，请稍后再试' },
+  message: { success: false, error: '登录过于频繁，请约 1 分钟后再试' },
 });
 app.use('/api/user/login', loginLimiter);
 
@@ -179,7 +179,7 @@ const ADMIN_LOGIN_RATE_LIMIT_MAX =
 const adminLoginLimiter = rateLimit({
   windowMs: 60000, // 1分钟
   max: ADMIN_LOGIN_RATE_LIMIT_MAX,
-  message: { success: false, error: '登录过于频繁，请稍后再试' },
+  message: { success: false, error: '登录过于频繁，请约 1 分钟后再试' },
 });
 app.use('/api/admin/login', adminLoginLimiter);
 
