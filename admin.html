@@ -371,6 +371,10 @@
 
     <div class="page" id="page-feedback">
       <div class="page-title"><span>反馈查看</span></div>
+      <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+        <input id="feedback-filter-input" type="text" placeholder="🔍 按菜品名过滤反馈…" style="flex:0 1 320px;padding:0.45rem 0.8rem;border:1.5px solid rgba(201,169,110,0.35);border-radius:8px;font-size:0.85rem;background:#fff;color:#4a3028;">
+        <button class="btn btn-sm" id="feedback-filter-clear" style="background:rgba(201,169,110,0.15);color:#4a3028;border-radius:8px;padding:0.4rem 0.8rem;">清空</button>
+      </div>
       <div class="card">
         <div class="card-header">最近反馈</div>
         <div class="card-body">
@@ -961,8 +965,10 @@ function loadPopularDishes() {
   }).catch(() => { console.warn('数据加载失败'); });
 }
 
-function loadFeedback() {
-  fetch('/api/admin/feedback-summary').then(r => r.json()).then(d => {
+function loadFeedback(dishFilter) {
+  // 服务端过滤(2026-11-08): summary 默认 LIMIT 50 装不下老反馈, 按菜过滤时走服务端 ILIKE 全量
+  const qs = dishFilter ? '?dish=' + encodeURIComponent(dishFilter) : '';
+  fetch('/api/admin/feedback-summary' + qs).then(r => r.json()).then(d => {
     if (!d.success) return;
     document.querySelector('#feedback-table tbody').innerHTML = d.feedbacks.map((x, i) =>
       `<tr><td>${i+1}</td><td>${esc(x.dish_name||'未知')}</td><td><span class="badge ${x.rating >= 4 ? 'bg-success' : x.rating >= 3 ? 'bg-warning' : 'bg-danger'}" style="border-radius:4px;">${x.rating}</span></td><td style="font-size:0.78rem;color:var(--text-light);">${new Date(x.created_at).toLocaleString()}</td></tr>`
@@ -971,6 +977,36 @@ function loadFeedback() {
     renderRatingChart(d.distribution);
   }).catch(() => { console.warn('数据加载失败'); });
 }
+
+// 反馈过滤输入(2026-11-08): 防抖 300ms 触发服务端过滤; 清空按钮回全量
+(function bindFeedbackFilter() {
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('feedback-filter-input');
+    const clear = document.getElementById('feedback-filter-clear');
+    let timer = null;
+    if (input) input.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { if (typeof loadFeedback === 'function') loadFeedback(input.value.trim()); }, 300);
+    });
+    if (clear) clear.addEventListener('click', function () {
+      if (input) input.value = '';
+      if (typeof loadFeedback === 'function') loadFeedback();
+    });
+  });
+})();
+
+// 反馈过滤框事件(2026-11-08): 输入即过滤 + 清空按钮
+(function bindFeedbackFilter() {
+  document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('feedback-filter-input');
+    const clear = document.getElementById('feedback-filter-clear');
+    if (input) input.addEventListener('input', function () { if (typeof applyFeedbackFilter === 'function') applyFeedbackFilter(); });
+    if (clear) clear.addEventListener('click', function () {
+      if (input) input.value = '';
+      if (typeof applyFeedbackFilter === 'function') applyFeedbackFilter();
+    });
+  });
+})();
 
 function renderRatingChart(distribution) {
   if (typeof Chart === 'undefined') return ensureChartJs(function() { renderRatingChart(distribution); });
@@ -1775,6 +1811,31 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   });
   window.scrollToTop=()=>window.scrollTo({top:0,behavior:'smooth'});
 
+  // 预警横幅点击(2026-11-08): 内部链接=切页(admin无showSection, 照[data-page]委托的核心逻辑内联), 带 dishName 时跳反馈页并服务端按菜过滤
+  document.getElementById('notification-bar').addEventListener('click', function (e) {
+    const card = e.target.closest('[data-goto]');
+    if (!card) return;
+    const link = card.getAttribute('data-goto');
+    const dish = card.getAttribute('data-dish') || '';
+    if (link.startsWith('#page-')) {
+      const pageId = link.slice(1);
+      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
+      const target = document.getElementById(pageId);
+      if (target) target.classList.add('active');
+      document.querySelectorAll('[data-page]').forEach(function (l) { l.classList.remove('active'); });
+      const nav = document.querySelector('[data-page="' + pageId.replace('page-', '') + '"]');
+      if (nav) nav.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (pageId === 'page-feedback') {
+        const filterInput = document.getElementById('feedback-filter-input');
+        if (filterInput) filterInput.value = dish;
+        setTimeout(function () { if (typeof loadFeedback === 'function') loadFeedback(dish); }, 100);
+      }
+    } else if (link.startsWith('/')) {
+      location.href = link;
+    }
+  });
+
   // 显示Toast通知
   function showToast(msg, type) {
     var bar = document.getElementById('notification-bar');
@@ -1851,11 +1912,14 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
         const bar = document.getElementById('notification-bar');
         if (!bar) return;
         bar.innerHTML = d.notifications.map(n => {
-          const safeLink = n.link && (n.link.startsWith('/') || n.link.startsWith('http://') || n.link.startsWith('https://')) ? n.link : '';
-          return '<div style="padding:8px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:4px;background:' + (n.type === 'warning' ? '#fef3cd' : '#d1ecf1') + ';color:' + (n.type === 'warning' ? '#856404' : '#0c5460') + ';display:flex;align-items:center;gap:8px;">'
+          // 2026-11-08: # 开头的内部链接支持点击跳转(section切换+可选菜品过滤), 不再只认 http/斜杠
+          const isInternal = n.link && n.link.startsWith('#page-');
+          const isExternal = n.link && (n.link.startsWith('/') || n.link.startsWith('http://') || n.link.startsWith('https://'));
+          const clickable = isInternal || isExternal;
+          return '<div' + (clickable ? ' style="padding:8px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:4px;background:' + (n.type === 'warning' ? '#fef3cd' : '#d1ecf1') + ';color:' + (n.type === 'warning' ? '#856404' : '#0c5460') + ';display:flex;align-items:center;gap:8px;cursor:pointer;" data-goto="' + esc(n.link || '') + '" data-dish="' + esc(n.dishName || '') + '"' : ' style="padding:8px 14px;border-radius:8px;font-size:0.85rem;margin-bottom:4px;background:' + (n.type === 'warning' ? '#fef3cd' : '#d1ecf1') + ';color:' + (n.type === 'warning' ? '#856404' : '#0c5460') + ';display:flex;align-items:center;gap:8px;"') + '>'
           + '<i class="bi bi-' + (n.type === 'warning' ? 'exclamation-triangle' : 'info-circle') + '"></i>'
           + '<span>' + esc(n.message) + '</span>'
-          + (safeLink ? '<a href="' + esc(safeLink) + '" style="margin-left:auto;color:inherit;text-decoration:underline;">查看</a>' : '')
+          + (clickable ? '<span style="margin-left:auto;color:inherit;text-decoration:underline;">查看详情 »</span>' : '')
           + '</div>';
         }).join('');
         bar.style.display = 'block';

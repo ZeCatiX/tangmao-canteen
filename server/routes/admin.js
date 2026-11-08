@@ -195,11 +195,19 @@ function register(app, deps) {
   app.get('/api/admin/feedback-summary', async (req, res) => {
     try {
       const pool = db;
-      const result = await pool.query(
-        "SELECT f.id, f.dish_id, COALESCE(d.name, '已删除菜品(#' || f.dish_id || ')') as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC LIMIT 50"
-      );
+      // 可选 ?dish= 按菜品名过滤（2026-11-08 预警横幅跳转/店家按菜查反馈）：
+      // 过滤时走 ILIKE 全量（LIMIT 200），不过滤保持默认最近 50 条
+      const dishFilter = (req.query.dish || '').toString().trim().slice(0, 60);
+      const result = dishFilter
+        ? await pool.query(
+            "SELECT f.id, f.dish_id, COALESCE(d.name, '已删除菜品(#' || f.dish_id || ')') as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id WHERE COALESCE(d.name, '') ILIKE $1 ORDER BY f.created_at DESC LIMIT 200",
+            ['%' + dishFilter.replace(/[%_]/g, '\\$&') + '%']
+          )
+        : await pool.query(
+            "SELECT f.id, f.dish_id, COALESCE(d.name, '已删除菜品(#' || f.dish_id || ')') as dish_name, f.rating, f.created_at FROM feedback f LEFT JOIN dishes d ON f.dish_id = d.id ORDER BY f.created_at DESC LIMIT 50"
+          );
       const dist = await pool.query('SELECT rating, COUNT(*) FROM feedback GROUP BY rating ORDER BY rating');
-      res.json({ success: true, feedbacks: result.rows, distribution: dist.rows });
+      res.json({ success: true, feedbacks: result.rows, distribution: dist.rows, filteredBy: dishFilter || null });
     } catch (e) {
       logger.error('API错误:', e.message);
       res.status(500).json({ success: false, error: '服务器内部错误' });
@@ -1267,6 +1275,7 @@ function register(app, deps) {
           type: 'warning',
           message: r.name + ' 评分偏低（' + r.avg + '分，' + r.count + '条反馈）',
           link: '#page-feedback',
+          dishName: r.name, // 2026-11-08: 横幅点击跳反馈页时自动按菜过滤明细
         });
       });
       if (parseInt(newOrders.rows[0].count) > 0) {
