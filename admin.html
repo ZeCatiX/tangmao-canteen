@@ -285,6 +285,17 @@
                 <span>R2: <strong id="model-r2">-</strong></span>
                 <span>反馈数量: <strong id="model-feedback-count">-</strong></span>
               </div>
+              <!-- 真实数据占比（2026-11-08 模型真实化仪表）：0%=纯规则近似器（冷启动正常态），随真实反馈/收藏拉黑样本积累爬升 -->
+              <div style="margin-top:10px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:#8b7a6a;margin-bottom:3px;">
+                  <span title="训练样本中来自真实顾客（评分/收藏/拉黑）的占比。0% 表示模型仍是选品规则的近似器；随真实数据积累，模型逐步偏离规则、逼近真实顾客偏好。">真实数据占比（模型真实化进度）</span>
+                  <strong id="model-real-ratio-pct" style="color:#4a3028;">0%</strong>
+                </div>
+                <div style="height:8px;background:rgba(201,169,110,0.18);border-radius:4px;overflow:hidden;">
+                  <div id="model-real-ratio-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#c9a96e,#b83a2a);border-radius:4px;transition:width 0.4s;"></div>
+                </div>
+                <div id="model-real-hint" style="font-size:0.72rem;color:#8b7a6a;margin-top:3px;">当前为冷启动状态：推荐基于店家选品规则（模拟训练），真实顾客数据积累后自动进化</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1321,6 +1332,20 @@ function loadModelInfo() {
     document.getElementById('model-trained-at').textContent = m.trainedAt ? new Date(m.trainedAt).toLocaleString() : '-';
     document.getElementById('model-r2').textContent = m.r2 ? m.r2.toFixed(4) : '-';
     document.getElementById('model-feedback-count').textContent = m.feedbackCount || '0';
+    // 真实数据占比进度条（2026-11-08 模型真实化仪表）
+    const ratio = Math.min(1, Math.max(0, m.realRatio || 0));
+    document.getElementById('model-real-ratio-pct').textContent = (ratio * 100).toFixed(1) + '%';
+    document.getElementById('model-real-ratio-bar').style.width = (ratio * 100).toFixed(1) + '%';
+    const hint = document.getElementById('model-real-hint');
+    if (ratio <= 0.001) {
+      hint.textContent = '当前为冷启动状态：推荐基于店家选品规则（模拟训练），真实顾客数据积累后自动进化';
+    } else if (ratio < 0.05) {
+      hint.textContent = '真实数据开始积累：显式评分 ' + (m.feedbackCount || 0) + ' 条 + 收藏/拉黑 ' + (m.implicitCount || 0) + ' 条——继续引导顾客评分与使用席面';
+    } else if (ratio < 0.2) {
+      hint.textContent = '模型真实化进行中：真实样本已具统计意义，可在"模型管理"页触发增量重训生效';
+    } else {
+      hint.textContent = '真实数据驱动阶段：推荐已主要由真实顾客行为塑造';
+    }
   }).catch(() => { console.warn('数据加载失败'); });
 }
 

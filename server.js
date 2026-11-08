@@ -773,7 +773,7 @@ function saveRuntimeSettings() {
 // ═══════════════════════════════════════════════
 // 模型版本管理 & 自动重训练
 // ═══════════════════════════════════════════════
-const modelInfo = { version: '1.0', trainedAt: null, feedbackCount: 0, r2: 0 };
+const modelInfo = { version: '1.0', trainedAt: null, feedbackCount: 0, r2: 0, realRatio: 0, implicitCount: 0 };
 const MODEL_PATH = path.join(__dirname, 'recommendation_model.pkl');
 const MODEL_BACKUP_DIR = path.join(__dirname, 'model_backups');
 
@@ -783,6 +783,12 @@ function loadModelInfo() {
     const data = readJSON(path.join(__dirname, 'model_metrics.json'));
     modelInfo.r2 = data.r2 || 0;
     modelInfo.feedbackCount = data.real_feedback_count || 0;
+    modelInfo.implicitCount = data.implicit_count || 0;
+    // 真实数据占比（2026-11-08 模型真实化可观测）：真实显式+隐式样本 / 全部训练样本。
+    // 0% = 纯规则近似器阶段（冷启动正常态）；灰度后逐步爬升——这个数字是"模型离真实顾客多远"的仪表
+    const total = data.training_samples || 0;
+    const real = (data.real_feedback_count || 0) + (data.implicit_count || 0);
+    modelInfo.realRatio = total > 0 ? Math.min(1, real / total) : 0;
   } catch (e) {
     logger.warn('加载模型指标失败: ' + (e?.message || String(e)));
   }
