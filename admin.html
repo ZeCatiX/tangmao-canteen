@@ -54,6 +54,11 @@
     .content-row { display: flex; gap: 16px; }
     .content-row .col-main { flex: 1; min-width: 0; }
     .content-row .col-side { width: 320px; min-width: 320px; }
+    /* 右栏布局(2026-11-08): 评分分布+模型摘要双卡填充右栏, 消除col-main长表与短右栏的766px空白;
+       sticky让右栏在窄屏纵排时仍友好; dashboard表格内滚高度360收短左栏 */
+    .content-row .col-side { display: flex; flex-direction: column; gap: 16px; align-self: flex-start; position: sticky; top: 16px; }
+    #page-dashboard .table-wrap { max-height: 360px; }
+    #page-dashboard .table-body-wrap { max-height: 360px; }
     @media (max-width: 992px) { .content-row { flex-direction: column; } .content-row .col-side { width: 100%; min-width: 0; } }
     .card { border: 1px solid rgba(201,169,110,0.1); border-radius: 12px; background: #fff; overflow: hidden; }
     .card-header { background: linear-gradient(135deg, var(--primary-dark), var(--primary)) !important; color: #fff; font-size: 0.85rem; letter-spacing: 2px; padding: 0.75rem 1rem; }
@@ -271,11 +276,7 @@
               <canvas id="rating-chart" height="220"></canvas>
             </div>
           </div>
-        </div>
-      </div>
-      <!-- 模型信息摘要（仪表盘下方） -->
-      <div class="row g-3 mt-2">
-        <div class="col-12">
+          <!-- 模型信息摘要（2026-11-08 挪入右栏: 填充col-main长表与短右栏的空白, 且真实化进度条与评分分布同栏常驻） -->
           <div class="card">
             <div class="card-header">模型信息摘要</div>
             <div class="card-body" style="padding:0.8rem 1rem;">
