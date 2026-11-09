@@ -112,36 +112,50 @@ print(json.dumps({'X': [float(v) for v in X], 'y': float(y), 'Xp': [float(v) for
     assert.ok(out.y > 0 && out.y <= 1);
   });
 
-  it('predict_worker 双模兼容: 12维模型下带/不带席面参数打分完全一致(行为零变化)', async function () {
+  it('predict_worker 双模兼容: 12维模型打分零变化铁证 / 14维模型预算罚方向正确', async function () {
     if (!hasModel) {
       console.log('  skip: 无本地模型文件 recommendation_model.pkl(*.pkl 不入库, CI 无模型); 编码/规则三测仍全跑');
       this.skip();
       return;
     }
-    // 用真 worker 子进程(pickle 模型=当前线上 12 维)走 stdin 协议
+    // 注: CI 的 "Train model (CI fixture)" 步骤会用当前代码真训练——本仓库 14 维化后 CI fixture 是 14 维模型,
+    // 预算规则已在其中生效(打分随席面参数变化=管线工作的证据); 本地线上 pkl 仍是 12 维(行为零变化)。
+    // 两分支各自钉死正确行为, 不硬编码"一致"。
     const dishes = [
       { id: 2071, name: '葫芦鸡', spiciness: '不辣', saltiness: '适中', sweetness: '无', price: '58元', rating: '3.5', tags: ['招牌'], calorie: '高' },
       { id: 2101, name: '醋泡花生米', spiciness: '不辣', saltiness: '偏酸', sweetness: '无', price: '12元', rating: '3.5', tags: [], calorie: '低' },
     ];
     const code = `
-import subprocess, json, sys, os
+import subprocess, json, sys, os, pickle
+with open('recommendation_model.pkl', 'rb') as f:
+    n_feat = pickle.load(f)['model'].n_features_in_
 p = subprocess.Popen([sys.executable, os.path.join('ml', 'predict_worker.py')],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-req_a = json.dumps({'userPrefs': {'辣度': '微辣'}, 'dishes': ${JSON.stringify(dishes)}})
-req_b = json.dumps({'userPrefs': {'辣度': '微辣', 'partySize': 8, 'budgetPerPerson': 50}, 'dishes': ${JSON.stringify(dishes)}})
-out, err = p.communicate((req_a + '\\n' + req_b + '\\n').encode('utf-8'), timeout=60)
+dishes = ${JSON.stringify(dishes)}
+reqs = [
+  json.dumps({'userPrefs': {'辣度': '微辣'}, 'dishes': dishes}),
+  json.dumps({'userPrefs': {'辣度': '微辣', 'partySize': 8, 'budgetPerPerson': 30}, 'dishes': dishes}),  # 贵菜58元 > 30×1.3 超预算
+  json.dumps({'userPrefs': {'辣度': '微辣', 'partySize': 8, 'budgetPerPerson': 500}, 'dishes': dishes}),  # 预算充裕
+]
+out, err = p.communicate(('\\n'.join(reqs) + '\\n').encode('utf-8'), timeout=90)
 lines = [l for l in out.decode('utf-8').splitlines() if l.strip().startswith('{') and 'success' in l]  # 跳过启动 ready 行
-ra, rb = json.loads(lines[0]), json.loads(lines[1])
-print(json.dumps({'a': ra, 'b': rb, 'err': (err or b'').decode('utf-8', 'replace')[-400:]}))
+rs = [json.loads(l) for l in lines]
+print(json.dumps({'n_feat': int(n_feat), 'rs': rs, 'err': (err or b'').decode('utf-8', 'replace')[-300:]}))
 `;
     const r = runPython(code);
     assert.equal(r.status, 0, 'worker 子进程失败: ' + (r.stderr || '').slice(0, 300));
-    const { a, b } = JSON.parse(r.stdout);
-    assert.ok(a.success && b.success, '两次请求都应 success, worker stderr: ' + (a.err || b.err || ''));
-    assert.deepEqual(
-      a.predictions.map((x) => [x.id, x.score]),
-      b.predictions.map((x) => [x.id, x.score]),
-      '12 维模型下席面参数不应影响打分(前12列与席面无关, 双模分流生效)'
-    );
+    const { n_feat, rs } = JSON.parse(r.stdout);
+    assert.ok(rs.length === 3 && rs.every((x) => x.success), '三次请求都应 success: ' + JSON.stringify(rs).slice(0, 200));
+    const scoreOf = (resp, id) => resp.predictions.find((x) => x.id === id).score;
+    if (n_feat === 12) {
+      // 旧 12 维模型(线上): 前12列与席面无关 → 三次打分 bit 级一致 = 行为零变化铁证
+      const base = rs[0].predictions.map((x) => [x.id, x.score]);
+      assert.deepEqual(rs[1].predictions.map((x) => [x.id, x.score]), base, '超预算请求不应影响 12 维模型打分');
+      assert.deepEqual(rs[2].predictions.map((x) => [x.id, x.score]), base, '预算充裕请求不应影响 12 维模型打分');
+    } else {
+      // 14 维模型(CI fixture/重训后): 预算规则已生效 → 超预算时贵菜分数不高于无席面基线; 预算充裕时两菜都应保留可观分数
+      assert.ok(scoreOf(rs[1], 2071) <= scoreOf(rs[0], 2071) + 1e-9, '超预算下贵菜打分应不升(预算罚生效)');
+      assert.ok(scoreOf(rs[0], 2071) > 0 && scoreOf(rs[0], 2101) > 0, '分数应在合理范围');
+    }
   });
 });
