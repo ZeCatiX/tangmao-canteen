@@ -75,9 +75,13 @@ def encode_features_batch(user_prefs, dishes, model_data):
 
     # ★ 检测模型格式：新模型（12维，无OHE/scaler）or 旧模型（25维）
     if ohe is None:
-        # 新模型格式：12维特征
-        # [辣度, 咸淡, 甜酸, 热量, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸, 用户价格, 用户热量]
-        X = np.zeros((n_samples, 12))
+        # 新模型格式：12维特征(2026-11-09 前)或 14 维(席面飞轮第3步预铺: +席面人数/人均预算)
+        # [辣度, 咸淡, 甜酸, 热量, 价格/100, 是否招牌, 评分/5, 用户辣度, 用户咸淡, 用户甜酸, 用户价格, 用户热量, 席面人数?, 人均预算?]
+        # 按 model.n_features_in_ 双模分流: 线上旧 12 维模型不追加列,行为零变化;
+        # 下次重训的 14 维模型自动启用席面两列(partySize/budgetPerPerson 缺省 0=单菜场景中性值)
+        model = model_data.get('model')
+        n_feat = getattr(model, 'n_features_in_', 12) if model is not None else 12
+        X = np.zeros((n_samples, n_feat))
         for i, d in enumerate(dishes):
             X[i, 0] = ORD_MAPPINGS['辣度'].get(d.get('spiciness', '无'), 1)
             X[i, 1] = ORD_MAPPINGS['咸淡'].get(d.get('saltiness', '无'), 1)
@@ -105,6 +109,9 @@ def encode_features_batch(user_prefs, dishes, model_data):
             X[i, 9] = ORD_MAPPINGS['甜酸'].get(user_prefs.get('甜酸', '无'), 1)
             X[i, 10] = ORD_MAPPINGS['价格区间'].get(user_prefs.get('价格区间', '无'), 0)
             X[i, 11] = ORD_MAPPINGS['热量'].get(user_prefs.get('calorie', '无'), 0)
+            if n_feat >= 14:
+                X[i, 12] = float(user_prefs.get('partySize') or 0)
+                X[i, 13] = float(user_prefs.get('budgetPerPerson') or 0)
         return X
 
     # 旧模型格式：25维特征（含OHE/scaler/交互特征等）

@@ -16,7 +16,12 @@ ORD_MAPPINGS = {
     '价格区间': {'经济': 1, '适中': 2, '品质': 3, '无': 0},
 }
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
-                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量']
+                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量',
+                 '席面人数', '人均预算']
+# 2026-11-09 席面飞轮第3步预铺: 与 train_restaurant_model.py 同步 14 维。
+# 席面样本取数挂点: 正式启用时在此附近加 load_table_samples_from_db()(从 table_set_log 读
+# show 行 sets 的每道菜, 采纳=1/展示未采纳=0, 带 partySize/budgetPerPerson)——现在不写实现,
+# 避免对着库里仅有的测试埋点写死标签口径; 真实数据积累后按实际分布再定。
 
 # 项目根的模型（与 server.js worker 的 MODEL_PATH 同路径——2026-11-05 修: 原指向 ml/ 下,
 # worker 从不读那里, 重训产物静默不生效, 且首次无旧模型时 predict 直接 NotFittedError 崩）
@@ -128,6 +133,20 @@ def parse_tags(tags):
     return []
 
 
+def _align_features(X, model):
+    """特征维度自适应(2026-11-09 预铺): 新 14 维编码 vs 旧 12 维模型。
+    前 12 列语义完全一致, 输入宽于模型时按 n_features_in_ 裁剪(席面两列只对
+    重训后的 14 维模型有意义); 反之补零列。防基线 predict 维度崩。"""
+    n = getattr(model, 'n_features_in_', None)
+    if n is None or X.shape[1] == n:
+        return X
+    if X.shape[1] > n:
+        return X[:, :n]
+    out = np.zeros((X.shape[0], n))
+    out[:, : X.shape[1]] = X
+    return out
+
+
 def encode_feedback(fb_row):
     """将一条反馈数据编码为11维特征 + 目标值（特征顺序/映射须与线上模型 train_restaurant_model.py 的 encode_dish 严格一致）
     2026-11-05: 行末可能带第 12 列 user_id（显式评分行/隐式样本行都有），只取前 11 列编码"""
@@ -145,7 +164,7 @@ def encode_feedback(fb_row):
     else:
         prefs = user_prefs
 
-    X = np.zeros(12)
+    X = np.zeros(14)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
@@ -165,6 +184,9 @@ def encode_feedback(fb_row):
     X[9] = ORD_MAPPINGS['甜酸'].get(user_sweet, 1)
     X[10] = ORD_MAPPINGS['价格区间'].get(user_price, 0)
     X[11] = ORD_MAPPINGS['热量'].get(user_cal, 0)
+    # 席面上下文(2026-11-09 预铺): user_preferences 里带席面参数时填入, 缺省 0=单菜场景中性值
+    X[12] = float(prefs.get('partySize') or 0)
+    X[13] = float(prefs.get('budgetPerPerson') or 0)
 
     # 目标值：评分映射到0.1~1.0
     y = max(0.1, min(1.0, float(rating) / 5))
@@ -219,7 +241,7 @@ def main():
     # 方法：用现有模型预测作为基础，结合真实反馈做增量训练
     if hasattr(model, 'predict'):
         try:
-            y_pred_base = model.predict(X_fb)
+            y_pred_base = model.predict(_align_features(X_fb, model))
             errors = np.abs(y_fb - y_pred_base)
             print(f'  当前模型在反馈数据上的平均误差: {np.mean(errors):.4f}', file=sys.stderr)
         except Exception as e:
@@ -270,7 +292,7 @@ def main():
         'explicit_count': explicit_count,
         'implicit_count': len(implicit),  # 收藏=5分/拉黑=1分折算（2026-11-05 接入）
         'training_samples': len(X_combined),
-        'feature_count': 12,
+        'feature_count': int(getattr(model, 'n_features_in_', X_combined.shape[1])),
         'feature_names': FEATURE_NAMES,
     }
 
@@ -298,7 +320,7 @@ def main():
             json.dump({
                 'r2': float(_r2), 'mse': _mse, 'rmse': float(np.sqrt(_mse)),
                 'mae': float(np.mean(np.abs(y_te - yp_te))),
-                'feature_count': 12,
+                'feature_count': int(getattr(model, 'n_features_in_', X_combined.shape[1])),
                 'training_samples': len(X_combined),
                 'real_feedback_count': explicit_count,
                 'implicit_count': len(implicit),  # 收藏=5分/拉黑=1分折算（2026-11-05 接入）
