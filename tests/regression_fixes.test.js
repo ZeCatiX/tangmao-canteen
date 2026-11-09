@@ -114,6 +114,15 @@ describe('显示修复回归', () => {
     assert.ok(!s.includes("icon: '??'"), '不应残留 ?? 占位符');
     assert.ok(!s.includes("icon: '?'"), '不应残留 ? 占位符');
   });
+
+  it('admin back-to-top 的 scrollToTop 已在 js/admin-core.js 定义(2026-11-09 修复: 此前 admin 从未引入 script.js,点击必 ReferenceError)', () => {
+    const s = read('js/admin-core.js');
+    assert.ok(s.includes('function scrollToTop()'), 'admin-core.js 应有 scrollToTop 定义');
+    assert.ok(s.includes("window.scrollTo({ top: 0, behavior: 'smooth' })"), '应为平滑滚动实现');
+    const html = read('admin.html');
+    assert.ok(html.includes('onclick="scrollToTop()"'), 'back-to-top 按钮应保留内联 onclick');
+    assert.ok(html.includes('js/admin-core.js?v='), 'admin-core.js 引用应带缓存版本号');
+  });
 });
 
 // ================================================================
@@ -172,12 +181,15 @@ describe('前端修复回归', () => {
     const rec = sq(read('js/recommendation.js'));
     assert.ok(rec.includes("rawMode.indexOf('本地')>=0?'local'"), 'fetchRecommendations 消费端应兼容旧中文标签');
   });
-  it('logo-intro 十二维雷达带维度标签（2026-10-08 回归）', () => {
+  it('logo-intro 十二维雷达带维度标签（2026-10-08 回归；2026-11-09 同步 fea604e 统一红字契约+清理 isUser 死变量）', () => {
     const s = read('js/logo-intro.js');
     // 首版抽取时剥掉了 radar.html 的标签层,十二维雷达没有轴标签
     assert.ok(s.includes('labelLayer'), '应有标签层');
-    assert.ok(s.includes("W[n].toFixed(1)+'%'") || s.includes("W[n].toFixed(1) + '%'"), '标签应含维度名+权重%');
-    assert.ok(/isUser\s*\?\s*'#b83a2a'/.test(s), '用户口味维应红色加粗区分');
+    assert.ok(s.includes("W[n].toFixed(1) + '%'"), '标签应含维度名+权重%');
+    // fea604e 有意统一全部标签红色加粗(区分语义由'用户'前缀文字承担),不再是 isUser 三元分色
+    assert.ok(s.includes("fill: '#b83a2a'"), '标签应统一品牌红');
+    assert.ok(s.includes("'font-weight': 700"), '标签应统一加粗');
+    assert.ok(!s.includes('const isUser'), '不应残留 isUser 死变量(fea604e 统一后无引用)');
     assert.ok(s.includes('EN_NAME'), 'EN 模式应有词表');
   });
   it('开幕动画时钟用逐帧累加防后台跳帧（2026-10-08 回归）', () => {

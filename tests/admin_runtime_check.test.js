@@ -102,6 +102,7 @@ describe('admin内联脚本运行时检查', () => {
         'loadModelInfo',
         'showAdmin',
         'renderRatingChart',
+        'scrollToTop', // 2026-11-09 修复: back-to-top 内联 onclick 此前在后台页必然 ReferenceError(admin 从未引入 script.js)
       ];
       const missing = [];
       funcs.forEach((f) => {
