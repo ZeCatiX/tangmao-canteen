@@ -680,10 +680,10 @@ describe('40. 拉黑虚假反馈移除', () => {
 // 41. 新增：admin 自动登出机制验证
 // ================================================================
 describe('41. Admin 自动登出机制', () => {
-  it('admin.html fetch拦截器包含 401 自动登出', () => {
+  it('admin fetch拦截器包含 401 自动登出(2026-11-09 admin 内联脚本拆出 js/admin-core.js 后契约改读该文件)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(content.includes('resp.status === 401'), '应检测 401 状态');
     assert.ok(content.includes("localStorage.removeItem('adminToken')"), '应清除 adminToken');
     assert.ok(content.includes('登录已过期'), '应显示过期提示');
@@ -732,18 +732,18 @@ describe('42. 用户删除数据清理', () => {
 // 43. 新增：前端 null 安全保护验证
 // ================================================================
 describe('43. 前端 null 安全保护', () => {
-  it('admin.html 中 Modal.getInstance 有空检查', () => {
+  it('admin 中 Modal.getInstance 有空检查(2026-11-09 admin 内联脚本拆出 js/admin-core.js 后契约改读该文件)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(content.includes('if(m)m.hide()'), 'Modal.hide 应有空检查');
     assert.ok(content.includes('if(m)m.hide()'), '删除弹窗应有空检查');
   });
 
-  it('admin.html 页面切换有目标检查(2026-11-08 收口为 showAdminPage 统一切页后同步契约)', () => {
+  it('admin 页面切换有目标检查(2026-11-08 收口为 showAdminPage 统一切页;11-09 拆分后契约改读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(content.includes('function showAdminPage(pageId, opts)'), '应有统一切页函数');
     assert.ok(content.includes('if (!target) return;'), '切页应检查目标存在(收口前的 if(target) 演进为卫语句)');
     assert.ok(content.includes("showAdminPage('page-' + a.dataset.page)"), '[data-page] 导航委托应走统一切页');
@@ -1267,19 +1267,19 @@ describe('61. 管理员查看所有订单', () => {
 // 62. 新增：数据导出（带认证头）验证
 // ================================================================
 describe('62. 数据导出带认证头', () => {
-  it('admin.html 使用 exportCSV 函数而非 location.href', () => {
+  it('admin 使用 exportCSV 函数而非 location.href(拆分后读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(content.includes('function exportCSV'), '应有 exportCSV 函数');
     assert.ok(content.includes("localStorage.getItem('adminToken')"), '应读取 adminToken');
     assert.ok(content.includes("'Authorization': 'Bearer '"), '应带 Authorization 头');
   });
 
-  it('admin.html 不再使用 location.href 导出', () => {
+  it('admin 不再使用 location.href 导出(拆分后读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(
       !content.includes("location.href='/api/admin/export/popular-dishes'"),
       '导出应使用 fetch 而非 location.href'
@@ -1371,17 +1371,17 @@ describe('65. API 404 JSON 响应', () => {
 // 66. 新增：admin.html 空 catch 修复验证
 // ================================================================
 describe('66. admin.html 错误处理', () => {
-  it('saveDish 有网络错误提示', () => {
+  it('saveDish 有网络错误提示(拆分后读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(!content.includes('.catch(() => {})'), 'saveDish 不应有空 catch');
   });
 
-  it('deleteDish 有网络错误提示', () => {
+  it('deleteDish 有网络错误提示(拆分后读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(!content.includes('.catch(() => {})'), 'deleteDish 不应有空 catch');
   });
 });
@@ -1505,10 +1505,10 @@ describe('70. spawn stdout 泄漏防范', () => {
 // 71. 新增：admin.html 空 catch 修复验证
 // ================================================================
 describe('71. admin.html 空 catch 修复', () => {
-  it('admin.html 无空 catch', () => {
+  it('admin 无空 catch(拆分后读 js/admin-core.js)', () => {
     const fs = require('fs');
     const path = require('path');
-    const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
+    const content = fs.readFileSync(path.join(__dirname, '..', 'js', 'admin-core.js'), 'utf8');
     assert.ok(!content.includes('catch(() => {})'), '不应有完全空的 catch');
     assert.ok(content.includes('console.warn'), '应有警告日志输出');
   });

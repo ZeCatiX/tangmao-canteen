@@ -12,6 +12,11 @@ function read(f) {
   return fs.readFileSync(path.join(ROOT, f), 'utf8');
 }
 
+// 2026-11-09 admin 内联脚本拆出 js/admin-core.js 后,"admin 前端代码"物理上分为
+// admin.html(结构)与 js/admin-core.js(逻辑)两个文件;审计读法 = 两文件拼接,
+// 与拆分前"单文件 HTML+内联 JS"的审计范围等价(HTML 级与 JS 级断言都覆盖)
+const readAdmin = () => read('admin.html') + '\n' + read('js/admin-core.js');
+
 // 改造1 后 js/ 源码经 prettier 格式化,历史上的紧凑断言串(如 if(!u||!p))需空白归一化后比较
 const sq = (s) => String(s).replace(/\s+/g, '');
 const readSq = (f) => sq(read(f));
@@ -194,7 +199,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台所有按钮存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const buttons = extractButtonIds(html);
     const required = ['admin-login-btn', 'add-dish-btn', 'retrain-btn', 'save-dish-btn', 'dish-image-upload'];
     required.forEach((id) => {
@@ -207,7 +212,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台所有页面面板存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const pages = [
       'page-dashboard',
       'page-dishes',
@@ -224,7 +229,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台所有侧边栏导航存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const pages = ['dashboard', 'dishes', 'users', 'feedback', 'preferences', 'analytics', 'model', 'apidocs'];
     pages.forEach((p) => {
       assert.ok(html.includes(`data-page="${p}"`), `管理后台侧边栏缺少 ${p} 导航`);
@@ -232,7 +237,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台所有功能函数存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const funcs = [
       'loadStats',
       'loadPopularDishes',
@@ -266,7 +271,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台登录后调用所有数据加载函数', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const idx1 = html.indexOf('loadStats(); loadPopularDishes');
     const idx2 = html.indexOf('loadStats(); loadPopularDishes', idx1 + 1);
     // 找到第二次出现（登录成功后的调用）
@@ -282,14 +287,14 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台该函数有正确的事件绑定', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('addEventListener'), '应有事件绑定');
     assert.ok(html.includes('retrain-btn'), '重训练按钮');
     assert.ok(html.includes('retrain'), '重训练函数');
   });
 
   it('管理后台重新训练按钮状态显示正确', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     // 修复前：点击按钮立即显示"训练完成"（错误）
     // 修复后：先显示"训练中..."，成功后显示"训练完成"
     const retrainBlock = html.substring(
@@ -310,7 +315,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台添加菜品按钮正确重置所有表单字段', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const addBtnBlock = html.substring(
       html.indexOf("document.getElementById('add-dish-btn')"),
       html.indexOf("document.getElementById('add-dish-btn')") + 3000
@@ -327,7 +332,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台添加菜品按钮使用null保护访问DOM', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     // 2026-10-06:表单加了英文双语等字段,重置代码后移,窗口从 1600 放宽到 4000
     const addBtnBlock = html.substring(
       html.indexOf("document.getElementById('add-dish-btn')"),
@@ -340,7 +345,7 @@ describe('1. 全面按钮可用性审计', () => {
   });
 
   it('管理后台所有数据加载函数有catch处理', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const loadFuncs = [
       'loadStats',
       'loadPopularDishes',
@@ -406,13 +411,13 @@ describe('2. 崩溃风险与边界情况审计', () => {
   });
 
   it('admin.html 关键函数有null保护', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('if (!ctx) return'), 'renderRatingChart 应有 null 保护');
     assert.ok(html.includes('dailyActive.length) return'), 'loadUserActivity 应有 null 保护');
   });
 
   it('admin.html fetch链有catch处理', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const fetchCalls = (html.match(/\.fetch\(/g) || []).length;
     const catchCount = (html.match(/\.catch\(/g) || []).length;
     const finallyCount = (html.match(/\.finally\(/g) || []).length;
@@ -421,32 +426,32 @@ describe('2. 崩溃风险与边界情况审计', () => {
   });
 
   it('admin.html 登录按钮有disabled状态管理', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('btn.disabled = true'), '登录按钮应有disabled状态');
     assert.ok(html.includes('btn.disabled = false'), '登录按钮应有恢复状态');
   });
 
   it('admin.html 401自动登出机制', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('resp.status === 401'), '管理后台应有401自动登出');
     assert.ok(html.includes("localStorage.removeItem('adminToken')"), '401时应清除adminToken');
     assert.ok(html.includes('showAdmin(false)'), '401时应隐藏管理界面');
   });
 
   it('admin.html fetch拦截器自动注入token', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes("Authorization'] = 'Bearer '"), '管理后台自动注入Authorization头');
     assert.ok(html.includes('adminToken'), '管理后台使用adminToken');
   });
 
   it('admin.html toast通知容器和动画存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('admin-toast-container'), '应有toast容器');
     assert.ok(html.includes('@keyframes fadeIn'), '应有淡入动画');
   });
 
   it('admin.html 模态框焦点管理完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('show.bs.modal'), '模态框打开事件');
     assert.ok(html.includes('hide.bs.modal'), '模态框关闭事件');
     assert.ok(html.includes('_lastTrigger'), '焦点归还机制');
@@ -517,7 +522,7 @@ describe('3. 显示排版与字符编码审计', () => {
 
   it('所有页面标题完整', () => {
     assert.ok(read('index.html').includes('唐猫庭院'), '首页标题应有唐猫庭院');
-    assert.ok(read('admin.html').includes('管理后台'), '管理后台标题应有管理后台');
+    assert.ok(readAdmin().includes('管理后台'), '管理后台标题应有管理后台');
     assert.ok(read('kitchen.html').includes('厨房看板'), '厨房看板标题应有厨房看板');
   });
 
@@ -567,14 +572,14 @@ describe('3. 显示排版与字符编码审计', () => {
   });
 
   it('管理后台导航完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     ['控制面板', '菜品管理', '用户管理', '反馈查看', '偏好分布', '数据分析', '模型管理'].forEach((item) => {
       assert.ok(html.includes(item), '管理后台导航应有 ' + item);
     });
   });
 
   it('管理后台菜品编辑模态框完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('dishModal'), '应有菜品编辑模态框');
     assert.ok(html.includes('dish-name'), '模态框应有菜名输入');
     assert.ok(html.includes('dish-category'), '模态框应有分类选择');
@@ -705,14 +710,14 @@ describe('4. 功能完整性审计', () => {
   });
 
   it('XSS转义函数在关键位置存在', () => {
-    ['js/globals.js', 'admin.html', 'kitchen.html'].forEach((f) => {
+    ['js/globals.js', 'js/admin-core.js', 'kitchen.html'].forEach((f) => {
       assert.ok(read(f).includes('function esc'), f + ' 应有 esc 转义函数');
     });
   });
 
   it('动态HTML拼接使用esc函数', () => {
     assert.ok(frontSrc().includes('esc('), 'core.js 中使用 esc 转义');
-    assert.ok(read('admin.html').includes('esc('), 'admin.html 中使用 esc 转义');
+    assert.ok(readAdmin().includes('esc('), 'admin 中使用 esc 转义');
   });
 
   it('密码不存储在前端localStorage', () => {
@@ -906,7 +911,8 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('deleteUser 函数错误消息正确', () => {
-    const html = read('admin.html');
+    // 只读 admin-core.js:拼接读会让 900 字符函数体窗口伸进相邻的 exportCSV 误命中"导出失败"
+    const html = read('js/admin-core.js');
     // 2026-09-17: 签名已变为 deleteUser(id, btn),窗口放宽至 900
     const deleteUserFunc = html.substring(
       html.indexOf('function deleteUser(id, btn)'),
@@ -917,7 +923,7 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('loadDishes 函数正确处理价格为null的情况', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const loadDishesBlock = html.substring(
       html.indexOf('function loadDishes()'),
       html.indexOf('function loadDishes()') + 800
@@ -926,7 +932,7 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('管理后台所有页面面板存在', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const pageIds = [
       'page-dashboard',
       'page-dishes',
@@ -943,13 +949,13 @@ describe('7. 后端API验证审计', () => {
   });
 
   it('管理后台导航链接数量正确', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const sidebarLinks = html.match(/data-page="[^"]+"/g) || [];
     assert.ok(sidebarLinks.length >= 9, '应有至少9个导航链接');
   });
 
   it('管理后台菜品编辑模态框字段完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('dish-name'), '菜名输入框');
     assert.ok(html.includes('dish-category'), '分类选择');
     assert.ok(html.includes('dish-price'), '价格输入');
@@ -975,7 +981,7 @@ describe('7. 后端API验证审计', () => {
 // ================================================================
 describe('8. 页面元素完整性审计', () => {
   it('管理后台监控面板元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const monitorIds = [
       'monitor-r2-trend',
       'monitor-uptime',
@@ -991,7 +997,7 @@ describe('8. 页面元素完整性审计', () => {
   });
 
   it('管理后台分析页面图表元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('daily-trend-chart'), '每日趋势图表');
     assert.ok(html.includes('pref-pie-chart'), '偏好饼图');
     assert.ok(html.includes('user-activity-chart'), '用户活跃度图表');
@@ -1000,7 +1006,7 @@ describe('8. 页面元素完整性审计', () => {
   });
 
   it('管理后台推荐统计元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('stat-total-rec'), '总推荐数');
     assert.ok(html.includes('stat-fb-rec'), '有反馈数');
     assert.ok(html.includes('stat-conversion'), '转化率');
@@ -1008,7 +1014,7 @@ describe('8. 页面元素完整性审计', () => {
   });
 
   it('管理后台偏好分布元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const prefIds = [
       'pref-spiciness',
       'pref-saltiness',
@@ -1111,7 +1117,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('仪表板响应式布局正确', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('content-row'), '应有flex布局容器');
     assert.ok(html.includes('col-main'), '应有主列');
     assert.ok(html.includes('col-side'), '应有侧边栏');
@@ -1119,7 +1125,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('saveDish 函数正确清理tags中的空格', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes("split(',').map(t => t.trim()).filter(Boolean).join(',')"), 'tags应清理空格');
   });
 
@@ -1130,7 +1136,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('API文档页面包含所有核心API', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('/api/dishes'), 'API文档包含菜品列表');
     assert.ok(html.includes('/api/user/register'), 'API文档包含用户注册');
     assert.ok(html.includes('/api/predict-rf'), 'API文档包含推荐预测');
@@ -1157,7 +1163,7 @@ describe('9. 后端逻辑健壮性审计', () => {
 
   it('菜品分类选项前后端一致', async () => {
     const indexHtml = read('index.html');
-    const adminHtml = read('admin.html');
+    const adminHtml = readAdmin();
     // 从API获取菜品数据（替代dishes_current.json）
     const dishesResp = await fetch('http://localhost:3000/api/dishes');
     const dishesData = await dishesResp.json();
@@ -1199,7 +1205,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('dashboard模型信息元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('model-version'), '模型版本');
     assert.ok(html.includes('model-trained-at'), '模型训练时间');
     assert.ok(html.includes('model-r2'), '模型R2');
@@ -1217,7 +1223,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('删除菜品有确认对话框', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     // 2026-09-17: 删除流程已迁移 confirmAction 双击确认封装(不再用原生 confirm)
     const deleteBlock = html.substring(
       html.indexOf('function deleteDish(id'),
@@ -1227,7 +1233,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('删除菜品后刷新数据', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const deleteBlock = html.substring(
       html.indexOf('function deleteDish(id'),
       html.indexOf('function deleteDish(id') + 1200
@@ -1266,7 +1272,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   it('菜品名称有前后端长度验证', () => {
     // 菜品 CRUD 已拆至 server/routes/admin.js(改造4)
     const server = read('server/routes/admin.js');
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(server.includes('name.trim().length < 2'), '服务端有菜名最小长度验证');
     assert.ok(server.includes('name.trim().length > 100'), '服务端有菜名最大长度验证');
     assert.ok(html.includes('if (!name)'), '前端有菜名非空验证');
@@ -1295,7 +1301,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('菜品编辑时过敏源复选框正确初始化', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('a.seafood || false'), '海鲜过敏默认false');
     assert.ok(html.includes('a.peanut || false'), '花生过敏默认false');
     assert.ok(html.includes('a.egg || false'), '鸡蛋过敏默认false');
@@ -1310,7 +1316,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('管理后台菜品列表图片有onerror处理', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     const loadDishesBlock = html.substring(
       html.indexOf('function loadDishes()'),
       html.indexOf('function loadDishes()') + 800
@@ -1323,7 +1329,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('模型管理页面元素完整', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('model-mgr-version'), '模型版本');
     assert.ok(html.includes('model-mgr-time'), '训练时间');
     assert.ok(html.includes('model-mgr-r2'), 'R2值');
@@ -1349,7 +1355,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('API文档包含所有管理后台端点', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('/api/admin/login'), '包含登录');
     assert.ok(html.includes('/api/admin/stats'), '包含统计');
     assert.ok(html.includes('/api/admin/dish'), '包含菜品管理');
@@ -1382,6 +1388,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('admin.html div标签平衡', () => {
+    // HTML 级断言只读 admin.html(等价于拆分前剥掉内联 script 后的统计范围)
     const html = read('admin.html');
     const htmlOnly = html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<style[\s\S]*?<\/style>/g, '');
     const opens = (htmlOnly.match(/<div[\s>]/g) || []).length;
@@ -1427,7 +1434,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('Chart.js实例创建前销毁旧实例', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('window.ratingChart.destroy()'), '评分图销毁');
     assert.ok(html.includes('window.dailyChart.destroy()'), '趋势图销毁');
     assert.ok(html.includes('window.prefChart.destroy()'), '偏好饼图销毁');
@@ -1473,7 +1480,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('管理后台按钮有防重复提交机制', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('btn.disabled = true'), '操作时禁用按钮');
     assert.ok(html.includes('btn.disabled = false'), '操作后恢复按钮');
   });
@@ -1628,9 +1635,10 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('管理后台移动端顶部栏响应式', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('.mobile-topbar'), '移动端顶部栏存在');
-    assert.ok(html.includes('@media (max-width: 768px)'), '768px断点存在');
+    // 2026-11-09 第三轮检查把与 Bootstrap 导航折叠断点冲突的 768px 收窄为 767.98px,同步契约
+    assert.ok(html.includes('@media (max-width: 767.98px)'), '移动断点存在(767.98px)');
     assert.ok(html.includes('.mobile-topbar { display: block'), '移动端显示顶部栏');
   });
 
@@ -1677,7 +1685,7 @@ describe('9. 后端逻辑健壮性审计', () => {
   });
 
   it('菜品名称输入有maxlength限制', () => {
-    const html = read('admin.html');
+    const html = readAdmin();
     assert.ok(html.includes('maxlength="100"'), '菜品名称最多100字符');
     assert.ok(html.includes('maxlength="500"'), '菜品描述最多500字符');
   });
