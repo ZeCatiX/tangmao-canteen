@@ -1276,6 +1276,18 @@ function loadDailyReport(date){
     tb.innerHTML=d.dishes.length?d.dishes.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+x.revenue+' 元</td></tr>').join(''):'<tr><td colspan="3" style="color:#8b7a6a;">当日无动销</td></tr>';
     const maxC=Math.max(1,...d.hours.map(h=>h.cnt));
     document.getElementById('report-hours').innerHTML=d.hours.length?d.hours.map(h=>'<div style="text-align:center;"><div style="width:26px;margin:0 auto;background:linear-gradient(180deg,var(--gold),var(--primary));border-radius:4px 4px 0 0;height:'+Math.round(h.cnt/maxC*80+6)+'px;" title="'+h.cnt+' 单 / '+h.amount+' 元"></div><small style="font-size:0.65rem;color:#8b7a6a;">'+h.hr+'时</small></div>').join(''):'<div style="color:#8b7a6a;font-size:0.8rem;">当日无有效订单</div>';
+    // ═══ 席面采纳卡(2026-11-09 数据飞轮第2步)═══
+    const ts=d.tableSet||{};
+    document.getElementById('report-tableset-stats').innerHTML=
+      '<div><span style="color:#8b7a6a;">席面展示</span> <b>'+esc(ts.shows||0)+'</b> 次</div>'
+     +'<div><span style="color:#8b7a6a;">有采纳会话</span> <b>'+esc(ts.adoptedSessions||0)+'</b> 个</div>'
+     +'<div><span style="color:#8b7a6a;">采纳率</span> <b style="color:var(--primary);">'+esc(ts.rate===null||ts.rate===undefined?'-':ts.rate)+'</b></div>'
+     +'<div><span style="color:#8b7a6a;">整桌采纳</span> <b>'+esc(ts.adoptSet||0)+'</b> 次</div>'
+     +'<div><span style="color:#8b7a6a;">单菜加购</span> <b>'+esc(ts.adoptDish||0)+'</b> 次</div>';
+    document.getElementById('report-tableset-combos').innerHTML=
+      (ts.topCombos&&ts.topCombos.length?ts.topCombos.map((c,i)=>'<div style="padding:0.45rem 0;border-top:1px dashed #e8ddd0;"><b>#'+(i+1)+'</b> '+esc(c.style||'')+' · '+esc(c.dishNames?c.dishNames.length:0)+' 菜 · 约'+esc(c.totalPrice||0)+'元 · 采纳 <b>'+esc(c.cnt)+'</b> 次<div style="font-size:0.75rem;color:#8b7a6a;margin-top:2px;">'+esc((c.dishNames||[]).join('、'))+'</div></div>').join('')
+      +(ts.topDishes&&ts.topDishes.length?'<div style="margin-top:0.5rem;font-size:0.8rem;"><span style="color:#8b7a6a;">单菜加购热门:</span> '+ts.topDishes.map(x=>esc(x.name)+'×'+x.cnt).join('、')+'</div>':'')
+      :'<div style="color:#8b7a6a;font-size:0.8rem;">当日无席面采纳记录</div>');
   }).catch(()=>showToast('网络错误','error'));
 }
 document.getElementById('report-load-btn').addEventListener('click',function(){

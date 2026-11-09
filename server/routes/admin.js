@@ -94,6 +94,57 @@ function register(app, deps) {
        FROM orders WHERE created_at::date = $1::date AND status <> 'cancelled' GROUP BY hr ORDER BY hr`,
         [date]
       );
+      // ═══ 席面采纳统计（2026-11-09 数据飞轮第2步: 采纳率/热门组合进日报, 数据源 table_set_log）═══
+      // 采纳率为会话级口径: 当日发生任一采纳事件的 show 会话数 / 当日 show 数;
+      // show 与采纳可能跨日发生, 各自按事件发生日归入当日
+      const tableShowRows = await db.query(
+        `SELECT id, sets FROM table_set_log WHERE event_type = 'show' AND created_at::date = $1::date`,
+        [date]
+      );
+      const adoptRows = await db.query(
+        `SELECT event_type, log_id, set_key, dish_id FROM table_set_log
+       WHERE event_type IN ('adopt_set', 'adopt_dish') AND created_at::date = $1::date`,
+        [date]
+      );
+      const showById = new Map(tableShowRows.rows.map((r) => [r.id, r]));
+      const adoptedSessionIds = new Set();
+      const comboAgg = {};
+      const dishAgg = {};
+      adoptRows.rows.forEach((a) => {
+        adoptedSessionIds.add(a.log_id);
+        if (a.event_type === 'adopt_set') {
+          const show = showById.get(a.log_id);
+          const seg = show && Array.isArray(show.sets) ? show.sets.find((s) => s.key === a.set_key) : null;
+          if (seg) {
+            const k = a.set_key + '|' + (seg.dishIds || []).join(',');
+            comboAgg[k] = comboAgg[k] || { style: seg.style, dishIds: seg.dishIds || [], totalPrice: seg.totalPrice, cnt: 0 };
+            comboAgg[k].cnt += 1;
+          }
+        } else if (a.dish_id) {
+          dishAgg[a.dish_id] = (dishAgg[a.dish_id] || 0) + 1;
+        }
+      });
+      const shows = tableShowRows.rows.length;
+      const topComboIds = [...new Set(Object.values(comboAgg).flatMap((c) => c.dishIds))];
+      const topDishIds = Object.keys(dishAgg).map(Number).sort((x, y) => dishAgg[y] - dishAgg[x]).slice(0, 5);
+      const nameRows = await db.query(
+        `SELECT id, name FROM dishes WHERE id = ANY($1::int[])`,
+        [[...topComboIds, ...topDishIds]]
+      );
+      const nameMap = {};
+      nameRows.rows.forEach((r) => { nameMap[r.id] = r.name; });
+      const tableSet = {
+        shows,
+        adoptedSessions: adoptedSessionIds.size,
+        adoptSet: adoptRows.rows.filter((a) => a.event_type === 'adopt_set').length,
+        adoptDish: adoptRows.rows.filter((a) => a.event_type === 'adopt_dish').length,
+        rate: shows ? Math.round((adoptedSessionIds.size / shows) * 100) + '%' : null,
+        topCombos: Object.values(comboAgg)
+          .sort((x, y) => y.cnt - x.cnt)
+          .slice(0, 3)
+          .map((c) => ({ style: c.style, cnt: c.cnt, totalPrice: c.totalPrice, dishNames: c.dishIds.map((id) => nameMap[id] || '#' + id) })),
+        topDishes: topDishIds.map((id) => ({ name: nameMap[id] || '#' + id, cnt: dishAgg[id] })),
+      };
       // 桌数维度(2026-11-02 对齐商龙报表口径): 翻台率=非打包完成单去重桌数/30桌; 桌均=营收/去重桌数
       const tableAgg = await db.query(
         `SELECT COUNT(DISTINCT table_number)::int AS tables
@@ -132,6 +183,7 @@ function register(app, deps) {
         },
         dishes: dishes.rows.map((r) => ({ name: r.name, qty: r.qty, revenue: Math.round(r.revenue * 100) / 100 })),
         hours: hours.rows.map((r) => ({ hr: r.hr, cnt: r.cnt, amount: Math.round(r.amount * 100) / 100 })),
+        tableSet,
       });
     } catch (e) {
       logger.error('营业日报失败:', e.message);
