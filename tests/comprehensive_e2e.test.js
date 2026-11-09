@@ -740,12 +740,15 @@ describe('43. 前端 null 安全保护', () => {
     assert.ok(content.includes('if(m)m.hide()'), '删除弹窗应有空检查');
   });
 
-  it('admin.html 页面切换有目标检查', () => {
+  it('admin.html 页面切换有目标检查(2026-11-08 收口为 showAdminPage 统一切页后同步契约)', () => {
     const fs = require('fs');
     const path = require('path');
     const content = fs.readFileSync(path.join(__dirname, '..', 'admin.html'), 'utf8');
-    assert.ok(content.includes('const target = document.getElementById'), '页面切换应检查目标');
-    assert.ok(content.includes('if (target)'), '应判断目标存在');
+    assert.ok(content.includes('function showAdminPage(pageId, opts)'), '应有统一切页函数');
+    assert.ok(content.includes('if (!target) return;'), '切页应检查目标存在(收口前的 if(target) 演进为卫语句)');
+    assert.ok(content.includes("showAdminPage('page-' + a.dataset.page)"), '[data-page] 导航委托应走统一切页');
+    assert.ok(content.includes('showAdminPage(link.slice(1)'), '预警横幅跳转应走统一切页');
+    assert.ok(content.includes('{ dishFilter: dish, smoothScroll: true }'), '横幅跳转应带过滤联动');
   });
 
   it('script.js 关键函数有 null 保护', () => {
