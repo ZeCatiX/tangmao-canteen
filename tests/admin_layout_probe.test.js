@@ -78,8 +78,15 @@ describe('admin 全页面×全视口布局探针', () => {
               if (r.width > 0 && r.right > vw + 2 && el.offsetParent !== null) {
                 const cs = getComputedStyle(el);
                 if (cs.position === 'fixed') return;
-                // 内滚容器的直接内容由容器自己负责(table-wrap 的行右边界超出属预期)
+                // 排除两类: ①table-wrap 内内容(容器横向内滚可用) ②任一祖先可横向内滚(同上)——只报"被裁不可用"的真问题
                 if (el.closest('.table-wrap, .table-body-wrap')) return;
+                let p = el.parentElement, innerScroll = false;
+                while (p && p !== document.body) {
+                  const ox = getComputedStyle(p).overflowX;
+                  if (ox === 'auto' || ox === 'scroll') { innerScroll = true; break; }
+                  p = p.parentElement;
+                }
+                if (innerScroll) return;
                 out.push({ tag: el.tagName, cls: String(el.className).slice(0, 24), right: Math.round(r.right) });
               }
             });
