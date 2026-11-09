@@ -104,8 +104,8 @@ describe('崩溃修复回归', () => {
 // 显示修复 - admin stat-cards 图标
 // ================================================================
 describe('显示修复回归', () => {
-  it('admin.html 统计卡片图标为 emoji 非占位符', () => {
-    const s = read('admin.html');
+  it('admin 统计卡片图标为 emoji 非占位符(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const s = read('js/admin-core.js');
     assert.ok(s.includes("icon: '📈'"), '今日推荐应有 📈 图标');
     assert.ok(s.includes("icon: '👥'"), '游客推荐应有 👥 图标');
     assert.ok(s.includes("icon: '👤'"), '用户推荐应有 👤 图标');
@@ -247,21 +247,20 @@ describe('前端修复回归', () => {
     );
     assert.ok(s.includes('functionopenStarFeedback(dish){if(!dish)'), '评分入口应对空引用防御提示');
   });
-  it('admin.html 内联脚本语法有效（2026-10-08 回归：重复赋值行曾致整个script块瘫痪）', () => {
+  it('admin 脚本语法有效（2026-10-08 回归：重复赋值行曾致整个script块瘫痪；2026-11-09 内联块拆出 js/admin-core.js 后改校验该文件）', () => {
+    const code = read('js/admin-core.js');
+    let err = null;
+    try {
+      new Function(code); // eslint-disable-line no-new-func -- 语法校验用途:解析脚本,非动态执行
+    } catch (e) {
+      err = e.message;
+    }
+    assert.ok(!err, 'admin-core.js 语法错误: ' + err);
     const html = read('admin.html');
     const blocks = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
       .map((m) => m[1])
       .filter((s) => s.trim());
-    assert.ok(blocks.length >= 1, '应存在内联脚本块');
-    blocks.forEach((code, i) => {
-      let err = null;
-      try {
-        new Function(code); // eslint-disable-line no-new-func -- 语法校验用途:解析内联脚本,非动态执行
-      } catch (e) {
-        err = e.message;
-      }
-      assert.ok(!err, '内联脚本块 #' + (i + 1) + ' 语法错误: ' + err);
-    });
+    assert.ok(blocks.length === 0, 'admin.html 不应再残留内联脚本块(已全部拆出)');
   });
   it('用户管理分页与服务端搜索（2026-10-08 回归）', () => {
     // 用户管理接口已拆至 server/routes/admin.js(改造4)
@@ -271,7 +270,7 @@ describe('前端修复回归', () => {
       /LIMIT \$/.test(server.split("app.get('/api/admin/users'")[1]?.split('app.get')[0] || ''),
       '用户接口应有分页上限'
     );
-    const admin = read('admin.html');
+    const admin = read('js/admin-core.js'); // 2026-11-09 拆分后前端逻辑在 admin-core.js
     assert.ok(admin.includes('renderUserRows(d.users, d.total)'), '客户端应传 total 供提示行');
     assert.ok(admin.includes('位用户 · 当前显示最新'), '应有总量提示行');
   });

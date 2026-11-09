@@ -137,7 +137,7 @@ describe('深度UI检查 - 按钮可用性', () => {
   });
 
   it('管理后台按钮有事件绑定', () => {
-    const html = read('admin.html');
+    const html = read('js/admin-core.js'); // 2026-11-09 admin 脚本拆出后事件绑定在此文件
     // 检查JS事件绑定（通过 addEventListener 或 onclick）
     assert.ok(html.includes("addEventListener('click'") || html.includes('add-dish-btn'), 'add-dish-btn 应有事件绑定');
     assert.ok(html.includes("delete-dish-btn').onclick"), 'delete-dish-btn 应有事件绑定');
@@ -300,8 +300,8 @@ describe('深度UI检查 - 崩溃风险', () => {
     assert.ok(js.includes('if(!uEl||!pEl||!cEl)'), 'register 应有 null 保护');
   });
 
-  it('admin.html 关键函数有null保护', () => {
-    const html = read('admin.html');
+  it('admin.html 关键函数有null保护(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     // 评分chart
     assert.ok(
       html.includes('renderRatingChart') && html.includes('if (!ctx) return'),
@@ -313,8 +313,8 @@ describe('深度UI检查 - 崩溃风险', () => {
     assert.ok(html.includes('dailyActive.length) return'), 'loadUserActivity 应有 null 保护');
   });
 
-  it('admin.html 所有fetch有catch处理', () => {
-    const html = read('admin.html');
+  it('admin 所有fetch有catch处理(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     const fetchCalls = html.match(/fetch\(/g) || [];
     const catchCount = html.match(/\.catch\(/g) || [];
     const finallyCount = html.match(/\.finally\(/g) || [];
@@ -491,8 +491,8 @@ describe('深度UI检查 - 构建产物与源码同步', () => {
 });
 
 describe('深度UI检查 - 安全', () => {
-  it('XSS转义函数存在', () => {
-    ['js/globals.js', 'admin.html'].forEach((f) => {
+  it('XSS转义函数存在(2026-11-09 admin esc 拆至 js/admin-core.js)', () => {
+    ['js/globals.js', 'js/admin-core.js'].forEach((f) => {
       const content = read(f);
       assert.ok(content.includes('function esc'), `${f} 应有 esc 转义函数`);
     });
@@ -500,10 +500,10 @@ describe('深度UI检查 - 安全', () => {
 
   it('动态HTML拼接使用esc函数', () => {
     const js = frontSrc();
-    const html = read('admin.html');
+    const html = read('js/admin-core.js'); // 2026-11-09 拆分后 admin 动态拼接在此文件
     // 检查esc函数被使用
     assert.ok(js.includes('esc('), 'core.js 中使用 esc 转义');
-    assert.ok(html.includes('esc('), 'admin.html 中使用 esc 转义');
+    assert.ok(html.includes('esc('), 'admin-core.js 中使用 esc 转义');
   });
 
   it('敏感文件被保护', () => {
@@ -610,8 +610,8 @@ describe('深度UI检查 - 布局与排版', () => {
     assert.ok(html.includes('模型信息摘要'), '管理后台应有模型信息摘要');
   });
 
-  it('管理后台功能函数完整', () => {
-    const html = read('admin.html');
+  it('管理后台功能函数完整(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     const funcs = [
       'loadStats',
       'loadPopularDishes',
@@ -670,8 +670,11 @@ describe('深度UI检查 - 布局与排版', () => {
   it('管理后台正确引用JS和CSS', () => {
     const html = read('admin.html');
     assert.ok(html.includes('bootstrap.bundle.min.js'), '管理后台应引用Bootstrap JS');
-    assert.ok(html.includes('chart.umd.min.js'), '管理后台应引用Chart.js');
     assert.ok(html.includes('bootstrap.min.css'), '管理后台应引用Bootstrap CSS');
+    // Chart.js 2026-10-19 起按需加载,路径字符串在拆分后的 admin-core.js(ensureChartJs)
+    const core = read('js/admin-core.js');
+    assert.ok(core.includes('chart.umd.min.js'), '管理后台应引用Chart.js(按需加载)');
+    assert.ok(html.includes('js/admin-core.js'), '管理后台应引用拆分后的 admin-core.js');
   });
 
   it('厨房看板正确引用JS和CSS', () => {
@@ -707,25 +710,24 @@ describe('深度UI检查 - 布局与排版', () => {
     assert.ok(init.includes('storage'), '多标签同步事件绑定');
   });
 
-  it('管理后台fetch拦截器自动注入token', () => {
-    const html = read('admin.html');
+  it('管理后台fetch拦截器自动注入token(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     assert.ok(
-      html.includes("Authorization', 'Bearer '") ||
-        html.includes("'Authorization', 'Bearer '") ||
-        html.includes('Authorization: Bearer'),
+      html.includes("'Authorization': 'Bearer '") ||
+        html.includes("Authorization'] = 'Bearer '"),
       '管理后台应自动注入Authorization头'
     );
     assert.ok(html.includes('adminToken'), '管理后台使用adminToken');
   });
 
-  it('管理后台401自动登出机制', () => {
-    const html = read('admin.html');
+  it('管理后台401自动登出机制(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     assert.ok(html.includes('resp.status === 401'), '管理后台应有401自动登出');
     assert.ok(html.includes("localStorage.removeItem('adminToken')"), '401时应清除adminToken');
   });
 
-  it('管理后台登录按钮有disabled状态管理', () => {
-    const html = read('admin.html');
+  it('管理后台登录按钮有disabled状态管理(2026-11-09 拆分后读 js/admin-core.js)', () => {
+    const html = read('js/admin-core.js');
     assert.ok(html.includes('btn.disabled = true'), '登录按钮应有disabled状态');
     assert.ok(html.includes('btn.disabled = false'), '登录按钮应有恢复状态');
   });
