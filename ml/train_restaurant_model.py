@@ -24,7 +24,12 @@ ORD_MAPPINGS = {
 }
 
 FEATURE_NAMES = ['辣度', '咸淡', '甜酸', '热量', '价格', '招牌', '评分',
-                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量']
+                 '用户辣度', '用户咸淡', '用户甜酸', '用户价格', '用户热量',
+                 '席面人数', '人均预算']
+# 2026-11-09 席面飞轮第3步预铺: 12→14 维(第13列 partySize / 第14列 budgetPerPerson)。
+# 中性值语义: 两列=0 表示非席面场景(单菜推荐), 席面请求传真实值。
+# 约束: predict_worker 按 model.n_features_in_ 双模分流——旧 12 维模型(当前线上)行为零变化,
+# 下次重训产出 14 维后席面预算规则自动生效。
 
 # 模拟用户池：按接近真实人群的比例随机生成
 # （原来手写 30 个用户太少，靠"同一道题抄 24 遍"凑数据量 —— 那是虚高 R² 和模型膨胀的根源）
@@ -106,8 +111,9 @@ def parse_tags(tags):
 # ═══════════════════════════════════════════════
 # 3. 生成训练数据
 # ═══════════════════════════════════════════════
-def encode_dish(dish, user_pref):
-    """将一道菜品 + 用户偏好编码为10维特征向量"""
+def encode_dish(dish, user_pref, table_ctx=None):
+    """将一道菜品 + 用户偏好编码为14维特征向量(2026-11-09 预铺: 前12列与旧版完全一致,
+    X[12]=席面人数 partySize / X[13]=人均预算 budgetPerPerson, 非席面场景填 0)"""
     _, name, category, spiciness, saltiness, sweetness, price, rating, tags, is_halal, is_vegetarian, is_active, calorie = dish
     tags_list = parse_tags(tags)
     is_sig = 1.0 if '招牌' in tags_list else 0.0
@@ -115,7 +121,7 @@ def encode_dish(dish, user_pref):
     rating_val = float(rating) if rating and float(rating) > 0 else 3.5  # 缺失评分兜底 3.5，与 server.js loadDishData 给前端的值一致（否则 train/serve 特征值不同）
     cal_val = calorie if calorie else '中'
 
-    X = np.zeros(12)
+    X = np.zeros(14)
     X[0] = ORD_MAPPINGS['辣度'].get(spiciness, 1)
     X[1] = ORD_MAPPINGS['咸淡'].get(saltiness, 1)
     X[2] = ORD_MAPPINGS['甜酸'].get(sweetness, 1)
@@ -128,6 +134,9 @@ def encode_dish(dish, user_pref):
     X[9] = ORD_MAPPINGS['甜酸'].get(user_pref['甜酸'], 1)
     X[10] = ORD_MAPPINGS['价格区间'].get(user_pref.get('价格', '无'), 0)
     X[11] = ORD_MAPPINGS['热量'].get(user_pref.get('calorie', '无'), 0)
+    if table_ctx:
+        X[12] = float(table_ctx.get('partySize') or 0)
+        X[13] = float(table_ctx.get('budgetPerPerson') or 0)
     return X, name, is_sig, price_val, rating_val, category
 
 
@@ -186,8 +195,16 @@ def compute_score(X, is_sig, price_val, rating_val, category):
     # ── 菜品评分 rating ──
     rating = (rating_val / 5) * 2.5 if rating_val > 0 else 2.0
 
+    # ── 席面预算适配(2026-11-09 预铺;X[13]=人均预算元值, 0=非席面场景)──
+    # 超人均预算 30% 以内不罚;超出部分按比例线性罚,封顶 4/15(≈27%)。
+    # 席面场景点超预算硬菜是明确业务硬伤;单菜场景(budget=0)完全不受影响。
+    # partySize(X[12])暂不进目标函数——"人数多推大菜"还是假说,等真实席面采纳数据再定规则。
+    budget_penalty = 0.0
+    if X[13] > 0 and price_val > X[13] * 1.3:
+        budget_penalty = min(4.0, (price_val / X[13] - 1.3) * 5.0)
+
     # ── 总分 → matchRate（与 computeDishMatch 的 total/15 同口径;2026-09-19: /14→/15 配合咸淡/热量 exact+3）──
-    total = taste + cuisine + calorie + price + rating
+    total = taste + cuisine + calorie + price + rating - budget_penalty
     match_rate = total / 15.0
     return max(0.1, min(1.0, match_rate))
 
@@ -212,8 +229,16 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
         if rebel:
             up_true['辣度'] = SPICE_SHIFT.get(up['辣度'], up['辣度'])
         for dish in dishes:
+            # 席面上下文(2026-11-09 预铺): ~25% 样本带席面参数(人数/人均预算),其余 0=单菜场景——
+            # 让模型见过 budget>0 的分布;预算规则在 compute_score 里生效
+            table_ctx = None
+            if np.random.random() < 0.25:
+                table_ctx = {
+                    'partySize': int(np.random.randint(2, 13)),
+                    'budgetPerPerson': int(np.random.choice([40, 60, 80, 100, 150])),
+                }
             # 特征：按用户"声明的"偏好编码
-            X, name, is_sig, price_val, rating_val, category = encode_dish(dish, up)
+            X, name, is_sig, price_val, rating_val, category = encode_dish(dish, up, table_ctx)
             if rebel:
                 # 目标：按用户"真实的"口味计算
                 X_true, _, _, _, _, _ = encode_dish(dish, up_true)
@@ -225,7 +250,7 @@ def generate_training_data(dishes, user_profiles, samples_per_dish=1):
             X_list.append(X)
             y_list.append(score)
             for _ in range(samples_per_dish - 1):
-                X_noise = X + np.random.normal(0, 0.008, 12)
+                X_noise = X + np.random.normal(0, 0.008, len(X))
                 X_noise = np.clip(X_noise, 0, None)
                 y_noise = score + np.random.normal(0, 0.008)
                 y_noise = max(0.1, min(1.0, y_noise))
@@ -338,7 +363,7 @@ def main():
             **metrics,
             'real_feedback_count': 0,
             'training_samples': len(X_all),
-            'feature_count': 12,
+            'feature_count': 14,
             'feature_names': FEATURE_NAMES
         }
     }
@@ -354,7 +379,7 @@ def main():
     with open(os.path.join(os.path.dirname(__file__), 'model_metrics.json'), 'w', encoding='utf-8') as f:
         json.dump({
             **metrics,
-            'feature_count': 12,
+            'feature_count': 14,
             'training_samples': len(X_all),
             'real_feedback_count': 0,
             'trained_at': datetime.datetime.now().isoformat(),
@@ -369,7 +394,7 @@ def main():
         'importance': importance,
         'metrics': metrics,
         'training_samples': len(X_all),
-        'feature_count': 12,
+        'feature_count': 14,
     }
     print(json.dumps(result, ensure_ascii=False))
 

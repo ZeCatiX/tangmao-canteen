@@ -437,6 +437,10 @@ function fallbackScore(dish, prefs) {
   if (prefs['辣度'] && prefs['辣度'] !== '无') s += (dish.spiciness === prefs['辣度'] ? 0.5 : -0.15);
   if (Array.isArray(dish.tags) && dish.tags.includes('招牌')) s += 0.5;
   s += Math.min(Number(dish.order_count) || 0, 50) / 100;
+  // 席面预算惩罚(2026-11-09 与训练目标 compute_score 同款规则): 超人均预算30%以上线性罚,
+  // 封顶1.33分(=目标函数 4.0/15×5 的同比例换算); budget=0(单菜场景)不受影响
+  const bud = Number(prefs.budgetPerPerson) || 0;
+  if (bud > 0 && price > bud * 1.3) s -= Math.min(1.33, (price / bud - 1.3) * 1.67);
   return Math.round(s * 100) / 100;
 }
 
@@ -469,6 +473,10 @@ function buildTableUserPrefs(params, profile) {
     '价格区间': band,
     '饮食_宗教': explicit(params.religion, PREF_VOCABS.religion, ['无', '无特殊要求']) || pick(profile.religion, PREF_VOCABS.religion, '无特殊要求'),
     '热量': explicit(params.calorie, PREF_VOCABS.calorie) || pick(profile.calorie, PREF_VOCABS.calorie, '无'),
+    // 席面上下文(2026-11-09 飞轮第3步预铺): worker 14 维模型用这两列打分, 12 维旧模型自动忽略;
+    // 单菜推荐链路的 userPrefs 不含这两个字段(worker 缺省 0=中性)
+    partySize: Number(params.partySize) || 0,
+    budgetPerPerson: budget,
   };
 }
 
