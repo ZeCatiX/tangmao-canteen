@@ -359,7 +359,6 @@ var TangCatIntro = (function () {
         s = Math.sin(a0);
       const px = CX + LRAD * c,
         py = CY + LRAD * s;
-      const isUser = n.indexOf('用户') === 0;
       const t = el(g.labelLayer, 'text', {
         x: px.toFixed(1),
         y: (py + (s < -0.5 ? -4 : s > 0.5 ? 14 : 5)).toFixed(1),
