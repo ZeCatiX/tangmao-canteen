@@ -918,36 +918,50 @@
   </div>
 
 <script>
+// 统一切页入口（2026-11-08 架构梳理: 原[data-page]委托与预警横幅委托两处复制且行为漂移——
+// 导航版有各页数据加载, 横幅版有回顶+反馈过滤联动; 收口为单一函数, 两处调用同一实现）
+function showAdminPage(pageId, opts) {
+  opts = opts || {};
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById(pageId);
+  if (!target) return;
+  target.classList.add('active');
+  const navKey = pageId.replace('page-', '');
+  document.querySelectorAll('[data-page]').forEach(l => l.classList.toggle('active', l.dataset.page === navKey));
+  window.scrollTo({ top: 0, behavior: opts.smoothScroll ? 'smooth' : 'auto' });
+  // 各页进入时加载对应数据
+  if (navKey === 'analytics') {
+    setTimeout(() => { loadDailyTrend(); loadAnalyticsPrefs(); loadUserActivity(); loadRecommendationLog(); loadRecommendationStats(); loadWorstDishes(); }, 200);
+  }
+  if (navKey === 'model') {
+    setTimeout(() => { loadModelManagement(); loadModelCompare(); }, 100);
+  }
+  if (navKey === 'users') {
+    setTimeout(function () { loadUsers(); if (typeof loadUserSegments === 'function') loadUserSegments(); }, 100);
+  }
+  if (navKey === 'orders') {
+    setTimeout(() => { if (typeof loadAdminOrders === 'function') loadAdminOrders(); }, 100);
+  }
+  if (navKey === 'tables') {
+    setTimeout(() => { if (typeof loadTables === 'function') loadTables(); }, 100);
+  }
+  if (navKey === 'report') {
+    // 营业日报：进入 tab 时默认查今天（若无值先填今天）
+    const inp = document.getElementById('report-date');
+    if (inp && !inp.value) { const d = new Date(); inp.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+    setTimeout(() => { if (typeof loadDailyReport === 'function') loadDailyReport(inp ? inp.value : localToday()); }, 100);
+  }
+  if (navKey === 'feedback' && opts.dishFilter) {
+    // 预警横幅跳转联动：自动按菜过滤反馈明细
+    const fi = document.getElementById('feedback-filter-input');
+    if (fi) fi.value = opts.dishFilter;
+    setTimeout(() => { if (typeof loadFeedback === 'function') loadFeedback(opts.dishFilter); }, 100);
+  }
+}
 document.querySelectorAll('[data-page]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const target = document.getElementById('page-' + a.dataset.page);
-    if (target) target.classList.add('active');
-    document.querySelectorAll('[data-page]').forEach(l => l.classList.remove('active'));
-    a.classList.add('active');
-    // 管理员点击导航时加载对应页面数据
-    if (a.dataset.page === 'analytics') {
-      setTimeout(() => { loadDailyTrend(); loadAnalyticsPrefs(); loadUserActivity(); loadRecommendationLog(); loadRecommendationStats(); loadWorstDishes(); }, 200);
-    }
-    if (a.dataset.page === 'model') {
-      setTimeout(() => { loadModelManagement(); loadModelCompare(); }, 100);
-    }
-    if (a.dataset.page === 'users') {
-      setTimeout(function () { loadUsers(); if (typeof loadUserSegments === 'function') loadUserSegments(); }, 100);
-    }
-    if (a.dataset.page === 'orders') {
-      setTimeout(() => { if (typeof loadAdminOrders === 'function') loadAdminOrders(); }, 100);
-    }
-    if (a.dataset.page === 'tables') {
-      setTimeout(() => { if (typeof loadTables === 'function') loadTables(); }, 100);
-    }
-    if (a.dataset.page === 'report') {
-      // 营业日报：进入 tab 时默认查今天（若无值先填今天）
-      const inp = document.getElementById('report-date');
-      if (inp && !inp.value) { const d = new Date(); inp.value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
-      setTimeout(() => { if (typeof loadDailyReport === 'function') loadDailyReport(inp ? inp.value : localToday()); }, 100);
-    }
+    showAdminPage('page-' + a.dataset.page);
   });
 });
 
@@ -1834,26 +1848,14 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
   });
   window.scrollToTop=()=>window.scrollTo({top:0,behavior:'smooth'});
 
-  // 预警横幅点击(2026-11-08): 内部链接=切页(admin无showSection, 照[data-page]委托的核心逻辑内联), 带 dishName 时跳反馈页并服务端按菜过滤
+  // 预警横幅点击(2026-11-08): 内部链接走统一切页 showAdminPage, 带 dishName 时跳反馈页并自动按菜过滤
   document.getElementById('notification-bar').addEventListener('click', function (e) {
     const card = e.target.closest('[data-goto]');
     if (!card) return;
     const link = card.getAttribute('data-goto');
     const dish = card.getAttribute('data-dish') || '';
     if (link.startsWith('#page-')) {
-      const pageId = link.slice(1);
-      document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
-      const target = document.getElementById(pageId);
-      if (target) target.classList.add('active');
-      document.querySelectorAll('[data-page]').forEach(function (l) { l.classList.remove('active'); });
-      const nav = document.querySelector('[data-page="' + pageId.replace('page-', '') + '"]');
-      if (nav) nav.classList.add('active');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (pageId === 'page-feedback') {
-        const filterInput = document.getElementById('feedback-filter-input');
-        if (filterInput) filterInput.value = dish;
-        setTimeout(function () { if (typeof loadFeedback === 'function') loadFeedback(dish); }, 100);
-      }
+      showAdminPage(link.slice(1), { dishFilter: dish, smoothScroll: true });
     } else if (link.startsWith('/')) {
       location.href = link;
     }
