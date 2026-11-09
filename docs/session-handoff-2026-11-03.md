@@ -110,3 +110,13 @@
 - **深色模式进度条核查**：金红渐变+中灰辅助色在深色卡上可读 ✓
 - **admin 拆分待办（未做，挂起）**：admin.html 2214 行巨石（内联 4 script 块）拆出 js/admin-core.js 的专项曾做一半（11-08 晚提取+GUI 验证通过）但未提交，11-09 排查中 git checkout 回滚丢失。重做步骤与坑全记录在本文件"席面函数分布"排查段——挂起原因：巨石版功能完整且三轮 GUI 全绿，拆分属架构优化非功能修复
 - **IAB 输入层丢事件五度呈现**：本环境真实鼠标事件偶发不触发 DOM click（el.click() 合成与真 Chrome 均正常）——关键浏览器级验证一律用 puppeteer 真 Chrome
+
+## 十四、admin 拆分专项落地（2026-11-09 晚，dev `e714e01` / master `7958c0c`）——十三节挂起项清零
+
+- **拆分结构**：admin.html 2214→933 行纯结构；四个内联 script 块按原执行顺序提取为 **js/admin-core.js 1284 行**（按需加载器→主逻辑 showAdminPage/全部 load*/CRUD→桌码QR→营业日报）。提取走 node 脚本按行号切片+边界哨兵，等价性逐行校验（原四块 vs 新文件反向重组）四块全等
+- **三条关键决策**：① esc 双份消重**保留 String 强转版**（原块4）——同层级 function 声明后者覆盖，页面运行时实际生效的一直是它，保留块1 的"非字符串透传"版才是行为变化；② admin-core.js 必须是**普通同步 `<script src>`**（body 尾）——内联 onclick（toggleSoldOut/editDish/exportCSV 等九个）依赖顶层 function 全局作用域，禁改 module/IIFE；③ 不进 build.js 合并链（那是 index 顾客端），缓存版本 `?v=20261109a` 手工维护
+- **顺手修正**：`</html>` 后游离的 `<style>`（user-table 对比度）与两个 script 块归位 body 内；768px 断点过时断言（11-09 第三轮改 767.98px 未同步测试）修为 767.98px——该条在 master HEAD 即挂，属既有挂账顺手清
+- **测试同步 21 处（5 文件）**：comprehensive_e2e 8 处、comprehensive_ui_e2e 11 处、regression_fixes 3 处、deep_audit_e2e 走 **readAdmin() 拼接读法**（admin.html+admin-core.js = 拆分前"HTML+内联JS"审计范围超集，47 处批量替换）；两个例外：div 平衡等纯 HTML 断言单读 admin.html（剥 script 语义），deleteUser 函数体提取单读 admin-core.js（拼接会让 900 字符窗口伸进相邻 exportCSV 误命中"导出失败"）
+- **验证链全绿**：node --check 语法 ✓｜runtime 深度检查 9/9（真 Chrome 登录+全 load 函数调用零 JS 错误）｜expired_token+layout_probe 5/5｜GUI 实操五项（日报渲染 1467 字符/桌码 QR 3 张/Chart.js 按需加载 3 canvas/内联 onclick 118 个/零页面错误）｜npm test 117/117｜CI 推送后见 run 记录
+- **既有挂账（非本次引入，未动）**：`regression_fixes` 的 logo-intro 十二维雷达断言过时（master HEAD 即挂，与拆分无关）；**scrollToTop 在 admin 页未定义**——back-to-top 按钮 onclick 引用它，但定义在 js/core.js 而 admin.html 从未引入 script.js，点击必 ReferenceError（既有行为，修复方案：admin.html 补引或 admin-core.js 补定义，属功能修复另开专项）
+- **教训闭环**：上次（11-08）拆分完成后未提交被 checkout 回滚丢失——本次改完即 commit（e714e01），专项单提交可追溯
