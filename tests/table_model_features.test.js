@@ -37,8 +37,10 @@ const PREF = { '辣度': '微辣', '咸淡': '适中', '甜酸': '偏甜', '价�
 
 describe('席面模型管线预铺(14维)', () => {
   let ok = false;
+  let hasModel = false;
   before(function () {
     ok = probePython();
+    hasModel = require('fs').existsSync(path.join(ROOT, 'recommendation_model.pkl')); // *.pkl 不入库, CI 无模型文件
     if (!ok) {
       console.log('  skip: 本地无 python/numpy/sklearn');
       this.skip();
@@ -110,7 +112,12 @@ print(json.dumps({'X': [float(v) for v in X], 'y': float(y), 'Xp': [float(v) for
     assert.ok(out.y > 0 && out.y <= 1);
   });
 
-  it('predict_worker 双模兼容: 12维模型下带/不带席面参数打分完全一致(行为零变化)', async () => {
+  it('predict_worker 双模兼容: 12维模型下带/不带席面参数打分完全一致(行为零变化)', async function () {
+    if (!hasModel) {
+      console.log('  skip: 无本地模型文件 recommendation_model.pkl(*.pkl 不入库, CI 无模型); 编码/规则三测仍全跑');
+      this.skip();
+      return;
+    }
     // 用真 worker 子进程(pickle 模型=当前线上 12 维)走 stdin 协议
     const dishes = [
       { id: 2071, name: '葫芦鸡', spiciness: '不辣', saltiness: '适中', sweetness: '无', price: '58元', rating: '3.5', tags: ['招牌'], calorie: '高' },
