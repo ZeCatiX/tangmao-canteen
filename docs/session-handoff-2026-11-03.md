@@ -120,3 +120,10 @@
 - **验证链全绿**：node --check 语法 ✓｜runtime 深度检查 9/9（真 Chrome 登录+全 load 函数调用零 JS 错误）｜expired_token+layout_probe 5/5｜GUI 实操五项（日报渲染 1467 字符/桌码 QR 3 张/Chart.js 按需加载 3 canvas/内联 onclick 118 个/零页面错误）｜npm test 117/117｜CI 推送后见 run 记录
 - **既有挂账（非本次引入，未动）**：`regression_fixes` 的 logo-intro 十二维雷达断言过时（master HEAD 即挂，与拆分无关）；**scrollToTop 在 admin 页未定义**——back-to-top 按钮 onclick 引用它，但定义在 js/core.js 而 admin.html 从未引入 script.js，点击必 ReferenceError（既有行为，修复方案：admin.html 补引或 admin-core.js 补定义，属功能修复另开专项）
 - **教训闭环**：上次（11-08）拆分完成后未提交被 checkout 回滚丢失——本次改完即 commit（e714e01），专项单提交可追溯
+
+## 十五、遗留两项修复 + 席面飞轮第 2 步（2026-11-09 深夜，master `600fd56`）
+
+- **scrollToTop 缺口修复**（5528286）：admin-core.js 末尾补定义（与 core.js 同款平滑滚动），back-to-top 点击不再 ReferenceError；runtime_check 函数清单 + regression_fixes 静态断言双回归钉死；admin-core.js 版本号升 `?v=20261109b`
+- **logo-intro 挂账清零**（5528286）：考古确认 `fea604e` 是有意统一标签红字（非回归），测试契约同步为"fill 固定 #b83a2a + font-weight 700"新设计，并删掉 isUser 死变量；`node build.js` 重打包（index 版本自动升）
+- **席面埋点飞轮第 2 步落地**（44dc36a）：日报接口 daily-report 新增 `tableSet` 块——**采纳率为会话级口径**（当日发生任一采纳事件的 show 会话数 / 当日 show 数；show 与采纳可能跨日，各按事件发生日归入）、热门组合 TOP3（按 setKey+dishIds 聚合、回链 show 行 sets 取 style/菜名/总价）、热门单菜 TOP5；日报页新增"席面采纳"卡（统计五项+组合清单+单菜热门，空态文案）；无 show 日 rate=null 不显示误导性 0%。回归 `tests/table_set_stats.test.js` 三例（统计正确/错 nonce 不落行/空数据日）纳入 test:all 候选
+- **第 3 步席面模型**（partySize/budgetPerPerson 进 14 维特征）数据链路已就绪，尚未启动
