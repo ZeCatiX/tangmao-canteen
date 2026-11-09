@@ -9,7 +9,7 @@
     "build": "node build.js",
     "test": "node --test tests/api.test.js",
     "posttest": "node scripts/cleanup_test_orders.js && node scripts/cleanup_test_dishes.js",
-    "test:all": "node --test --test-concurrency=2 tests/api.test.js tests/e2e.test.js tests/comprehensive_e2e.test.js tests/enhanced_e2e.test.js tests/admin_auth_test.js tests/gift_append.test.js tests/trust_proxy_e2e.test.js tests/stock_tables.test.js tests/points_report.test.js tests/admin_expired_token.test.js tests/retrain_implicit.test.js tests/table_recommend_edge.test.js tests/table_recommend_blacklist.test.js tests/offline_cache.test.js tests/table_set_log.test.js",
+    "test:all": "node --test --test-concurrency=2 tests/api.test.js tests/e2e.test.js tests/comprehensive_e2e.test.js tests/enhanced_e2e.test.js tests/admin_auth_test.js tests/gift_append.test.js tests/trust_proxy_e2e.test.js tests/stock_tables.test.js tests/points_report.test.js tests/admin_expired_token.test.js tests/retrain_implicit.test.js tests/table_recommend_edge.test.js tests/table_recommend_blacklist.test.js tests/offline_cache.test.js tests/table_set_log.test.js tests/table_set_stats.test.js",
     "posttest:all": "node scripts/cleanup_test_orders.js && node scripts/cleanup_test_dishes.js",
     "test:watch": "node --test --watch tests/api.test.js",
     "test:e2e": "node --test tests/e2e.test.js",
