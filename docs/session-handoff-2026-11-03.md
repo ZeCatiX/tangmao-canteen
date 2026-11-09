@@ -99,3 +99,14 @@
 - **🟢 盲盒枯竭契约**：候选全被排除时 `selectBlindBoxDish` 返回 null（调用方 `if (blind)` 已保护），正常数据返回盲盒菜——evaluate 钉死双面契约
 - **🟢 席面组合层边角**：`tests/table_recommend_edge.test.js` 四例——招牌池全空（拉黑/售罄后）席面降级不崩、忌口拉满四池枯竭空席面、partySize=1 简餐模式、quotasFor 自动缩池。组合层本就健壮（quotasFor min 缩池），钉死防重构回退
 - **测试侧教训**：body.innerText 对 display:none 区不含文本（菜单 section 未激活时"菜单未见"≠未渲染，要查 DOM 行数）；`buildPools` 返回 `{pools, excluded}` 包装；psycopg2 取 jsonb `'{}'` 是空 dict 非字符串
+
+## 十三、2026-11-09 第三轮真实点击全面检查（纯验证轮+两项优化，master `3e69432`）
+
+- **席面拉黑排除缺口修复**（b096f88）：服务端 getBlacklistedIds + 席面排除 + 拉黑标注四处 + 503 文案涵盖拉黑——API/GUI 双验证
+- **拉黑 API 增量模式**（3e69432）：mode=add/remove 用 PG array_cat/array_remove 单语句原子更新（消除双设备并发丢名单窗口），缺省 set 向后兼容；登录限流文案加"约 1 分钟后"
+- **席面埋点飞轮验证**：bl_tes_1106 GUI 全链（生成席面→逐菜加购→整桌加购）→ table_set_log 三行闭环（show/adopt_set/adopt_dish）
+- **排版根因修复**（0680f52）：app-wrap flex→block（main 塌缩 454px→满宽 1045px）+ 预警横幅挪入 dashboard 页内 + 768 断点冲突改 767.98px
+- **布局探针**（tests/admin_layout_probe.test.js）：3 视口×12 页水平溢出+超界元素自动检测，纳入 test:all
+- **深色模式进度条核查**：金红渐变+中灰辅助色在深色卡上可读 ✓
+- **admin 拆分待办（未做，挂起）**：admin.html 2214 行巨石（内联 4 script 块）拆出 js/admin-core.js 的专项曾做一半（11-08 晚提取+GUI 验证通过）但未提交，11-09 排查中 git checkout 回滚丢失。重做步骤与坑全记录在本文件"席面函数分布"排查段——挂起原因：巨石版功能完整且三轮 GUI 全绿，拆分属架构优化非功能修复
+- **IAB 输入层丢事件五度呈现**：本环境真实鼠标事件偶发不触发 DOM click（el.click() 合成与真 Chrome 均正常）——关键浏览器级验证一律用 puppeteer 真 Chrome
