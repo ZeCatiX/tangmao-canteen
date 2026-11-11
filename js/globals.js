@@ -466,6 +466,7 @@ var UI_STR = {
   home_bill: ['本桌账单', 'Table Bill'],
   login: ['登录', 'Sign In'],
   register: ['注册', 'Register'],
+  logout: ['退出登录', 'Logout'],
   table_none: ['未选择桌号', 'No table yet'],
   table_pick: ['选择桌号', 'Pick a Table'],
   table_change: ['更换', 'Change'],

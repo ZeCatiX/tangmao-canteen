@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', function () {
   if (savedUser && getUserData(savedUser)) {
     currentUser = savedUser;
   }
+  // 启动时按 token 实况统一认证态(登录态显示首页退出按钮/隐藏登录注册, 2026-11-11)
+  if (typeof updateNavAuthState === 'function') {
+    updateNavAuthState();
+  }
   // 常客记忆欢迎条(2026-11-02 对标商龙VIP到店关怀): 登录回头客→光临次数+上次点过的菜+再来一单
   (function () {
     const card = document.getElementById('welcome-back-card');
@@ -583,6 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
   click('cancel-blacklist-btn', cancelBlacklist);
   click('delete-account-btn', deleteAccount);
   click('profile-logout-btn', logout);
+  click('logout-home-btn', logout); // 首页退出登录按钮(2026-11-11 认证态双向化新增)
   click('back-to-preference', () => showSection('preference-section'));
   // 模态框隐藏前移出焦点：焦点留在弹窗内时隐藏会触发 aria-hidden 无障碍警告(Blocked aria-hidden)
   // Bootstrap 5 的 hide.bs.modal 事件会冒泡,document 级监听一次覆盖全站所有弹窗(提示框/选桌号/账单等)
