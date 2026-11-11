@@ -949,6 +949,10 @@ function login() {
         if (window.updateHomeButtons) {
           window.updateHomeButtons();
         }
+        // 登录成功即拉常客欢迎卡(2026-11-11: 此前只页面加载时拉一次, 登录后需刷新才见)
+        if (typeof window.refreshWelcomeCard === 'function') {
+          window.refreshWelcomeCard();
+        }
         showSection('preference-section');
         if (d.user?.preferences) {
           loadUserPreferences(d.user.preferences);
@@ -1086,6 +1090,10 @@ function register() {
         updateNavAuthState();
         if (window.updateHomeButtons) {
           window.updateHomeButtons();
+        }
+        // 注册成功即拉常客欢迎卡(新用户通常无历史订单, 调用为一致性; 2026-11-11)
+        if (typeof window.refreshWelcomeCard === 'function') {
+          window.refreshWelcomeCard();
         }
         showSection('preference-section');
       });
