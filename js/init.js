@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function () {
     updateNavAuthState();
   }
   // 常客记忆欢迎条(2026-11-02 对标商龙VIP到店关怀): 登录回头客→光临次数+上次点过的菜+再来一单
-  (function () {
+  // 2026-11-11: 提取为全局 refreshWelcomeCard()——登录/注册成功回调也调用(此前只页面加载时拉一次, 登录后需刷新才见欢迎条)
+  function refreshWelcomeCard() {
     const card = document.getElementById('welcome-back-card');
     if (!card) return;
     const token = localStorage.getItem('userToken');
@@ -58,7 +59,9 @@ document.addEventListener('DOMContentLoaded', function () {
         };
       })
       .catch(function () {});
-  })();
+  }
+  window.refreshWelcomeCard = refreshWelcomeCard; // 暴露全局(函数声明在 DOMContentLoaded 回调作用域内, 须手动挂载): core.js 登录/注册成功回调跨作用域调用(2026-11-11)
+  refreshWelcomeCard();
   // 恢复登录态 UI：导航"我的"显示/登录入口隐藏 + 首页登录/注册按钮隐藏（此前只覆盖登录动作瞬间，刷新后按钮复活）
   if (currentUser && savedUser) {
     const pi = document.getElementById('nav-profile-item'),
