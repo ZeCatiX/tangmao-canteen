@@ -115,10 +115,10 @@ describe('显示修复回归', () => {
     assert.ok(!s.includes("icon: '?'"), '不应残留 ? 占位符');
   });
 
-  it('admin back-to-top 的 scrollToTop 已在 js/admin-core.js 定义(2026-11-09 修复: 此前 admin 从未引入 script.js,点击必 ReferenceError)', () => {
+  it('admin back-to-top 的 scrollToTop 单一定义(2026-11-11 勘误: 09 日补定义系误判——拆分原文 L947 本有 window.scrollToTop 箭头函数, 当时的 grep 行首锚定漏检; 现钉死单一箭头定义防重复)', () => {
     const s = read('js/admin-core.js');
-    assert.ok(s.includes('function scrollToTop()'), 'admin-core.js 应有 scrollToTop 定义');
-    assert.ok(s.includes("window.scrollTo({ top: 0, behavior: 'smooth' })"), '应为平滑滚动实现');
+    assert.ok(s.includes("window.scrollToTop=()=>window.scrollTo({top:0,behavior:'smooth'})"), '应有 scrollToTop 箭头函数定义(平滑滚动)');
+    assert.ok(!s.includes('function scrollToTop()'), '不应再残留重复的 function 声明版(两实现相同, 冗余定义清掉)');
     const html = read('admin.html');
     assert.ok(html.includes('onclick="scrollToTop()"'), 'back-to-top 按钮应保留内联 onclick');
     assert.ok(html.includes('js/admin-core.js?v='), 'admin-core.js 引用应带缓存版本号');
