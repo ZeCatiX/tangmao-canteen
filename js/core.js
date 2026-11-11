@@ -805,22 +805,33 @@ function updateModeDisplay() {
 
 // 登录/注册成功后的导航栏认证态切换(2026-10-27: 从弹窗"确定"回调提前到 API 成功时——
 // 用户点 X 关闭弹窗曾跳过回调,导航停留在"登录"态而实际已登录)
+// 2026-11-11 双向化: 原单向只管"登录后隐藏", 无未登录恢复分支且漏首页退出按钮——
+// 登录态首页却挂着登录/注册按钮的不一致(绕过 UI 表单的登录态恢复场景必现), 以 userToken 实况统一切换
 function updateNavAuthState() {
+  const logged = !!localStorage.getItem('userToken');
   const pi = document.getElementById('nav-profile-item'),
-    nu = document.getElementById('nav-user');
-  if (pi) {
-    pi.classList.remove('d-none');
-  }
-  if (nu) {
-    nu.classList.add('d-none');
-  }
-  const hlb = document.getElementById('login-btn'),
-    hrb = document.getElementById('register-btn');
-  if (hlb) {
-    hlb.classList.add('d-none');
-  }
-  if (hrb) {
-    hrb.classList.add('d-none');
+    nu = document.getElementById('nav-user'),
+    hlb = document.getElementById('login-btn'),
+    hrb = document.getElementById('register-btn'),
+    lob = document.getElementById('logout-home-btn');
+  const show = (el) => {
+    if (el) el.classList.remove('d-none');
+  };
+  const hide = (el) => {
+    if (el) el.classList.add('d-none');
+  };
+  if (logged) {
+    show(pi);
+    hide(nu);
+    hide(hlb);
+    hide(hrb);
+    show(lob);
+  } else {
+    hide(pi);
+    show(nu);
+    show(hlb);
+    show(hrb);
+    hide(lob);
   }
 }
 
@@ -1579,21 +1590,12 @@ function logout() {
     resetPreferenceForm();
   }
   resetRecommendation();
-  const pi = document.getElementById('nav-profile-item'),
-    nu = document.getElementById('nav-user');
-  if (pi) {
-    pi.classList.add('d-none');
-  }
-  if (nu) {
-    nu.classList.remove('d-none');
-  }
-  const hlb = document.getElementById('login-btn'),
-    hrb = document.getElementById('register-btn');
-  if (hlb) {
-    hlb.classList.remove('d-none');
-  }
-  if (hrb) {
-    hrb.classList.remove('d-none');
+  // 未登录态恢复统一走 updateNavAuthState(含首页退出按钮, 2026-11-11)
+  updateNavAuthState();
+  // 常客欢迎卡属登录态 UI, 退出即隐藏(否则残留到下次刷新)
+  const wbCard = document.getElementById('welcome-back-card');
+  if (wbCard) {
+    wbCard.style.display = 'none';
   }
   const vcbG = document.getElementById('view-cached-btn');
   if (vcbG) {
