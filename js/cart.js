@@ -880,19 +880,29 @@ function rebuildEndView() {
     }, 150);
   }
   // 积分提示(2026-11-02 对标商龙会员域): 登录用户在完成页显示当前积分(订单完成时已按 1元=1分 入账)
+  // 2026-11-11 健壮性: 结算瞬间的请求偶发失败(此前 catch 静默吞掉导致积分行不显示)——失败重试两次
   const endPoints = document.getElementById('end-points-line');
   if (endPoints) {
     const token = localStorage.getItem('userToken');
     if (token) {
-      safeFetch('/api/user/points', { headers: { Authorization: 'Bearer ' + token } })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.success) {
-            endPoints.textContent = '🎁 当前积分 ' + d.points;
-            endPoints.style.display = '';
-          }
-        })
-        .catch(() => {});
+      const loadEndPoints = (attempt) => {
+        safeFetch('/api/user/points', { headers: { Authorization: 'Bearer ' + token } })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success) {
+              endPoints.textContent = '🎁 当前积分 ' + d.points;
+              endPoints.style.display = '';
+            } else if (attempt < 2) {
+              setTimeout(() => loadEndPoints(attempt + 1), 900);
+            }
+          })
+          .catch(() => {
+            if (attempt < 2) {
+              setTimeout(() => loadEndPoints(attempt + 1), 900);
+            }
+          });
+      };
+      loadEndPoints(0);
     }
   }
   showSection('end-section');
@@ -1252,6 +1262,32 @@ async function checkoutCart() {
           clo2.style.display = 'none';
         }
         showSection('end-section');
+        // 积分行(2026-11-11 修复: 积分段此前只在 rebuildEndView(回看/赠菜路径), 主结算完成页从未显示——
+        // 登录用户完成页显示当前积分(pending 单为下完成后入账前的当前值, 属正确业务))
+        const endPoints = document.getElementById('end-points-line');
+        if (endPoints) {
+          const token = localStorage.getItem('userToken');
+          if (token) {
+            const loadEndPoints = (attempt) => {
+              safeFetch('/api/user/points', { headers: { Authorization: 'Bearer ' + token } })
+                .then((r) => r.json())
+                .then((d) => {
+                  if (d.success) {
+                    endPoints.textContent = '🎁 当前积分 ' + d.points;
+                    endPoints.style.display = '';
+                  } else if (attempt < 2) {
+                    setTimeout(() => loadEndPoints(attempt + 1), 900);
+                  }
+                })
+                .catch(() => {
+                  if (attempt < 2) {
+                    setTimeout(() => loadEndPoints(attempt + 1), 900);
+                  }
+                });
+            };
+            loadEndPoints(0);
+          }
+        }
         if (isAI) {
           setTimeout(() => {
             displayModelMetrics();
