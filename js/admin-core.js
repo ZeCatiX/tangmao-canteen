@@ -1294,10 +1294,3 @@ document.getElementById('report-load-btn').addEventListener('click',function(){
   const v=document.getElementById('report-date').value;
   if(v)loadDailyReport(v);else showToast('请选择日期','warning');
 });
-
-// ═══ 回到顶部(back-to-top 内联 onclick 依赖)═══
-// admin.html 从未引入 script.js(顾客端打包产物),back-to-top 按钮的 onclick="scrollToTop()"
-// 此前在后台页必然 ReferenceError——2026-11-09 补定义,实现与 js/core.js 同款平滑滚动
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
