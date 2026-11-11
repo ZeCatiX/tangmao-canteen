@@ -140,3 +140,11 @@
 - **全绿结论**：npm test 117/117 + test:all 330/330(含行为级并行套件) + admin 运行时检查/布局探针 12/12 + 自写端到端冒烟 12/12(顾客端渲染/回到顶部/席面生成含 worker 打分/采纳上报/伪造 nonce 拒绝/admin 登录/日报席面卡真实埋点/8 页统一切页含 2 秒稳态检查/下单 POST /api/order/厨房 pending 可见)+ 服务 error 日志干净 + 静态架构核对(onclick 引用闭合 51 函数/幽灵 id 零/script.js 新鲜且含最新特征/admin-core 不泄漏进顾客端打包)
 - **唯一实锤瑕疵并已修**：scrollToTop"缺口修复"勘误——拆分原文 L947 本有 `window.scrollToTop=` 箭头函数(11-09 修复时的 grep 行首锚定漏检该形式,误判为未定义并追加了重复的 function 声明;两实现相同故无行为影响)。已删重复定义保留原文箭头版,回归断言改为钉死单一定义(admin-core.js ?v=20261109d)
 - **测试侧教训**：自写冒烟脚本三处契约误用浪费三轮——①showAdminPage 契约是**直收完整页面 id**(横幅 link.slice(1) 同款),不是"内部拼前缀";②fetch 拦截器只给 /api/admin/ 注 token,/api/orders 要手动带头;③席面 API 响应 sets 元素是完整 dishes 数组(dishIds 只存在于 table_set_log 存储格式)。另:两段式 evaluate(切页+sleep+查 active)会被窗口期假象坑,断言要用原子 evaluate
+
+## 十八、第四轮真实点击全量检查(2026-11-11,38 项全绿+两回归归档)
+
+- **覆盖**:顾客端 19 项(intro/菜单 108 卡/分类过滤/搜索/详情层加购/席面全链 6 步[入口→桌号选择器→配置→三套结果→整桌加购 24 件]/购物车数量+/结算下单/EN/深色/回顶/零 pageerror)+ admin/kitchen 19 项(登录/12 页逐页切换/菜品列表 117 行/编辑弹窗开合/日报查询含席面采纳卡/桌码 QR 生成/分析 canvas/反馈页/深色/kitchen 登录/新单出现/完成按钮 3 秒确认窗两段式/零 pageerror)——**38/38 全绿**
+- **环境结论(十三节升级)**:本机输入层真实鼠标事件丢事件在 **puppeteer 真 Chrome 也复现**(mouse.click 坐标点击无效、el.click() 合成正常)——"本机环境"限制而非"IAB 特有"。真实点击检查的正确形态=真 Chrome+合成点击+真实键入(page.type 不受影响)
+- **产品行为确认(均非 bug)**:①席面入口未锁桌时**先弹桌号选择器**(选桌后才进配置页)②估清限购拦购物车 plus(备量买满即拒绝+弹"今日备量有限")③详情入口是卡片**标题 h6 的行内 onclick** 非整卡 ④headless 无 GPU 下 intro rAF 节流不自动结束,点击跳过正常 ⑤kitchen 完成单进"今日已完成"折叠区(默认收起)
+- **回归沉淀**:tests/rt4_customer_clicks.test.js + tests/rt4_admin_kitchen_clicks.test.js(各 19 项,node:test 包装,不进 test:all——CI 无 Chrome;本地 `node --test tests/rt4_*.test.js`)。补齐空白:席面 GUI 全链/桌码生成/kitchen 完成确认窗此前无 GUI 级回归
+- **脚本教训**:python str.replace 不命中是**静默的**——三轮"25→25"假象耗了五轮排查,根因是补丁锚点不匹配断言从未真正更新。批量改脚本必须逐处断言命中(assert old in s)
