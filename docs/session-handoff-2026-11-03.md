@@ -148,3 +148,11 @@
 - **产品行为确认(均非 bug)**:①席面入口未锁桌时**先弹桌号选择器**(选桌后才进配置页)②估清限购拦购物车 plus(备量买满即拒绝+弹"今日备量有限")③详情入口是卡片**标题 h6 的行内 onclick** 非整卡 ④headless 无 GPU 下 intro rAF 节流不自动结束,点击跳过正常 ⑤kitchen 完成单进"今日已完成"折叠区(默认收起)
 - **回归沉淀**:tests/rt4_customer_clicks.test.js + tests/rt4_admin_kitchen_clicks.test.js(各 19 项,node:test 包装,不进 test:all——CI 无 Chrome;本地 `node --test tests/rt4_*.test.js`)。补齐空白:席面 GUI 全链/桌码生成/kitchen 完成确认窗此前无 GUI 级回归
 - **脚本教训**:python str.replace 不命中是**静默的**——三轮"25→25"假象耗了五轮排查,根因是补丁锚点不匹配断言从未真正更新。批量改脚本必须逐处断言命中(assert old in s)
+
+## 十九、第五轮真实点击检查:用户生命周期/深操作/移动端(2026-11-11,33 项全绿+三回归归档)
+
+- **A 用户生命周期 13 项**(`tests/rt5_user_lifecycle.test.js`):注册(隐私政策勾选框必勾!)→ 自动进偏好页 → 偏好提交 → 个性化推荐 → 推荐卡收藏(addToFavorites)→ 档案收藏列表 → **结算→桌号选择器→选桌→真实下单(登录单含订单号)** → 积分链路(API 层)→ 完成页星级评分 → 推荐历史 → 退出。**零 pageerror**
+- **B admin 深操作 8 项**(`tests/rt5_admin_deep.test.js`):用户搜索真实键入命中/toggle 行按钮清点/订单页 100 行/桌态页/模型管理指标/API 文档页/删除流程(confirm 自动接受)。**零 pageerror**。注:用户删除=toggle 软删语义(非物理删,专项 API 测试已覆盖)
+- **C 移动端 375px+桌码 12 项**(`tests/rt5_mobile_tableqr.test.js`):**桌码扫码真实功能=本桌账单查询**(签名 URL 是 /api/table-view API,补零两位桌号;伪造签名 403 拒绝)→ 移动端 108 卡 → 汉堡展开 → 席面入口选桌 → 三套渲染 → 锁桌一键结算 → **催菜按钮"10 分钟后可催"门槛提示**(刚下单不可催=正确业务)→ 汉堡内 EN。**零 pageerror**
+- **产品逻辑确认(新)**:①注册表单有**隐私政策勾选框**,未勾选本地校验直接拒(API 不发)②checkoutCart **只读 lockedTable(sessionStorage)**,cart-table-number input 仅展示——脚本直改 input 无效,须走桌号选择器 ③积分入账在**订单完成时**(pending 单查 0 分属正确)④收藏列表渲染在 showProfile()(showSection 直调不渲染数据)⑤requestSubmit 会被表单原生 required 校验拦截,测试脚本用 dispatchEvent 直达 handler
+- 第五轮总计 **33/33**;加上第四轮 38 项,两轮真实点击检查共 **71 项全绿**。五份 GUI 回归归档(rt4_×2 + rt5_×3,均本地专项不进 test:all)
