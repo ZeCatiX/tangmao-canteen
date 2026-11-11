@@ -128,3 +128,9 @@
 - **席面埋点飞轮第 2 步落地**（44dc36a）：日报接口 daily-report 新增 `tableSet` 块——**采纳率为会话级口径**（当日发生任一采纳事件的 show 会话数 / 当日 show 数；show 与采纳可能跨日，各按事件发生日归入）、热门组合 TOP3（按 setKey+dishIds 聚合、回链 show 行 sets 取 style/菜名/总价）、热门单菜 TOP5；日报页新增"席面采纳"卡（统计五项+组合清单+单菜热门，空态文案）；无 show 日 rate=null 不显示误导性 0%。回归 `tests/table_set_stats.test.js` 三例（统计正确/错 nonce 不落行/空数据日）纳入 test:all 候选
 - **第 3 步席面模型管线预铺完成**（9e0da2d / master `77f09bf`，2026-11-09 深夜）：特征 12→14 维（+席面人数/人均预算）三端对齐——train 的 encode_dish/compute_score 加预算规则（超人均预算 30% 以上线性罚封顶 4/15，budget=0 单菜场景零影响，partySize 纯占位等真实数据定规则）+25% 席面上下文样本流；predict_worker 按 `model.n_features_in_` 双模分流（**线上 12 维 pkl 行为零变化**，回归里有打分一致性铁证断言；下次重训 14 维自动生效）；retrain 同步+_align_features 维度自适应；fallbackScore 同款预算惩罚（train/serve 一致）；cleanup_production_data 加 `--purge-table-set-log`（上线清洗补缺口：席面埋点全清）。回归 `tests/table_model_features.test.js` 四例纳入 test:all。**未执行任何重训，线上模型不动**——真实席面数据积累后重训即启用；席面样本取数实现（load_table_samples）有意不写，避免对着测试埋点写死标签口径（挂点注释在 retrain_from_feedback.py）
 - **⚠️ CI fixture 重要知识点（三轮 CI 红复盘）**：ci.yml 的 "Train model (CI fixture)" 步骤**每次 push 都用当前代码真训练一个模型**——14 维化后 CI fixture 自动带预算规则，与本地线上 12 维 pkl 从此分叉。推论：①"行为零变化"断言只在本地 12 维模型上成立，CI 上 14 维 fixture 打分必然随席面参数变化（=管线工作的证据，不是回归）；②worker 双模回归必须按 `n_features_in_` 双分支断言（12 维=打分 bit 级一致铁证 / 14 维=超预算贵菜不升分）；③`*.pkl` 不入库，worker 起进程的测试要探测模型文件缺失时 skip。三轮红根因依次：worker 起不来（CI 无 pkl）→ skip 后仍红（fixture 是 14 维打分变了）→ 双分支断言后全绿（run `42617703884`，同时完整验证 14 维训练管线干净环境端到端可跑）
+
+## 十六、灰度上线 Runbook 固化（2026-11-11，`docs/go-live-runbook.md`）
+
+- 把散落在本文档各节的上线流程固化成独立可执行手册：备份 → 清洗（三开关+2026-11-11 实测基线数字）→ 清洗后验证 → .env 安全五项（**首条=删除本地 ORDER_FREQ_LIMIT=100000 放宽值**）→ 灰度冒烟清单（含 3 秒确认窗/IAB 丢事件等已知行为）→ 灰度后飞轮动作（真实数据→席面取数实现→重训 14 维自动生效）→ 回滚预案 → 维护速查
+- 素材来源：本文档八/十/十三/十四/十五节 + scripts 实测；后续上线动作以 runbook 为准，本文档只作历史背景
+- 另：worktree 里 build.js 自动升级的 index.html 版本号残留已顺手提交（`80da331`）
