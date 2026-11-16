@@ -524,22 +524,37 @@ describe('4. 边界与安全', () => {
     assert.ok(text.charCodeAt(0) === 0xfeff || text.includes('菜名') || text.includes('name'), 'CSV 应包含 BOM 或表头');
   });
 
-  it('POST /api/admin/dish 添加重复名', async () => {
+  it('POST /api/admin/dish 添加重复名(2026-11-12 补清场: 此前用例插入的"测试重复菜名"从未清理, 被测试订单引用后 cleanup 按规则跳过——库内累积脏菜, 菜单计数口径被污染)', async () => {
     const token = await getAdminToken();
-    const { status } = await api('/api/admin/dish', {
+    // 唯一名: 避免与历史残留(如 3856)同名导致清理定位混淆
+    const uniqueName = '测试重复菜名_E2E_' + Date.now();
+    const created = await api('/api/admin/dish', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ name: '测试重复菜名', category: '热菜', price: 20, rating: 4.0 }),
+      body: JSON.stringify({ name: uniqueName, category: '热菜', price: 20, rating: 4.0 }),
     });
-    assert.equal(status, 200, '添加菜品应成功');
+    assert.equal(created.status, 200, '添加菜品应成功');
+    const createdId = created.body?.id || created.body?.dish?.id;
     // 再次添加同名
     const { status: s2 } = await api('/api/admin/dish', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ name: '测试重复菜名', category: '热菜', price: 20, rating: 4.0 }),
+      body: JSON.stringify({ name: uniqueName, category: '热菜', price: 20, rating: 4.0 }),
     });
     // 允许重复（不强制唯一名称），但不应崩溃
     assert.ok(s2 === 200 || s2 === 400, `重复名应返回 200/400，实际 ${s2}`);
+    // 清场: 删除本用例创建的菜品(物理删, 无订单引用)
+    if (createdId) {
+      await api('/api/admin/dish/' + createdId + '/permanent', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+    }
+    // 兜底: 公开 /api/dishes 返回全量(含未过滤的测试菜), 按唯一名删尽(第二条重名菜无独立 id)
+    const cleanup = await api('/api/dishes');
+    const arr = cleanup.body?.dishes || [];
+    for (const dish of arr.filter((x) => x.name === uniqueName)) {
+      await api('/api/admin/dish/' + dish.id + '/permanent', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+    }
+    const remain = await api('/api/dishes');
+    assert.ok(!(remain.body?.dishes || []).some((x) => x.name === uniqueName), '用例自清场后不应残留测试菜');
   });
 });
 
