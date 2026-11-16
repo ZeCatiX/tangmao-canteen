@@ -130,6 +130,7 @@ function register(app, deps) {
   async function recomputeOrderItems(pool, items) {
     const ids = items.map((i) => parseInt(i.id)).filter((n) => !isNaN(n));
     const priceMap = {};
+    const nameMap = {};
     const soldOutNames = [];
     if (ids.length) {
       const pr = await pool.query(
@@ -138,6 +139,8 @@ function register(app, deps) {
       );
       pr.rows.forEach((r) => {
         priceMap[r.id] = parseFloat(r.price);
+        // 2026-11-12: 回填菜名——API 直发的 items 可能缺 name(仅 UI 下单自带), 缺失时以 DB 名兜底, 否则日报动销出现空菜名行
+        nameMap[r.id] = r.name || '菜品' + r.id;
         if (r.is_sold_out === true) {
           soldOutNames.push(r.name || '菜品' + r.id);
         }
@@ -161,7 +164,11 @@ function register(app, deps) {
         .trim()
         .slice(0, 50);
       const dbPrice = priceMap[did];
-      return i.giftFrom ? { ...i, qty, price: 0, origPrice: dbPrice, note } : { ...i, qty, price: dbPrice, note };
+      // 2026-11-12: 菜名兜底(API 直发 items 缺 name 时以 DB 名回填, 防日报动销空菜名行)
+      const dbName = String(i.name || '')
+        .trim()
+        .slice(0, 100) || nameMap[did];
+      return i.giftFrom ? { ...i, name: dbName, qty, price: 0, origPrice: dbPrice, note } : { ...i, name: dbName, qty, price: dbPrice, note };
     });
     if (validated.some((i) => i === null)) {
       return null;
