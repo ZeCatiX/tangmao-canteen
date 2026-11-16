@@ -212,6 +212,10 @@ function showDishDetail(id) {
         : '✅ 可正常点餐') +
     (d.serving ? ' · ' + esc(specLang(d.serving)) : '') +
     '</div>' +
+    '<div id="dish-reviews-box" style="margin-top:14px;padding-top:10px;border-top:1px dashed #e4dbcf;">' +
+    '<div style="font-size:0.82rem;color:var(--text-light);">顾客评价加载中…</div></div>' +
+    // 单品备注(2026-11-12 点餐时备注): 加购前填写, 随条目带入购物车(购物车内仍可后改)
+    '<div style="margin-top:10px;"><input class="form-control dish-detail-note" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.85rem;padding:6px 10px;border-radius:8px;border:1px solid #e4dbcf;" aria-label="菜品备注"></div>' +
     '<div style="margin-top:12px;"><button class="btn add-to-cart-btn w-100" data-id="' +
     selId +
     '"' +

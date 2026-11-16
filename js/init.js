@@ -892,7 +892,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (target.classList.contains('add-to-cart-btn')) {
       const dish = dishData.find((d) => d.id === id);
       if (dish) {
-        addToCart(dish, 1);
+        // 点餐时备注(2026-11-12): 详情层备注框随加购带入(菜卡直接加购无备注框, 取值为空串)
+        const detailNote = target.closest('#dish-detail-modal')?.querySelector('.dish-detail-note');
+        const noteVal = detailNote ? String(detailNote.value || '').trim().slice(0, 30) : '';
+        addToCart(dish, 1, noteVal);
         if (document.getElementById('dataset-section')?.classList.contains('active') && !refreshMenuCardCtrl(id)) {
           renderMenuTable();
         }
