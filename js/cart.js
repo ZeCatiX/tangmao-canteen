@@ -38,6 +38,55 @@ document.addEventListener('click', function (e) {
 });
 
 // ═══════════════ 购物车功能 ═══════════════
+// 订单状态徽章(2026-11-12): 进行中订单提示条上的进度可视化——此前状态仅内部用于催菜/清横幅, 顾客看不到进度
+window.renderOrderStatusBadge = function (status) {
+  const el = document.getElementById('banner-order-status');
+  if (!el) return;
+  const MAP = {
+    pending: ['⏳ 待处理', '#f39c12'],
+    confirmed: ['✅ 已确认', '#2980b9'],
+    preparing: ['🍳 制作中', '#e67e22'],
+    completed: ['✅ 已出餐 · 请取餐', '#27ae60'],
+    cancelled: ['已取消', '#95a5a6'],
+  };
+  const m = MAP[status];
+  if (!m) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+  el.textContent = m[0];
+  el.style.background = m[1];
+  el.style.display = '';
+};
+// 订单状态轮询(2026-11-12): 横幅可见时每 60s 刷一次状态徽章(status-check 限流 30/分, 占用极低);
+// completed 时一次性弹窗提醒取餐; 无单/横幅隐藏时跳过
+window.startOrderStatusPoll = function () {
+  if (window._orderStatusTimer) return;
+  window._orderStatusTimer = setInterval(function () {
+    const oid = ssGet('lastOrderId');
+    const lt = ssGet('lockedTable') || '';
+    const banner = document.getElementById('cart-order-banner');
+    if (!oid || !lt || !banner || getComputedStyle(banner).display === 'none') return;
+    safeFetch('/api/order/' + encodeURIComponent(oid) + '/status-check?tableNumber=' + encodeURIComponent(lt), {
+      headers: authHeaders(),
+    })
+      .then((r) => r.json())
+      .then((chk) => {
+        if (!chk || !chk.success) return;
+        if (window.renderOrderStatusBadge) window.renderOrderStatusBadge(chk.exists ? chk.status : 'gone');
+        if (chk.exists && chk.status === 'completed' && window._orderDoneNotified !== oid) {
+          window._orderDoneNotified = oid;
+          showMessage(L('餐已备好', 'Order ready'), L('您的订单已出餐，请取餐 🍽', 'Your order is ready for pickup 🍽'), null, 6000);
+        }
+        if (chk.exists && chk.status === 'cancelled') {
+          window._orderDoneNotified = null;
+        }
+      })
+      .catch(() => {});
+  }, 60000);
+};
+window.startOrderStatusPoll(); // 页面加载即启动轮询(横幅可见时才实际发请求)
 // 购物车三处参数化文案(加菜横幅/赠菜横幅/回执头)的语言感知渲染——遍历式翻译只做整节点精确匹配,够不着带动态值的模板,须渲染路径自理
 // showCart 与 applyUiLang(切语言)都会调用;2026-10-16 修复 EN 模式残留中文(A4 同类)
 window.renderCartLangAware = function () {
@@ -78,6 +127,10 @@ window.renderCartLangAware = function () {
             if (window._orderChkCache && window._orderChkCache.oid === loB) {
               window._orderChkCache.verdict = chk && chk.success && chk.exists ? chk.status : 'gone';
             }
+            // 订单状态徽章(2026-11-12): 让顾客看到进度(此前状态只内部用于催菜/清横幅, 顾客不可见)
+            if (window.renderOrderStatusBadge) {
+              window.renderOrderStatusBadge(chk && chk.success && chk.exists ? chk.status : 'gone');
+            }
             // 催菜按钮(2026-11-02 对标商龙KDS): 进行中且下单满10分钟才亮出, 未满10分钟灰置带倒计时
             const rushBtn = document.getElementById('banner-rush-btn');
             if (rushBtn) {
@@ -97,6 +150,11 @@ window.renderCartLangAware = function () {
               }
             }
             if (chk && chk.success && (!chk.exists || ['completed', 'cancelled'].indexOf(chk.status) >= 0)) {
+              // 出餐提醒(2026-11-12): 完成时一次性弹窗告知取餐(此前横幅默默消失, 顾客无感知)
+              if (chk.exists && chk.status === 'completed' && window._orderDoneNotified !== loB) {
+                window._orderDoneNotified = loB;
+                showMessage(L('餐已备好', 'Order ready'), L('您的订单已出餐，请取餐 🍽', 'Your order is ready for pickup 🍽'), null, 6000);
+              }
               [
                 'lastOrderId',
                 'lastOrderTable',
@@ -113,10 +171,10 @@ window.renderCartLangAware = function () {
               }
             }
           })
-          .catch(() => {
-            window._orderChkCache = null;
-          });
-      } else if (
+      .catch(() => {
+        window._orderChkCache = null;
+      });
+    } else if (
         window._orderChkCache.verdict &&
         ['completed', 'cancelled', 'gone'].indexOf(window._orderChkCache.verdict) >= 0
       ) {
