@@ -629,6 +629,14 @@
                             <button type="button" id="cancel-blacklist-btn" class="btn btn-sm btn-outline-secondary" style="border-radius:20px;font-size:0.8rem;">取消</button>
                         </div>
 
+                        <!-- 我的订单(2026-11-12: 往期订单回看, 此前顾客端无跨会话订单历史入口) -->
+                        <div class="mb-4">
+                            <h5 style="font-family:'Noto Serif SC',serif;color:var(--primary);font-size:1rem;padding-bottom:8px;border-bottom:2px solid var(--gold-light);margin-bottom:12px;">
+                                <i class="bi bi-receipt me-2" style="color:var(--gold);"></i>我的订单
+                            </h5>
+                            <div id="my-orders-list" class="mb-2"><div style="font-size:0.82rem;color:var(--text-light);">加载中…</div></div>
+                        </div>
+
                         <!-- 退出登录 / 注销账号 -->
                         <div class="mt-4 pt-3 text-center" style="border-top:1px solid rgba(201,169,110,0.15);">
                             <button type="button" id="profile-logout-btn" class="btn btn-sm btn-outline-danger" style="border-radius:20px;font-size:0.8rem;padding:4px 20px;margin-right:12px;">
@@ -1281,7 +1289,7 @@
     </div>
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="script.js?v=20261116do" defer></script>
+    <script src="script.js?v=20261116qf" defer></script>
     <script src="js/password-toggle.js?v=20260910" defer></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>
