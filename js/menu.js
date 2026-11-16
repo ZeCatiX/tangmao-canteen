@@ -381,7 +381,12 @@ function renderMenuTable() {
   const sorted = [...dishData].sort((a, b) => catOrderOf(a.category) - catOrderOf(b.category) || a.id - b.id);
   const filtered = sorted.filter((d) => {
     if (q && !d.name.toLowerCase().includes(q)) {
-      return false;
+      // 拼音搜索(2026-11-12): "kc"匹配首字母串(name_py_head), "kaoc"匹配全拼连串(name_py)——服务端 pinyin-pro 生成
+      const pyFull = String(d.name_py || '').toLowerCase().replace(/ /g, '');
+      const pyHead = String(d.name_py_head || '').toLowerCase();
+      if (!(pyHead.includes(q) || pyFull.includes(q))) {
+        return false;
+      }
     }
     if (cat && d.category !== cat) {
       return false;

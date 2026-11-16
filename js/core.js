@@ -1622,6 +1622,33 @@ function logout() {
 }
 // 我的订单(2026-11-12): 登录用户往期订单回看——此前顾客端无跨会话订单历史入口
 // (会话内时间线存 sessionStorage 关浏览器即失, 常客卡仅"上一单"); 数据源 /api/orders(按登录用户)
+// 再来一单(2026-11-12): 按历史订单 items 一键复购(售罄/下架自动跳过, 与常客卡 reorder 同规则)
+window.addMyOrderAgain = function (oid) {
+  const orders = window._myOrdersCache || [];
+  const o = orders.find((x) => x.id === oid);
+  if (!o) {
+    showMessage('提示', '订单数据未加载，请重新打开个人中心');
+    return;
+  }
+  let added = 0;
+  let skipped = 0;
+  const skippedNames = [];
+  (o.items || []).forEach(function (it) {
+    const dish = (typeof dishData !== 'undefined' ? dishData : []).find(function (x) { return x.id === parseInt(it.id); });
+    if (!dish || dish.is_sold_out === true || dish.is_active === false) {
+      skipped++;
+      skippedNames.push(it.name || '菜品#' + it.id);
+      return;
+    }
+    addToCart(dish, parseInt(it.qty) || 1);
+    added++;
+  });
+  const detail = added ? ('按上次订单加入 ' + added + ' 项' + (skipped ? '，跳过售罄/下架：' + skippedNames.join('、') : '')) : ('上次菜品均不可用：' + skippedNames.join('、'));
+  showMessage(added ? '已加入购物车' : '部分菜品不可用', detail, null, 3500);
+  if (added && typeof showCart === 'function') {
+    showCart();
+  }
+};
 function loadMyOrders() {
   const el = document.getElementById('my-orders-list');
   if (!el) return;
@@ -1642,6 +1669,10 @@ function loadMyOrders() {
         el.innerHTML = '<p class="text-muted">还没有订单，快去点一桌好菜吧</p>';
         return;
       }
+      window._myOrdersCache = orders;
+      // 消费汇总(2026-11-12): 总单数(含进行中) + 已完成消费合计(取消不计)
+      const doneOrders = orders.filter((o) => o.status === 'completed');
+      const doneSum = doneOrders.reduce((s, o) => s + (parseFloat(o.total_price) || 0), 0).toFixed(2);
       const ST = {
         pending: ['待处理', '#f39c12'],
         confirmed: ['已确认', '#2980b9'],
@@ -1649,7 +1680,12 @@ function loadMyOrders() {
         completed: ['已完成', '#27ae60'],
         cancelled: ['已取消', '#95a5a6'],
       };
-      el.innerHTML = orders
+      el.innerHTML =
+        '<div class="mb-3 p-2 text-center" style="background:rgba(201,169,110,0.1);border-radius:10px;font-size:0.88rem;">' +
+        '共 <strong>' + orders.length + '</strong> 单' +
+        (doneOrders.length ? ' · 已完成 <strong>' + doneOrders.length + '</strong> 单 · 消费合计 <strong style="color:var(--primary);">' + doneSum + '</strong> 元' : '') +
+        '</div>' +
+        orders
         .map((o) => {
           const meta = ST[o.status] || ['未知', '#95a5a6'];
           const items = (o.items || [])
@@ -1658,6 +1694,7 @@ function loadMyOrders() {
           const t = o.created_at
             ? new Date(o.created_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
             : '';
+          const cancellable = ['pending', 'confirmed'].indexOf(o.status) >= 0;
           return (
             '<div class="mb-2 p-2" style="border:1px solid rgba(201,169,110,0.25);border-radius:10px;background:rgba(201,169,110,0.06);">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
@@ -1665,7 +1702,10 @@ function loadMyOrders() {
             '<span style="font-size:0.78rem;padding:2px 10px;border-radius:12px;color:#fff;background:' + meta[1] + ';">' + meta[0] + '</span>' +
             '</div>' +
             '<div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">' + t + ' · ' + items.slice(0, 80) + '</div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">' +
+            '<button type="button" class="btn btn-sm" onclick="addMyOrderAgain(' + o.id + ')" style="border-radius:16px;font-size:0.78rem;padding:2px 14px;background:var(--primary-accent);color:#fff;border:none;" title="按上次菜品一键加入购物车">🔁 再来一单</button>' +
             '<div style="text-align:right;font-weight:600;color:var(--primary);">' + (parseFloat(o.total_price) || 0).toFixed(2) + ' 元</div>' +
+            '</div>' +
             '</div>'
           );
         })
