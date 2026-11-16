@@ -459,9 +459,27 @@ async function loadDishData() {
       const result = await client.query(
         "SELECT d.*, COALESCE(oc.order_count, 0) as order_count FROM dishes d LEFT JOIN (SELECT dish_id, COUNT(*) as order_count FROM (SELECT jsonb_array_elements(items)->>'id' as dish_id FROM orders) o WHERE o.dish_id IS NOT NULL GROUP BY dish_id) oc ON d.id::text = oc.dish_id ORDER BY d.id"
       );
+      // 拼音搜索字段(2026-11-12): name_py 全拼(按字空格分)/name_py_head 首字母串——前端菜单搜索支持拼音
+      let pyModule = null;
+      try {
+        pyModule = require('pinyin-pro');
+      } catch (e) {
+        logger.warn('pinyin-pro 未安装, 拼音搜索字段跳过');
+      }
+      const pyOf = (name) =>
+        pyModule
+          ? {
+              name_py: pyModule.pinyin(name, { toneType: 'none', type: 'array' }).join(' ').toLowerCase(),
+              name_py_head: pyModule
+                .pinyin(name, { pattern: 'first', toneType: 'none', type: 'array' })
+                .join('')
+                .toLowerCase(),
+            }
+          : { name_py: '', name_py_head: '' };
       state.dishData = result.rows.map((d) => ({
         id: d.id,
         name: d.name,
+        ...pyOf(d.name),
         category: d.category,
         tags: d.tags || [],
         spiciness: d.spiciness || '不辣',
