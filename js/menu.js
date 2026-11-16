@@ -280,6 +280,26 @@ function showDishDetail(id) {
     }
   });
   m.show();
+  // 顾客评价(2026-11-12): 异步拉取最近评分, 不阻塞弹层显示; 失败静默
+  safeFetch('/api/dish/' + d.id + '/reviews')
+    .then((r) => r.json())
+    .then((d2) => {
+      const box = document.getElementById('dish-reviews-box');
+      if (!box) return;
+      const list = d2.reviews || [];
+      box.innerHTML = list.length
+        ? '<div style="font-size:0.82rem;color:var(--text);"><strong>' + d2.count + '</strong> 人评价 · 最近：</div>' +
+          list
+            .slice(0, 5)
+            .map(function (rv) {
+              const dt = rv.created_at ? new Date(rv.created_at).toLocaleDateString('zh-CN') : '';
+              const stars = '★'.repeat(Math.round(rv.rating)) + '☆'.repeat(5 - Math.round(rv.rating));
+              return '<div style="margin-top:4px;">' + stars + ' <span style="color:var(--text-light);font-size:0.75rem;">' + dt + '</span></div>';
+            })
+            .join('')
+        : '<div style="font-size:0.8rem;color:var(--text-light);">暂无评价，期待您的评价</div>';
+    })
+    .catch(function () {});
 }
 
 // 估清"仅剩N份"提示(2026-11-02 对标商龙): 备量菜剩余≤3且未售罄时显示(制造紧迫感); 0份由售罄徽章覆盖

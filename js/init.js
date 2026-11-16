@@ -13,6 +13,21 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof updateNavAuthState === 'function') {
     updateNavAuthState();
   }
+  // 店内公告横幅(2026-11-12): admin 发布 → 顾客首页展示(公开 API, 登录态无关)
+  (function () {
+    safeFetch('/api/announcement')
+      .then((r) => r.json())
+      .then((d) => {
+        const banner = document.getElementById('announcement-banner');
+        if (!banner || !d.success) return;
+        const a = d.announcement || {};
+        if (a.active && a.text) {
+          document.getElementById('announcement-text').textContent = a.text;
+          banner.style.display = 'block';
+        }
+      })
+      .catch(function () {});
+  })();
   // 常客记忆欢迎条(2026-11-02 对标商龙VIP到店关怀): 登录回头客→光临次数+上次点过的菜+再来一单
   // 2026-11-11: 提取为全局 refreshWelcomeCard()——登录/注册成功回调也调用(此前只页面加载时拉一次, 登录后需刷新才见欢迎条)
   function refreshWelcomeCard() {
@@ -590,6 +605,39 @@ document.addEventListener('DOMContentLoaded', function () {
   click('cancel-blacklist-btn', cancelBlacklist);
   click('delete-account-btn', deleteAccount);
   click('profile-logout-btn', logout);
+  // 服务呼叫(2026-11-12): 锁桌后显示呼叫行; 点击通知服务员(60s 冷却由服务端+前端 disabled 双保险)
+  const svcBtn = document.getElementById('service-call-btn');
+  if (svcBtn) {
+    svcBtn.addEventListener('click', function () {
+      if (svcBtn.disabled) return;
+      const lt = sessionStorage.getItem('lockedTable');
+      if (!lt) { showMessage('提示', '请先选择桌号'); return; }
+      const type = document.getElementById('service-call-type');
+      svcBtn.disabled = true;
+      safeFetch('/api/service-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tableNumber: lt, callType: type ? type.value : 'other' }),
+      })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success) {
+            svcBtn.textContent = d.duplicate ? '✓ 已通知，稍候' : '✓ 已通知服务员';
+            showMessage('已通知', d.message || '服务员会尽快到 ' + lt + ' 号桌', null, 3000);
+          } else {
+            svcBtn.disabled = false;
+            showMessage('呼叫失败', d.error || '请稍后重试');
+          }
+        })
+        .catch(() => { svcBtn.disabled = false; showMessage('网络错误', '请稍后重试'); });
+    });
+  }
+  // 呼叫行显隐随锁桌变化(轻量 2s 轮询, 仅读 sessionStorage 无网络)
+  setInterval(function () {
+    const row = document.getElementById('service-call-row');
+    if (!row) return;
+    row.style.display = sessionStorage.getItem('lockedTable') ? 'block' : 'none';
+  }, 2000);
   click('logout-home-btn', logout); // 首页退出登录按钮(2026-11-11 认证态双向化新增)
   click('back-to-preference', () => showSection('preference-section'));
   // 模态框隐藏前移出焦点：焦点留在弹窗内时隐藏会触发 aria-hidden 无障碍警告(Blocked aria-hidden)

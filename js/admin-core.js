@@ -70,6 +70,70 @@ document.querySelectorAll('[data-page]').forEach(a => {
   });
 });
 
+// 店内公告管理(2026-11-12): dashboard 编辑卡 → announcements.json → 顾客首页横幅
+function loadAnnouncementAdmin() {
+  // fetch 拦截器自动注入 /api/admin/* 的 Authorization(无需手动头)
+  fetch('/api/admin/announcement')
+    .then((r) => r.json())
+    .then((d) => {
+      if (!d.success) return;
+      const a = d.announcement || {};
+      const t = document.getElementById('announcement-text');
+      const cb = document.getElementById('announcement-active');
+      if (t) t.value = a.text || '';
+      if (cb) cb.checked = a.active === true;
+    })
+    .catch(() => {});
+}
+function saveAnnouncementAdmin() {
+  const text = (document.getElementById('announcement-text') || {}).value || '';
+  const active = !!(document.getElementById('announcement-active') || {}).checked;
+  fetch('/api/admin/announcement', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, active }),
+  })
+    .then((r) => r.json())
+    .then((d) => {
+      showToast(d.success ? '公告已保存' : d.error || '保存失败', d.success ? 'success' : 'error');
+    })
+    .catch(() => showToast('保存失败：网络错误', 'error'));
+}
+// 服务呼叫(2026-11-12): 顾客一键呼叫 → 服务员在 admin 处理; 30s 轮询 open 列表, 无 open 时收横幅
+function loadServiceCalls() {
+  fetch('/api/admin/service-calls?status=open')
+    .then((r) => r.json())
+    .then((d) => {
+      const banner = document.getElementById('service-calls-banner');
+      const list = document.getElementById('service-calls-list');
+      if (!banner || !list) return;
+      const calls = d.calls || [];
+      if (!calls.length) {
+        banner.style.display = 'none';
+        list.innerHTML = '';
+        return;
+      }
+      const TYPE = { water: '🍵 加水', tableware: '🥢 加餐具', bill: '💳 结账', other: '🔔 其他服务' };
+      banner.style.display = 'block';
+      list.innerHTML = calls
+        .map(function (c) {
+          const t = c.created_at ? new Date(c.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+          return (
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 8px;background:rgba(255,255,255,0.06);border-radius:8px;">' +
+            '<span style="font-size:0.85rem;">📍 ' + esc(c.table_number) + ' 号桌 · ' + (TYPE[c.call_type] || esc(c.call_type)) + ' · ' + t + '</span>' +
+            '<button class="btn btn-sm" onclick="handleServiceCall(' + c.id + ')" style="background:#27ae60;color:#fff;border:none;border-radius:14px;padding:2px 14px;font-size:0.78rem;">✓ 已处理</button>' +
+            '</div>'
+          );
+        })
+        .join('');
+    })
+    .catch(() => {});
+}
+window.handleServiceCall = function (id) {
+  fetch('/api/admin/service-calls/' + id + '/handle', { method: 'POST' })
+    .then(() => loadServiceCalls())
+    .catch(() => {});
+};
 function loadStats() {
   fetch('/api/admin/stats').then(r => r.json()).then(d => {
     if (!d.success) return;
@@ -912,6 +976,10 @@ document.getElementById('dishModal').addEventListener('hide.bs.modal', function(
     installAdminFetchInterceptor();
     // 加载初始数据
     loadStats(); loadPopularDishes(); loadFeedback(); loadDishes(); loadPreferenceStats(); loadModelInfo(); loadMonitor(); loadNotifications();
+    loadAnnouncementAdmin();
+    document.getElementById('announcement-save-btn')?.addEventListener('click', saveAnnouncementAdmin);
+    loadServiceCalls();
+    setInterval(loadServiceCalls, 30000); // 服务呼叫 30s 轮询(防顾客呼叫被漏看)
   } else {
     showAdmin(false);
   }
@@ -1269,6 +1337,8 @@ function loadDailyReport(date){
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">客单价</div><h4 style="margin:0;">'+s.avgTicket+' 元</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">退单</div><h4 style="margin:0;">'+s.cancelled+' <small style="font-size:0.7rem;color:#8b7a6a;">('+s.cancelledAmount+'元)</small></h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">翻台率(30桌)</div><h4 style="margin:0;">'+(s.turnoverRate||'-')+' <small style="font-size:0.7rem;color:#8b7a6a;">动用'+(s.usedTables||0)+'桌</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">复购率(登录客)</div><h4 style="margin:0;">'+(s.repeatRate===null||s.repeatRate===undefined?'-':s.repeatRate+'%')+' <small style="font-size:0.7rem;color:#8b7a6a;">复购'+(s.repeatCustomers||0)+'客</small></h4></div></div>'
+     +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">新客(登录)</div><h4 style="margin:0;">'+(s.newCustomers===null||s.newCustomers===undefined?'-':s.newCustomers)+'</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">桌均营收</div><h4 style="margin:0;">'+(s.avgPerTable||0)+' 元</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日营收</div><h4 style="margin:0;">'+(s.prevRevenue||0)+' 元</h4></div></div>'
      +'<div class="col-md-3 col-6"><div class="card" style="padding:0.8rem;"><div style="font-size:0.75rem;color:#8b7a6a;">昨日单量</div><h4 style="margin:0;">'+(s.prevOrders||0)+'</h4></div></div>';

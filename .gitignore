@@ -111,3 +111,4 @@ COLLABORATION.md
 ml/model_metrics.json
 ml/feature_importance.json
 tests/gui_regression_logs/
+announcements.json
