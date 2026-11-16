@@ -1015,7 +1015,9 @@ function renderTableSets() {
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
               dishImg(d.image_url, 52, d.name) +
               '<div class="flex-grow-1 tsc-name" style="min-width:0;">' +
-              '<div class="dish-name-serif">' +
+              '<div class="dish-name-serif" onclick="showDishDetail(' +
+              d.id +
+              ')" style="cursor:pointer;" title="查看详情">' +
               esc(dishNameOf(d)) +
               '<span class="ms-2" style="font-size:0.73rem;color:var(--text-light);">' +
               esc(catNameOf(d.category)) +
@@ -1058,7 +1060,9 @@ function renderTableSets() {
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
               dishImg(d.image_url, 52, d.name) +
               '<div class="flex-grow-1 tsc-name" style="min-width:0;">' +
-              '<div class="dish-name-serif">' +
+              '<div class="dish-name-serif" onclick="showDishDetail(' +
+              d.id +
+              ')" style="cursor:pointer;" title="查看详情">' +
               esc(dishNameOf(d)) +
               '<span class="ms-2" style="font-size:0.72rem;color:var(--gold);border:1px solid rgba(201,169,110,0.5);border-radius:10px;padding:1px 8px;">默认按人数 · 可自由加减</span></div>' +
               '<div style="font-size:0.78rem;color:var(--text-light);letter-spacing:0.3px;">' +
