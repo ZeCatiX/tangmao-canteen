@@ -10,6 +10,8 @@ function register(app, deps) {
   const {
     db,
     logger,
+    announcements,
+    saveAnnouncements,
     readJSON,
     tableSig,
     loadDishData,
@@ -163,6 +165,21 @@ function register(app, deps) {
       const prevRevenue = parseFloat(prev.rows[0]?.revenue) || 0;
       const revenueChange = prevRevenue > 0 ? Math.round(((revenue - prevRevenue) / prevRevenue) * 1000) / 10 : null;
       const ordersChange = prevOrders > 0 ? Math.round(((totalOrders - prevOrders) / prevOrders) * 1000) / 10 : null;
+      // 复购/新客(2026-11-12 日报增强): 当日登录下单用户中, 此前也有订单的=复购客, 否则=新客; 游客单无身份不计
+      const custAgg = await db.query(
+        `SELECT COUNT(DISTINCT user_id)::int AS total_users,
+                COUNT(DISTINCT user_id) FILTER (
+                  WHERE EXISTS (SELECT 1 FROM orders o2
+                                WHERE o2.user_id = orders.user_id AND o2.created_at::date < $1::date)
+                )::int AS repeat_users
+         FROM orders
+         WHERE created_at::date = $1::date AND user_id IS NOT NULL AND user_id NOT IN ('', 'guest')`,
+        [date]
+      );
+      const totalUsers = custAgg.rows[0]?.total_users || 0;
+      const repeatUsers = custAgg.rows[0]?.repeat_users || 0;
+      const repeatRate = totalUsers > 0 ? Math.round((repeatUsers / totalUsers) * 100) : null;
+      const newCustomers = totalUsers - repeatUsers;
       res.json({
         success: true,
         date,
@@ -175,6 +192,10 @@ function register(app, deps) {
           pendingConfirmed,
           usedTables,
           turnoverRate: Math.round((usedTables / TABLE_COUNT) * 100) + '%',
+          // 复购/新客(2026-11-12 日报增强): 登录用户维度, 游客单不计
+          repeatRate,
+          repeatCustomers: repeatUsers,
+          newCustomers,
           avgPerTable: usedTables ? Math.round((revenue / usedTables) * 100) / 100 : 0,
           prevRevenue: Math.round(prevRevenue * 100) / 100,
           prevOrders,
@@ -729,6 +750,35 @@ function register(app, deps) {
     }
   });
 
+  // 服务呼叫管理(2026-11-12): open 列表 + 标记已处理
+  app.get('/api/admin/service-calls', async (req, res) => {
+    try {
+      const status = ['open', 'handled'].includes(req.query.status) ? req.query.status : 'open';
+      const r = await db.query(
+        'SELECT id, table_number, call_type, status, created_at FROM service_calls WHERE status = $1 ORDER BY created_at DESC LIMIT 50',
+        [status]
+      );
+      res.json({ success: true, calls: r.rows });
+    } catch (e) {
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+  app.post('/api/admin/service-calls/:id/handle', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id || isNaN(id) || id <= 0) {
+        return res.status(400).json({ success: false, error: '参数无效' });
+      }
+      const r = await db.query(
+        "UPDATE service_calls SET status = 'handled', handled_at = NOW() WHERE id = $1 AND status = 'open' RETURNING id",
+        [id]
+      );
+      res.json({ success: true, handled: r.rows.length });
+    } catch (e) {
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+
   app.get('/api/admin/settings', (req, res) => res.json({ success: true, settings: { ...runtimeSettings } }));
   app.post('/api/admin/settings', (req, res) => {
     try {
@@ -743,6 +793,35 @@ function register(app, deps) {
       logger.error('API错误:', e.message);
       res.status(500).json({ success: false, error: '服务器内部错误' });
     }
+  });
+
+  // 店内公告(2026-11-12): admin 发布 → 顾客首页横幅(announcements.json 持久化)
+  app.put('/api/admin/announcement', (req, res) => {  // 鉴权由 app.use('/api/admin', adminAuth) 前缀中间件统一覆盖
+    try {
+      const { text, active } = req.body || {};
+      if (text !== undefined) {
+        if (typeof text !== 'string') {
+          return res.status(400).json({ success: false, error: '公告内容无效' });
+        }
+        if (text.length > 200) {
+          return res.status(400).json({ success: false, error: '公告最长 200 字' });
+        }
+        announcements.text = text.trim();
+      }
+      if (typeof active === 'boolean') {
+        announcements.active = active;
+      }
+      announcements.updatedAt = new Date().toISOString();
+      saveAnnouncements();
+      res.json({ success: true, announcement: { ...announcements } });
+    } catch (e) {
+      logger.error('店内公告保存失败:', e.message);
+      res.status(500).json({ success: false, error: '服务器内部错误' });
+    }
+  });
+
+  app.get('/api/admin/announcement', (req, res) => {
+    res.json({ success: true, announcement: { ...announcements } });
   });
 
   app.get('/api/admin/recommendation-effect', (req, res) => {

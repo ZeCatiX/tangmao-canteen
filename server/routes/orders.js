@@ -524,6 +524,76 @@ function register(app, deps) {
     max: 30, // 业务侧有10分钟门槛+30分钟冷却双保险, IP限流只防脚本滥用; 30/分与status-check同款
     message: { success: false, error: '请求过于频繁' },
   });
+  // 顾客限时自助取消(2026-11-12): 下单 60 秒内可自助取消(点错菜场景, 减少服务员介入);
+  // 归属校验同催菜口径(本人/管理员/同桌凭证), 超时需找服务员由后台操作
+  app.post('/api/order/:id/self-cancel', statusCheckLimiter, softAuth, async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      if (!orderId || isNaN(orderId) || orderId <= 0) {
+        return res.status(400).json({ success: false, error: '参数无效' });
+      }
+      const r = await pool.query('SELECT status, table_number, user_id, created_at FROM orders WHERE id=$1', [orderId]);
+      if (r.rows.length === 0) {
+        return res.status(404).json({ success: false, error: '订单不存在' });
+      }
+      const row = r.rows[0];
+      const effectiveUserId = getUser(req);
+      const isAdmin = req.user?.role === 'admin';
+      const isOwner = effectiveUserId !== 'guest' && row.user_id === effectiveUserId;
+      const tableNumber = (req.body && req.body.tableNumber) || '';
+      const isTableMatch = row.table_number && tableNumber && String(row.table_number) === String(tableNumber);
+      if (!isAdmin && !isOwner && !isTableMatch) {
+        return res.status(404).json({ success: false, error: '订单不存在或无权操作' });
+      }
+      if (!['pending', 'confirmed'].includes(row.status)) {
+        return res.status(400).json({ success: false, error: '订单已进入制作流程，无法自助取消，请联系服务员' });
+      }
+      const elapsedSec = (Date.now() - new Date(row.created_at).getTime()) / 1000;
+      if (elapsedSec > 60) {
+        return res.status(400).json({ success: false, error: '已超过 60 秒自助取消时限，请联系服务员' });
+      }
+      await pool.query("UPDATE orders SET status = 'cancelled' WHERE id = $1", [orderId]);
+      logger.info(`自助取消: 订单 ${orderId} 由 ${effectiveUserId} 在下单 ${Math.round(elapsedSec)} 秒后取消`);
+      res.json({ success: true, message: '订单已取消' });
+    } catch (e) {
+      logger.error('自助取消API错误:', e.message);
+      serverError(res);
+    }
+  });
+
+  // 服务呼叫(2026-11-12): 顾客一键呼叫服务员(加水/加餐具/结账/其他); 同桌 60 秒内已有未处理呼叫则幂等返回
+  const serviceCallLimiter = rateLimit({
+    windowMs: 60000,
+    max: 10,
+    message: { success: false, error: '呼叫过于频繁，请稍等' },
+  });
+  app.post('/api/service-call', serviceCallLimiter, async (req, res) => {
+    try {
+      const tableNumber = String((req.body && req.body.tableNumber) || '').trim();
+      const callType = ['water', 'tableware', 'bill', 'other'].includes((req.body || {}).callType)
+        ? req.body.callType
+        : 'other';
+      if (!/^[0-9]{1,2}$/.test(tableNumber) && tableNumber !== '打包') {
+        return res.status(400).json({ success: false, error: '桌号格式不正确' });
+      }
+      const dup = await pool.query(
+        "SELECT id FROM service_calls WHERE table_number = $1 AND status = 'open' AND created_at > NOW() - INTERVAL '60 seconds' LIMIT 1",
+        [tableNumber]
+      );
+      if (dup.rows.length) {
+        return res.json({ success: true, duplicate: true, message: '该桌呼叫已通知服务员，请稍候' });
+      }
+      const r = await pool.query(
+        "INSERT INTO service_calls (table_number, call_type) VALUES ($1, $2) RETURNING id, created_at",
+        [tableNumber, callType]
+      );
+      res.json({ success: true, id: r.rows[0].id, message: '已通知服务员' });
+    } catch (e) {
+      logger.error('服务呼叫错误:', e.message);
+      serverError(res);
+    }
+  });
+
   app.post('/api/order/:id/rush', rushLimiter, softAuth, async (req, res) => {
     try {
       const orderId = parseInt(req.params.id);
@@ -714,6 +784,31 @@ function register(app, deps) {
       res.json({ success: true, message: '反馈成功' });
     } catch (e) {
       logger.error('API错误:', e.message);
+      serverError(res);
+    }
+  });
+
+  // 菜品评价列表(2026-11-12): 公开, 顾客点菜前查看该菜的真实评分(匿名不含 user_id)
+  app.get('/api/dish/:id/reviews', async (req, res) => {
+    try {
+      const dishId = parseInt(req.params.id);
+      if (!dishId || isNaN(dishId) || dishId <= 0) {
+        return res.status(400).json({ success: false, error: '参数无效' });
+      }
+      const r = await pool.query(
+        "SELECT rating, user_preferences, created_at FROM feedback WHERE dish_id = $1 ORDER BY created_at DESC LIMIT 5",
+        [dishId]
+      );
+      res.json({
+        success: true,
+        reviews: r.rows.map((row) => ({
+          rating: parseFloat(row.rating) || 0,
+          created_at: row.created_at,
+        })),
+        count: r.rows.length,
+      });
+    } catch (e) {
+      logger.error('菜品评价查询错误:', e.message);
       serverError(res);
     }
   });

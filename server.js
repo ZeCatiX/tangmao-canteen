@@ -595,6 +595,9 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, 'kitchen.html')));
 app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'assets', 'brand', 'favicon-64.png')));
+app.get('/api/announcement', (req, res) => {
+  res.json({ success: true, announcement: announcements });
+});
 app.get('/api/dishes', (req, res) => {
   // 估清日切懒挂点: 隔天首个菜单请求自动复位昨日售罄(DB+内存), 无需重启/定时任务
   ensureStockDate(db, state, logger);
@@ -693,6 +696,23 @@ app.use('/api/admin', adminAuth);
 // 共享运行时开关:admin 域(settings POST/retrain 守卫)与本文件 checkAndRetrain 定时器读写同一份。
 // 拆分时曾丢此声明——rs 块的 Object.assign 被 try/catch 吞掉,30 分钟后的 checkAndRetrain 触发未处理 rejection 崩进程
 const runtimeSettings = { autoRetrain: false };
+// 店内公告(2026-11-12): admin 发布 → 顾客首页横幅展示; 独立文件(内容数据与开关设置分离)
+// 注意: 必须定义在 admin 路由 register 调用之前(deps 引用), 故置于 runtimeSettings 同段
+const ANNOUNCEMENTS_PATH = path.join(__dirname, 'announcements.json');
+let announcements = { text: '', updatedAt: null, active: false };
+try {
+  const _ann = JSON.parse(fs.readFileSync(ANNOUNCEMENTS_PATH, 'utf8'));
+  if (_ann && typeof _ann === 'object') announcements = Object.assign(announcements, _ann);
+} catch (e) {
+  /* 首次运行无文件，用默认值 */
+}
+function saveAnnouncements() {
+  try {
+    fs.writeFileSync(ANNOUNCEMENTS_PATH, JSON.stringify(announcements, null, 2));
+  } catch (e) {
+    logger.warn('保存店内公告失败: ' + (e?.message || ''));
+  }
+}
 
 // 桌码管理（A2）：批量生成签名桌码链接（协议/域名取自请求头，支持反代与隧道）
 // /api/admin/* 业务域拆分至 server/routes/admin.js(登录/上传图/认证中间件仍在本文件)(2026-10-13 改造4)
@@ -701,6 +721,8 @@ require('./server/routes/admin').register(app, {
   db,
   logger,
   state,
+  announcements,
+  saveAnnouncements,
   readJSON,
   tableSig,
   loadDishData,
@@ -774,7 +796,7 @@ require('./server/routes/orders').register(app, { db, logger, softAuth, authMidd
 // 目前只有「按用户反馈自动重训」一项。未上线时 feedback 里全是测试用例，
 // 拿它们自动重训会把模型带偏 —— 所以默认关闭：反馈照常收集进库，
 // 但不自动拿去重训。上线积累到真实反馈后再来后台打开。
-const RUNTIME_SETTINGS_PATH = path.join(__dirname, 'runtime_settings.json');
+
 try {
   Object.assign(runtimeSettings, readJSON(RUNTIME_SETTINGS_PATH));
 } catch (e) {
@@ -1187,8 +1209,39 @@ db
      CREATE INDEX IF NOT EXISTS idx_table_set_log_user ON table_set_log(user_id);
      CREATE INDEX IF NOT EXISTS idx_table_set_log_event ON table_set_log(event_type, created_at)`
   )
-  .then(() => logger.info('席面采纳埋点表就绪'))
+  .then(() => logger.info('席面采纳埋点表就绪'));
+
+// 服务呼叫表(2026-11-12): 顾客一键呼叫服务员(加水/加餐具/结账/其他) → admin 仪表盘横幅提示+标记已处理
+db
+  .query(
+    `CREATE TABLE IF NOT EXISTS service_calls (
+       id SERIAL PRIMARY KEY,
+       table_number VARCHAR(10) NOT NULL,
+       call_type VARCHAR(20) NOT NULL DEFAULT 'other',
+       status VARCHAR(10) NOT NULL DEFAULT 'open',
+       created_at TIMESTAMP DEFAULT NOW(),
+       handled_at TIMESTAMP NULL
+     );
+     CREATE INDEX IF NOT EXISTS idx_service_calls_status ON service_calls(status, created_at)`
+  )
+  .then(() => logger.info('服务呼叫表就绪'))
   .catch((e) => logger.error('席面埋点表迁移失败: ' + e.message));
+
+// 服务呼叫表(2026-11-12): 顾客一键呼叫服务员(加水/加餐具/结账/其他) → admin 仪表盘横幅提示+标记已处理
+db
+  .query(
+    `CREATE TABLE IF NOT EXISTS service_calls (
+       id SERIAL PRIMARY KEY,
+       table_number VARCHAR(10) NOT NULL,
+       call_type VARCHAR(20) NOT NULL DEFAULT 'other',
+       status VARCHAR(10) NOT NULL DEFAULT 'open',
+       created_at TIMESTAMP DEFAULT NOW(),
+       handled_at TIMESTAMP NULL
+     );
+     CREATE INDEX IF NOT EXISTS idx_service_calls_status ON service_calls(status, created_at)`
+  )
+  .then(() => logger.info('服务呼叫表就绪'))
+  .catch((e) => logger.warn('service_calls 建表失败(首次): ' + e.message));
 
 // 可选 HTTPS（配置 SSL 证书路径后自动启用）
 const SSL_KEY = process.env.SSL_KEY || '';

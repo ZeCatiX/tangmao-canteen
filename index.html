@@ -127,6 +127,21 @@
                         <span style="font-size:0.92rem;color:var(--text);">📍 <span id="table-status-text">未选择桌号</span></span>
                         <button class="btn btn-sm" id="table-change-btn" style="background:var(--gold);color:#2c1810;border:none;border-radius:14px;padding:3px 14px;font-size:0.78rem;letter-spacing:1px;font-weight:600;" data-i18n="table_pick">选择桌号</button>
                     </div>
+                    <!-- 服务呼叫(2026-11-12: 锁桌后显示, 一键通知服务员) -->
+                    <div id="service-call-row" style="display:none;margin-top:10px;">
+                        <select id="service-call-type" class="form-select form-select-sm" style="display:inline-block;width:auto;max-width:140px;border-radius:14px;font-size:0.82rem;" aria-label="呼叫类型">
+                            <option value="water">🍵 加水</option>
+                            <option value="tableware">🥢 加餐具</option>
+                            <option value="bill">💳 结账</option>
+                            <option value="other">🔔 其他服务</option>
+                        </select>
+                        <button class="btn btn-sm" id="service-call-btn" style="background:var(--primary-accent);color:#fff;border:none;border-radius:14px;padding:4px 16px;font-size:0.8rem;letter-spacing:1px;font-weight:600;">🔔 呼叫服务员</button>
+                    </div>
+                </div>
+
+                <!-- 店内公告(2026-11-12: admin 发布 → 顾客首页横幅, 如今日特惠/新品上市) -->
+                <div id="announcement-banner" class="mb-3" style="display:none;max-width:640px;margin-left:auto;margin-right:auto;padding:12px 18px;border-radius:14px;background:rgba(192,57,43,0.12);border:1px solid rgba(192,57,43,0.45);">
+                    <span style="font-size:0.92rem;color:var(--primary-accent);font-weight:600;">📢 <span id="announcement-text"></span></span>
                 </div>
 
                 <!-- 常客记忆欢迎条(2026-11-02 对标商龙VIP到店关怀): 登录回头客显示光临次数+上次点过的菜+一键再来一单 -->
@@ -1290,7 +1305,7 @@
     </div>
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="script.js?v=20261116i8" defer></script>
+    <script src="script.js?v=20261116gs" defer></script>
     <script src="js/password-toggle.js?v=20260910" defer></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>

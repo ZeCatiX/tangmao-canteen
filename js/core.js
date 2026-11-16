@@ -1649,6 +1649,63 @@ window.addMyOrderAgain = function (oid) {
     showCart();
   }
 };
+// 导出我的订单 CSV(2026-11-12): 前端从 _myOrdersCache 生成(BOM 保证 Excel 中文不乱码)
+window.exportMyOrdersCsv = function () {
+  const orders = window._myOrdersCache || [];
+  if (!orders.length) {
+    showMessage('提示', '暂无订单可导出');
+    return;
+  }
+  const ST = { pending: '待处理', confirmed: '已确认', preparing: '制作中', completed: '已完成', cancelled: '已取消' };
+  const rows = [['订单号', '时间', '桌号', '状态', '金额(元)', '菜品']];
+  orders.forEach(function (o) {
+    rows.push([
+      o.id,
+      o.created_at ? new Date(o.created_at).toLocaleString('zh-CN') : '',
+      o.table_number || '外卖',
+      ST[o.status] || o.status,
+      (parseFloat(o.total_price) || 0).toFixed(2),
+      (o.items || []).map(function (it) { return (it.name || '菜品') + '×' + (it.qty || 1); }).join('；'),
+    ]);
+  });
+  const csv = rows
+    .map(function (r) {
+      return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(',');
+    })
+    .join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = '我的订单_' + new Date().toISOString().slice(0, 10) + '.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+// 限时自助取消按钮(2026-11-12): 下单 60 秒内的进行中单显示"取消"(超时隐藏, 需找服务员)
+function cancellableCancelBtn(o) {
+  if (['pending', 'confirmed'].indexOf(o.status) < 0) return '';
+  const elapsed = (Date.now() - new Date(o.created_at).getTime()) / 1000;
+  if (elapsed > 60) return '';
+  return '<button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelMyOrder(' + o.id + ',' + (o.table_number || '') + ')" style="border-radius:16px;font-size:0.75rem;padding:2px 12px;">✕ 取消订单</button>';
+}
+window.cancelMyOrder = function (oid, tableNumber) {
+  const token = localStorage.getItem('userToken');
+  showMessage('取消订单', '确定取消 #' + oid + ' 的订单吗？(下单 60 秒内可自助取消)', function () {
+    safeFetch('/api/order/' + oid + '/self-cancel', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
+      body: JSON.stringify({ tableNumber }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          showMessage('已取消', d.message || '订单已取消', function () { if (typeof loadMyOrders === 'function') loadMyOrders(); }, 2500);
+        } else {
+          showMessage('无法取消', d.error || '请联系服务员处理', null, 3500);
+        }
+      })
+      .catch(() => showMessage('网络错误', '请稍后重试'));
+  });
+};
 function loadMyOrders() {
   const el = document.getElementById('my-orders-list');
   if (!el) return;
@@ -1684,6 +1741,7 @@ function loadMyOrders() {
         '<div class="mb-3 p-2 text-center" style="background:rgba(201,169,110,0.1);border-radius:10px;font-size:0.88rem;">' +
         '共 <strong>' + orders.length + '</strong> 单' +
         (doneOrders.length ? ' · 已完成 <strong>' + doneOrders.length + '</strong> 单 · 消费合计 <strong style="color:var(--primary);">' + doneSum + '</strong> 元' : '') +
+        ' <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="exportMyOrdersCsv()" style="border-radius:16px;font-size:0.75rem;">⬇ 导出 CSV</button>' +
         '</div>' +
         orders
         .map((o) => {
@@ -1704,8 +1762,10 @@ function loadMyOrders() {
             '<div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">' + t + ' · ' + items.slice(0, 80) + '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">' +
             '<button type="button" class="btn btn-sm" onclick="addMyOrderAgain(' + o.id + ')" style="border-radius:16px;font-size:0.78rem;padding:2px 14px;background:var(--primary-accent);color:#fff;border:none;" title="按上次菜品一键加入购物车">🔁 再来一单</button>' +
+            '<div style="display:flex;align-items:center;gap:10px;">' +
+            cancellableCancelBtn(o) +
             '<div style="text-align:right;font-weight:600;color:var(--primary);">' + (parseFloat(o.total_price) || 0).toFixed(2) + ' 元</div>' +
-            '</div>' +
+            '</div></div>' +
             '</div>'
           );
         })

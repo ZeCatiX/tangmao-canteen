@@ -247,7 +247,27 @@
     <div class="page active" id="page-dashboard">
       <!-- 预警横幅在控制面板页内(2026-11-08: 原在main级压所有页面顶部, 挪入面板归位) -->
       <div id="notification-bar" style="display:none;margin-bottom:12px;"></div>
+      <!-- 服务呼叫横幅(2026-11-12): 顾客呼叫服务员 → 服务员在 admin 处理 -->
+      <div id="service-calls-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:10px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.5);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <strong style="color:#e74c3c;">🔔 服务呼叫</strong>
+          <span style="font-size:0.8rem;color:var(--text-light);">顾客请求 · 点击"已处理"消除</span>
+        </div>
+        <div id="service-calls-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
       <div class="row g-3 mb-4" id="stat-cards"></div>
+      <!-- 店内公告(2026-11-12: admin 发布 → 顾客首页横幅展示) -->
+      <div class="card mb-4" id="announcement-card" style="border:1px solid rgba(201,169,110,0.35);">
+        <div class="card-body">
+          <h5 style="font-family:'Noto Serif SC',serif;color:var(--primary);font-size:1rem;">📢 店内公告（顾客首页展示，如今日特惠/新品上市）</h5>
+          <textarea id="announcement-text" class="form-control" rows="2" maxlength="200" placeholder="输入公告内容…（最长 200 字；关闭展示即顾客端隐藏）"></textarea>
+          <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" id="announcement-active">
+            <label class="form-check-label" for="announcement-active" style="font-size:0.85rem;">启用展示</label>
+            <button type="button" class="btn btn-sm btn-primary ms-3" id="announcement-save-btn" style="background:var(--primary-accent);border:none;border-radius:16px;padding:4px 20px;">保存公告</button>
+          </div>
+        </div>
+      </div>
       <div class="content-row">
         <div class="col-main">
           <div class="card">
@@ -922,7 +942,7 @@
 </div>
   </div>
 
-<script src="js/admin-core.js?v=20261109d"></script>
+<script src="js/admin-core.js?v=20261116b"></script>
 <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/password-toggle.js?v=20260910"></script>
     </main>
