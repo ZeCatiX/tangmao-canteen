@@ -346,6 +346,16 @@ function refreshMenuCardCtrl(id) {
   }
   return false;
 }
+// 菜品计数"品种"口径(2026-11-12): 同基础名(去尾部括号规格后缀)的多行规格/口味拆分合并计 1 道,
+// 与规格重聚渲染(虚拟主卡/变体并入)同一规则——一道菜的不同规格差分不算多个菜品
+function countDishVarieties(list) {
+  const seen = new Set();
+  (list || []).forEach((d) => {
+    const m = String(d.name || '').match(/^(.+)\(([^()]+)\)$/);
+    seen.add(m ? m[1] : String(d.name || ''));
+  });
+  return seen.size;
+}
 function renderMenuTable() {
   const container = document.getElementById('dataset-table-body');
   if (!container) {
@@ -642,11 +652,12 @@ function renderMenuTable() {
       (menuLang === 'en' ? 'Try another keyword, or reset the filters' : '换个关键词，或清除筛选条件再试试') +
       '</p>' +
       '</div>';
-    document.getElementById('menu-count').textContent = '0/' + dishData.length;
+    document.getElementById('menu-count').textContent = '0/' + countDishVarieties(dishData);
     return;
   }
   container.innerHTML = '<div class="dish-grid">' + html + '</div>';
-  document.getElementById('menu-count').textContent = filtered.length + '/' + dishData.length;
+  // 计数按"品种"口径(2026-11-12): 同基础名的规格/口味拆分(如一口脆虾球原味/芥末味)合并计 1 道, 与重聚渲染单位一致
+  document.getElementById('menu-count').textContent = countDishVarieties(filtered) + '/' + countDishVarieties(dishData);
   // 选饮品模式横幅随菜单重绘恢复（renderMenuTable 会重绘菜单容器周边 DOM）
   if (typeof renderDrinksModeBanner === 'function') {
     renderDrinksModeBanner();

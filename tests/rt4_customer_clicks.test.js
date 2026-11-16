@@ -52,6 +52,20 @@ async function main() {
   await page.waitForFunction(() => document.querySelectorAll('.dish-card').length > 20, { timeout: 15000 }).catch(() => {});
   const dishN = await page.evaluate(() => document.querySelectorAll('.dish-card').length);
   ok('② 菜单渲染', dishN > 50, dishN + ' 张菜品卡');
+  // 计数"品种"口径(2026-11-12): 规格/口味拆分合并计 1 道——menu-count 分子=渲染卡数, 分母=基础名去重数
+  const variety = await page.evaluate(() => {
+    const seen = new Set();
+    (window.dishData || []).forEach((d) => {
+      const m = String(d.name || "").match(/^(.+)\(([^()]+)\)$/);
+      seen.add(m ? m[1] : String(d.name || ""));
+    });
+    return { sku: (window.dishData || []).length, varieties: seen.size, count: document.getElementById("menu-count").textContent };
+  });
+  ok(
+    "②b 菜单计数品种口径(拆分合并计 1 道)",
+    variety.count === variety.varieties + "/" + variety.varieties,
+    "SKU " + variety.sku + " → 品种 " + variety.varieties + ", 显示 " + variety.count
+  );
 
   // 3. 真实点击导航进数据集页(过滤控件所在 section), 再分类过滤
   await clickAt(page, '#nav-dataset');
