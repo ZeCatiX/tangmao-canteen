@@ -953,7 +953,9 @@ function login() {
         if (typeof window.refreshWelcomeCard === 'function') {
           window.refreshWelcomeCard();
         }
-        showSection('preference-section');
+        // 登录落点(2026-11-12 体验打磨): 已填过口味档案的老用户回首页直接点餐, 新用户才进偏好引导
+        const hasPrefs = d.user?.preferences && Object.keys(d.user.preferences).length > 0;
+        showSection(hasPrefs ? 'home-section' : 'preference-section');
         if (d.user?.preferences) {
           loadUserPreferences(d.user.preferences);
         }
