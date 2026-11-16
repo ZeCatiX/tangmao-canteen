@@ -83,7 +83,7 @@ function loadAnnouncementAdmin() {
       if (t) t.value = a.text || '';
       if (cb) cb.checked = a.active === true;
     })
-    .catch(() => {});
+    .catch((e) => console.warn('公告/服务呼叫加载失败:', e));
 }
 function saveAnnouncementAdmin() {
   const text = (document.getElementById('announcement-text') || {}).value || '';
@@ -127,12 +127,12 @@ function loadServiceCalls() {
         })
         .join('');
     })
-    .catch(() => {});
+    .catch((e) => console.warn('公告/服务呼叫加载失败:', e));
 }
 window.handleServiceCall = function (id) {
   fetch('/api/admin/service-calls/' + id + '/handle', { method: 'POST' })
     .then(() => loadServiceCalls())
-    .catch(() => {});
+    .catch((e) => console.warn('公告/服务呼叫加载失败:', e));
 };
 function loadStats() {
   fetch('/api/admin/stats').then(r => r.json()).then(d => {
