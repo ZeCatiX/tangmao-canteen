@@ -1620,6 +1620,61 @@ function logout() {
     showSection('home-section');
   });
 }
+// 我的订单(2026-11-12): 登录用户往期订单回看——此前顾客端无跨会话订单历史入口
+// (会话内时间线存 sessionStorage 关浏览器即失, 常客卡仅"上一单"); 数据源 /api/orders(按登录用户)
+function loadMyOrders() {
+  const el = document.getElementById('my-orders-list');
+  if (!el) return;
+  const token = localStorage.getItem('userToken');
+  if (!token) {
+    el.innerHTML = '<p class="text-muted">登录后可查看历史订单</p>';
+    return;
+  }
+  safeFetch('/api/orders', { headers: { Authorization: 'Bearer ' + token } })
+    .then((r) => r.json())
+    .then((d) => {
+      if (!d.success) {
+        el.innerHTML = '<p class="text-muted">' + esc(d.error || '加载失败') + '</p>';
+        return;
+      }
+      const orders = (d.orders || []).slice(0, 20); // 最近 20 单
+      if (!orders.length) {
+        el.innerHTML = '<p class="text-muted">还没有订单，快去点一桌好菜吧</p>';
+        return;
+      }
+      const ST = {
+        pending: ['待处理', '#f39c12'],
+        confirmed: ['已确认', '#2980b9'],
+        preparing: ['制作中', '#e67e22'],
+        completed: ['已完成', '#27ae60'],
+        cancelled: ['已取消', '#95a5a6'],
+      };
+      el.innerHTML = orders
+        .map((o) => {
+          const meta = ST[o.status] || ['未知', '#95a5a6'];
+          const items = (o.items || [])
+            .map((it) => esc(it.name || '菜品') + '×' + (it.qty || 1))
+            .join('、');
+          const t = o.created_at
+            ? new Date(o.created_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+            : '';
+          return (
+            '<div class="mb-2 p-2" style="border:1px solid rgba(201,169,110,0.25);border-radius:10px;background:rgba(201,169,110,0.06);">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+            '<span style="font-weight:600;">#' + o.id + ' · ' + (o.table_number ? esc(o.table_number) + ' 号桌' : '外卖') + '</span>' +
+            '<span style="font-size:0.78rem;padding:2px 10px;border-radius:12px;color:#fff;background:' + meta[1] + ';">' + meta[0] + '</span>' +
+            '</div>' +
+            '<div style="font-size:0.8rem;color:var(--text-light);margin-top:4px;">' + t + ' · ' + items.slice(0, 80) + '</div>' +
+            '<div style="text-align:right;font-weight:600;color:var(--primary);">' + (parseFloat(o.total_price) || 0).toFixed(2) + ' 元</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+    })
+    .catch(() => {
+      el.innerHTML = '<p class="text-muted">网络错误，请稍后重试</p>';
+    });
+}
 function showProfile() {
   if (!currentUser || currentUser === 'guest') {
     showMessage('提示', '请先登录');
@@ -1686,6 +1741,8 @@ function showProfile() {
   if (cbb) {
     cbb.style.display = user.blacklist?.length ? '' : 'none';
   }
+  // 我的订单(2026-11-12): 登录用户往期订单回看(此前顾客端无跨会话订单历史入口)
+  loadMyOrders();
   document.querySelectorAll('.cancel-favorite').forEach((b) =>
     b.addEventListener('click', function () {
       const id = this.getAttribute('data-id');
