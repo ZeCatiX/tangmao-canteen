@@ -217,11 +217,13 @@ function stockRemainOf(dish) {
   return Math.max(0, parseInt(dish.daily_stock) - (parseInt(dish.sold_today) || 0));
 }
 
-function addToCart(dish, qty) {
+function addToCart(dish, qty, note) {
   const cart = getCart();
   const i = cart.findIndex((x) => x.id === dish.id);
   const min = minQtyOf(dish);
   const q = typeof qty === 'number' && qty > 0 ? qty : 1;
+  // 单品备注(2026-11-12 点餐时备注): 详情层备注框传入, 缺省空; 购物车逐行备注仍可后改
+  const noteStr = String(note || '').trim().slice(0, 30);
   // 估清限购: 加购环节就拦(而非等到下单被拒), 购物车已有数量+本次增量不超剩余
   const remain = stockRemainOf(dish);
   if (remain !== null) {
@@ -254,12 +256,16 @@ function addToCart(dish, qty) {
   }
   if (i >= 0) {
     cart[i].qty = (cart[i].qty || 1) + q;
+    // 已有条目无备注且本次带了备注 → 补记(顾客后加的菜品备注不覆盖手工备注)
+    if (noteStr && !cart[i].note) {
+      cart[i].note = noteStr;
+    }
     saveCart(cart);
     updateCartBadge();
   } else {
     // 起售数量：首次加入按最小起售量（如核桃包3个起、迷你肉夹馍2个起）
     const add = Math.max(q, min);
-    cart.push({ id: dish.id, name: dish.name, price: dish.price, qty: add, image: dish.image_url || '' });
+    cart.push({ id: dish.id, name: dish.name, price: dish.price, qty: add, image: dish.image_url || '', note: noteStr });
     saveCart(cart);
     updateCartBadge();
     if (add > q) {
