@@ -46,7 +46,7 @@ window.renderOrderStatusBadge = function (status) {
     pending: ['⏳ 待处理', '#f39c12'],
     confirmed: ['✅ 已确认', '#2980b9'],
     preparing: ['🍳 制作中', '#e67e22'],
-    completed: ['✅ 已出餐 · 请取餐', '#27ae60'],
+    completed: ['✅ 已出餐 · 即将上桌', '#27ae60'],
     cancelled: ['已取消', '#95a5a6'],
   };
   const m = MAP[status];
@@ -60,7 +60,7 @@ window.renderOrderStatusBadge = function (status) {
   el.style.display = '';
 };
 // 订单状态轮询(2026-11-12): 横幅可见时每 60s 刷一次状态徽章(status-check 限流 30/分, 占用极低);
-// completed 时一次性弹窗提醒取餐; 无单/横幅隐藏时跳过
+// 完成时一次性弹窗告知出餐上桌(堂食上菜语义); 无单/横幅隐藏时跳过
 window.startOrderStatusPoll = function () {
   if (window._orderStatusTimer) return;
   window._orderStatusTimer = setInterval(function () {
@@ -77,7 +77,7 @@ window.startOrderStatusPoll = function () {
         if (window.renderOrderStatusBadge) window.renderOrderStatusBadge(chk.exists ? chk.status : 'gone');
         if (chk.exists && chk.status === 'completed' && window._orderDoneNotified !== oid) {
           window._orderDoneNotified = oid;
-          showMessage(L('餐已备好', 'Order ready'), L('您的订单已出餐，请取餐 🍽', 'Your order is ready for pickup 🍽'), null, 6000);
+          showMessage(L('菜品已出餐', 'Dishes served'), L('您的菜品已出餐，服务员将为您上桌', 'Your dishes are being served to your table'), null, 6000);
         }
         if (chk.exists && chk.status === 'cancelled') {
           window._orderDoneNotified = null;
@@ -150,10 +150,10 @@ window.renderCartLangAware = function () {
               }
             }
             if (chk && chk.success && (!chk.exists || ['completed', 'cancelled'].indexOf(chk.status) >= 0)) {
-              // 出餐提醒(2026-11-12): 完成时一次性弹窗告知取餐(此前横幅默默消失, 顾客无感知)
+              // 出餐提醒(2026-11-12): 完成时一次性弹窗告知出餐上桌(此前横幅默默消失, 顾客无感知)
               if (chk.exists && chk.status === 'completed' && window._orderDoneNotified !== loB) {
                 window._orderDoneNotified = loB;
-                showMessage(L('餐已备好', 'Order ready'), L('您的订单已出餐，请取餐 🍽', 'Your order is ready for pickup 🍽'), null, 6000);
+                showMessage(L('菜品已出餐', 'Dishes served'), L('您的菜品已出餐，服务员将为您上桌', 'Your dishes are being served to your table'), null, 6000);
               }
               [
                 'lastOrderId',
