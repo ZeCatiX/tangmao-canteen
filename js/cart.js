@@ -826,7 +826,7 @@ function showCart() {
             '" style="align-self:flex-start;padding:2px 8px;font-size:0.75rem;"><i class="bi bi-x"></i></button>' +
             '<div style="margin-left:auto;color:#c0392b;font-weight:600;">' +
             subtotal.toFixed(2) +
-            ' 元</div></div></div>'
+            ' 元</div></div></div></div></div>'
           );
         })
         .join('');
