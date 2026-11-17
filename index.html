@@ -798,12 +798,7 @@
                         <p style="font-size:0.85rem;">去推荐菜品页面添加你喜欢的菜吧</p>
                     </div>
                     <div id="cart-content" style="display:none;">
-                        <div class="table-responsive mb-3">
-                            <table class="table table-hover" style="font-size:0.9rem;">
-                                <thead><tr><th>菜品</th><th style="width:100px;">数量</th><th style="width:80px;">单价</th><th style="width:80px;">小计</th><th style="width:50px;"></th></tr></thead>
-                                <tbody id="cart-table-body"></tbody>
-                            </table>
-                        </div>
+                        <div id="cart-table-body" style="display:flex;flex-direction:column;gap:20px;"></div>
                         <div class="d-flex justify-content-between align-items-center p-3" style="background:#fdf6f0;border-radius:8px;flex-wrap:wrap;gap:8px;">
                             <div class="d-flex align-items-center gap-3">
                                 <span style="color:var(--text-light);font-size:0.9rem;">共 <strong id="cart-total-items">0</strong> 件</span>
@@ -1305,7 +1300,7 @@
     </div>
 
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="script.js?v=20261117n0" defer></script>
+    <script src="script.js?v=20261117k0" defer></script>
     <script src="js/password-toggle.js?v=20260910" defer></script>
     <!-- 回到顶部按钮 -->
     <button id="back-to-top" onclick="scrollToTop()" title="回到顶部" aria-label="回到顶部">↑</button>

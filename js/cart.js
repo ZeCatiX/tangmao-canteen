@@ -771,7 +771,7 @@ function showCart() {
     }
     if (tb) {
       tb.innerHTML = cart
-        .map((x) => {
+        .map((x, idx) => {
           const dish = dishData.find((d) => d.id === x.id);
           const qtyVal = x.qty || 1;
           // 回退分支=菜品已从菜单删除,快照名(x.name)是唯一真相,勿改查表(同 id 必查不到,且会踩掉回归-BUG3 内容断言)
@@ -785,26 +785,32 @@ function showCart() {
           const price = parseFloat(x.price) || 0;
           const subtotal = price * qtyVal;
           return (
-            '<tr><td>' +
+            // 卡片化购物车条目(2026-11-12): table 行 → 独立卡片(图/名/备注/数量/小计/删除)
+            '<div class="cart-item-card p-3" style="border:1px solid rgba(201,169,110,0.4);border-radius:10px;background:rgba(201,169,110,0.08);position:relative;">' +
+            '<span style="position:absolute;top:-10px;left:14px;background:var(--primary-accent);color:#fff;font-size:0.7rem;font-weight:600;padding:1px 10px;border-radius:10px;">第 ' + (idx + 1) + ' 道</span>' +
+            '<div style="display:flex;gap:10px;align-items:flex-start;">' +
             (dish && dish.image_url
               ? dish.image_url.startsWith('/') || dish.image_url.startsWith('http')
                 ? '<img src="' +
                   esc(dish.image_url || '') +
                   '" alt="' +
                   esc(dish.name || '菜品') +
-                  '" loading="lazy" style="width:80px;height:80px;border-radius:8px;object-fit:cover;margin-right:8px;vertical-align:middle;" onerror="this.style.display=\'none\'">'
-                : '<span class="dish-emoji" style="font-size:2rem;margin-right:8px;vertical-align:middle;">' +
+                  '" loading="lazy" style="width:56px;height:56px;border-radius:8px;object-fit:cover;flex:0 0 auto;" onerror="this.style.display=\'none\'">'
+                : '<span class="dish-emoji" style="font-size:1.8rem;flex:0 0 auto;">' +
                   esc(dish.image_url) +
                   '</span>'
               : '') +
+            '<div style="flex:1;min-width:0;">' +
+            '<div style="font-weight:600;">' +
             name +
             unit +
             '<div style="margin-top:4px;"><input class="form-control form-control-sm cart-note-input" data-id="' +
             esc(String(x.id)) +
             '" value="' +
             esc(x.note || '') +
-            '" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;width:100%;max-width:220px;box-sizing:border-box;" aria-label="菜品备注"></div></td>' +
-            '<td><div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="' +
+            '" maxlength="30" placeholder="备注：少辣/不要香菜…" style="font-size:0.75rem;padding:2px 6px;border:1px solid #e4dbcf;border-radius:6px;width:100%;max-width:220px;box-sizing:border-box;" aria-label="菜品备注"></div></div>' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
+            '<div class="input-group input-group-sm" style="width:110px;height:30px;align-items:stretch;"><button class="btn btn-outline-secondary cart-qty-minus" data-id="' +
             esc(String(x.id)) +
             '" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:6px 0 0 6px;line-height:1;">−</button>' +
             '<input type="text" class="form-control text-center cart-qty-input" data-id="' +
@@ -814,15 +820,13 @@ function showCart() {
             '" style="width:38px;height:30px;font-size:0.82rem;font-weight:600;padding:0;border-radius:0;border-left:1px solid #dee2e6;border-right:1px solid #dee2e6;text-align:center;display:flex;align-items:center;justify-content:center;">' +
             '<button class="btn btn-outline-secondary cart-qty-plus" data-id="' +
             esc(String(x.id)) +
-            '" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div></td>' +
-            '<td>' +
-            price.toFixed(2) +
-            '</td><td style="color:#c0392b;font-weight:600;">' +
-            subtotal.toFixed(2) +
-            '</td>' +
-            '<td><button class="btn btn-sm btn-outline-danger cart-remove-btn" data-id="' +
+            '" style="padding:0 8px;height:30px;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;border-radius:0 6px 6px 0;line-height:1;">+</button></div>' +
+            '<button class="btn btn-sm btn-outline-danger cart-remove-btn" data-id="' +
             esc(String(x.id)) +
-            '" style="padding:2px 6px;font-size:0.7rem;"><i class="bi bi-x"></i></button></td></tr>'
+            '" style="align-self:flex-start;padding:2px 8px;font-size:0.75rem;"><i class="bi bi-x"></i></button>' +
+            '<div style="margin-left:auto;color:#c0392b;font-weight:600;">' +
+            subtotal.toFixed(2) +
+            ' 元</div></div></div>'
           );
         })
         .join('');
