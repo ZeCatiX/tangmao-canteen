@@ -1013,7 +1013,11 @@ function renderTableSets() {
               '</div>';
             return (
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
+              '<span style="cursor:pointer;flex:0 0 auto;" title="查看详情" onclick="showDishDetail(' +
+              d.id +
+              ')">' +
               dishImg(d.image_url, 52, d.name) +
+              '</span>' +
               '<div class="flex-grow-1 tsc-name" style="min-width:0;">' +
               '<div class="dish-name-serif" onclick="showDishDetail(' +
               d.id +
@@ -1058,7 +1062,11 @@ function renderTableSets() {
           .map(function (d) {
             return (
               '<div class="d-flex align-items-center gap-2 py-2 tsc-row" style="border-bottom:1px solid rgba(201,169,110,0.14);">' +
+              '<span style="cursor:pointer;flex:0 0 auto;" title="查看详情" onclick="showDishDetail(' +
+              d.id +
+              ')">' +
               dishImg(d.image_url, 52, d.name) +
+              '</span>' +
               '<div class="flex-grow-1 tsc-name" style="min-width:0;">' +
               '<div class="dish-name-serif" onclick="showDishDetail(' +
               d.id +
